@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Campsite tokens — light (default) */
+:root {
+  color-scheme: light dark;
+  --campsite-bg: #faf9f6;
+  --campsite-surface: #f5f4f1;
+  --campsite-text: #121212;
+  --campsite-text-secondary: #6b6b6b;
+  --campsite-text-muted: #9b9b9b;
+  --campsite-border: #d8d8d8;
+  --campsite-warning: #b91c1c;
+  --campsite-success: #15803d;
+  --campsite-accent: #1d4ed8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --campsite-bg: #121212;
+    --campsite-surface: #1a1a1a;
+    --campsite-text: #faf9f6;
+    --campsite-text-secondary: #808080;
+    --campsite-text-muted: #b0b0b0;
+    --campsite-border: #2a2a2a;
+    --campsite-warning: #f87171;
+    --campsite-success: #4ade80;
+    --campsite-accent: #1d4ed8;
+  }
+}
+
+body {
+  color: var(--campsite-text);
+  background: var(--campsite-bg);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Auth marketing + forms — fixed light right panel (matches design mock) */
+.auth-shell {
+  color-scheme: light;
+}
+
+.auth-shell-main {
+  color-scheme: light;
+  background: #f8f8f8;
+  color: #121212;
+}
+
+@layer components {
+  .auth-title {
+    @apply font-authSerif text-[30px] leading-tight tracking-tight text-[#121212];
+  }
+
+  .auth-sub {
+    @apply text-sm leading-relaxed text-[#6b6b6b];
+  }
+
+  .auth-label {
+    @apply mb-1.5 block text-[13px] font-medium tracking-wide text-[#6b6b6b];
+  }
+
+  .auth-input {
+    @apply h-11 w-full rounded-[10px] border border-[#d8d8d8] bg-white px-3.5 text-sm text-[#121212] outline-none transition-shadow placeholder:text-[#9b9b9b];
+  }
+
+  .auth-input:focus {
+    @apply border-[#121212] shadow-[0_0_0_3px_rgba(18,18,18,0.08)];
+  }
+
+  .auth-input-error {
+    @apply border-[#b91c1c];
+  }
+
+  .auth-btn-primary {
+    @apply flex h-[46px] w-full items-center justify-center gap-2 rounded-[10px] border-0 bg-[#121212] text-sm font-medium text-[#faf9f6] transition-opacity disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .auth-btn-primary:not(:disabled):hover {
+    @apply opacity-[0.88];
+  }
+
+  .auth-btn-ghost {
+    @apply flex h-[46px] w-full items-center justify-center gap-2 rounded-[10px] border border-[#d8d8d8] bg-transparent text-sm font-medium text-[#121212] transition-colors;
+  }
+
+  .auth-btn-ghost:hover {
+    @apply bg-[#f5f4f1];
+  }
+
+  .auth-link {
+    @apply border-0 bg-transparent p-0 font-sans text-sm font-medium text-[#121212] underline decoration-[#121212] underline-offset-2;
+  }
+
+  .auth-divider {
+    @apply my-6 flex items-center gap-3 text-xs text-[#9b9b9b];
+  }
+
+  .auth-divider::before,
+  .auth-divider::after {
+    content: '';
+    @apply h-px flex-1 bg-[#d8d8d8];
+  }
+}

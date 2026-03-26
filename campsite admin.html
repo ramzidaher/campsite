@@ -1,0 +1,2857 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campsite — Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #faf9f6;
+    --surface: #f5f4f1;
+    --text: #121212;
+    --text2: #6B6B6B;
+    --text3: #9B9B9B;
+    --border: #D8D8D8;
+    --accent: #121212;
+    --success: #15803D;
+    --warning: #B91C1C;
+    --card: #ffffff;
+    --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-lg: 0 2px 8px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.07);
+    --font: 'DM Sans', sans-serif;
+    --serif: 'DM Serif Display', serif;
+    --sidebar-w: 240px;
+    --topbar-h: 60px;
+    --radius: 12px;
+    --transition: 0.18s ease;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ═══════════════════════════════════
+     SIDEBAR
+  ═══════════════════════════════════ */
+  .sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    height: 100vh;
+    background: var(--accent);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0; top: 0;
+    z-index: 100;
+    overflow: hidden;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .sidebar-icon {
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-brand-text {
+    font-family: var(--serif);
+    font-size: 19px;
+    color: #faf9f6;
+    letter-spacing: -0.2px;
+  }
+
+  .sidebar-org {
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    margin-bottom: 8px;
+  }
+
+  .org-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+
+  .org-badge:hover { background: rgba(255,255,255,0.11); }
+
+  .org-logo {
+    width: 24px; height: 24px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.2);
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .org-name {
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 500;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .org-chevron {
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+  }
+
+  /* Nav */
+  .nav-section {
+    padding: 0 12px;
+    margin-bottom: 4px;
+  }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.28);
+    text-transform: uppercase;
+    padding: 8px 8px 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.55);
+    font-size: 13.5px;
+    font-weight: 400;
+    transition: background var(--transition), color var(--transition);
+    position: relative;
+    user-select: none;
+  }
+
+  .nav-item:hover {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.85);
+  }
+
+  .nav-item.active {
+    background: rgba(255,255,255,0.12);
+    color: #faf9f6;
+    font-weight: 500;
+  }
+
+  .nav-icon {
+    width: 20px;
+    text-align: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: #E11D48;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 999px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .nav-badge.grey {
+    background: rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.7);
+  }
+
+  .nav-sub {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.25s ease;
+  }
+
+  .nav-sub.open { max-height: 200px; }
+
+  .nav-sub-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px 7px 38px;
+    border-radius: 7px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.45);
+    font-size: 12.5px;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .nav-sub-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.75); }
+  .nav-sub-item.active { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.08); }
+
+  .sidebar-spacer { flex: 1; }
+
+  .sidebar-user {
+    padding: 14px 12px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background var(--transition);
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .sidebar-user:hover { background: rgba(255,255,255,0.06); }
+
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #faf9f6;
+    flex-shrink: 0;
+  }
+
+  .avatar.sm { width: 26px; height: 26px; font-size: 11px; }
+  .avatar.md { width: 38px; height: 38px; font-size: 15px; }
+  .avatar.lg { width: 44px; height: 44px; font-size: 17px; }
+
+  .user-info { flex: 1; overflow: hidden; }
+
+  .user-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-role {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 1px;
+  }
+
+  .user-cog {
+    font-size: 14px;
+    color: rgba(255,255,255,0.3);
+    transition: color var(--transition);
+  }
+
+  .sidebar-user:hover .user-cog { color: rgba(255,255,255,0.6); }
+
+  /* ═══════════════════════════════════
+     MAIN
+  ═══════════════════════════════════ */
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Top bar */
+  .topbar {
+    height: var(--topbar-h);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    gap: 16px;
+  }
+
+  .topbar-title {
+    font-family: var(--serif);
+    font-size: 20px;
+    letter-spacing: -0.2px;
+    flex: 1;
+  }
+
+  .topbar-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 12px;
+    height: 36px;
+    width: 220px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+
+  .topbar-search:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(18,18,18,0.07);
+  }
+
+  .topbar-search input {
+    border: none;
+    background: none;
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    width: 100%;
+  }
+
+  .topbar-search input::placeholder { color: var(--text3); }
+
+  .topbar-search-icon { color: var(--text3); font-size: 14px; }
+
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: var(--text2);
+    transition: background var(--transition), border-color var(--transition);
+    position: relative;
+  }
+
+  .icon-btn:hover { background: var(--surface); border-color: #c5c5c5; }
+
+  .icon-btn .notif-dot {
+    position: absolute;
+    top: 7px; right: 7px;
+    width: 7px; height: 7px;
+    background: #E11D48;
+    border-radius: 50%;
+    border: 1.5px solid var(--bg);
+  }
+
+  .topbar-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #faf9f6;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color var(--transition);
+  }
+
+  .topbar-avatar:hover { border-color: var(--accent); }
+
+  /* ═══════════════════════════════════
+     PAGE CONTENT
+  ═══════════════════════════════════ */
+  .page { display: none; flex-direction: column; gap: 0; }
+  .page.active { display: flex; }
+
+  .page-inner {
+    padding: 28px 28px;
+    flex: 1;
+  }
+
+  /* Greeting */
+  .greeting {
+    margin-bottom: 28px;
+  }
+
+  .greeting-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .greeting h1 {
+    font-family: var(--serif);
+    font-size: 28px;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .greeting-meta {
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: box-shadow var(--transition), transform var(--transition);
+  }
+
+  .stat-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+
+  .stat-label {
+    font-size: 11.5px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat-label-icon { font-size: 13px; }
+
+  .stat-value {
+    font-family: var(--serif);
+    font-size: 32px;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 6px;
+  }
+
+  .stat-sub .up { color: var(--success); }
+  .stat-sub .down { color: var(--warning); }
+
+  .stat-bar {
+    margin-top: 12px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--accent);
+  }
+
+  /* Two column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  /* Section header */
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-size: 17px;
+    letter-spacing: -0.2px;
+  }
+
+  .section-link {
+    font-size: 12.5px;
+    color: var(--text2);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color var(--transition);
+  }
+
+  .section-link:hover { color: var(--text); }
+
+  /* Broadcasts list */
+  .broadcasts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .broadcast-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: box-shadow var(--transition), border-color var(--transition);
+    position: relative;
+  }
+
+  .broadcast-item:hover {
+    box-shadow: var(--shadow);
+    border-color: #c8c8c8;
+  }
+
+  .broadcast-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 3px 0 0 3px;
+  }
+
+  .broadcast-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .broadcast-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    flex: 1;
+  }
+
+  .broadcast-item.unread .broadcast-title { font-weight: 600; }
+
+  .broadcast-time {
+    font-size: 11.5px;
+    color: var(--text3);
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .broadcast-body {
+    font-size: 12.5px;
+    color: var(--text2);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .broadcast-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--surface);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  .tag.accent { background: var(--accent); color: #faf9f6; border-color: var(--accent); }
+  .tag.green { background: #dcfce7; color: #15803D; border-color: #bbf7d0; }
+  .tag.blue { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+  .tag.orange { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+  .tag.purple { background: #f3e8ff; color: #7c3aed; border-color: #e9d5ff; }
+
+  /* Calendar widget */
+  .calendar-widget {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .cal-header {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cal-month {
+    font-family: var(--serif);
+    font-size: 15px;
+  }
+
+  .cal-nav {
+    display: flex;
+    gap: 4px;
+  }
+
+  .cal-nav-btn {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text2);
+    display: flex; align-items: center; justify-content: center;
+    transition: background var(--transition);
+  }
+
+  .cal-nav-btn:hover { background: var(--surface); }
+
+  .cal-grid {
+    padding: 12px;
+  }
+
+  .cal-days-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  .cal-day-label {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 0;
+  }
+
+  .cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text2);
+    transition: background var(--transition), color var(--transition);
+    position: relative;
+  }
+
+  .cal-day:hover { background: var(--surface); color: var(--text); }
+  .cal-day.other { color: var(--text3); opacity: 0.45; }
+  .cal-day.today {
+    background: var(--accent);
+    color: #faf9f6;
+    font-weight: 600;
+  }
+
+  .cal-day.today:hover { background: #333; }
+
+  .cal-day.has-event::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: #1D4ED8;
+  }
+
+  .cal-day.today.has-event::after { background: #faf9f6; }
+
+  /* Upcoming events */
+  .upcoming-events {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .event-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  .event-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .event-color-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .event-details { flex: 1; }
+
+  .event-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+
+  .event-time {
+    font-size: 11.5px;
+    color: var(--text3);
+  }
+
+  /* Pending verifications panel */
+  .pending-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .pending-panel-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pending-panel-title {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pending-count-badge {
+    background: #E11D48;
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  .pending-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pending-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+  }
+
+  .pending-item:last-child { border-bottom: none; }
+  .pending-item:hover { background: var(--surface); }
+
+  .pending-info { flex: 1; }
+
+  .pending-name {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+
+  .pending-meta {
+    font-size: 11.5px;
+    color: var(--text3);
+  }
+
+  .pending-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn-approve {
+    padding: 5px 12px;
+    background: #dcfce7;
+    color: #15803D;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background var(--transition);
+  }
+
+  .btn-approve:hover { background: #bbf7d0; }
+
+  .btn-reject {
+    padding: 5px 10px;
+    background: none;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .btn-reject:hover { background: #fee2e2; color: var(--warning); border-color: #fecaca; }
+
+  /* Quick actions */
+  .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .qa-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 16px 14px;
+    cursor: pointer;
+    transition: box-shadow var(--transition), transform var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .qa-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+
+  .qa-icon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    border: 1px solid var(--border);
+  }
+
+  .qa-label {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .qa-sub {
+    font-size: 11.5px;
+    color: var(--text3);
+    margin-top: 1px;
+  }
+
+  /* ═══════════════════════════════════
+     BROADCASTS PAGE
+  ═══════════════════════════════════ */
+  .page-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    flex-wrap: wrap;
+  }
+
+  .filter-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .filter-pill {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-size: 12.5px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+    font-family: var(--font);
+  }
+
+  .filter-pill:hover { background: var(--surface); color: var(--text); }
+
+  .filter-pill.active {
+    background: var(--accent);
+    color: #faf9f6;
+    border-color: var(--accent);
+  }
+
+  .btn-compose {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: #faf9f6;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background var(--transition), transform var(--transition);
+    white-space: nowrap;
+  }
+
+  .btn-compose:hover { background: #2a2a2a; transform: translateY(-1px); }
+  .btn-compose:active { transform: translateY(0); }
+
+  .broadcasts-full {
+    padding: 20px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Compose modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    backdrop-filter: blur(2px);
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--card);
+    border-radius: 16px;
+    width: 560px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(12px) scale(0.98);
+    transition: transform 0.2s ease;
+  }
+
+  .modal-overlay.open .modal { transform: none; }
+
+  .modal-header {
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title {
+    font-family: var(--serif);
+    font-size: 20px;
+  }
+
+  .modal-close {
+    width: 30px; height: 30px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text2);
+    display: flex; align-items: center; justify-content: center;
+    transition: background var(--transition);
+  }
+
+  .modal-close:hover { background: var(--surface); color: var(--text); }
+
+  .modal-body { padding: 22px 24px; }
+
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .field-modal {
+    margin-bottom: 16px;
+  }
+
+  .field-modal label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+
+  .field-modal input,
+  .field-modal select,
+  .field-modal textarea {
+    width: 100%;
+    padding: 9px 13px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    appearance: none;
+  }
+
+  .field-modal textarea {
+    height: 110px;
+    resize: vertical;
+    padding-top: 10px;
+  }
+
+  .field-modal input:focus,
+  .field-modal select:focus,
+  .field-modal textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(18,18,18,0.07);
+  }
+
+  .field-row-modal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .btn-ghost-modal {
+    padding: 9px 18px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background var(--transition);
+  }
+
+  .btn-ghost-modal:hover { background: var(--surface); color: var(--text); }
+
+  .btn-primary-modal {
+    padding: 9px 20px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #faf9f6;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background var(--transition);
+  }
+
+  .btn-primary-modal:hover { background: #2a2a2a; }
+
+  .compose-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .compose-tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: none;
+    font-size: 12.5px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+  }
+
+  .compose-tab.active {
+    background: var(--accent);
+    color: #faf9f6;
+    border-color: var(--accent);
+  }
+
+  /* ═══════════════════════════════════
+     ROTA PAGE
+  ═══════════════════════════════════ */
+  .rota-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .rota-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .rota-date-label {
+    font-family: var(--serif);
+    font-size: 16px;
+    min-width: 160px;
+    text-align: center;
+  }
+
+  .rota-nav-btn {
+    width: 32px; height: 32px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text2);
+    display: flex; align-items: center; justify-content: center;
+    transition: background var(--transition);
+  }
+
+  .rota-nav-btn:hover { background: var(--surface); }
+
+  .view-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .view-toggle-btn {
+    padding: 6px 14px;
+    border: none;
+    background: var(--card);
+    font-size: 12.5px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: var(--font);
+    border-right: 1px solid var(--border);
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .view-toggle-btn:last-child { border-right: none; }
+  .view-toggle-btn.active { background: var(--accent); color: #faf9f6; }
+
+  .rota-week {
+    padding: 20px 28px;
+    overflow-x: auto;
+  }
+
+  .rota-grid {
+    display: grid;
+    grid-template-columns: 100px repeat(7, 1fr);
+    min-width: 700px;
+    gap: 8px;
+  }
+
+  .rota-day-header {
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 8px;
+    background: var(--surface);
+  }
+
+  .rota-day-name {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text3);
+  }
+
+  .rota-day-num {
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--text);
+    margin-top: 2px;
+  }
+
+  .rota-day-header.today-col .rota-day-num {
+    background: var(--accent);
+    color: #faf9f6;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 2px auto 0;
+  }
+
+  .rota-time-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 44px;
+  }
+
+  .rota-time-slot {
+    height: 64px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+
+  .rota-time-label {
+    font-size: 10.5px;
+    color: var(--text3);
+    margin-top: -6px;
+  }
+
+  .rota-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .rota-col-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+  }
+
+  .shift-card {
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    cursor: pointer;
+    transition: opacity var(--transition), transform var(--transition);
+    border: 1px solid transparent;
+  }
+
+  .shift-card:hover { opacity: 0.85; transform: scale(1.01); }
+
+  .shift-card.blue { background: #dbeafe; border-color: #bfdbfe; color: #1e40af; }
+  .shift-card.green { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+  .shift-card.orange { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+  .shift-card.purple { background: #f3e8ff; border-color: #e9d5ff; color: #6d28d9; }
+
+  .shift-time { font-weight: 600; margin-bottom: 2px; }
+  .shift-name { opacity: 0.85; }
+
+  /* ═══════════════════════════════════
+     NOTIFICATIONS PANEL
+  ═══════════════════════════════════ */
+  .notif-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    pointer-events: none;
+  }
+
+  .notif-panel {
+    position: absolute;
+    top: 60px; right: 16px;
+    width: 360px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-8px) scale(0.97);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .notif-panel.open {
+    transform: none;
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .notif-head {
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .notif-head-title {
+    font-family: var(--serif);
+    font-size: 16px;
+  }
+
+  .mark-all-read {
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    background: none; border: none; font-family: var(--font);
+    transition: color var(--transition);
+  }
+
+  .mark-all-read:hover { color: var(--text); }
+
+  .notif-list {
+    max-height: 380px;
+    overflow-y: auto;
+  }
+
+  .notif-item {
+    display: flex;
+    gap: 12px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background var(--transition);
+    position: relative;
+  }
+
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item:hover { background: var(--surface); }
+  .notif-item.unread { background: #fdfcfa; }
+
+  .notif-dot-indicator {
+    position: absolute;
+    left: 8px; top: 50%;
+    transform: translateY(-50%);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .notif-item.unread .notif-dot-indicator { opacity: 1; }
+  .notif-item:not(.unread) .notif-dot-indicator { opacity: 0; }
+
+  .notif-icon-wrap {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .notif-content { flex: 1; }
+
+  .notif-text {
+    font-size: 13px;
+    line-height: 1.45;
+    margin-bottom: 3px;
+  }
+
+  .notif-text strong { font-weight: 600; }
+
+  .notif-time {
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ═══════════════════════════════════
+     DISCOUNT PAGE
+  ═══════════════════════════════════ */
+  .discount-page {
+    padding: 32px 28px;
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .discount-card-wrapper {
+    flex: 0 0 auto;
+  }
+
+  .discount-card {
+    width: 320px;
+    background: var(--accent);
+    border-radius: 18px;
+    padding: 26px 26px 22px;
+    color: #faf9f6;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .discount-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .discount-card::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .dc-org {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 18px;
+  }
+
+  .dc-name {
+    font-family: var(--serif);
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+
+  .dc-role {
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 20px;
+  }
+
+  .dc-qr {
+    width: 120px; height: 120px;
+    background: #fff;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .dc-discount {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 9px;
+    border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    z-index: 1;
+  }
+
+  .dc-discount-label { font-size: 12px; color: rgba(255,255,255,0.55); }
+
+  .dc-discount-value {
+    font-family: var(--serif);
+    font-size: 20px;
+  }
+
+  .dc-expiry {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 10px;
+    text-align: right;
+    position: relative;
+    z-index: 1;
+  }
+
+  .discount-info { flex: 1; min-width: 260px; }
+
+  .discount-tiers {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .tier-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tier-row:last-child { border-bottom: none; }
+
+  .tier-role {
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+
+  .tier-value {
+    font-family: var(--serif);
+    font-size: 17px;
+    color: var(--success);
+  }
+
+  /* Settings page */
+  .settings-page {
+    padding: 28px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 24px;
+    max-width: 900px;
+  }
+
+  .settings-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .settings-nav-item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .settings-nav-item:hover { background: var(--surface); color: var(--text); }
+  .settings-nav-item.active { background: var(--surface); color: var(--text); font-weight: 500; }
+
+  .settings-content {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .settings-section {
+    display: none;
+    padding: 24px;
+  }
+
+  .settings-section.active { display: block; }
+
+  .settings-title {
+    font-family: var(--serif);
+    font-size: 19px;
+    margin-bottom: 4px;
+  }
+
+  .settings-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 24px;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+
+  .settings-row:last-child { border-bottom: none; }
+
+  .settings-row-label { font-size: 13.5px; font-weight: 500; }
+  .settings-row-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* Toggle switch */
+  .toggle {
+    width: 40px; height: 22px;
+    background: var(--border);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .toggle.on { background: var(--accent); }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .toggle.on::after { transform: translateX(18px); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: #1a1a1a;
+    color: #faf9f6;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 500;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text3);
+  }
+
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-title { font-size: 15px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #bbb; }
+
+  /* Spinner */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.65s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Fade in page content */
+  .page-inner > * {
+    animation: fadeUp 0.22s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .page-inner > *:nth-child(1) { animation-delay: 0ms; }
+  .page-inner > *:nth-child(2) { animation-delay: 40ms; }
+  .page-inner > *:nth-child(3) { animation-delay: 80ms; }
+  .page-inner > *:nth-child(4) { animation-delay: 120ms; }
+  .page-inner > *:nth-child(5) { animation-delay: 160ms; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-icon">⛺</div>
+    <span class="sidebar-brand-text">Campsite</span>
+  </div>
+
+  <div class="sidebar-org">
+    <div class="org-badge" onclick="showToast('Switch organisation coming soon')">
+      <div class="org-logo">SU</div>
+      <span class="org-name">Sussex Students' Union</span>
+      <span class="org-chevron">⌄</span>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-item active" onclick="navTo('dashboard', this)">
+      <span class="nav-icon">◼</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navTo('broadcasts', this)">
+      <span class="nav-icon">📡</span> Broadcasts
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-item" onclick="navTo('calendar', this)">
+      <span class="nav-icon">📅</span> Calendar
+    </div>
+    <div class="nav-item" onclick="navTo('rota', this)">
+      <span class="nav-icon">🗓</span> Rota
+    </div>
+    <div class="nav-item" onclick="navTo('discount', this)">
+      <span class="nav-icon">🎫</span> Discount Card
+    </div>
+  </div>
+
+  <div class="nav-section" style="margin-top:8px">
+    <div class="nav-label">Admin</div>
+    <div class="nav-item" id="admin-nav-item" onclick="toggleAdminMenu(this)">
+      <span class="nav-icon">⚙️</span> Admin
+      <span class="nav-badge grey" id="admin-chevron">›</span>
+    </div>
+    <div class="nav-sub" id="admin-sub-menu">
+      <div class="nav-sub-item active" onclick="navToAdmin('users')">👥 Users</div>
+      <div class="nav-sub-item" onclick="navToAdmin('departments')">🏢 Departments</div>
+      <div class="nav-sub-item" onclick="navToAdmin('org-settings')">🔧 Org Settings</div>
+    </div>
+  </div>
+
+  <div class="sidebar-spacer"></div>
+
+  <div class="sidebar-user" onclick="navTo('settings', document.querySelector('.nav-item.settings-nav-trigger') || null)">
+    <div class="avatar">AJ</div>
+    <div class="user-info">
+      <div class="user-name">Alex Johnson</div>
+      <div class="user-role">Manager · Events & Activities</div>
+    </div>
+    <span class="user-cog">⚙</span>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════
+     MAIN AREA
+══════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+
+    <div class="topbar-search">
+      <span class="topbar-search-icon">🔍</span>
+      <input type="text" placeholder="Search broadcasts, people…" oninput="handleSearch(this.value)">
+    </div>
+
+    <div class="topbar-actions">
+      <button class="icon-btn" onclick="toggleNotifPanel()" title="Notifications">
+        🔔
+        <div class="notif-dot" id="notif-dot"></div>
+      </button>
+      <div class="topbar-avatar" onclick="navTo('settings', null)" title="Settings">AJ</div>
+    </div>
+  </header>
+
+  <!-- ── DASHBOARD PAGE ── -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-inner">
+
+      <div class="greeting">
+        <div class="greeting-row">
+          <div>
+            <h1>Good morning, Alex 👋</h1>
+            <div class="greeting-meta">Thursday, 26 March 2026 · Sussex Students' Union</div>
+          </div>
+          <button class="btn-compose" onclick="openCompose()">✏ New Broadcast</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card" onclick="navTo('broadcasts', null)">
+          <div class="stat-label"><span class="stat-label-icon">📡</span> Total Broadcasts</div>
+          <div class="stat-value">142</div>
+          <div class="stat-sub"><span class="up">↑ 12%</span> this month</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:72%"></div></div>
+        </div>
+        <div class="stat-card" onclick="navTo('admin', null)">
+          <div class="stat-label"><span class="stat-label-icon">👥</span> Active Members</div>
+          <div class="stat-value">348</div>
+          <div class="stat-sub"><span class="up">↑ 8</span> new this week</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:58%"></div></div>
+        </div>
+        <div class="stat-card" onclick="showPendingModal()">
+          <div class="stat-label"><span class="stat-label-icon">⏳</span> Pending Approvals</div>
+          <div class="stat-value" style="color:#B91C1C">5</div>
+          <div class="stat-sub"><span class="down">Needs your attention</span></div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:100%;background:#B91C1C;opacity:0.4"></div></div>
+        </div>
+        <div class="stat-card" onclick="navTo('rota', null)">
+          <div class="stat-label"><span class="stat-label-icon">🗓</span> Shifts This Week</div>
+          <div class="stat-value">24</div>
+          <div class="stat-sub">Your next: <strong>Today 3pm</strong></div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:45%"></div></div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="quick-actions">
+        <div class="qa-card" onclick="openCompose()">
+          <div class="qa-icon">✏️</div>
+          <div>
+            <div class="qa-label">New Broadcast</div>
+            <div class="qa-sub">Send to your dept</div>
+          </div>
+        </div>
+        <div class="qa-card" onclick="navTo('rota', null)">
+          <div class="qa-icon">🗓</div>
+          <div>
+            <div class="qa-label">View Rota</div>
+            <div class="qa-sub">This week's schedule</div>
+          </div>
+        </div>
+        <div class="qa-card" onclick="navTo('discount', null)">
+          <div class="qa-icon">🎫</div>
+          <div>
+            <div class="qa-label">Discount Card</div>
+            <div class="qa-sub">Show your QR code</div>
+          </div>
+        </div>
+        <div class="qa-card" onclick="showPendingModal()">
+          <div class="qa-icon">⏳</div>
+          <div>
+            <div class="qa-label">Pending Members</div>
+            <div class="qa-sub">5 awaiting approval</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two col -->
+      <div class="two-col">
+
+        <!-- Broadcasts -->
+        <div>
+          <div class="section-head">
+            <div class="section-title">Recent Broadcasts</div>
+            <span class="section-link" onclick="navTo('broadcasts', null)">View all →</span>
+          </div>
+          <div class="broadcasts-list">
+            <div class="broadcast-item unread" onclick="showToast('Opening broadcast…')">
+              <div class="broadcast-top">
+                <div class="broadcast-title">📢 End of Year Ball — Volunteer Sign-ups Open!</div>
+                <div class="broadcast-time">2h ago</div>
+              </div>
+              <div class="broadcast-body">We're looking for 20 volunteers to help run the End of Year Ball on June 12th. Shifts are 5pm–midnight. Free ticket included for all volunteers who complete their shift.</div>
+              <div class="broadcast-footer">
+                <span class="tag green">Events & Activities</span>
+                <span class="tag">Volunteer Opportunities</span>
+              </div>
+            </div>
+
+            <div class="broadcast-item unread" onclick="showToast('Opening broadcast…')">
+              <div class="broadcast-top">
+                <div class="broadcast-title">🧑‍💼 HR Policy Update — Holiday Booking Changes</div>
+                <div class="broadcast-time">Yesterday</div>
+              </div>
+              <div class="broadcast-body">From April 1st, holiday requests must be submitted at least 2 weeks in advance via the new online portal. Requests made via email will no longer be accepted.</div>
+              <div class="broadcast-footer">
+                <span class="tag blue">Human Resources</span>
+                <span class="tag">Policy Updates</span>
+              </div>
+            </div>
+
+            <div class="broadcast-item" onclick="showToast('Opening broadcast…')">
+              <div class="broadcast-top">
+                <div class="broadcast-title">📣 Spring Campaign Assets — Available Now</div>
+                <div class="broadcast-time">Mon</div>
+              </div>
+              <div class="broadcast-body">All spring campaign graphics and copy are now live in the shared drive. Please use only approved assets for any public-facing materials — do not use last year's templates.</div>
+              <div class="broadcast-footer">
+                <span class="tag orange">Marketing & Comms</span>
+                <span class="tag">Design Assets</span>
+              </div>
+            </div>
+
+            <div class="broadcast-item" onclick="showToast('Opening broadcast…')">
+              <div class="broadcast-top">
+                <div class="broadcast-title">💙 Mental Health Awareness Week — Staff Resources</div>
+                <div class="broadcast-time">Last week</div>
+              </div>
+              <div class="broadcast-body">A collection of resources and lunchtime sessions are available throughout Mental Health Awareness Week (May 12–18). Sessions are free and open to all staff.</div>
+              <div class="broadcast-footer">
+                <span class="tag purple">Welfare & Support</span>
+                <span class="tag">Support Resources</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+
+          <!-- Mini calendar -->
+          <div class="calendar-widget">
+            <div class="cal-header">
+              <div class="cal-month">March 2026</div>
+              <div class="cal-nav">
+                <button class="cal-nav-btn" onclick="showToast('Previous month')">‹</button>
+                <button class="cal-nav-btn" onclick="showToast('Next month')">›</button>
+              </div>
+            </div>
+            <div class="cal-grid">
+              <div class="cal-days-header">
+                <div class="cal-day-label">Mo</div>
+                <div class="cal-day-label">Tu</div>
+                <div class="cal-day-label">We</div>
+                <div class="cal-day-label">Th</div>
+                <div class="cal-day-label">Fr</div>
+                <div class="cal-day-label">Sa</div>
+                <div class="cal-day-label">Su</div>
+              </div>
+              <div class="cal-days" id="cal-days"></div>
+            </div>
+            <div class="upcoming-events">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Upcoming</div>
+              <div class="event-item" onclick="showToast('Viewing event…')">
+                <div class="event-color-dot" style="background:#1D4ED8"></div>
+                <div class="event-details">
+                  <div class="event-name">Events Team Meeting</div>
+                  <div class="event-time">Tomorrow · 10:00 AM</div>
+                </div>
+              </div>
+              <div class="event-item" onclick="showToast('Viewing event…')">
+                <div class="event-color-dot" style="background:#059669"></div>
+                <div class="event-details">
+                  <div class="event-name">Shift: Events Desk</div>
+                  <div class="event-time">Today · 3:00 – 7:00 PM</div>
+                </div>
+              </div>
+              <div class="event-item" onclick="showToast('Viewing event…')">
+                <div class="event-color-dot" style="background:#7C3AED"></div>
+                <div class="event-details">
+                  <div class="event-name">Ball Volunteer Briefing</div>
+                  <div class="event-time">28 Mar · 6:00 PM</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending verifications -->
+          <div class="pending-panel">
+            <div class="pending-panel-header">
+              <div class="pending-panel-title">
+                Pending Verifications
+                <span class="pending-count-badge">5</span>
+              </div>
+              <span class="section-link" onclick="showPendingModal()">View all</span>
+            </div>
+            <div class="pending-list">
+              <div class="pending-item" id="pi-1">
+                <div class="avatar sm">JC</div>
+                <div class="pending-info">
+                  <div class="pending-name">Jamie Clarke</div>
+                  <div class="pending-meta">Events & Activities · Weekly Paid Staff</div>
+                </div>
+                <div class="pending-actions">
+                  <button class="btn-approve" onclick="approveUser('pi-1', 'Jamie Clarke')">✓</button>
+                  <button class="btn-reject" onclick="rejectUser('pi-1', 'Jamie Clarke')">✕</button>
+                </div>
+              </div>
+              <div class="pending-item" id="pi-2">
+                <div class="avatar sm">RL</div>
+                <div class="pending-info">
+                  <div class="pending-name">Raj Lakhani</div>
+                  <div class="pending-meta">Events & Activities · Coordinator</div>
+                </div>
+                <div class="pending-actions">
+                  <button class="btn-approve" onclick="approveUser('pi-2', 'Raj Lakhani')">✓</button>
+                  <button class="btn-reject" onclick="rejectUser('pi-2', 'Raj Lakhani')">✕</button>
+                </div>
+              </div>
+              <div class="pending-item" id="pi-3">
+                <div class="avatar sm">SP</div>
+                <div class="pending-info">
+                  <div class="pending-name">Sophie Park</div>
+                  <div class="pending-meta">Marketing & Comms · Assistant</div>
+                </div>
+                <div class="pending-actions">
+                  <button class="btn-approve" onclick="approveUser('pi-3', 'Sophie Park')">✓</button>
+                  <button class="btn-reject" onclick="rejectUser('pi-3', 'Sophie Park')">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── BROADCASTS PAGE ── -->
+  <div class="page" id="page-broadcasts">
+    <div class="page-toolbar">
+      <div class="filter-pills">
+        <button class="filter-pill active" onclick="filterBroadcasts('all', this)">All</button>
+        <button class="filter-pill" onclick="filterBroadcasts('unread', this)">Unread</button>
+        <button class="filter-pill" onclick="filterBroadcasts('events', this)">Events & Activities</button>
+        <button class="filter-pill" onclick="filterBroadcasts('hr', this)">Human Resources</button>
+        <button class="filter-pill" onclick="filterBroadcasts('marketing', this)">Marketing</button>
+        <button class="filter-pill" onclick="filterBroadcasts('welfare', this)">Welfare</button>
+      </div>
+      <button class="btn-compose" onclick="openCompose()">✏ New Broadcast</button>
+    </div>
+    <div class="broadcasts-full" id="broadcasts-full-list">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- ── CALENDAR PAGE ── -->
+  <div class="page" id="page-calendar">
+    <div class="page-inner">
+      <div class="greeting">
+        <div class="greeting-row">
+          <div>
+            <h1>Calendar</h1>
+            <div class="greeting-meta">Showing events, shifts & broadcasts for March 2026</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost-modal" onclick="showToast('Syncing Google Calendar…')">🔗 Sync Google Calendar</button>
+            <button class="btn-compose" onclick="showToast('Add event coming soon')">+ Add Event</button>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="rota-nav-btn" onclick="showToast('Previous month')">‹</button>
+            <div style="font-family:var(--serif);font-size:18px">March 2026</div>
+            <button class="rota-nav-btn" onclick="showToast('Next month')">›</button>
+          </div>
+          <div class="view-toggle">
+            <button class="view-toggle-btn active" onclick="calToggle(this)">Month</button>
+            <button class="view-toggle-btn" onclick="calToggle(this)">Week</button>
+            <button class="view-toggle-btn" onclick="calToggle(this)">Agenda</button>
+          </div>
+        </div>
+        <div style="padding:20px" id="cal-full-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ROTA PAGE ── -->
+  <div class="page" id="page-rota">
+    <div class="rota-header">
+      <div class="rota-nav">
+        <button class="rota-nav-btn" onclick="showToast('Previous week')">‹</button>
+        <div class="rota-date-label">24–30 March 2026</div>
+        <button class="rota-nav-btn" onclick="showToast('Next week')">›</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" onclick="rotaToggle(this)">Week</button>
+          <button class="view-toggle-btn" onclick="rotaToggle(this)">List</button>
+        </div>
+        <button class="btn-ghost-modal" onclick="showToast('Importing from Google Sheets…')">📥 Import Sheets</button>
+        <button class="btn-compose" onclick="showToast('Add shift form coming in Admin section')">+ Add Shift</button>
+      </div>
+    </div>
+    <div class="rota-week">
+      <div class="rota-grid" id="rota-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── DISCOUNT PAGE ── -->
+  <div class="page" id="page-discount">
+    <div class="discount-page">
+      <div class="discount-card-wrapper">
+        <div class="section-head" style="margin-bottom:14px">
+          <div class="section-title">My Discount Card</div>
+        </div>
+        <div class="discount-card">
+          <div class="dc-org">Sussex Students' Union</div>
+          <div class="dc-name">Alex Johnson</div>
+          <div class="dc-role">Manager · Events & Activities</div>
+          <div class="dc-qr" id="qr-container">
+            <canvas id="qr-canvas" width="104" height="104"></canvas>
+          </div>
+          <div class="dc-discount">
+            <span class="dc-discount-label">Staff Discount</span>
+            <span class="dc-discount-value">15% off</span>
+          </div>
+          <div class="dc-expiry">QR refreshes in <span id="qr-countdown">23:47:12</span></div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button class="btn-ghost-modal" style="flex:1" onclick="showToast('Refreshing QR code…')">🔄 Refresh QR</button>
+          <button class="btn-ghost-modal" style="flex:1" onclick="navTo('scan', null)">📷 Scan a Card</button>
+        </div>
+      </div>
+
+      <div class="discount-info">
+        <div class="section-head">
+          <div class="section-title">Discount Tiers</div>
+        </div>
+        <div class="discount-tiers">
+          <div class="tier-row" style="background:var(--surface)">
+            <div>
+              <div class="tier-role">Manager / Senior Manager</div>
+              <div style="font-size:12px;color:var(--text3)">Your current tier</div>
+            </div>
+            <div class="tier-value">15% off</div>
+          </div>
+          <div class="tier-row">
+            <div class="tier-role">Super Admin</div>
+            <div class="tier-value">20% off</div>
+          </div>
+          <div class="tier-row">
+            <div class="tier-role">Coordinator</div>
+            <div class="tier-value">12% off</div>
+          </div>
+          <div class="tier-row">
+            <div class="tier-role">Assistant</div>
+            <div class="tier-value">10% off</div>
+          </div>
+          <div class="tier-row">
+            <div class="tier-role">Weekly Paid Staff</div>
+            <div class="tier-value">10% off</div>
+          </div>
+          <div class="tier-row">
+            <div class="tier-role">Society / Club Leader</div>
+            <div class="tier-value">8% off</div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px">
+          <div style="font-weight:500;margin-bottom:6px;font-size:13.5px">How it works</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.7">
+            Show your QR code at participating venues. The cashier will scan it using the Campsite app to verify your employment status and apply the correct discount.<br><br>
+            QR codes rotate every 24 hours automatically for security. Your discount tier is based on your current role.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS PAGE ── -->
+  <div class="page" id="page-settings">
+    <div class="settings-page">
+      <div class="settings-nav">
+        <div class="settings-nav-item active" onclick="settingsTab('profile', this)">👤 Profile</div>
+        <div class="settings-nav-item" onclick="settingsTab('notifications', this)">🔔 Notifications</div>
+        <div class="settings-nav-item" onclick="settingsTab('subscriptions', this)">📬 Subscriptions</div>
+        <div class="settings-nav-item" onclick="settingsTab('appearance', this)">🎨 Appearance</div>
+        <div class="settings-nav-item" onclick="settingsTab('security', this)">🔒 Security</div>
+      </div>
+
+      <div class="settings-content">
+        <!-- Profile -->
+        <div class="settings-section active" id="settings-profile">
+          <div class="settings-title">Profile</div>
+          <div class="settings-sub">Your personal details visible to your organisation.</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+            <div class="avatar lg" style="background:var(--accent);color:#faf9f6">AJ</div>
+            <div>
+              <button class="btn-ghost-modal" onclick="showToast('Upload photo coming soon')">Upload photo</button>
+              <div style="font-size:12px;color:var(--text3);margin-top:5px">JPG or PNG, max 2MB</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div class="field-modal"><label>First name</label><input type="text" value="Alex"></div>
+            <div class="field-modal"><label>Last name</label><input type="text" value="Johnson"></div>
+          </div>
+          <div class="field-modal"><label>Email address</label><input type="email" value="alex.johnson@sussex.ac.uk"></div>
+          <div style="margin-top:8px">
+            <button class="btn-primary-modal" onclick="showToast('Profile saved ✓')">Save changes</button>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="settings-section" id="settings-notifications">
+          <div class="settings-title">Notifications</div>
+          <div class="settings-sub">Choose what you're notified about and how.</div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">New broadcasts</div><div class="settings-row-sub">Push + in-app alerts for broadcasts in your subscribed categories</div></div>
+            <div class="toggle on" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Shift reminders</div><div class="settings-row-sub">Notified 2 hours before your shift starts</div></div>
+            <div class="toggle on" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Pending verifications</div><div class="settings-row-sub">When a new member request needs your approval</div></div>
+            <div class="toggle on" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Email notifications</div><div class="settings-row-sub">Critical alerts only (account changes, approvals)</div></div>
+            <div class="toggle" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Do Not Disturb</div><div class="settings-row-sub">Quiet hours: 10pm – 8am. Notifications queued until morning.</div></div>
+            <div class="toggle on" onclick="toggleSwitch(this)"></div>
+          </div>
+        </div>
+
+        <!-- Subscriptions -->
+        <div class="settings-section" id="settings-subscriptions">
+          <div class="settings-title">Broadcast Subscriptions</div>
+          <div class="settings-sub">Choose which categories you receive in each department.</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px">
+              <div style="font-weight:500;margin-bottom:10px;font-size:13.5px">🎉 Events & Activities</div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px">
+                <div class="filter-pill active" onclick="this.classList.toggle('active')">Announcements</div>
+                <div class="filter-pill active" onclick="this.classList.toggle('active')">Events</div>
+                <div class="filter-pill active" onclick="this.classList.toggle('active')">Recruitment</div>
+                <div class="filter-pill" onclick="this.classList.toggle('active')">Volunteer Opportunities</div>
+              </div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px">
+              <div style="font-weight:500;margin-bottom:10px;font-size:13.5px">🧑‍💼 Human Resources</div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px">
+                <div class="filter-pill active" onclick="this.classList.toggle('active')">Announcements</div>
+                <div class="filter-pill active" onclick="this.classList.toggle('active')">Policy Updates</div>
+                <div class="filter-pill" onclick="this.classList.toggle('active')">Recruitment</div>
+                <div class="filter-pill" onclick="this.classList.toggle('active')">Lost Property</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <button class="btn-primary-modal" onclick="showToast('Subscription preferences saved ✓')">Save preferences</button>
+          </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="settings-section" id="settings-appearance">
+          <div class="settings-title">Appearance</div>
+          <div class="settings-sub">Customise the look and feel of your Campsite.</div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Dark mode</div><div class="settings-row-sub">Switch between light and dark theme</div></div>
+            <div class="toggle" onclick="toggleSwitch(this);showToast('Dark mode coming soon!')"></div>
+          </div>
+          <div style="margin-top:16px">
+            <div style="font-size:13px;font-weight:500;margin-bottom:10px">Accent colour</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px" id="accent-swatches"></div>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="settings-section" id="settings-security">
+          <div class="settings-title">Security</div>
+          <div class="settings-sub">Manage your password and account security.</div>
+          <div class="field-modal"><label>Current password</label><input type="password" placeholder="••••••••"></div>
+          <div class="field-modal"><label>New password</label><input type="password" placeholder="••••••••"></div>
+          <div class="field-modal"><label>Confirm new password</label><input type="password" placeholder="••••••••"></div>
+          <button class="btn-primary-modal" onclick="showToast('Password updated ✓')">Update password</button>
+          <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+            <div style="font-size:13.5px;font-weight:500;color:var(--warning);margin-bottom:8px">Danger zone</div>
+            <button style="padding:9px 18px;background:none;border:1px solid #fecaca;color:var(--warning);border-radius:8px;font-size:13px;cursor:pointer;font-family:var(--font)" onclick="showToast('Please contact your Super Admin to deactivate your account')">Deactivate account</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- /main -->
+
+<!-- ══════════════════════════════════════
+     COMPOSE MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="compose-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Broadcast</div>
+      <button class="modal-close" onclick="closeCompose()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="compose-toggle">
+        <button class="compose-tab active" onclick="composeTabSwitch('send', this)">Send now</button>
+        <button class="compose-tab" onclick="composeTabSwitch('schedule', this)">Schedule</button>
+        <button class="compose-tab" onclick="composeTabSwitch('draft', this)">Save as draft</button>
+      </div>
+      <div class="field-modal">
+        <label>Title</label>
+        <input type="text" id="compose-title" placeholder="e.g. New shift available — Friday afternoon">
+      </div>
+      <div class="field-row-modal">
+        <div class="field-modal">
+          <label>Department</label>
+          <select id="compose-dept">
+            <option>Events & Activities</option>
+            <option>Human Resources</option>
+            <option>Marketing & Comms</option>
+            <option>Welfare & Support</option>
+            <option>Finance</option>
+          </select>
+        </div>
+        <div class="field-modal">
+          <label>Category</label>
+          <select id="compose-cat">
+            <option>Announcements</option>
+            <option>Events</option>
+            <option>Recruitment</option>
+            <option>Volunteer Opportunities</option>
+            <option>Shifts</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-modal">
+        <label>Message</label>
+        <textarea id="compose-body" placeholder="Write your broadcast message here…"></textarea>
+      </div>
+      <div class="field-modal" id="schedule-field" style="display:none">
+        <label>Scheduled date & time</label>
+        <input type="datetime-local" id="compose-schedule">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost-modal" onclick="closeCompose()">Cancel</button>
+      <button class="btn-primary-modal" onclick="sendBroadcast()" id="send-btn">Send broadcast</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     NOTIFICATIONS PANEL
+══════════════════════════════════════ -->
+<div class="notif-overlay" id="notif-overlay" onclick="closeNotifPanel()">
+  <div class="notif-panel" id="notif-panel" onclick="event.stopPropagation()">
+    <div class="notif-head">
+      <div class="notif-head-title">Notifications</div>
+      <button class="mark-all-read" onclick="markAllRead()">Mark all read</button>
+    </div>
+    <div class="notif-list">
+      <div class="notif-item unread" onclick="handleNotif(this)">
+        <div class="notif-dot-indicator"></div>
+        <div class="notif-icon-wrap">⏳</div>
+        <div class="notif-content">
+          <div class="notif-text"><strong>Jamie Clarke</strong> is awaiting verification in Events & Activities</div>
+          <div class="notif-time">2 hours ago</div>
+        </div>
+      </div>
+      <div class="notif-item unread" onclick="handleNotif(this)">
+        <div class="notif-dot-indicator"></div>
+        <div class="notif-icon-wrap">📡</div>
+        <div class="notif-content">
+          <div class="notif-text">New broadcast in <strong>Events & Activities</strong> — End of Year Ball Volunteers</div>
+          <div class="notif-time">2 hours ago</div>
+        </div>
+      </div>
+      <div class="notif-item unread" onclick="handleNotif(this)">
+        <div class="notif-dot-indicator"></div>
+        <div class="notif-icon-wrap">⏳</div>
+        <div class="notif-content">
+          <div class="notif-text"><strong>Raj Lakhani</strong> joined your department and needs verification</div>
+          <div class="notif-time">Yesterday</div>
+        </div>
+      </div>
+      <div class="notif-item" onclick="handleNotif(this)">
+        <div class="notif-dot-indicator"></div>
+        <div class="notif-icon-wrap">🗓</div>
+        <div class="notif-content">
+          <div class="notif-text">Reminder: Your shift <strong>Events Desk</strong> starts in 2 hours</div>
+          <div class="notif-time">Today at 1:00 PM</div>
+        </div>
+      </div>
+      <div class="notif-item" onclick="handleNotif(this)">
+        <div class="notif-dot-indicator"></div>
+        <div class="notif-icon-wrap">✅</div>
+        <div class="notif-content">
+          <div class="notif-text">Your broadcast <strong>"Spring Volunteer Drive"</strong> was sent successfully</div>
+          <div class="notif-time">Mon 23 Mar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── DATA ─── */
+const BROADCASTS = [
+  { id:1, unread:true, title:'📢 End of Year Ball — Volunteer Sign-ups Open!', dept:'Events & Activities', cat:'Volunteer Opportunities', time:'2h ago', body:'We\'re looking for 20 volunteers to help run the End of Year Ball on June 12th. Shifts are 5pm–midnight. Free ticket included for all volunteers who complete their shift.' },
+  { id:2, unread:true, title:'🧑‍💼 HR Policy Update — Holiday Booking Changes', dept:'Human Resources', cat:'Policy Updates', time:'Yesterday', body:'From April 1st, holiday requests must be submitted at least 2 weeks in advance via the new online portal. Requests made via email will no longer be accepted.' },
+  { id:3, unread:false, title:'📣 Spring Campaign Assets — Available Now', dept:'Marketing & Comms', cat:'Design Assets', time:'Mon', body:'All spring campaign graphics and copy are now live in the shared drive. Please use only approved assets for any public-facing materials.' },
+  { id:4, unread:false, title:'💙 Mental Health Awareness Week — Staff Resources', dept:'Welfare & Support', cat:'Support Resources', time:'Last week', body:'A collection of resources and lunchtime sessions are available throughout Mental Health Awareness Week (May 12–18).' },
+  { id:5, unread:false, title:'💷 Q1 Budget Report Published', dept:'Finance', cat:'Budget Updates', time:'Last week', body:'The Q1 budget report is now available in the admin portal. All managers please review your department spend against forecast.' },
+  { id:6, unread:false, title:'🎉 Society Fair — Stall Applications Now Open', dept:'Events & Activities', cat:'Events', time:'2 weeks ago', body:'Applications for stalls at the Spring Society Fair (April 14th) are now open. Societies must apply by March 31st.' },
+];
+
+const DEPT_TAG_CLASSES = {
+  'Events & Activities': 'green',
+  'Human Resources': 'blue',
+  'Marketing & Comms': 'orange',
+  'Welfare & Support': 'purple',
+  'Finance': '',
+};
+
+/* ─── NAVIGATION ─── */
+let currentPage = 'dashboard';
+
+function navTo(page, clickedEl) {
+  // remove active from all nav items
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  // try to activate correct nav item
+  if (clickedEl) clickedEl.classList.add('active');
+
+  // hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+  // show target page (admin maps to dashboard for now)
+  const target = document.getElementById('page-' + page) || document.getElementById('page-dashboard');
+  target.classList.add('active');
+
+  // topbar title
+  const titles = {dashboard:'Dashboard', broadcasts:'Broadcasts', calendar:'Calendar', rota:'Rota', discount:'Discount Card', settings:'Settings', admin:'Admin'};
+  document.getElementById('topbar-title').textContent = titles[page] || 'Campsite';
+
+  currentPage = page;
+
+  if (page === 'broadcasts') renderBroadcastsFull('all');
+  if (page === 'rota') renderRota();
+  if (page === 'calendar') renderFullCalendar();
+  if (page === 'settings') renderAccentSwatches();
+
+  closeNotifPanel();
+}
+
+function toggleAdminMenu(el) {
+  const sub = document.getElementById('admin-sub-menu');
+  const chevron = document.getElementById('admin-chevron');
+  const open = sub.classList.toggle('open');
+  chevron.textContent = open ? '⌄' : '›';
+  el.classList.toggle('active', open);
+}
+
+function navToAdmin(sub) {
+  document.querySelectorAll('.nav-sub-item').forEach(i => i.classList.remove('active'));
+  event.target.classList.add('active');
+  navTo('admin', null);
+  showToast('Admin: ' + sub + ' — coming in next section!');
+}
+
+/* ─── CALENDAR MINI ─── */
+function renderMiniCal() {
+  const grid = document.getElementById('cal-days');
+  if (!grid) return;
+  const today = 26;
+  const eventDays = [4, 11, 14, 19, 26, 28, 31];
+  // March 2026 starts on Sunday — offset = 6 (Mon-based grid)
+  const offset = 6;
+  const days = 31;
+  let html = '';
+  for (let i = 0; i < offset; i++) {
+    const d = 28 + i; // Feb days
+    html += `<div class="cal-day other">${d}</div>`;
+  }
+  for (let d = 1; d <= days; d++) {
+    const isToday = d === today;
+    const hasEvent = eventDays.includes(d);
+    html += `<div class="cal-day${isToday?' today':''}${hasEvent?' has-event':''}" onclick="showToast('March ${d}')">${d}</div>`;
+  }
+  // fill remaining cells
+  const total = offset + days;
+  const rem = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let i = 1; i <= rem; i++) {
+    html += `<div class="cal-day other">${i}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+/* ─── FULL CALENDAR ─── */
+function renderFullCalendar() {
+  const grid = document.getElementById('cal-full-grid');
+  if (!grid) return;
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const today = 26;
+  const offset = 6;
+  const total = 31;
+  const events = {
+    4: [{label:'Team Meeting', color:'#1D4ED8'}],
+    11: [{label:'Shift: Events Desk', color:'#059669'}],
+    14: [{label:'Society Fair Deadline', color:'#7C3AED'}],
+    26: [{label:'Shift: Events Desk 3–7pm', color:'#059669'},{label:'Pending Review', color:'#B91C1C'}],
+    27: [{label:'Events Team Meeting', color:'#1D4ED8'}],
+    28: [{label:'Ball Volunteer Briefing', color:'#7C3AED'}],
+  };
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px">`;
+  days.forEach(d => { html += `<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:4px 0">${d}</div>`; });
+  html += '</div>';
+
+  html += `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">`;
+
+  for (let i = 0; i < offset; i++) {
+    html += `<div style="min-height:72px;border-radius:8px;padding:6px;background:var(--surface);opacity:0.4"></div>`;
+  }
+  for (let d = 1; d <= total; d++) {
+    const isToday = d === today;
+    const evs = events[d] || [];
+    html += `<div style="min-height:72px;border-radius:8px;padding:6px;background:${isToday?'var(--accent)':'var(--surface)'};cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'" onclick="showToast('March ${d}')">
+      <div style="font-size:13px;font-weight:600;color:${isToday?'#faf9f6':'var(--text)'};margin-bottom:4px">${d}</div>
+      ${evs.map(e=>`<div style="font-size:10.5px;background:${isToday?'rgba(255,255,255,.15)':e.color+'22'};color:${isToday?'rgba(255,255,255,.85)':e.color};padding:2px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.label}</div>`).join('')}
+    </div>`;
+  }
+  const rem2 = (offset + total) % 7 === 0 ? 0 : 7 - ((offset + total) % 7);
+  for (let i = 1; i <= rem2; i++) {
+    html += `<div style="min-height:72px;border-radius:8px;padding:6px;background:var(--surface);opacity:0.4"></div>`;
+  }
+  html += '</div>';
+  grid.innerHTML = html;
+}
+
+/* ─── ROTA ─── */
+function renderRota() {
+  const grid = document.getElementById('rota-grid');
+  if (!grid) return;
+  const days = ['Mon 24', 'Tue 25', 'Wed 26', 'Thu 27', 'Fri 28', 'Sat 29', 'Sun 30'];
+  const todayIdx = 2; // Wed 26
+
+  const shifts = {
+    0: [{time:'09:00–13:00', name:'Events Desk', color:'blue'}, {time:'14:00–17:00', name:'Admin: Raj Lakhani', color:'green'}],
+    1: [{time:'10:00–14:00', name:'Events Desk', color:'blue'}],
+    2: [{time:'15:00–19:00', name:'Events Desk ★', color:'green'}, {time:'10:00–12:00', name:'Team Briefing', color:'purple'}],
+    3: [{time:'09:00–13:00', name:'Marketing Collab', color:'orange'}],
+    4: [{time:'14:00–18:00', name:'Events Desk', color:'blue'}, {time:'18:00–21:00', name:'Ball Briefing', color:'purple'}],
+    5: [],
+    6: [],
+  };
+
+  let html = '<div></div>'; // empty top-left
+
+  days.forEach((d, i) => {
+    html += `<div class="rota-day-header${i===todayIdx?' today-col':''}">
+      <div class="rota-day-name">${d.split(' ')[0]}</div>
+      <div class="rota-day-num">${d.split(' ')[1]}</div>
+    </div>`;
+  });
+
+  // time column
+  const times = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
+  html += `<div class="rota-time-col">${times.map(t=>`<div class="rota-time-slot"><div class="rota-time-label">${t}</div></div>`).join('')}</div>`;
+
+  days.forEach((d, i) => {
+    const dayShifts = shifts[i] || [];
+    html += `<div class="rota-col">
+      <div class="rota-col-body">
+        ${dayShifts.map(s=>`<div class="shift-card ${s.color}" onclick="showToast('Shift: ${s.name}, ${s.time}')">
+          <div class="shift-time">${s.time}</div>
+          <div class="shift-name">${s.name}</div>
+        </div>`).join('')}
+        ${dayShifts.length===0?`<div style="height:768px;border:1.5px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:12px" onclick="showToast('Add shift')">+</div>`:''}
+      </div>
+    </div>`;
+  });
+
+  grid.innerHTML = html;
+}
+
+/* ─── BROADCASTS FULL ─── */
+function renderBroadcastsFull(filter) {
+  const list = document.getElementById('broadcasts-full-list');
+  if (!list) return;
+
+  let filtered = BROADCASTS;
+  if (filter === 'unread') filtered = BROADCASTS.filter(b=>b.unread);
+  if (filter === 'events') filtered = BROADCASTS.filter(b=>b.dept.includes('Events'));
+  if (filter === 'hr') filtered = BROADCASTS.filter(b=>b.dept.includes('Human'));
+  if (filter === 'marketing') filtered = BROADCASTS.filter(b=>b.dept.includes('Marketing'));
+  if (filter === 'welfare') filtered = BROADCASTS.filter(b=>b.dept.includes('Welfare'));
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No broadcasts here</div><div class="empty-sub">Try a different filter or compose a new broadcast</div></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(b => `
+    <div class="broadcast-item${b.unread?' unread':''}" onclick="markBroadcastRead(${b.id}, this)">
+      <div class="broadcast-top">
+        <div class="broadcast-title">${b.title}</div>
+        <div class="broadcast-time">${b.time}</div>
+      </div>
+      <div class="broadcast-body">${b.body}</div>
+      <div class="broadcast-footer">
+        <span class="tag ${DEPT_TAG_CLASSES[b.dept]||''}">${b.dept}</span>
+        <span class="tag">${b.cat}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterBroadcasts(filter, btn) {
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderBroadcastsFull(filter);
+}
+
+function markBroadcastRead(id, el) {
+  const b = BROADCASTS.find(x=>x.id===id);
+  if (b) b.unread = false;
+  el.classList.remove('unread');
+  showToast('Broadcast opened');
+}
+
+/* ─── COMPOSE ─── */
+let composeMode = 'send';
+
+function openCompose() {
+  document.getElementById('compose-overlay').classList.add('open');
+}
+
+function closeCompose() {
+  document.getElementById('compose-overlay').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('compose-overlay')) closeCompose();
+}
+
+function composeTabSwitch(mode, btn) {
+  composeMode = mode;
+  document.querySelectorAll('.compose-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const sendBtn = document.getElementById('send-btn');
+  const schedField = document.getElementById('schedule-field');
+  if (mode === 'send') { sendBtn.textContent = 'Send broadcast'; schedField.style.display='none'; }
+  if (mode === 'schedule') { sendBtn.textContent = 'Schedule broadcast'; schedField.style.display='block'; }
+  if (mode === 'draft') { sendBtn.textContent = 'Save as draft'; schedField.style.display='none'; }
+}
+
+function sendBroadcast() {
+  const title = document.getElementById('compose-title').value.trim();
+  const body = document.getElementById('compose-body').value.trim();
+  if (!title) { showToast('Please add a title'); return; }
+  if (!body) { showToast('Please add a message body'); return; }
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Sending…';
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = 'Send broadcast';
+    closeCompose();
+    const msg = composeMode === 'draft' ? '✓ Draft saved' : composeMode === 'schedule' ? '✓ Broadcast scheduled' : '✓ Broadcast sent!';
+    showToast(msg);
+    document.getElementById('compose-title').value = '';
+    document.getElementById('compose-body').value = '';
+  }, 1400);
+}
+
+/* ─── PENDING APPROVALS ─── */
+function approveUser(id, name) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.transition = 'opacity .3s, transform .3s';
+  el.style.opacity = '0';
+  el.style.transform = 'translateX(12px)';
+  setTimeout(() => el.remove(), 300);
+  showToast(`✓ ${name} approved`);
+}
+
+function rejectUser(id, name) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.transition = 'opacity .3s, transform .3s';
+  el.style.opacity = '0';
+  el.style.transform = 'translateX(-12px)';
+  setTimeout(() => el.remove(), 300);
+  showToast(`${name} rejected`);
+}
+
+function showPendingModal() {
+  navTo('admin', null);
+  showToast('Showing all 5 pending verifications in Admin section');
+}
+
+/* ─── NOTIFICATIONS ─── */
+let notifOpen = false;
+
+function toggleNotifPanel() {
+  notifOpen = !notifOpen;
+  const panel = document.getElementById('notif-panel');
+  const overlay = document.getElementById('notif-overlay');
+  if (notifOpen) {
+    panel.classList.add('open');
+    overlay.style.pointerEvents = 'all';
+  } else {
+    closeNotifPanel();
+  }
+}
+
+function closeNotifPanel() {
+  notifOpen = false;
+  document.getElementById('notif-panel').classList.remove('open');
+  document.getElementById('notif-overlay').style.pointerEvents = 'none';
+}
+
+function handleNotif(el) {
+  el.classList.remove('unread');
+  updateNotifDot();
+  showToast('Notification viewed');
+  closeNotifPanel();
+}
+
+function markAllRead() {
+  document.querySelectorAll('.notif-item.unread').forEach(n => n.classList.remove('unread'));
+  updateNotifDot();
+  showToast('All notifications marked as read');
+}
+
+function updateNotifDot() {
+  const unread = document.querySelectorAll('.notif-item.unread').length;
+  const dot = document.getElementById('notif-dot');
+  dot.style.display = unread > 0 ? 'block' : 'none';
+}
+
+/* ─── SETTINGS ─── */
+function settingsTab(tab, el) {
+  document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('settings-' + tab).classList.add('active');
+}
+
+function toggleSwitch(el) {
+  el.classList.toggle('on');
+}
+
+const ACCENTS = [
+  { name:'Midnight', color:'#121212' },
+  { name:'Ocean', color:'#1D4ED8' },
+  { name:'Emerald', color:'#059669' },
+  { name:'Sunset', color:'#F97316' },
+  { name:'Orchid', color:'#7C3AED' },
+  { name:'Rose', color:'#E11D48' },
+];
+
+let activeAccent = 0;
+
+function renderAccentSwatches() {
+  const wrap = document.getElementById('accent-swatches');
+  if (!wrap) return;
+  wrap.innerHTML = ACCENTS.map((a,i) => `
+    <div onclick="setAccent(${i})" style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer">
+      <div style="width:32px;height:32px;border-radius:50%;background:${a.color};border:2px solid ${i===activeAccent?a.color:'transparent'};outline:2px solid ${i===activeAccent?a.color+'44':'transparent'};transition:all .15s"></div>
+      <div style="font-size:10.5px;color:var(--text3)">${a.name}</div>
+    </div>
+  `).join('');
+}
+
+function setAccent(i) {
+  activeAccent = i;
+  document.documentElement.style.setProperty('--accent', ACCENTS[i].color);
+  renderAccentSwatches();
+  showToast(`Accent set to ${ACCENTS[i].name}`);
+}
+
+/* ─── CALENDAR TOGGLES ─── */
+function calToggle(btn) {
+  btn.closest('.view-toggle').querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  showToast(btn.textContent + ' view');
+}
+
+function rotaToggle(btn) {
+  btn.closest('.view-toggle').querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  showToast(btn.textContent + ' view');
+}
+
+/* ─── SEARCH ─── */
+function handleSearch(val) {
+  if (val.length > 1) showToast('Searching for "' + val + '"…');
+}
+
+/* ─── QR CANVAS ─── */
+function drawQR() {
+  const canvas = document.getElementById('qr-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const S = 104;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, S, S);
+  ctx.fillStyle = '#121212';
+  // simple fake QR pattern
+  const seed = [
+    [1,1,1,1,1,1,1,0,1,0,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
+    [1,0,1,1,1,0,1,0,1,1,1,0,1,1,1,0,1],
+    [1,0,1,1,1,0,1,0,0,1,0,0,1,1,1,0,1],
+    [1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1],
+    [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1],
+    [0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0],
+    [1,0,1,1,0,1,1,1,0,1,1,0,1,0,1,1,0],
+    [0,1,0,0,1,0,0,0,1,0,0,1,0,1,0,0,1],
+    [1,1,1,0,1,1,1,1,0,1,1,0,1,1,0,1,0],
+    [0,0,0,0,0,0,0,0,1,1,0,0,1,0,1,0,1],
+    [1,1,1,1,1,1,1,0,0,0,1,0,1,1,0,1,0],
+    [1,0,0,0,0,0,1,0,1,0,0,1,0,0,1,0,1],
+    [1,0,1,1,1,0,1,0,1,1,1,0,0,1,0,1,0],
+    [1,0,0,0,0,0,1,0,0,1,0,1,1,0,1,0,1],
+    [1,1,1,1,1,1,1,0,1,0,1,1,0,1,1,1,0],
+  ];
+  const cell = Math.floor(S / seed.length);
+  seed.forEach((row, ri) => {
+    row.forEach((bit, ci) => {
+      if (bit) ctx.fillRect(ci * cell + 2, ri * cell + 2, cell - 1, cell - 1);
+    });
+  });
+}
+
+/* ─── QR COUNTDOWN ─── */
+function startCountdown() {
+  const el = document.getElementById('qr-countdown');
+  if (!el) return;
+  let h = 23, m = 47, s = 12;
+  setInterval(() => {
+    s--;
+    if (s < 0) { s = 59; m--; }
+    if (m < 0) { m = 59; h--; }
+    if (h < 0) { h = 23; m = 59; s = 59; }
+    el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 1000);
+}
+
+/* ─── TOAST ─── */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ─── INIT ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  renderMiniCal();
+  drawQR();
+  startCountdown();
+  updateNotifDot();
+});
+</script>
+</body>
+</html>

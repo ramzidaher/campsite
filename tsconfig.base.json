@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "jsx": "react-jsx",
+    "paths": {
+      "@campsite/api": ["./packages/api/src/index.ts"],
+      "@campsite/api/*": ["./packages/api/src/*"],
+      "@campsite/theme": ["./packages/theme/src/index.ts"],
+      "@campsite/theme/*": ["./packages/theme/src/*"],
+      "@campsite/types": ["./packages/types/src/index.ts"],
+      "@campsite/types/*": ["./packages/types/src/*"],
+      "@campsite/ui": ["./packages/ui/src/index.ts"],
+      "@campsite/ui/*": ["./packages/ui/src/*"]
+    }
+  }
+}

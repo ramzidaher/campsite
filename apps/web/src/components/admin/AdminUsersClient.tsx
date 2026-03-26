@@ -1,0 +1,638 @@
+'use client';
+
+import { PROFILE_ROLES, type ProfileRole } from '@campsite/types';
+import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+export type UserRow = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  role: string;
+  status: string;
+  created_at: string;
+  departments: string[];
+};
+
+const PAGE = 25;
+
+const ROLE_OPTION_LABEL: Record<string, string> = {
+  org_admin: 'Org admin',
+  manager: 'Manager',
+  coordinator: 'Coordinator',
+  administrator: 'Administrator',
+  duty_manager: 'Duty manager',
+  csa: 'CSA',
+  society_leader: 'Society leader',
+};
+
+function rolePillClass(role: string): string {
+  const m: Record<string, string> = {
+    org_admin: 'bg-[#1a1a1a] text-[#faf9f6]',
+    manager: 'bg-[#14532d] text-[#86efac]',
+    coordinator: 'bg-[#3b0764] text-[#d8b4fe]',
+    administrator: 'bg-[#431407] text-[#fdba74]',
+    duty_manager: 'bg-[#0c4a6e] text-[#bae6fd]',
+    csa: 'border border-[#d8d8d8] bg-[#f5f4f1] text-[#6b6b6b]',
+    society_leader: 'bg-[#fef3c7] text-[#92400e]',
+  };
+  return m[role] ?? 'border border-[#d8d8d8] bg-[#f5f4f1] text-[#6b6b6b]';
+}
+
+function statusBadge(status: string) {
+  if (status === 'active') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[11px] font-medium text-[#166534]">
+        <span className="h-[5px] w-[5px] rounded-full bg-current" />
+        Active
+      </span>
+    );
+  }
+  if (status === 'pending') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#fff7ed] px-2.5 py-0.5 text-[11px] font-medium text-[#c2410c]">
+        <span className="h-[5px] w-[5px] rounded-full bg-current" />
+        Pending
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#9b9b9b]">
+      <span className="h-[5px] w-[5px] rounded-full bg-current" />
+      Inactive
+    </span>
+  );
+}
+
+function initials(name: string) {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  if (p.length === 0) return '?';
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
+}
+
+export function AdminUsersClient({
+  initialRows,
+  departments,
+  defaultFilters,
+  orgName,
+  orgSlug,
+  totalMemberCount,
+}: {
+  initialRows: UserRow[];
+  departments: { id: string; name: string; type: string; is_archived: boolean }[];
+  defaultFilters: { q?: string; dept?: string; status?: string; role?: string };
+  orgName: string;
+  orgSlug: string;
+  totalMemberCount: number;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = useMemo(() => createClient(), []);
+  const [rows, setRows] = useState(initialRows);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const [edit, setEdit] = useState<UserRow | null>(null);
+  const [editRole, setEditRole] = useState<ProfileRole>('csa');
+  const [editDepts, setEditDepts] = useState<Set<string>>(new Set());
+
+  const [qInput, setQInput] = useState(defaultFilters.q ?? '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const activeDepts = departments.filter((d) => !d.is_archived);
+
+  const filterHref = useCallback(
+    (patch: Record<string, string | undefined>) => {
+      const p = new URLSearchParams(searchParams.toString());
+      for (const [k, v] of Object.entries(patch)) {
+        if (!v || v === 'all') p.delete(k);
+        else p.set(k, v);
+      }
+      const s = p.toString();
+      return s ? `/admin/users?${s}` : '/admin/users';
+    },
+    [searchParams]
+  );
+
+  useEffect(() => {
+    setRows(initialRows);
+    setPage(0);
+  }, [initialRows]);
+
+  useEffect(() => {
+    setQInput(defaultFilters.q ?? '');
+  }, [defaultFilters.q]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const inUrl = searchParams.get('q') ?? '';
+      if (qInput === inUrl) return;
+      router.replace(filterHref({ q: qInput.trim() || undefined }));
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [qInput, router, filterHref, searchParams]);
+
+  const slice = rows.slice(page * PAGE, page * PAGE + PAGE);
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+
+  const statusFilter = defaultFilters.status ?? 'all';
+  const roleFilter = defaultFilters.role ?? 'all';
+  const deptFilter = defaultFilters.dept ?? 'all';
+  const inviteHref = `/register?org=${encodeURIComponent(orgSlug)}`;
+
+  function toggleAll() {
+    if (selected.size === slice.length) setSelected(new Set());
+    else setSelected(new Set(slice.map((r) => r.id)));
+  }
+
+  function toggleOne(id: string) {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+
+  async function bulkApprovePending() {
+    const ids = [...selected].filter((id) => rows.find((r) => r.id === id)?.status === 'pending');
+    if (!ids.length) return;
+    setBusy('bulk');
+    setMsg(null);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setBusy(null);
+      return;
+    }
+    for (const id of ids) {
+      const { error } = await supabase.rpc('approve_pending_profile', {
+        p_target: id,
+        p_approve: true,
+        p_rejection_note: null,
+      });
+      if (error) {
+        setMsg(error.message);
+        setBusy(null);
+        return;
+      }
+    }
+    setBusy(null);
+    setSelected(new Set());
+    router.refresh();
+  }
+
+  async function bulkDeactivate() {
+    if (!selected.size || !confirm('Deactivate selected users?')) return;
+    setBusy('bulk');
+    setMsg(null);
+    for (const id of selected) {
+      const { error } = await supabase.from('profiles').update({ status: 'inactive' }).eq('id', id);
+      if (error) {
+        setMsg(error.message);
+        setBusy(null);
+        return;
+      }
+    }
+    setBusy(null);
+    setSelected(new Set());
+    router.refresh();
+  }
+
+  function exportCsv() {
+    const lines = [
+      ['id', 'full_name', 'email', 'role', 'status', 'departments', 'joined'].join(','),
+      ...rows.map((r) =>
+        [
+          r.id,
+          JSON.stringify(r.full_name),
+          JSON.stringify(r.email ?? ''),
+          r.role,
+          r.status,
+          JSON.stringify(r.departments.join('; ')),
+          r.created_at,
+        ].join(',')
+      ),
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'users-export.csv';
+    a.click();
+  }
+
+  function openEdit(r: UserRow) {
+    setEdit(r);
+    setEditRole(r.role as ProfileRole);
+    setEditDepts(new Set());
+    void (async () => {
+      const { data } = await supabase.from('user_departments').select('dept_id').eq('user_id', r.id);
+      setEditDepts(new Set((data ?? []).map((x) => x.dept_id as string)));
+    })();
+  }
+
+  async function saveEdit() {
+    if (!edit) return;
+    setBusy(edit.id);
+    setMsg(null);
+    const { error: e1 } = await supabase.from('profiles').update({ role: editRole }).eq('id', edit.id);
+    if (e1) {
+      setMsg(e1.message);
+      setBusy(null);
+      return;
+    }
+    await supabase.from('user_departments').delete().eq('user_id', edit.id);
+    for (const did of editDepts) {
+      const { error: e2 } = await supabase.from('user_departments').insert({ user_id: edit.id, dept_id: did });
+      if (e2) {
+        setMsg(e2.message);
+        setBusy(null);
+        return;
+      }
+    }
+    setEdit(null);
+    setBusy(null);
+    router.refresh();
+  }
+
+  async function setUserStatus(id: string, status: string) {
+    setBusy(id);
+    const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
+    setBusy(null);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    router.refresh();
+  }
+
+  function pillClass(active: boolean) {
+    return [
+      'rounded-full border px-3 py-1.5 text-[12.5px] transition-colors',
+      active
+        ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
+        : 'border-[#d8d8d8] bg-white text-[#6b6b6b] hover:bg-[#f5f4f1]',
+    ].join(' ');
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+      <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">All Members</h1>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            {totalMemberCount} member{totalMemberCount === 1 ? '' : 's'} across {orgName}
+            {rows.length < totalMemberCount ? (
+              <span className="text-[#9b9b9b]"> · {rows.length} shown (filters / max 500 loaded)</span>
+            ) : null}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={inviteHref}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+          >
+            + Invite member
+          </Link>
+        </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex h-9 w-full max-w-[240px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 transition-[box-shadow] focus-within:border-[#121212] focus-within:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]">
+          <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
+            🔍
+          </span>
+          <input
+            type="search"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            placeholder="Search name or email…"
+            className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
+            aria-label="Search members"
+          />
+        </div>
+
+        <select
+          value={roleFilter}
+          onChange={(e) => router.push(filterHref({ role: e.target.value }))}
+          className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
+          aria-label="Filter by role"
+        >
+          <option value="all">All roles</option>
+          {PROFILE_ROLES.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_OPTION_LABEL[r] ?? r.replace(/_/g, ' ')}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={deptFilter}
+          onChange={(e) => router.push(filterHref({ dept: e.target.value }))}
+          className="h-9 min-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
+          aria-label="Filter by department"
+        >
+          <option value="all">All departments</option>
+          {activeDepts.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex flex-wrap gap-2">
+          <Link href={filterHref({ status: 'all' })} className={pillClass(statusFilter === 'all')}>
+            All
+          </Link>
+          <Link href={filterHref({ status: 'active' })} className={pillClass(statusFilter === 'active')}>
+            Active
+          </Link>
+          <Link href={filterHref({ status: 'pending' })} className={pillClass(statusFilter === 'pending')}>
+            Pending
+          </Link>
+          <Link href={filterHref({ status: 'inactive' })} className={pillClass(statusFilter === 'inactive')}>
+            Inactive
+          </Link>
+        </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void bulkApprovePending()}
+          disabled={busy !== null}
+          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
+        >
+          Approve selected (pending)
+        </button>
+        <button
+          type="button"
+          onClick={() => void bulkDeactivate()}
+          disabled={busy !== null || !selected.size}
+          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
+        >
+          Deactivate selected
+        </button>
+        <button
+          type="button"
+          onClick={() => exportCsv()}
+          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+        >
+          Export CSV
+        </button>
+        <Link
+          href={filterHref({ q: undefined, status: 'all', role: 'all', dept: 'all' })}
+          className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+        >
+          Clear filters
+        </Link>
+      </div>
+
+      {msg ? <p className="mb-3 text-sm text-[#b91c1c]">{msg}</p> : null}
+
+      <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] border-collapse text-[13px]">
+            <thead>
+              <tr className="border-b border-[#d8d8d8]">
+                <th className="w-10 px-3 py-2.5 text-left">
+                  <input
+                    type="checkbox"
+                    className="rounded border-[#d8d8d8]"
+                    checked={slice.length > 0 && selected.size === slice.length}
+                    onChange={() => toggleAll()}
+                    aria-label="Select all on page"
+                  />
+                </th>
+                <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9b9b9b]">
+                  Member
+                </th>
+                <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9b9b9b]">
+                  Role
+                </th>
+                <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9b9b9b]">
+                  Department(s)
+                </th>
+                <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9b9b9b]">
+                  Status
+                </th>
+                <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9b9b9b]">
+                  Joined
+                </th>
+                <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9b9b9b]">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {slice.map((r) => (
+                <tr key={r.id} className="border-b border-[#d8d8d8] transition-colors last:border-0 hover:bg-[#f5f4f1]">
+                  <td className="px-3 py-3 align-middle">
+                    <input
+                      type="checkbox"
+                      className="rounded border-[#d8d8d8]"
+                      checked={selected.has(r.id)}
+                      onChange={() => toggleOne(r.id)}
+                      aria-label={`Select ${r.full_name}`}
+                    />
+                  </td>
+                  <td className="px-3 py-3 align-middle">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[11px] font-semibold text-[#6b6b6b]">
+                        {initials(r.full_name)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-[#121212]">{r.full_name}</div>
+                        <div className="text-[11.5px] text-[#9b9b9b]">{r.email ?? '—'}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-3 align-middle">
+                    <span
+                      className={[
+                        'inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                        rolePillClass(r.role),
+                      ].join(' ')}
+                    >
+                      {ROLE_OPTION_LABEL[r.role] ?? r.role.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="max-w-[200px] px-3 py-3 align-middle text-[13px] text-[#6b6b6b]">
+                    {r.departments.length ? r.departments.join(', ') : '—'}
+                  </td>
+                  <td className="px-3 py-3 align-middle">{statusBadge(r.status)}</td>
+                  <td className="px-3 py-3 align-middle text-[13px] text-[#6b6b6b]">
+                    {new Date(r.created_at).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </td>
+                  <td className="px-3 py-3 align-middle">
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        className="rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                        onClick={() => openEdit(r)}
+                      >
+                        Edit
+                      </button>
+                      {r.status === 'active' ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-[#fecaca] bg-[#fef2f2] px-2 py-1 text-[11.5px] font-medium text-[#b91c1c] hover:bg-[#fee2e2]"
+                          onClick={() => void setUserStatus(r.id, 'inactive')}
+                          disabled={busy === r.id}
+                        >
+                          Deactivate
+                        </button>
+                      ) : r.status === 'inactive' ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-[#bbf7d0] bg-[#dcfce7] px-2 py-1 text-[11.5px] font-medium text-[#166534] hover:bg-[#bbf7d0]"
+                          onClick={() => void setUserStatus(r.id, 'active')}
+                          disabled={busy === r.id}
+                        >
+                          Activate
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {slice.length === 0 ? (
+        <p className="mt-6 text-center text-sm text-[#9b9b9b]">No members match these filters.</p>
+      ) : null}
+
+      <div className="mt-4 flex items-center gap-2 text-[13px]">
+        <button
+          type="button"
+          disabled={page <= 0}
+          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[#6b6b6b] disabled:opacity-40"
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+        >
+          Previous
+        </button>
+        <span className="text-[#6b6b6b]">
+          Page {page + 1} of {pages}
+        </span>
+        <button
+          type="button"
+          disabled={page >= pages - 1}
+          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[#6b6b6b] disabled:opacity-40"
+          onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
+        >
+          Next
+        </button>
+      </div>
+
+      {edit ? (
+        <div
+          className="fixed inset-0 z-[200] flex items-end justify-center bg-black/45 p-4 backdrop-blur-[3px] sm:items-center"
+          role="presentation"
+          onClick={() => setEdit(null)}
+        >
+          <div
+            className="max-h-[92vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_16px_40px_rgba(0,0,0,0.08)]"
+            role="dialog"
+            aria-labelledby="edit-member-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#d8d8d8] px-6 py-5">
+              <h2 id="edit-member-title" className="font-authSerif text-xl text-[#121212]">
+                Edit member
+              </h2>
+              <button
+                type="button"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#d8d8d8] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                onClick={() => setEdit(null)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <div className="mb-5 flex items-center gap-3 rounded-lg bg-[#f5f4f1] p-3.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#121212] text-[14px] font-semibold text-[#faf9f6]">
+                  {initials(edit.full_name)}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-medium text-[#121212]">{edit.full_name}</div>
+                  <div className="text-[12px] text-[#9b9b9b]">{edit.email ?? '—'}</div>
+                </div>
+              </div>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Role
+                <select
+                  className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value as ProfileRole)}
+                >
+                  {PROFILE_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {ROLE_OPTION_LABEL[role] ?? role.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <fieldset className="mt-4">
+                <legend className="text-[12.5px] font-medium text-[#6b6b6b]">Departments</legend>
+                <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3">
+                  {activeDepts.map((d) => (
+                    <label key={d.id} className="flex cursor-pointer items-center gap-2 text-[13px] text-[#121212]">
+                      <input
+                        type="checkbox"
+                        className="rounded border-[#d8d8d8]"
+                        checked={editDepts.has(d.id)}
+                        onChange={(e) => {
+                          setEditDepts((s) => {
+                            const n = new Set(s);
+                            if (e.target.checked) n.add(d.id);
+                            else n.delete(d.id);
+                            return n;
+                          });
+                        }}
+                      />
+                      {d.name}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[#d8d8d8] bg-white px-6 py-4">
+              <button
+                type="button"
+                className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                onClick={() => setEdit(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy === edit.id}
+                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+                onClick={() => void saveEdit()}
+              >
+                Save changes
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

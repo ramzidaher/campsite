@@ -1,0 +1,617 @@
+'use client';
+
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+type Dept = {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  is_archived: boolean;
+};
+
+type FilterKey = 'all' | 'department' | 'society' | 'club';
+
+function typeIcon(t: string) {
+  if (t === 'society') return '👥';
+  if (t === 'club') return '⚽';
+  return '🏢';
+}
+
+function typeLabel(t: string) {
+  if (t === 'department') return 'Department';
+  if (t === 'society') return 'Society';
+  if (t === 'club') return 'Club';
+  return t;
+}
+
+function pillClass(active: boolean) {
+  return [
+    'rounded-full border px-3 py-1.5 text-[12.5px] transition-colors',
+    active
+      ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
+      : 'border-[#d8d8d8] bg-white text-[#6b6b6b] hover:bg-[#f5f4f1]',
+  ].join(' ');
+}
+
+export function AdminDepartmentsClient({
+  orgId,
+  initialDepartments,
+  categoriesByDept,
+  managersByDept,
+  memberCountByDept,
+  staffOptions,
+}: {
+  orgId: string;
+  initialDepartments: Dept[];
+  categoriesByDept: Record<string, { id: string; name: string }[]>;
+  managersByDept: Record<string, { user_id: string; full_name: string }[]>;
+  memberCountByDept: Record<string, number>;
+  staffOptions: { id: string; full_name: string; role: string }[];
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [filter, setFilter] = useState<FilterKey>('all');
+  const [q, setQ] = useState('');
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [nName, setNName] = useState('');
+  const [nType, setNType] = useState<'department' | 'society' | 'club'>('department');
+  const [nDesc, setNDesc] = useState('');
+
+  const [detailDept, setDetailDept] = useState<Dept | null>(null);
+
+  const counts = useMemo(() => {
+    const list = initialDepartments;
+    return {
+      all: list.length,
+      department: list.filter((d) => d.type === 'department').length,
+      society: list.filter((d) => d.type === 'society').length,
+      club: list.filter((d) => d.type === 'club').length,
+    };
+  }, [initialDepartments]);
+
+  const filteredGrid = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    let list = initialDepartments;
+    if (filter !== 'all') list = list.filter((d) => d.type === filter);
+    if (s) {
+      list = list.filter(
+        (d) =>
+          d.name.toLowerCase().includes(s) ||
+          (d.description ?? '').toLowerCase().includes(s) ||
+          typeLabel(d.type).toLowerCase().includes(s)
+      );
+    }
+    return list;
+  }, [initialDepartments, filter, q]);
+
+  const refresh = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  async function createDept() {
+    if (!nName.trim()) return;
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase.from('departments').insert({
+      org_id: orgId,
+      name: nName.trim(),
+      type: nType,
+      description: nDesc.trim() || null,
+    });
+    setBusy(false);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setCreateOpen(false);
+    setNName('');
+    setNDesc('');
+    void refresh();
+  }
+
+  async function saveDept(d: Dept) {
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase
+      .from('departments')
+      .update({
+        name: d.name,
+        type: d.type as 'department' | 'society' | 'club',
+        description: d.description,
+        is_archived: d.is_archived,
+      })
+      .eq('id', d.id);
+    setBusy(false);
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function addCategory(deptId: string, name: string) {
+    if (!name.trim()) return;
+    const { error } = await supabase.from('dept_categories').insert({ dept_id: deptId, name: name.trim() });
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function removeCategory(catId: string) {
+    const { error } = await supabase.from('dept_categories').delete().eq('id', catId);
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function addManager(deptId: string, userId: string) {
+    const { error } = await supabase.from('dept_managers').insert({ dept_id: deptId, user_id: userId });
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function removeManager(deptId: string, userId: string) {
+    const { error } = await supabase.from('dept_managers').delete().eq('dept_id', deptId).eq('user_id', userId);
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+      <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Departments</h1>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            Manage all departments, societies and clubs in your organisation
+          </p>
+          <p className="mt-1 text-[12px] text-[#9b9b9b]">
+            {counts.all} total · {counts.department} department{counts.department === 1 ? '' : 's'} ·{' '}
+            {counts.society} societ{counts.society === 1 ? 'y' : 'ies'} · {counts.club} club
+            {counts.club === 1 ? '' : 's'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setMsg(null);
+            setCreateOpen(true);
+          }}
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+        >
+          + New Department
+        </button>
+      </div>
+
+      {msg ? <p className="mb-4 text-sm text-[#b91c1c]">{msg}</p> : null}
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex h-9 w-full max-w-[240px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3">
+          <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
+            🔍
+          </span>
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search…"
+            className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
+            aria-label="Search departments"
+          />
+        </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button type="button" className={pillClass(filter === 'all')} onClick={() => setFilter('all')}>
+          All ({counts.all})
+        </button>
+        <button type="button" className={pillClass(filter === 'department')} onClick={() => setFilter('department')}>
+          Departments ({counts.department})
+        </button>
+        <button type="button" className={pillClass(filter === 'society')} onClick={() => setFilter('society')}>
+          Societies ({counts.society})
+        </button>
+        <button type="button" className={pillClass(filter === 'club')} onClick={() => setFilter('club')}>
+          Clubs ({counts.club})
+        </button>
+      </div>
+
+      {filteredGrid.length === 0 ? (
+        <div className="rounded-xl border border-[#d8d8d8] bg-white px-6 py-14 text-center">
+          <p className="text-[15px] font-medium text-[#6b6b6b]">No departments match</p>
+          <p className="mt-1 text-[13px] text-[#9b9b9b]">Try another filter or add a new department.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredGrid.map((d) => (
+            <DeptGridCard
+              key={d.id}
+              dept={d}
+              memberCount={memberCountByDept[d.id] ?? 0}
+              categories={categoriesByDept[d.id] ?? []}
+              managers={managersByDept[d.id] ?? []}
+              onOpen={() => {
+                setMsg(null);
+                setDetailDept(d);
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {createOpen ? (
+        <ModalOverlay title="New department" onClose={() => setCreateOpen(false)}>
+          <div className="grid gap-3">
+            <label className="text-[13px] text-[#121212]">
+              Name
+              <input
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#121212]"
+                value={nName}
+                onChange={(e) => setNName(e.target.value)}
+              />
+            </label>
+            <label className="text-[13px] text-[#121212]">
+              Type
+              <select
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+                value={nType}
+                onChange={(e) => setNType(e.target.value as typeof nType)}
+              >
+                <option value="department">Department</option>
+                <option value="society">Society</option>
+                <option value="club">Club</option>
+              </select>
+            </label>
+            <label className="text-[13px] text-[#121212]">
+              Description
+              <textarea
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+                rows={3}
+                value={nDesc}
+                onChange={(e) => setNDesc(e.target.value)}
+              />
+            </label>
+          </div>
+          <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-[#d8d8d8] pt-4">
+            <button
+              type="button"
+              className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              onClick={() => setCreateOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+              onClick={() => void createDept()}
+            >
+              Create
+            </button>
+          </div>
+        </ModalOverlay>
+      ) : null}
+
+      {detailDept ? (
+        <ModalOverlay
+          title={detailDept.name}
+          subtitle={`${typeLabel(detailDept.type)} · ${memberCountByDept[detailDept.id] ?? 0} members`}
+          onClose={() => setDetailDept(null)}
+        >
+          <DeptDetailForm
+            dept={detailDept}
+            categories={categoriesByDept[detailDept.id] ?? []}
+            managers={managersByDept[detailDept.id] ?? []}
+            staffOptions={staffOptions}
+            busy={busy}
+            onSave={(x) => void saveDept(x)}
+            onAddCat={(name) => void addCategory(detailDept.id, name)}
+            onRemoveCat={(id) => void removeCategory(id)}
+            onAddMgr={(uid) => void addManager(detailDept.id, uid)}
+            onRemoveMgr={(uid) => void removeManager(detailDept.id, uid)}
+          />
+        </ModalOverlay>
+      ) : null}
+    </div>
+  );
+}
+
+function DeptGridCard({
+  dept,
+  memberCount,
+  categories,
+  managers,
+  onOpen,
+}: {
+  dept: Dept;
+  memberCount: number;
+  categories: { id: string; name: string }[];
+  managers: { user_id: string; full_name: string }[];
+  onOpen: () => void;
+}) {
+  const catNames = categories.map((c) => c.name);
+  const show = catNames.slice(0, 3);
+  const more = catNames.length - show.length;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className={[
+        'cursor-pointer rounded-xl border border-[#d8d8d8] bg-white p-[18px] text-left transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
+        dept.is_archived ? 'opacity-75' : '',
+      ].join(' ')}
+    >
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[9px] border border-[#d8d8d8] bg-[#f5f4f1] text-[18px]">
+          {typeIcon(dept.type)}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
+            {typeLabel(dept.type)}
+          </span>
+          {dept.is_archived ? (
+            <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#fef2f2] px-2 py-0.5 text-[11px] font-medium text-[#991b1b]">
+              Archived
+            </span>
+          ) : null}
+          <button
+            type="button"
+            className="rounded-md px-2 py-1 text-[11px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+          >
+            Edit
+          </button>
+        </div>
+      </div>
+      <div className="font-authSerif text-[22px] leading-none text-[#121212]">{memberCount}</div>
+      <div className="mb-1 text-[12px] text-[#9b9b9b]">members</div>
+      <div className="text-[14px] font-medium text-[#121212]">{dept.name}</div>
+      <div className="mt-1 text-[12px] text-[#6b6b6b]">
+        {managers.length ? <>Managed by {managers.map((m) => m.full_name).join(', ')}</> : 'No assigned manager'}
+      </div>
+      {catNames.length > 0 ? (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {show.map((c) => (
+            <span
+              key={c}
+              className="rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2 py-0.5 text-[10.5px] text-[#9b9b9b]"
+            >
+              {c}
+            </span>
+          ))}
+          {more > 0 ? (
+            <span className="rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2 py-0.5 text-[10.5px] text-[#9b9b9b]">
+              +{more} more
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ModalOverlay({
+  title,
+  subtitle,
+  children,
+  onClose,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dept-modal-title"
+        className="max-h-[min(90vh,720px)] w-full max-w-lg overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.07)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-[#d8d8d8] px-6 py-4">
+          <div>
+            <h2 id="dept-modal-title" className="font-authSerif text-[19px] tracking-tight text-[#121212]">
+              {title}
+            </h2>
+            {subtitle ? <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{subtitle}</p> : null}
+          </div>
+          <button
+            type="button"
+            className="rounded-lg px-2 py-1 text-[15px] leading-none text-[#9b9b9b] hover:bg-[#f5f4f1] hover:text-[#121212]"
+            aria-label="Close"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="px-6 py-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function DeptDetailForm({
+  dept,
+  categories,
+  managers,
+  staffOptions,
+  busy,
+  onSave,
+  onAddCat,
+  onRemoveCat,
+  onAddMgr,
+  onRemoveMgr,
+}: {
+  dept: Dept;
+  categories: { id: string; name: string }[];
+  managers: { user_id: string; full_name: string }[];
+  staffOptions: { id: string; full_name: string; role: string }[];
+  busy: boolean;
+  onSave: (d: Dept) => void;
+  onAddCat: (name: string) => void;
+  onRemoveCat: (id: string) => void;
+  onAddMgr: (userId: string) => void;
+  onRemoveMgr: (userId: string) => void;
+}) {
+  const [edit, setEdit] = useState(dept);
+  const [catName, setCatName] = useState('');
+  const [mgrPick, setMgrPick] = useState('');
+
+  useEffect(() => {
+    setEdit(dept);
+  }, [dept]);
+
+  return (
+    <>
+      <div className="grid gap-3">
+        <label className="text-[13px] text-[#121212]">
+          Name
+          <input
+            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+            value={edit.name}
+            onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+          />
+        </label>
+        <label className="text-[13px] text-[#121212]">
+          Type
+          <select
+            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+            value={edit.type}
+            onChange={(e) => setEdit({ ...edit, type: e.target.value })}
+          >
+            <option value="department">Department</option>
+            <option value="society">Society</option>
+            <option value="club">Club</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-[13px] text-[#121212]">
+          <input
+            type="checkbox"
+            className="rounded border-[#d8d8d8]"
+            checked={edit.is_archived}
+            onChange={(e) => setEdit({ ...edit, is_archived: e.target.checked })}
+          />
+          Archived
+        </label>
+        <label className="text-[13px] text-[#121212]">
+          Description
+          <textarea
+            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+            rows={3}
+            value={edit.description ?? ''}
+            onChange={(e) => setEdit({ ...edit, description: e.target.value || null })}
+          />
+        </label>
+      </div>
+      <button
+        type="button"
+        disabled={busy}
+        className="mt-4 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+        onClick={() => onSave(edit)}
+      >
+        Save department
+      </button>
+
+      <div className="mt-6 border-t border-[#d8d8d8] pt-4">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast categories</p>
+        <ul className="mt-2 space-y-1.5 text-[13px]">
+          {categories.map((c) => (
+            <li key={c.id} className="flex items-center justify-between gap-2">
+              <span className="text-[#6b6b6b]">{c.name}</span>
+              <button
+                type="button"
+                className="text-[12px] text-[#b91c1c] hover:underline"
+                onClick={() => onRemoveCat(c.id)}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2 flex gap-2">
+          <input
+            className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            placeholder="New category"
+            value={catName}
+            onChange={(e) => setCatName(e.target.value)}
+          />
+          <button
+            type="button"
+            className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+            onClick={() => {
+              onAddCat(catName);
+              setCatName('');
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-[#d8d8d8] pt-4">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Managers</p>
+        <ul className="mt-2 space-y-1.5 text-[13px]">
+          {managers.map((m) => (
+            <li key={m.user_id} className="flex items-center justify-between gap-2">
+              <span className="text-[#6b6b6b]">{m.full_name}</span>
+              <button
+                type="button"
+                className="text-[12px] text-[#b91c1c] hover:underline"
+                onClick={() => onRemoveMgr(m.user_id)}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2 flex gap-2">
+          <select
+            className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            value={mgrPick}
+            onChange={(e) => setMgrPick(e.target.value)}
+          >
+            <option value="">Add manager…</option>
+            {staffOptions
+              .filter((s) => !managers.some((m) => m.user_id === s.id))
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.full_name} ({s.role})
+                </option>
+              ))}
+          </select>
+          <button
+            type="button"
+            className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+            onClick={() => {
+              if (mgrPick) {
+                onAddMgr(mgrPick);
+                setMgrPick('');
+              }
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}

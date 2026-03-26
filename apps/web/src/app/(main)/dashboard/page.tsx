@@ -1,0 +1,48 @@
+import { DashboardHome } from '@/components/dashboard/DashboardHome';
+import { loadDashboardHome } from '@/lib/dashboard/loadDashboardHome';
+import { createClient } from '@/lib/supabase/server';
+import { canComposeBroadcast, isOrgAdminRole, type ProfileRole } from '@campsite/types';
+import { redirect } from 'next/navigation';
+
+function greeting(hour: number, name: string) {
+  if (hour < 12) return `Good morning, ${name}`;
+  if (hour < 17) return `Good afternoon, ${name}`;
+  return `Good evening, ${name}`;
+}
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, org_id, role, full_name, status')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.org_id) redirect('/login');
+  if (profile.status !== 'active') redirect('/pending');
+
+  const role = profile.role as ProfileRole;
+  const data = await loadDashboardHome(supabase, user.id, profile.org_id as string, {
+    full_name: profile.full_name as string | null,
+    role: profile.role as string,
+  });
+
+  const hour = new Date().getHours();
+  const greetingLine = `${greeting(hour, data.userName.split(/\s+/)[0] ?? 'there')} 👋`;
+
+  const canViewOrgDirectory = isOrgAdminRole(role);
+
+  return (
+    <DashboardHome
+      data={data}
+      greetingLine={greetingLine}
+      canCompose={canComposeBroadcast(role)}
+      membersStatHref={canViewOrgDirectory ? '/admin/users' : '/broadcasts'}
+    />
+  );
+}
