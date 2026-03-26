@@ -1,7 +1,12 @@
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { loadDashboardHome } from '@/lib/dashboard/loadDashboardHome';
 import { createClient } from '@/lib/supabase/server';
-import { canComposeBroadcast, isOrgAdminRole, type ProfileRole } from '@campsite/types';
+import {
+  canComposeBroadcast,
+  isBroadcastDraftOnlyRole,
+  isOrgAdminRole,
+  type ProfileRole,
+} from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 function greeting(hour: number, name: string) {
@@ -36,13 +41,16 @@ export default async function DashboardPage() {
   const greetingLine = `${greeting(hour, data.userName.split(/\s+/)[0] ?? 'there')} 👋`;
 
   const canViewOrgDirectory = isOrgAdminRole(role);
+  const canCompose = canComposeBroadcast(role);
+  const showPrimaryComposeCta = canCompose && !isBroadcastDraftOnlyRole(role);
 
   return (
     <DashboardHome
       data={data}
       greetingLine={greetingLine}
-      canCompose={canComposeBroadcast(role)}
-      membersStatHref={canViewOrgDirectory ? '/admin/users' : '/broadcasts'}
+      canCompose={canCompose}
+      showPrimaryComposeCta={showPrimaryComposeCta}
+      membersStatHref={canViewOrgDirectory ? '/admin/users' : null}
     />
   );
 }

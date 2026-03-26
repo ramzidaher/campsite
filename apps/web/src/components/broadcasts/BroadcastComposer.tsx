@@ -4,6 +4,8 @@ import { isBroadcastDraftOnlyRole, type ProfileRole } from '@campsite/types';
 import { canComposeBroadcast } from '@campsite/types';
 import type { ReactNode, SelectHTMLAttributes } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import type { DeptRow } from './dept-scope';
 
@@ -53,16 +55,23 @@ type Props = {
 
 const TITLE_MAX = 120;
 
+/**
+ * Broadcasts shell uses a fixed light palette; CSS theme vars follow OS dark mode and made
+ * compose fields look like solid black boxes. Match feed/search inputs instead.
+ */
+const COMPOSE_INPUT_CLASS =
+  'w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-sm text-[#121212] shadow-sm outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10';
+
 /** No opacity hack on disabled — it made the category placeholder invisible in WebKit. */
 const SELECT_FIELD_CLASS =
-  'w-full rounded-md border border-[var(--campsite-border)] px-3 py-2 pr-11 text-sm shadow-sm transition-colors focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/15 disabled:cursor-not-allowed disabled:text-[var(--campsite-text-secondary)]';
+  'w-full rounded-lg border border-[#d8d8d8] px-3 py-2 pr-11 text-sm shadow-sm transition-colors focus:border-[#121212] focus:outline-none focus:ring-[3px] focus:ring-[#121212]/10 disabled:cursor-not-allowed disabled:bg-[#f5f4f1] disabled:text-[#9b9b9b]';
 
 /** WebKit needs explicit color/background or the closed select can paint empty when appearance is none. */
 const SELECT_FIELD_STYLE = {
   appearance: 'none' as const,
   WebkitAppearance: 'none' as const,
-  color: 'var(--campsite-text)',
-  backgroundColor: 'var(--campsite-surface)',
+  color: '#121212',
+  backgroundColor: '#ffffff',
 };
 
 function SelectWithChevron({
@@ -81,7 +90,7 @@ function SelectWithChevron({
         {children}
       </select>
       <span
-        className="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[var(--campsite-text-secondary)]"
+        className="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#6b6b6b]"
         aria-hidden
       >
         <svg
@@ -367,11 +376,7 @@ export function BroadcastComposer({
   };
 
   if (!canComposeBroadcast(role)) {
-    return (
-      <p className="text-sm text-[var(--campsite-text-secondary)]">
-        Your role cannot compose broadcasts.
-      </p>
-    );
+    return <p className="text-sm text-[#6b6b6b]">Your role cannot compose broadcasts.</p>;
   }
 
   const showDeliveryOptions =
@@ -380,29 +385,30 @@ export function BroadcastComposer({
     (caps.send_org_wide || caps.mandatory_broadcast || caps.pin_broadcasts);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-2xl space-y-5 rounded-xl border border-[#d8d8d8] bg-[#faf9f6] p-5 sm:p-6">
       {error ? (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {error}
         </div>
       ) : null}
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Title</label>
+        <label className="mb-1 block text-sm font-medium text-[#121212]">Title</label>
         <input
-          className="w-full rounded-md border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-3 py-2 text-sm"
+          className={COMPOSE_INPUT_CLASS}
           maxLength={TITLE_MAX}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          placeholder="Short headline for the feed"
         />
-        <div className="mt-1 text-right text-xs text-[var(--campsite-text-secondary)]">
+        <div className="mt-1 text-right text-xs text-[#6b6b6b]">
           {title.length}/{TITLE_MAX}
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium">Department</label>
+          <label className="mb-1 block text-sm font-medium text-[#121212]">Department</label>
           <SelectWithChevron
             value={displayDeptId}
             onChange={(e) => setDeptId(e.target.value)}
@@ -419,7 +425,7 @@ export function BroadcastComposer({
           </SelectWithChevron>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Category</label>
+          <label className="mb-1 block text-sm font-medium text-[#121212]">Category</label>
           <SelectWithChevron
             value={displayCatId}
             onChange={(e) => setCatId(e.target.value)}
@@ -436,9 +442,9 @@ export function BroadcastComposer({
             ))}
           </SelectWithChevron>
           {!cats.length ? (
-            <p id="compose-category-hint" className="mt-1.5 text-[12px] leading-snug text-[var(--campsite-text-secondary)]">
-              Add broadcast categories under{' '}
-              <span className="font-medium text-[var(--campsite-text)]">Admin → Departments</span> for &ldquo;
+            <p id="compose-category-hint" className="mt-1.5 text-[12px] leading-snug text-[#6b6b6b]">
+              Add broadcast categories in{' '}
+              <span className="font-medium text-[#121212]">Admin → Departments</span> for &ldquo;
               {departments.find((d) => d.id === displayDeptId)?.name ?? 'this department'}
               &rdquo;, then refresh this page.
             </p>
@@ -447,26 +453,26 @@ export function BroadcastComposer({
       </div>
 
       {!isBroadcastDraftOnlyRole(role) && displayDeptId ? (
-        <div className="rounded-lg border border-[var(--campsite-border)] p-3">
-          <p className="text-sm font-medium text-[var(--campsite-text)]">Delivery options</p>
-          <p className="mt-1 text-[12px] leading-snug text-[var(--campsite-text-secondary)]">
+        <div className="rounded-lg border border-[#d8d8d8] bg-white p-3">
+          <p className="text-sm font-medium text-[#121212]">Delivery options</p>
+          <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
             Shown when your role and department toggles allow org-wide reach, mandatory delivery, or pinning.
           </p>
           {capsLoading ? (
-            <p className="mt-2 text-xs text-[var(--campsite-text-secondary)]">Loading options…</p>
+            <p className="mt-2 text-xs text-[#6b6b6b]">Loading options…</p>
           ) : showDeliveryOptions ? (
             <div className="mt-3 space-y-2.5">
               {caps.send_org_wide ? (
-                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                <label className="flex cursor-pointer items-start gap-2 text-sm text-[#121212]">
                   <input
                     type="checkbox"
-                    className="mt-0.5 rounded border-[var(--campsite-border)]"
+                    className="mt-0.5 rounded border-[#d8d8d8]"
                     checked={isOrgWide}
                     onChange={(e) => setIsOrgWide(e.target.checked)}
                   />
                   <span>
-                    <span className="font-medium text-[var(--campsite-text)]">Org-wide</span>
-                    <span className="mt-0.5 block text-[12px] text-[var(--campsite-text-secondary)]">
+                    <span className="font-medium">Org-wide</span>
+                    <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
                       Send with organisation-wide intent. Subscribers still filter by category unless you also use
                       mandatory.
                     </span>
@@ -474,32 +480,32 @@ export function BroadcastComposer({
                 </label>
               ) : null}
               {caps.mandatory_broadcast ? (
-                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                <label className="flex cursor-pointer items-start gap-2 text-sm text-[#121212]">
                   <input
                     type="checkbox"
-                    className="mt-0.5 rounded border-[var(--campsite-border)]"
+                    className="mt-0.5 rounded border-[#d8d8d8]"
                     checked={isMandatory}
                     onChange={(e) => setIsMandatory(e.target.checked)}
                   />
                   <span>
-                    <span className="font-medium text-[var(--campsite-text)]">Mandatory</span>
-                    <span className="mt-0.5 block text-[12px] text-[var(--campsite-text-secondary)]">
+                    <span className="font-medium">Mandatory</span>
+                    <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
                       Deliver to everyone in the target audience regardless of category subscription.
                     </span>
                   </span>
                 </label>
               ) : null}
               {caps.pin_broadcasts ? (
-                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                <label className="flex cursor-pointer items-start gap-2 text-sm text-[#121212]">
                   <input
                     type="checkbox"
-                    className="mt-0.5 rounded border-[var(--campsite-border)]"
+                    className="mt-0.5 rounded border-[#d8d8d8]"
                     checked={isPinned}
                     onChange={(e) => setIsPinned(e.target.checked)}
                   />
                   <span>
-                    <span className="font-medium text-[var(--campsite-text)]">Pin to top</span>
-                    <span className="mt-0.5 block text-[12px] text-[var(--campsite-text-secondary)]">
+                    <span className="font-medium">Pin to top</span>
+                    <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
                       Show this post before non-pinned items in the feed.
                     </span>
                   </span>
@@ -507,7 +513,7 @@ export function BroadcastComposer({
               ) : null}
             </div>
           ) : (
-            <p className="mt-2 text-[12px] text-[var(--campsite-text-secondary)]">
+            <p className="mt-2 text-[12px] text-[#6b6b6b]">
               No extra delivery options for this department. An org admin can enable them under Admin → Departments.
             </p>
           )}
@@ -515,25 +521,28 @@ export function BroadcastComposer({
       ) : null}
 
       <div>
-        <div className="mb-1 flex flex-wrap gap-2">
-          <span className="text-sm font-medium">Body (Markdown)</span>
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-[#121212]">Message</span>
+          <span className="text-[12px] text-[#6b6b6b]">Use the buttons or type normally — preview updates as you go.</span>
+        </div>
+        <div className="mb-2 flex flex-wrap gap-1.5">
           <button
             type="button"
-            className="rounded border border-[var(--campsite-border)] px-2 py-0.5 text-xs"
+            className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 text-xs font-medium text-[#121212] transition hover:bg-[#f5f4f1]"
             onClick={() => wrapSelection('**', '**')}
           >
             Bold
           </button>
           <button
             type="button"
-            className="rounded border border-[var(--campsite-border)] px-2 py-0.5 text-xs"
+            className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 text-xs font-medium text-[#121212] transition hover:bg-[#f5f4f1]"
             onClick={() => wrapSelection('*', '*')}
           >
             Italic
           </button>
           <button
             type="button"
-            className="rounded border border-[var(--campsite-border)] px-2 py-0.5 text-xs"
+            className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 text-xs font-medium text-[#121212] transition hover:bg-[#f5f4f1]"
             onClick={() => {
               const ta = bodyRef.current;
               if (!ta) return;
@@ -543,21 +552,31 @@ export function BroadcastComposer({
               setBody(next);
             }}
           >
-            Bullet
+            Bullet list
           </button>
         </div>
         <textarea
           ref={bodyRef}
-          className="min-h-[200px] w-full rounded-md border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-3 py-2 font-mono text-sm"
+          className={`${COMPOSE_INPUT_CLASS} min-h-[160px] resize-y leading-relaxed`}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Write your message…"
         />
+        <div className="mt-3 rounded-lg border border-[#d8d8d8] bg-white p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Preview</p>
+          {body.trim() ? (
+            <div className="max-w-none text-sm leading-relaxed text-[#121212] [&_a]:text-emerald-700 [&_a]:underline [&_li]:my-0.5 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+            </div>
+          ) : (
+            <p className="text-sm text-[#9b9b9b]">Recipients will see your message here once you start typing.</p>
+          )}
+        </div>
       </div>
 
       {!isBroadcastDraftOnlyRole(role) ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-[var(--campsite-border)] p-3">
-          <label className="flex items-center gap-2 text-sm">
+        <div className="flex flex-col gap-2 rounded-lg border border-[#d8d8d8] bg-white p-3">
+          <label className="flex items-center gap-2 text-sm text-[#121212]">
             <input type="checkbox" checked={schedule} onChange={(e) => setSchedule(e.target.checked)} />
             Schedule send
           </label>
@@ -567,7 +586,7 @@ export function BroadcastComposer({
               min={minScheduleIso}
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
-              className="max-w-xs rounded-md border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-3 py-2 text-sm"
+              className={`${COMPOSE_INPUT_CLASS} max-w-xs`}
             />
           ) : null}
         </div>
@@ -577,7 +596,7 @@ export function BroadcastComposer({
         <button
           type="button"
           disabled={saving}
-          className="rounded-md border border-[var(--campsite-border)] px-4 py-2 text-sm font-medium hover:bg-[var(--campsite-bg)]"
+          className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-sm font-medium text-[#121212] transition hover:bg-[#f5f4f1]"
           onClick={() => void submit('draft')}
         >
           Save draft

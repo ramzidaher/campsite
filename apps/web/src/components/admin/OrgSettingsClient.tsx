@@ -73,8 +73,14 @@ export function OrgSettingsClient({
   const [msgTone, setMsgTone] = useState<'ok' | 'err'>('ok');
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [logoPreviewFailed, setLogoPreviewFailed] = useState(false);
 
   const initials = useMemo(() => orgInitials(name), [name]);
+  const trimmedLogoUrl = logoUrl.trim();
+
+  useEffect(() => {
+    setLogoPreviewFailed(false);
+  }, [trimmedLogoUrl]);
 
   useEffect(() => {
     setName(initial.name);
@@ -90,11 +96,19 @@ export function OrgSettingsClient({
   async function saveBranding() {
     setLoading(true);
     setMsg(null);
+    if (trimmedLogoUrl && logoPreviewFailed) {
+      setLoading(false);
+      flash(
+        'Logo URL must be a direct link to an image file (e.g. ending in .png or .svg), not a normal web page.',
+        'err'
+      );
+      return;
+    }
     const { error } = await supabase
       .from('organisations')
       .update({
         name: name.trim(),
-        logo_url: logoUrl.trim() || null,
+        logo_url: trimmedLogoUrl || null,
       })
       .eq('id', initial.id);
     setLoading(false);
@@ -215,21 +229,41 @@ export function OrgSettingsClient({
               <p className="mt-1 text-[13px] text-[#6b6b6b]">Customise how your organisation appears in Campsite.</p>
 
               <div className="mt-5 flex flex-col gap-4 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] p-4 sm:flex-row sm:items-center">
-                {logoUrl.trim() ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={logoUrl.trim()}
-                    alt=""
-                    className="mx-auto h-16 w-16 shrink-0 rounded-xl border border-[#d8d8d8] bg-white object-cover sm:mx-0"
-                  />
-                ) : (
-                  <div className="mx-auto flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[#121212] font-authSerif text-[22px] text-[#faf9f6] sm:mx-0">
-                    {initials}
-                  </div>
-                )}
+                <div className="relative mx-auto h-16 w-16 shrink-0 sm:mx-0">
+                  {trimmedLogoUrl && !logoPreviewFailed ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={trimmedLogoUrl}
+                      src={trimmedLogoUrl}
+                      alt=""
+                      onError={() => setLogoPreviewFailed(true)}
+                      className="h-16 w-16 rounded-xl border border-[#d8d8d8] bg-white object-contain"
+                    />
+                  ) : null}
+                  {(!trimmedLogoUrl || logoPreviewFailed) && (
+                    <div
+                      className={[
+                        'flex h-16 w-16 items-center justify-center rounded-xl bg-[#121212] font-authSerif text-[22px] text-[#faf9f6]',
+                        trimmedLogoUrl && logoPreviewFailed ? 'absolute inset-0' : '',
+                      ].join(' ')}
+                    >
+                      {initials}
+                    </div>
+                  )}
+                </div>
                 <div className="min-w-0 flex-1 text-center sm:text-left">
                   <div className="text-[13.5px] font-medium text-[#121212]">Organisation logo</div>
-                  <p className="mt-1 text-[11.5px] text-[#9b9b9b]">PNG or SVG recommended · paste a public URL below</p>
+                  <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
+                    Use a <strong className="font-medium text-[#6b6b6b]">direct image URL</strong> (PNG, SVG, JPG, or
+                    WebP) — not a website homepage. The link should usually end in{' '}
+                    <span className="font-mono">.png</span>, <span className="font-mono">.svg</span>, etc.
+                  </p>
+                  {trimmedLogoUrl && logoPreviewFailed ? (
+                    <p className="mt-2 text-[11.5px] font-medium text-[#b45309]">
+                      We couldn&apos;t load an image from this URL. Try opening it in a new tab — if you see a page
+                      instead of a picture, paste the image file&apos;s address instead.
+                    </p>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
                     <button
                       type="button"
@@ -244,7 +278,7 @@ export function OrgSettingsClient({
                     </button>
                     <button
                       type="button"
-                      disabled={!logoUrl.trim()}
+                      disabled={!trimmedLogoUrl}
                       className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6] disabled:opacity-40"
                       onClick={() => setLogoUrl('')}
                     >
@@ -284,8 +318,12 @@ export function OrgSettingsClient({
                   className="w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://…"
+                  placeholder="https://example.org/logo.png"
                 />
+                <span className="mt-1 block text-[11.5px] text-[#9b9b9b]">
+                  Host the file somewhere public (your site, Supabase Storage, etc.) or right-click an image → copy image
+                  address.
+                </span>
               </label>
 
               <button

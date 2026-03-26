@@ -41,48 +41,61 @@ function StepProgress({ step }: { step: number }) {
   return (
     <div className="mb-8">
       <p className="mb-3 text-center text-[11.5px] font-medium text-[#9b9b9b] md:hidden">
-        Step {step} of {STEP_LABELS.length}
+        Step {step} of {STEP_LABELS.length}: {STEP_LABELS[step - 1]}
       </p>
-      <div className="hidden items-center md:flex">
-        {STEP_LABELS.map((label, i) => {
-          const n = i + 1;
-          const isDone = n < step;
-          const isActive = n === step;
-          return (
-            <div key={label} className="flex min-w-0 flex-1 items-center">
-              <div className="flex min-w-0 items-center gap-2">
-                <div
-                  className={[
-                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[1.5px] text-xs font-medium transition-colors',
-                    isDone
-                      ? 'border-[#15803d] bg-[#15803d] text-white'
-                      : isActive
-                        ? 'border-[#121212] bg-[#121212] text-white'
-                        : 'border-[#d8d8d8] bg-white text-[#9b9b9b]',
-                  ].join(' ')}
-                >
-                  {isDone ? '✓' : n}
+      <div className="hidden md:block">
+        <div className="flex w-full">
+          {STEP_LABELS.map((label, i) => {
+            const n = i + 1;
+            const isDone = n < step;
+            const isActive = n === step;
+            const circle = (
+              <div
+                className={[
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[1.5px] text-xs font-medium transition-colors',
+                  isDone
+                    ? 'border-[#15803d] bg-[#15803d] text-white'
+                    : isActive
+                      ? 'border-[#121212] bg-[#121212] text-white'
+                      : 'border-[#d8d8d8] bg-white text-[#9b9b9b]',
+                ].join(' ')}
+              >
+                {isDone ? '✓' : n}
+              </div>
+            );
+            return (
+              <div key={label} className="flex min-w-0 flex-1 flex-col items-center">
+                <div className="flex w-full items-center">
+                  <div
+                    className={[
+                      'h-px min-w-2 flex-1',
+                      i === 0 ? 'max-w-0 min-w-0 flex-[0]' : '',
+                      i > 0 && step > i ? 'bg-[#15803d]' : i > 0 ? 'bg-[#d8d8d8]' : '',
+                    ].join(' ')}
+                    aria-hidden
+                  />
+                  {circle}
+                  <div
+                    className={[
+                      'h-px min-w-2 flex-1',
+                      i === STEP_LABELS.length - 1 ? 'max-w-0 min-w-0 flex-[0]' : '',
+                      i < STEP_LABELS.length - 1 && step > i + 1 ? 'bg-[#15803d]' : i < STEP_LABELS.length - 1 ? 'bg-[#d8d8d8]' : '',
+                    ].join(' ')}
+                    aria-hidden
+                  />
                 </div>
                 <span
                   className={[
-                    'truncate text-[11.5px] font-medium',
+                    'mt-2 w-full px-0.5 text-center text-[11px] font-medium leading-tight',
                     isActive ? 'text-[#121212]' : 'text-[#9b9b9b]',
                   ].join(' ')}
                 >
                   {label}
                 </span>
               </div>
-              {i < STEP_LABELS.length - 1 ? (
-                <div
-                  className={['mx-2 h-px min-w-[12px] flex-1', n < step ? 'bg-[#15803d]' : 'bg-[#d8d8d8]'].join(
-                    ' '
-                  )}
-                  aria-hidden
-                />
-              ) : null}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -204,11 +217,22 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
     setLoading(true);
     const supabase = createClient();
     const origin = window.location.origin;
+    const registerSubscriptions = cats
+      .filter((c) => selectedDeptIds.has(c.dept_id))
+      .map((c) => ({
+        cat_id: c.id,
+        subscribed: subscribed[c.id] ?? true,
+      }));
     const { data, error: signErr } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          register_org_id: orgId,
+          register_dept_ids: JSON.stringify([...selectedDeptIds]),
+          register_subscriptions: JSON.stringify(registerSubscriptions),
+        },
         emailRedirectTo: `${origin}/auth/callback?next=/pending`,
       },
     });
@@ -219,43 +243,44 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
     }
 
     const userId = data.user.id;
+    const { completeRegistrationProfileIfNeeded } = await import('@/lib/auth/completeRegistrationProfile');
 
-    const { error: pErr } = await supabase.from('profiles').insert({
-      id: userId,
-      org_id: orgId,
-      full_name: fullName,
-      email,
-      role: 'csa',
-      status: 'pending',
-    });
-    if (pErr) {
-      setLoading(false);
-      setError(pErr.message);
-      return;
-    }
-
-    const ud = [...selectedDeptIds].map((dept_id) => ({ user_id: userId, dept_id }));
-    const { error: udErr } = await supabase.from('user_departments').insert(ud);
-    if (udErr) {
-      setLoading(false);
-      setError(udErr.message);
-      return;
-    }
-
-    const subRows = cats
-      .filter((c) => selectedDeptIds.has(c.dept_id))
-      .map((c) => ({
-        user_id: userId,
-        cat_id: c.id,
-        subscribed: subscribed[c.id] ?? true,
-      }));
-    if (subRows.length) {
-      const { error: sErr } = await supabase.from('user_subscriptions').insert(subRows);
-      if (sErr) {
+    let sessionUser = data.user;
+    if (data.session) {
+      const done = await completeRegistrationProfileIfNeeded(supabase, sessionUser);
+      if (!done.ok) {
         setLoading(false);
-        setError(sErr.message);
+        setError(done.message);
         return;
       }
+    } else {
+      await new Promise((r) => setTimeout(r, 400));
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess.session?.user) {
+        sessionUser = sess.session.user;
+        const done = await completeRegistrationProfileIfNeeded(supabase, sessionUser);
+        if (!done.ok) {
+          setLoading(false);
+          setError(done.message);
+          return;
+        }
+      }
+    }
+
+    const { data: sessFinal } = await supabase.auth.getSession();
+    if (sessFinal.session) {
+      const { data: prof } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+      if (!prof) {
+        setLoading(false);
+        setError(
+          'Your account was created but your member profile was not saved. If you were asked to confirm your email, open the link in that message, then sign in once. You can also ask an organisation admin to add you.'
+        );
+        return;
+      }
+      setLoading(false);
+      router.replace('/pending');
+      router.refresh();
+      return;
     }
 
     setLoading(false);

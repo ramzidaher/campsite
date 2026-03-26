@@ -1,8 +1,19 @@
 'use client';
 
+import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+
+const ROLE_LABEL: Record<string, string> = {
+  org_admin: 'Org admin',
+  manager: 'Manager',
+  coordinator: 'Coordinator',
+  administrator: 'Administrator',
+  duty_manager: 'Duty manager',
+  csa: 'CSA',
+  society_leader: 'Society leader',
+};
 
 export type PendingRow = {
   id: string;
@@ -12,11 +23,25 @@ export type PendingRow = {
   departments: string[];
 };
 
-export function PendingApprovalsClient({ initial }: { initial: PendingRow[] }) {
+export function PendingApprovalsClient({
+  initial,
+  viewerRole,
+}: {
+  initial: PendingRow[];
+  /** Used to explain scoped queue for managers/coordinators vs org-wide admin list. */
+  viewerRole: string;
+}) {
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [note, setNote] = useState<Record<string, string>>({});
+  const [approveRoleById, setApproveRoleById] = useState<Record<string, ProfileRole>>({});
   const [busy, setBusy] = useState<string | null>(null);
+
+  const assignableRoles = useMemo(() => rolesAssignableOnApprove(viewerRole), [viewerRole]);
+  const defaultApproveRole = useMemo((): ProfileRole => {
+    if (assignableRoles.includes('csa')) return 'csa';
+    return assignableRoles[0] ?? 'csa';
+  }, [assignableRoles]);
 
   async function refresh() {
     router.refresh();
@@ -28,10 +53,12 @@ export function PendingApprovalsClient({ initial }: { initial: PendingRow[] }) {
       const supabase = createClient();
       const { data: me } = await supabase.auth.getUser();
       if (!me.user) return;
+      const rolePick = approveRoleById[id] ?? defaultApproveRole;
       const { error } = await supabase.rpc('approve_pending_profile', {
         p_target: id,
         p_approve: true,
         p_rejection_note: null,
+        p_role: rolePick,
       });
       if (error) {
         alert(error.message);
@@ -54,6 +81,7 @@ export function PendingApprovalsClient({ initial }: { initial: PendingRow[] }) {
         p_target: id,
         p_approve: false,
         p_rejection_note: note[id]?.trim() ? note[id]!.trim() : null,
+        p_role: null,
       });
       if (error) {
         alert(error.message);
@@ -67,8 +95,19 @@ export function PendingApprovalsClient({ initial }: { initial: PendingRow[] }) {
   }
 
   if (!rows.length) {
+    const scoped = viewerRole === 'manager' || viewerRole === 'coordinator';
     return (
-      <p className="mt-6 text-sm text-[var(--campsite-text-secondary)]">No pending registrations.</p>
+      <div className="mt-6 space-y-2 text-sm text-[var(--campsite-text-secondary)]">
+        <p>No pending registrations.</p>
+        {scoped ? (
+          <p className="text-xs leading-relaxed text-[var(--campsite-text-muted)]">
+            You only see people who picked at least one department you manage (managers) or belong to
+            (coordinators). New joiners who chose other teams appear for your{' '}
+            <strong className="font-medium text-[var(--campsite-text-secondary)]">organisation admin</strong>{' '}
+            under Admin → Pending approval or All members (filter: Pending).
+          </p>
+        ) : null}
+      </div>
     );
   }
 
@@ -87,6 +126,22 @@ export function PendingApprovalsClient({ initial }: { initial: PendingRow[] }) {
           <p className="mt-2 text-sm text-[var(--campsite-text-secondary)]">
             Departments: {p.departments.length ? p.departments.join(', ') : '—'}
           </p>
+          <label className="mt-3 block text-xs text-[var(--campsite-text-secondary)]">
+            Role after approval
+            <select
+              className="mt-1 block w-full max-w-xs rounded border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2 py-1.5 text-sm"
+              value={approveRoleById[p.id] ?? defaultApproveRole}
+              onChange={(e) =>
+                setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value as ProfileRole }))
+              }
+            >
+              {assignableRoles.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABEL[r] ?? r.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="mt-3 block text-xs">
             Rejection note (optional)
             <input

@@ -11,6 +11,9 @@ export const PROFILE_ROLES = [
 
 export type ProfileRole = (typeof PROFILE_ROLES)[number];
 
+/** Stored on new self-registrations until an approver picks a real role. */
+export const PROFILE_REGISTRATION_ROLE = 'unassigned' as const;
+
 export const PROFILE_STATUSES = ['pending', 'active', 'inactive'] as const;
 export type ProfileStatus = (typeof PROFILE_STATUSES)[number];
 
@@ -21,6 +24,18 @@ export type ProfileStatus = (typeof PROFILE_STATUSES)[number];
 export function isOrgAdminRole(role: string | null | undefined): boolean {
   const r = role?.trim();
   return r === 'org_admin' || r === 'super_admin';
+}
+
+/**
+ * Roles an approver may assign when activating a pending member (excludes `unassigned`).
+ * Managers/coordinators cannot assign `org_admin` or `manager` from the approval queue.
+ */
+export function rolesAssignableOnApprove(viewerRole: string | null | undefined): ProfileRole[] {
+  const r = viewerRole?.trim();
+  if (isOrgAdminRole(r)) {
+    return [...PROFILE_ROLES];
+  }
+  return PROFILE_ROLES.filter((role) => role !== 'org_admin' && role !== 'manager');
 }
 
 /** Member / broadcast approval queues: org admin, dept managers, coordinators (see RLS `can_approve_profile`). */

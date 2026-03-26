@@ -1,9 +1,10 @@
 'use client';
 
+import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { PendingPreviewRow } from '@/lib/dashboard/loadDashboardHome';
 
@@ -19,6 +20,8 @@ export function AdminOrgBulkApprove({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const assignableRoles = useMemo(() => rolesAssignableOnApprove('org_admin'), []);
+  const [bulkApproveRole, setBulkApproveRole] = useState<ProfileRole>('csa');
 
   async function approveAllPending() {
     if (!confirm('Approve all pending members in this organisation?')) return;
@@ -43,6 +46,7 @@ export function AdminOrgBulkApprove({
         p_target: id,
         p_approve: true,
         p_rejection_note: null,
+        p_role: bulkApproveRole,
       });
       if (error) {
         setMsg(error.message);
@@ -62,14 +66,30 @@ export function AdminOrgBulkApprove({
         <p className="text-sm text-amber-950">
           <strong>{pendingCount}</strong> pending verification(s). Super admins can approve everyone in one step.
         </p>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void approveAllPending()}
-          className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {busy ? 'Working…' : 'Approve all pending'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-sm text-amber-950">
+            Role
+            <select
+              value={bulkApproveRole}
+              onChange={(e) => setBulkApproveRole(e.target.value as ProfileRole)}
+              className="rounded-md border border-amber-800/30 bg-white px-2 py-1 text-sm text-amber-950"
+            >
+              {assignableRoles.map((r) => (
+                <option key={r} value={r}>
+                  {r.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void approveAllPending()}
+            className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {busy ? 'Working…' : 'Approve all pending'}
+          </button>
+        </div>
       </div>
       {pendingPreview.length > 0 ? (
         <ul className="mt-3 space-y-1 text-xs text-amber-950/90">

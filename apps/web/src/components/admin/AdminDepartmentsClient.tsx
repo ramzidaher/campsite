@@ -162,7 +162,10 @@ export function AdminDepartmentsClient({
   }, [router]);
 
   async function createDept() {
-    if (!nName.trim()) return;
+    if (!nName.trim()) {
+      setMsg('Please enter a department name.');
+      return;
+    }
     setBusy(true);
     setMsg(null);
     const { error } = await supabase.from('departments').insert({

@@ -36,7 +36,7 @@ export default async function PendingApprovalsPage() {
       <p className="mt-1 text-sm text-[var(--campsite-text-secondary)]">
         Approve or reject new registrations in your organisation.
       </p>
-      <PendingApprovalsClient initial={rows} />
+      <PendingApprovalsClient initial={rows} viewerRole={me.role as string} />
     </div>
   );
 }

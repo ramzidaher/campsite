@@ -1,7 +1,7 @@
 import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isApproverRole } from '@campsite/types';
+import { canViewOrgWideDashboardStats, isApproverRole } from '@campsite/types';
 
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
@@ -25,8 +25,10 @@ export type DashboardHomeModel = {
   orgName: string;
   userName: string;
   profileRole: string;
-  broadcastTotal: number;
-  memberActiveTotal: number;
+  /** Org-wide sent count; omitted when the viewer must not see org aggregates. */
+  broadcastTotal?: number;
+  /** Org-wide active profile count; omitted when the viewer must not see org aggregates. */
+  memberActiveTotal?: number;
   /** Active profiles created in the last 7 days — set when `adminOverview` loader option is used. */
   newMembersWeek?: number;
   pendingCount: number | null;
@@ -105,6 +107,23 @@ export async function loadDashboardHome(
   weekAgo.setDate(weekAgo.getDate() - 7);
 
   const adminOverview = options?.adminOverview === true;
+  const showOrgAggregates = canViewOrgWideDashboardStats(profile.role);
+
+  const broadcastCountQuery = showOrgAggregates
+    ? supabase
+        .from('broadcasts')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+        .eq('status', 'sent')
+    : Promise.resolve({ count: null as number | null });
+
+  const memberActiveCountQuery = showOrgAggregates
+    ? supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+        .eq('status', 'active')
+    : Promise.resolve({ count: null as number | null });
 
   const shiftsQuery = adminOverview
     ? supabase
@@ -139,16 +158,8 @@ export async function loadDashboardHome(
     { data: eventsRaw },
     unreadRpc,
   ] = await Promise.all([
-    supabase
-      .from('broadcasts')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', orgId)
-      .eq('status', 'sent'),
-    supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', orgId)
-      .eq('status', 'active'),
+    broadcastCountQuery,
+    memberActiveCountQuery,
     shiftsQuery,
     newMembersQuery,
     supabase
@@ -227,8 +238,12 @@ export async function loadDashboardHome(
     orgName,
     userName: profile.full_name?.trim() || 'there',
     profileRole: profile.role,
-    broadcastTotal: broadcastTotal ?? 0,
-    memberActiveTotal: memberActiveTotal ?? 0,
+    ...(showOrgAggregates
+      ? {
+          broadcastTotal: broadcastTotal ?? 0,
+          memberActiveTotal: memberActiveTotal ?? 0,
+        }
+      : {}),
     ...(adminOverview ? { newMembersWeek: newMembersWeekCount ?? 0 } : {}),
     pendingCount,
     unreadCount,

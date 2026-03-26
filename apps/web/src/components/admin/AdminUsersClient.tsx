@@ -1,6 +1,6 @@
 'use client';
 
-import { PROFILE_ROLES, type ProfileRole } from '@campsite/types';
+import { PROFILE_ROLES, rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -19,6 +19,7 @@ export type UserRow = {
 const PAGE = 25;
 
 const ROLE_OPTION_LABEL: Record<string, string> = {
+  unassigned: 'Unassigned',
   org_admin: 'Org admin',
   manager: 'Manager',
   coordinator: 'Coordinator',
@@ -30,6 +31,7 @@ const ROLE_OPTION_LABEL: Record<string, string> = {
 
 function rolePillClass(role: string): string {
   const m: Record<string, string> = {
+    unassigned: 'bg-[#fef3c7] text-[#92400e]',
     org_admin: 'bg-[#1a1a1a] text-[#faf9f6]',
     manager: 'bg-[#14532d] text-[#86efac]',
     coordinator: 'bg-[#3b0764] text-[#d8b4fe]',
@@ -105,6 +107,8 @@ export function AdminUsersClient({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeDepts = departments.filter((d) => !d.is_archived);
+  const orgAdminAssignableRoles = useMemo(() => rolesAssignableOnApprove('org_admin'), []);
+  const [bulkApproveRole, setBulkApproveRole] = useState<ProfileRole>('csa');
 
   const filterHref = useCallback(
     (patch: Record<string, string | undefined>) => {
@@ -179,6 +183,7 @@ export function AdminUsersClient({
         p_target: id,
         p_approve: true,
         p_rejection_note: null,
+        p_role: bulkApproveRole,
       });
       if (error) {
         setMsg(error.message);
@@ -295,6 +300,12 @@ export function AdminUsersClient({
               <span className="text-[#9b9b9b]"> · {rows.length} shown (filters / max 500 loaded)</span>
             ) : null}
           </p>
+          <p className="mt-2 max-w-2xl text-[12px] leading-relaxed text-[#9b9b9b]">
+            <strong className="font-medium text-[#6b6b6b]">Invite link</strong> opens self-registration for this org.
+            New accounts are created as <strong className="font-medium text-[#6b6b6b]">Unassigned</strong>{' '}
+            with status <strong className="font-medium text-[#6b6b6b]">Pending</strong>. An approver chooses
+            their role (CSA, duty manager, etc.) when approving. You can still change role later here.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -328,6 +339,7 @@ export function AdminUsersClient({
           aria-label="Filter by role"
         >
           <option value="all">All roles</option>
+          <option value="unassigned">{ROLE_OPTION_LABEL.unassigned}</option>
           {PROFILE_ROLES.map((r) => (
             <option key={r} value={r}>
               {ROLE_OPTION_LABEL[r] ?? r.replace(/_/g, ' ')}
@@ -366,6 +378,21 @@ export function AdminUsersClient({
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 text-[12.5px] text-[#6b6b6b]">
+          Role when approving
+          <select
+            value={bulkApproveRole}
+            onChange={(e) => setBulkApproveRole(e.target.value as ProfileRole)}
+            className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2 text-[13px] text-[#121212]"
+            aria-label="Role to assign when bulk approving pending members"
+          >
+            {orgAdminAssignableRoles.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_OPTION_LABEL[r] ?? r}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           type="button"
           onClick={() => void bulkApprovePending()}

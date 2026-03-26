@@ -1,4 +1,4 @@
-import { isApproverRole } from '@campsite/types';
+import { isApproverRole, rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -47,6 +47,16 @@ async function fetchPendingRows(userId: string, orgId: string, role: string): Pr
       const allowed = new Set((ud ?? []).map((u) => u.user_id as string));
       list = list.filter((p) => allowed.has(p.id));
     }
+  } else if (role === 'coordinator') {
+    const { data: ud } = await supabase.from('user_departments').select('dept_id').eq('user_id', userId);
+    const deptIds = [...new Set((ud ?? []).map((u) => u.dept_id as string))];
+    if (!deptIds.length) {
+      list = [];
+    } else {
+      const { data: ud2 } = await supabase.from('user_departments').select('user_id').in('dept_id', deptIds);
+      const allowed = new Set((ud2 ?? []).map((u) => u.user_id as string));
+      list = list.filter((p) => allowed.has(p.id));
+    }
   }
 
   const ids = list.map((p) => p.id);
@@ -87,6 +97,7 @@ export default function PendingApprovalsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [approveRole, setApproveRole] = useState<ProfileRole>('csa');
 
   const load = useCallback(async () => {
     if (!isSupabaseConfigured() || !user?.id || !profile?.org_id || !isApproverRole(profile.role)) {
@@ -96,6 +107,9 @@ export default function PendingApprovalsScreen() {
     const data = await fetchPendingRows(user.id, profile.org_id, profile.role);
     setRows(data);
   }, [user?.id, profile?.org_id, profile?.role]);
+
+  const assignableRoles = rolesAssignableOnApprove(profile?.role);
+  const roleLabel = (r: string) => r.replace(/_/g, ' ');
 
   useFocusEffect(
     useCallback(() => {
@@ -139,6 +153,7 @@ export default function PendingApprovalsScreen() {
         p_target: id,
         p_approve: true,
         p_rejection_note: null,
+        p_role: approveRole,
       });
       if (error) {
         Alert.alert('Could not approve', error.message);
@@ -161,6 +176,7 @@ export default function PendingApprovalsScreen() {
         p_target: id,
         p_approve: false,
         p_rejection_note: notes[id]?.trim() ? notes[id]!.trim() : null,
+        p_role: null,
       });
       if (error) {
         Alert.alert('Could not reject', error.message);
@@ -193,6 +209,20 @@ export default function PendingApprovalsScreen() {
       >
         <Text style={styles.title}>Pending members</Text>
         <Text style={styles.sub}>Approve or reject new registrations in your organisation.</Text>
+        <Text style={styles.rolePickLabel}>Role when approving</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roleChips}>
+          {assignableRoles.map((r) => (
+            <Pressable
+              key={r}
+              onPress={() => setApproveRole(r)}
+              style={[styles.roleChip, approveRole === r && styles.roleChipOn]}
+            >
+              <Text style={[styles.roleChipText, approveRole === r && styles.roleChipTextOn]}>
+                {roleLabel(r)}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
 
         {loading ? (
           <ActivityIndicator style={styles.spinner} color="#1D4ED8" />
@@ -245,6 +275,20 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 20, fontWeight: '600', color: mainShell.pageText },
   sub: { marginTop: 6, fontSize: 14, lineHeight: 21, color: mainShell.textSecondary },
+  rolePickLabel: { marginTop: 14, fontSize: 12, fontWeight: '600', color: mainShell.textMuted },
+  roleChips: { marginTop: 8, flexGrow: 0 },
+  roleChip: {
+    marginRight: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: mainShell.border,
+    backgroundColor: mainShell.surface,
+  },
+  roleChipOn: { borderColor: '#15803D', backgroundColor: '#dcfce7' },
+  roleChipText: { fontSize: 13, color: mainShell.textSecondary, textTransform: 'capitalize' },
+  roleChipTextOn: { color: '#166534', fontWeight: '600' },
   muted: { marginTop: 24, fontSize: 14, color: mainShell.textSecondary },
   spinner: { marginTop: 32 },
   card: {

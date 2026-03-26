@@ -29,6 +29,7 @@ export default async function AdminPendingPage() {
       initialRows={rows}
       orgId={orgId}
       showApproveAll={canManageOrgUsers(profile.role)}
+      viewerRole={profile.role as string}
     />
   );
 }

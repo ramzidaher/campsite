@@ -33,13 +33,17 @@ export default async function AdminDepartmentsPage() {
   const broadcastPermsByDept: Record<string, { permission: string; min_role: string }[]> = {};
 
   if (deptIds.length) {
-    const [{ data: cats }, { data: dms }, { data: profs }, { data: dbp }] = await Promise.all([
+    const [catsRes, dmsRes, profsRes, dbpRes] = await Promise.all([
       supabase.from('dept_categories').select('id, name, dept_id').in('dept_id', deptIds),
       supabase.from('dept_managers').select('dept_id, user_id').in('dept_id', deptIds),
       supabase.from('profiles').select('id, full_name').eq('org_id', profile.org_id),
       supabase.from('dept_broadcast_permissions').select('dept_id, permission, min_role').in('dept_id', deptIds),
     ]);
-    for (const row of dbp ?? []) {
+    const cats = catsRes.data;
+    const dms = dmsRes.data;
+    const profs = profsRes.data;
+    const dbp = dbpRes.error ? [] : (dbpRes.data ?? []);
+    for (const row of dbp) {
       const did = row.dept_id as string;
       if (!broadcastPermsByDept[did]) broadcastPermsByDept[did] = [];
       broadcastPermsByDept[did].push({

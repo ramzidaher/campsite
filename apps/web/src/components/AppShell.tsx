@@ -105,7 +105,7 @@ export function AppShell({
   const closeMobile = () => setMobileNav(false);
 
   return (
-    <div className="flex min-h-screen bg-[#faf9f6] text-[#121212]">
+    <div className="campsite-paper flex min-h-screen bg-[var(--campsite-bg)] text-[var(--campsite-text)]">
       {mobileNav ? (
         <button
           type="button"

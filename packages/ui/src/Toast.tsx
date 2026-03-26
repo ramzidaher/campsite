@@ -27,27 +27,36 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <View
-        style={[styles.stack, StyleSheet.absoluteFillObject, { pointerEvents: 'box-none' }]}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        {items.map((t) => (
-          <View
-            key={t.id}
-            style={[styles.snack, { backgroundColor: tokens.textPrimary, borderColor: tokens.border }]}
-            accessibilityRole="alert"
-          >
-            <Text style={[styles.snackText, { color: tokens.background }]}>{t.message}</Text>
-            <Pressable
-              accessibilityLabel="Dismiss"
-              onPress={() => setItems((prev) => prev.filter((x) => x.id !== t.id))}
+      {items.length > 0 ? (
+        <View
+          style={[styles.stack, StyleSheet.absoluteFillObject, { pointerEvents: 'none' }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {items.map((t) => (
+            <View
+              key={t.id}
+              style={[
+                styles.snack,
+                {
+                  backgroundColor: tokens.textPrimary,
+                  borderColor: tokens.border,
+                  pointerEvents: 'auto',
+                },
+              ]}
+              accessibilityRole="alert"
             >
-              <Text style={[styles.dismiss, { color: tokens.background }]}>×</Text>
-            </Pressable>
-          </View>
-        ))}
-      </View>
+              <Text style={[styles.snackText, { color: tokens.background }]}>{t.message}</Text>
+              <Pressable
+                accessibilityLabel="Dismiss"
+                onPress={() => setItems((prev) => prev.filter((x) => x.id !== t.id))}
+              >
+                <Text style={[styles.dismiss, { color: tokens.background }]}>×</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </ToastContext.Provider>
   );
 }

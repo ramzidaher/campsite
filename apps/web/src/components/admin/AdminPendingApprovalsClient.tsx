@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { PendingApprovalRow } from '@/lib/admin/loadPendingApprovals';
+import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 
 const ROLE_LABEL: Record<string, string> = {
+  unassigned: 'Unassigned',
   org_admin: 'Org admin',
   manager: 'Manager',
   coordinator: 'Coordinator',
@@ -37,10 +39,12 @@ export function AdminPendingApprovalsClient({
   initialRows,
   orgId,
   showApproveAll,
+  viewerRole,
 }: {
   initialRows: PendingApprovalRow[];
   orgId: string;
   showApproveAll: boolean;
+  viewerRole: string;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -51,6 +55,14 @@ export function AdminPendingApprovalsClient({
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [bulkAllBusy, setBulkAllBusy] = useState(false);
+  const [approveRoleById, setApproveRoleById] = useState<Record<string, ProfileRole>>({});
+  const [bulkApproveRole, setBulkApproveRole] = useState<ProfileRole>('csa');
+
+  const assignableRoles = useMemo(() => rolesAssignableOnApprove(viewerRole), [viewerRole]);
+  const defaultApproveRole = useMemo((): ProfileRole => {
+    if (assignableRoles.includes('csa')) return 'csa';
+    return assignableRoles[0] ?? 'csa';
+  }, [assignableRoles]);
 
   useEffect(() => {
     setRows(initialRows);
@@ -75,10 +87,12 @@ export function AdminPendingApprovalsClient({
     setBusy(id);
     setMsg(null);
     try {
+      const rolePick = approveRoleById[id] ?? defaultApproveRole;
       const { error } = await supabase.rpc('approve_pending_profile', {
         p_target: id,
         p_approve: true,
         p_rejection_note: null,
+        p_role: rolePick,
       });
       if (error) {
         setMsg(error.message);
@@ -100,6 +114,7 @@ export function AdminPendingApprovalsClient({
         p_target: id,
         p_approve: false,
         p_rejection_note: note[id]?.trim() ? note[id]!.trim() : null,
+        p_role: null,
       });
       if (error) {
         setMsg(error.message);
@@ -135,6 +150,7 @@ export function AdminPendingApprovalsClient({
         p_target: id,
         p_approve: true,
         p_rejection_note: null,
+        p_role: bulkApproveRole,
       });
       if (error) {
         setMsg(error.message);
@@ -171,19 +187,35 @@ export function AdminPendingApprovalsClient({
       </div>
 
       {showApproveAll && count > 0 ? (
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#d8d8d8] bg-white px-4 py-3">
+        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-[#d8d8d8] bg-white px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-[13px] text-[#6b6b6b]">
             <span className="font-medium text-[#121212]">{count}</span> awaiting verification. You can approve
             everyone in one step.
           </p>
-          <button
-            type="button"
-            disabled={bulkAllBusy}
-            onClick={() => void approveAllPending()}
-            className="shrink-0 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {bulkAllBusy ? 'Working…' : 'Approve all pending'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-[12px] text-[#6b6b6b]">
+              Role for all
+              <select
+                value={bulkApproveRole}
+                onChange={(e) => setBulkApproveRole(e.target.value as ProfileRole)}
+                className="h-9 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-2 text-[13px] text-[#121212]"
+              >
+                {assignableRoles.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABEL[r] ?? r}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={bulkAllBusy}
+              onClick={() => void approveAllPending()}
+              className="shrink-0 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {bulkAllBusy ? 'Working…' : 'Approve all pending'}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -273,7 +305,22 @@ export function AdminPendingApprovalsClient({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+                      <select
+                        value={approveRoleById[p.id] ?? defaultApproveRole}
+                        onChange={(e) =>
+                          setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value as ProfileRole }))
+                        }
+                        className="h-9 min-w-[140px] rounded-lg border border-[#d8d8d8] bg-white px-2 text-[12px] text-[#121212]"
+                        aria-label="Role when approving"
+                      >
+                        {assignableRoles.map((r) => (
+                          <option key={r} value={r}>
+                            {ROLE_LABEL[r] ?? r}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex items-center gap-2">
                       <button
                         type="button"
                         title="Approve"
@@ -292,6 +339,7 @@ export function AdminPendingApprovalsClient({
                       >
                         ✕
                       </button>
+                      </div>
                     </div>
                   )}
                 </li>

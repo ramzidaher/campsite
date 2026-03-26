@@ -233,7 +233,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       org_id: orgId,
       full_name: fullName,
       email,
-      role: 'csa',
+      role: 'unassigned',
       status: 'pending',
     });
     if (pErr) {

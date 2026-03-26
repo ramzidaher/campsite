@@ -60,14 +60,17 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
     return { start, end };
   }, [initial.body]);
 
+  const displayTitle = initial.title?.trim() ? initial.title.trim() : 'Untitled broadcast';
+  const bodyTrimmed = initial.body?.trim() ?? '';
+
   async function addToCalendar() {
     if (!parsedRange) return;
     setCalendarBusy(true);
     setCalendarMsg(null);
     const { error } = await supabase.from('calendar_events').insert({
       org_id: initial.org_id,
-      title: initial.title,
-      description: initial.body.slice(0, 2000),
+      title: displayTitle,
+      description: initial.body?.slice(0, 2000) ?? '',
       start_time: parsedRange.start.toISOString(),
       end_time: parsedRange.end.toISOString(),
       all_day: false,
@@ -84,76 +87,95 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
       <Link
         href="/broadcasts"
-        className="text-sm text-emerald-400 hover:underline"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--campsite-text-secondary)] transition-colors hover:text-[var(--campsite-text)]"
       >
-        ← Back to broadcasts
+        <span aria-hidden>←</span> Back to broadcasts
       </Link>
 
-      <div className="flex flex-wrap gap-2">
-        {initial.is_pinned ? (
-          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
-            Pinned
-          </span>
-        ) : null}
-        {initial.is_mandatory ? (
-          <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-medium text-red-900">
-            Mandatory
-          </span>
-        ) : null}
-        {initial.is_org_wide ? (
-          <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-900">
-            Org-wide
-          </span>
-        ) : null}
-        <span className="rounded-full bg-[var(--campsite-bg)] px-2 py-0.5 text-xs text-[var(--campsite-text-secondary)]">
-          {initial.departments?.name ?? 'Department'}
-        </span>
-        <span className="rounded-full bg-[var(--campsite-bg)] px-2 py-0.5 text-xs text-[var(--campsite-text-secondary)]">
-          {initial.dept_categories?.name ?? 'Category'}
-        </span>
-      </div>
+      <div className="mt-6 rounded-2xl border border-[var(--campsite-border)] bg-white p-6 shadow-[0_1px_3px_rgba(18,18,18,0.06)] sm:p-8">
+        <div className="flex flex-wrap gap-2">
+          {initial.is_pinned ? (
+            <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-950">
+              Pinned
+            </span>
+          ) : null}
+          {initial.is_mandatory ? (
+            <span className="inline-flex items-center rounded-full border border-red-200/80 bg-red-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-950">
+              Mandatory
+            </span>
+          ) : null}
+          {initial.is_org_wide ? (
+            <span className="inline-flex items-center rounded-full border border-sky-200/80 bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-950">
+              Org-wide
+            </span>
+          ) : null}
+          {initial.departments?.name ? (
+            <span className="inline-flex items-center rounded-full border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--campsite-text-secondary)]">
+              {initial.departments.name}
+            </span>
+          ) : null}
+          {initial.dept_categories?.name ? (
+            <span className="inline-flex items-center rounded-full border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--campsite-text-secondary)]">
+              {initial.dept_categories.name}
+            </span>
+          ) : null}
+        </div>
 
-      <h1 className="text-2xl font-semibold text-[var(--campsite-text)]">{initial.title}</h1>
-      <div className="text-sm text-[var(--campsite-text-secondary)]">
-        {initial.profiles?.full_name ?? 'Unknown'} ·{' '}
-        {initial.sent_at
-          ? new Date(initial.sent_at).toLocaleString(undefined, {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            })
-          : ''}
-      </div>
+        <h1 className="mt-5 font-authSerif text-[1.65rem] font-normal leading-tight tracking-tight text-[var(--campsite-text)] sm:text-3xl">
+          {displayTitle}
+        </h1>
+        <p className="mt-3 text-sm text-[var(--campsite-text-secondary)]">
+          <span className="font-medium text-[var(--campsite-text)]">
+            {initial.profiles?.full_name ?? 'Unknown sender'}
+          </span>
+          {initial.sent_at ? (
+            <>
+              <span className="mx-2 text-[var(--campsite-text-muted)]">·</span>
+              <time dateTime={initial.sent_at}>
+                {new Date(initial.sent_at).toLocaleString(undefined, {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })}
+              </time>
+            </>
+          ) : null}
+        </p>
 
-      <article className="max-w-none space-y-3 text-sm leading-relaxed text-[var(--campsite-text)] [&_a]:text-emerald-400 [&_li]:my-0.5 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{initial.body}</ReactMarkdown>
-      </article>
+        <div className="mt-8 border-t border-[var(--campsite-border)] pt-8">
+          <article className="max-w-none text-[15px] leading-[1.65] text-[var(--campsite-text)] [&_a]:font-medium [&_a]:text-emerald-700 [&_a]:underline [&_a]:decoration-emerald-700/30 [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--campsite-border)] [&_blockquote]:pl-4 [&_blockquote]:text-[var(--campsite-text-secondary)] [&_code]:rounded [&_code]:bg-[var(--campsite-surface)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-semibold [&_li]:my-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-3 [&_p:first-child]:mt-0 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[var(--campsite-border)] [&_pre]:bg-[var(--campsite-surface)] [&_pre]:p-3 [&_pre]:text-[13px] [&_strong]:font-semibold [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5">
+            {bodyTrimmed ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{initial.body}</ReactMarkdown>
+            ) : (
+              <p className="text-[var(--campsite-text-muted)]">No message body for this broadcast.</p>
+            )}
+          </article>
+        </div>
 
-      {parsedRange ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          <p>
-            Event detected:{' '}
-            <strong>
+        {parsedRange ? (
+          <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-4 text-sm text-amber-950">
+            <p className="font-medium text-amber-950">Date or time in this message</p>
+            <p className="mt-1 text-amber-950/90">
               {parsedRange.start.toLocaleString(undefined, {
                 dateStyle: 'full',
                 timeStyle: 'short',
               })}{' '}
               – {parsedRange.end.toLocaleTimeString(undefined, { timeStyle: 'short' })}
-            </strong>
-          </p>
-          <button
-            type="button"
-            disabled={calendarBusy}
-            onClick={() => void addToCalendar()}
-            className="mt-3 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {calendarBusy ? 'Saving…' : 'Add to calendar'}
-          </button>
-          {calendarMsg ? <p className="mt-2 text-xs text-amber-200/90">{calendarMsg}</p> : null}
-        </div>
-      ) : null}
+            </p>
+            <button
+              type="button"
+              disabled={calendarBusy}
+              onClick={() => void addToCalendar()}
+              className="mt-4 rounded-lg bg-amber-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:bg-amber-800 disabled:opacity-60"
+            >
+              {calendarBusy ? 'Saving…' : 'Add to organisation calendar'}
+            </button>
+            {calendarMsg ? <p className="mt-2 text-xs text-amber-900/80">{calendarMsg}</p> : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

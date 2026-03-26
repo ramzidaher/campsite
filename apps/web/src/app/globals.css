@@ -30,6 +30,24 @@
   }
 }
 
+/**
+ * Main app chrome uses a fixed light “paper” surface. Without this, OS dark mode
+ * flips :root tokens to light text colours while AppShell keeps a cream
+ * background, so var(--campsite-text) disappears against the page.
+ */
+.campsite-paper {
+  color-scheme: only light;
+  --campsite-bg: #faf9f6;
+  --campsite-surface: #f5f4f1;
+  --campsite-text: #121212;
+  --campsite-text-secondary: #6b6b6b;
+  --campsite-text-muted: #9b9b9b;
+  --campsite-border: #d8d8d8;
+  --campsite-warning: #b91c1c;
+  --campsite-success: #15803d;
+  --campsite-accent: #1d4ed8;
+}
+
 body {
   color: var(--campsite-text);
   background: var(--campsite-bg);

@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { completeRegistrationProfileIfNeeded } from '@/lib/auth/completeRegistrationProfile';
 import { getSupabasePublicKey, getSupabaseUrl } from '@/lib/supabase/env';
 
 export async function GET(request: NextRequest) {
@@ -32,6 +33,17 @@ export async function GET(request: NextRequest) {
     );
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const done = await completeRegistrationProfileIfNeeded(supabase, user);
+        if (!done.ok) {
+          return NextResponse.redirect(
+            `${origin}/pending?registration_error=${encodeURIComponent(done.message)}`
+          );
+        }
+      }
       return response;
     }
   }

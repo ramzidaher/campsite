@@ -6,12 +6,14 @@ export type OrgSlug = string & { readonly __brand: 'OrgSlug' };
 
 export {
   PROFILE_ROLES,
+  PROFILE_REGISTRATION_ROLE,
   PROFILE_STATUSES,
   type ProfileRole,
   type ProfileStatus,
   isOrgAdminRole,
   isApproverRole,
   canVerifyStaffDiscountQr,
+  rolesAssignableOnApprove,
 } from './roles';
 
 export {
@@ -21,3 +23,5 @@ export {
   isBroadcastApproverRole,
   isBroadcastDraftOnlyRole,
 } from './broadcasts';
+
+export { canViewOrgWideDashboardStats } from './dashboard';
