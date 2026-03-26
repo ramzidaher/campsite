@@ -31,6 +31,8 @@ type Props = {
   unreadOnly?: boolean;
   /** Shown in empty-state subline when filters yield no rows */
   emptyStateCanCompose?: boolean;
+  /** When true with `emptyStateCanCompose`, copy refers to drafts for approval instead of sending. */
+  emptyStateDraftForApproval?: boolean;
   onUnreadChange?: (n: number) => void;
 };
 
@@ -83,6 +85,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     searchQuery,
     unreadOnly = false,
     emptyStateCanCompose = false,
+    emptyStateDraftForApproval = false,
     onUnreadChange,
   },
   ref
@@ -267,7 +270,9 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
           <div className="text-[15px] font-medium text-[#6b6b6b]">No broadcasts here</div>
           <p className="mt-1.5 text-[13px]">
             {emptyStateCanCompose
-              ? 'Try a different filter or compose a new broadcast.'
+              ? emptyStateDraftForApproval
+                ? 'Try a different filter or create a draft for approval.'
+                : 'Try a different filter or compose a new broadcast.'
               : 'Try a different filter.'}
           </p>
         </div>

@@ -229,7 +229,7 @@ export function OrgSettingsClient({
               <p className="mt-1 text-[13px] text-[#6b6b6b]">Customise how your organisation appears in Campsite.</p>
 
               <div className="mt-5 flex flex-col gap-4 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] p-4 sm:flex-row sm:items-center">
-                <div className="relative mx-auto h-16 w-16 shrink-0 sm:mx-0">
+                <div className="mx-auto h-16 w-16 shrink-0 sm:mx-0">
                   {trimmedLogoUrl && !logoPreviewFailed ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -239,14 +239,8 @@ export function OrgSettingsClient({
                       onError={() => setLogoPreviewFailed(true)}
                       className="h-16 w-16 rounded-xl border border-[#d8d8d8] bg-white object-contain"
                     />
-                  ) : null}
-                  {(!trimmedLogoUrl || logoPreviewFailed) && (
-                    <div
-                      className={[
-                        'flex h-16 w-16 items-center justify-center rounded-xl bg-[#121212] font-authSerif text-[22px] text-[#faf9f6]',
-                        trimmedLogoUrl && logoPreviewFailed ? 'absolute inset-0' : '',
-                      ].join(' ')}
-                    >
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#121212] font-authSerif text-[22px] text-[#faf9f6]">
                       {initials}
                     </div>
                   )}

@@ -26,23 +26,67 @@ function StatBar({ pct, danger }: { pct: number; danger?: boolean }) {
   );
 }
 
+const statTileClass =
+  'rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]';
+
 export function DashboardHome({
   data,
   greetingLine,
   canCompose,
+  showPrimaryComposeCta,
   membersStatHref,
   variant = 'dashboard',
 }: {
   data: DashboardHomeModel;
   greetingLine: string;
   canCompose: boolean;
-  membersStatHref: string;
+  showPrimaryComposeCta: boolean;
+  /** When set, active-members tile links here; when null but tile is shown, tile is non-interactive. */
+  membersStatHref: string | null;
   variant?: 'dashboard' | 'admin';
 }) {
   const now = new Date();
   const isAdmin = variant === 'admin';
   const composeHref = canCompose ? '/broadcasts?tab=compose' : '/broadcasts';
   const pendingHref = isAdmin ? '/admin/pending' : '/pending-approvals';
+  const showBroadcastTotal = data.broadcastTotal !== undefined;
+  const showMemberTotal = data.memberActiveTotal !== undefined;
+  const statTileCount = 2 + (showBroadcastTotal ? 1 : 0) + (showMemberTotal ? 1 : 0);
+  const statGridLg =
+    statTileCount <= 2 ? 'lg:grid-cols-2' : statTileCount === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4';
+
+  const memberFootnote =
+    isAdmin && data.newMembersWeek !== undefined ? (
+      <div className="mt-2 space-y-0.5 text-xs text-[#9b9b9b]">
+        <p>Profiles with active status</p>
+        {data.newMembersWeek > 0 ? (
+          <p>
+            <span className="font-medium text-[#15803d]">↑ {data.newMembersWeek}</span> new this week
+          </p>
+        ) : (
+          <p>No new members in the last 7 days</p>
+        )}
+      </div>
+    ) : (
+      <div className="mt-2 text-xs text-[#9b9b9b]">
+        {membersStatHref ? 'Profiles with active status' : 'In your organisation'}
+      </div>
+    );
+
+  const memberTileInner = (
+    <>
+      <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+        <span>👥</span> Active members
+      </div>
+      <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
+        {data.memberActiveTotal}
+      </div>
+      {memberFootnote}
+      {isAdmin && data.memberActiveTotal !== undefined ? (
+        <StatBar pct={statFillPct(data.memberActiveTotal, 500)} />
+      ) : null}
+    </>
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-[28px]">
@@ -62,59 +106,51 @@ export function DashboardHome({
             {data.orgName}
           </p>
         </div>
-        {canCompose ? (
-          <Link
-            href={composeHref}
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
-          >
-            ✏ New broadcast
-          </Link>
-        ) : null}
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {showPrimaryComposeCta ? (
+            <Link
+              href={composeHref}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+            >
+              ✏ New broadcast
+            </Link>
+          ) : null}
+          {canCompose && !showPrimaryComposeCta ? (
+            <Link
+              href={composeHref}
+              className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+            >
+              Submit draft for approval
+            </Link>
+          ) : null}
+        </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-        <Link
-          href="/broadcasts"
-          className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
-        >
-          <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-            <span>📡</span> Total broadcasts
-          </div>
-          <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
-            {data.broadcastTotal}
-          </div>
-          <div className="mt-2 text-xs text-[#9b9b9b]">Sent in your organisation</div>
-          {isAdmin ? <StatBar pct={statFillPct(data.broadcastTotal, 200)} /> : null}
-        </Link>
+      <div className={`mb-6 grid grid-cols-1 gap-3.5 sm:grid-cols-2 ${statGridLg}`}>
+        {showBroadcastTotal ? (
+          <Link href="/broadcasts" className={statTileClass}>
+            <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+              <span>📡</span> Total broadcasts
+            </div>
+            <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
+              {data.broadcastTotal}
+            </div>
+            <div className="mt-2 text-xs text-[#9b9b9b]">Sent in your organisation</div>
+            {isAdmin && data.broadcastTotal !== undefined ? (
+              <StatBar pct={statFillPct(data.broadcastTotal, 200)} />
+            ) : null}
+          </Link>
+        ) : null}
 
-        <Link
-          href={membersStatHref}
-          className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
-        >
-          <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-            <span>👥</span> Active members
-          </div>
-          <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
-            {data.memberActiveTotal}
-          </div>
-          {isAdmin && data.newMembersWeek !== undefined ? (
-            <div className="mt-2 space-y-0.5 text-xs text-[#9b9b9b]">
-              <p>Profiles with active status</p>
-              {data.newMembersWeek > 0 ? (
-                <p>
-                  <span className="font-medium text-[#15803d]">↑ {data.newMembersWeek}</span> new this week
-                </p>
-              ) : (
-                <p>No new members in the last 7 days</p>
-              )}
-            </div>
+        {showMemberTotal ? (
+          membersStatHref ? (
+            <Link href={membersStatHref} className={statTileClass}>
+              {memberTileInner}
+            </Link>
           ) : (
-            <div className="mt-2 text-xs text-[#9b9b9b]">
-              {membersStatHref.startsWith('/admin') ? 'Profiles with active status' : 'In your organisation'}
-            </div>
-          )}
-          {isAdmin ? <StatBar pct={statFillPct(data.memberActiveTotal, 500)} /> : null}
-        </Link>
+            <div className={statTileClass}>{memberTileInner}</div>
+          )
+        ) : null}
 
         {data.pendingCount !== null ? (
           <Link
@@ -196,8 +232,14 @@ export function DashboardHome({
           {
             href: composeHref,
             icon: '✏️',
-            label: 'New broadcast',
-            sub: canCompose ? (isAdmin ? 'Send to your dept' : 'Send to your teams') : 'View feed',
+            label: !canCompose ? 'Broadcasts' : showPrimaryComposeCta ? 'New broadcast' : 'New draft',
+            sub: !canCompose
+              ? 'View feed'
+              : showPrimaryComposeCta
+                ? isAdmin
+                  ? 'Send to your dept'
+                  : 'Send to your teams'
+                : 'Submit for approval',
           },
           { href: '/rota', icon: '🗓', label: 'View rota', sub: 'This week' },
           { href: '/discount', icon: '🎫', label: 'Discount card', sub: 'Your QR code' },

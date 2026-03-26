@@ -1,7 +1,11 @@
 'use client';
 
 import type { ProfileRole } from '@campsite/types';
-import { canComposeBroadcast, isBroadcastApproverRole } from '@campsite/types';
+import {
+  canComposeBroadcast,
+  isBroadcastApproverRole,
+  isBroadcastDraftOnlyRole,
+} from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -37,6 +41,7 @@ export function BroadcastsClient({
   const feedRef = useRef<BroadcastFeedHandle>(null);
   const [tab, setTab] = useState<Tab>(() => {
     if (initialTab === 'compose' && canComposeBroadcast(profile.role)) return 'compose';
+    if (initialTab === 'scheduled' && isBroadcastDraftOnlyRole(profile.role)) return 'feed';
     return 'feed';
   });
   const [departments, setDepartments] = useState<DeptRow[]>([]);
@@ -131,6 +136,11 @@ export function BroadcastsClient({
     if (tab === 'compose') void loadMeta();
   }, [tab, loadMeta]);
 
+  const draftOnlyRole = isBroadcastDraftOnlyRole(profile.role);
+  useEffect(() => {
+    if (draftOnlyRole && tab === 'scheduled') setTab('feed');
+  }, [draftOnlyRole, tab]);
+
   const scopedDepts = useMemo(
     () =>
       departmentsForBroadcast(profile.role, profile.org_id, departments, userDeptIds, managedDeptIds),
@@ -188,13 +198,19 @@ export function BroadcastsClient({
     ].join(' ');
 
   const composeAllowed = canComposeBroadcast(profile.role);
+  const showScheduledTab = composeAllowed && !draftOnlyRole;
+  const primaryComposeCta = composeAllowed && !draftOnlyRole;
 
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 px-5 sm:px-[28px]">
         <div>
           <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Broadcasts</h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">Org feed, compose, and approvals.</p>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            {draftOnlyRole
+              ? 'Feed, drafts, and submit messages for approval.'
+              : 'Org feed, compose, and approvals.'}
+          </p>
         </div>
         {unread > 0 ? (
           <span className="rounded-full border border-[#d8d8d8] bg-white px-3 py-1 text-[12.5px] text-[#6b6b6b]">
@@ -207,9 +223,11 @@ export function BroadcastsClient({
         {(
           [
             ['feed', 'Feed'],
-            ...(composeAllowed ? ([['compose', 'Compose']] as const) : []),
+            ...(composeAllowed
+              ? ([['compose', draftOnlyRole ? 'New draft' : 'Compose']] as const)
+              : []),
             ...(composeAllowed ? ([['drafts', 'My drafts']] as const) : []),
-            ...(composeAllowed ? ([['scheduled', 'Scheduled']] as const) : []),
+            ...(showScheduledTab ? ([['scheduled', 'Scheduled']] as const) : []),
             ...(isBroadcastApproverRole(profile.role) ? ([['pending', 'Pending approval']] as const) : []),
           ] as const
         ).map(([id, label]) => (
@@ -256,13 +274,21 @@ export function BroadcastsClient({
               >
                 Mark all as read
               </button>
-              {composeAllowed ? (
+              {primaryComposeCta ? (
                 <button
                   type="button"
                   onClick={() => setTab('compose')}
                   className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
                 >
                   ✏ New broadcast
+                </button>
+              ) : composeAllowed ? (
+                <button
+                  type="button"
+                  onClick={() => setTab('compose')}
+                  className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+                >
+                  Submit draft for approval
                 </button>
               ) : null}
             </div>
@@ -294,6 +320,7 @@ export function BroadcastsClient({
               searchQuery={searchQuery}
               unreadOnly={feedPill === 'unread'}
               emptyStateCanCompose={composeAllowed}
+              emptyStateDraftForApproval={draftOnlyRole}
               onUnreadChange={setUnread}
             />
           </div>
@@ -324,13 +351,13 @@ export function BroadcastsClient({
             onClick={() => setTab('compose')}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:bg-[#2a2a2a]"
           >
-            ✏ New broadcast
+            {draftOnlyRole ? '✏ New draft' : '✏ New broadcast'}
           </button>
           <DraftsScheduledList supabase={supabase} userId={profile.id} mode="draft" />
         </div>
       ) : null}
 
-      {tab === 'scheduled' && composeAllowed ? (
+      {tab === 'scheduled' && showScheduledTab ? (
         <div className="space-y-4 px-5 py-6 sm:px-[28px]">
           <button
             type="button"
