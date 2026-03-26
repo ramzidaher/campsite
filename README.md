@@ -297,7 +297,7 @@ campsite/
 
 ## Developer setup (local)
 
-1. **Prerequisites:** Node 20+, npm 10+, Docker (optional, for local Supabase), accounts for Supabase / Vercel / Expo as needed.
+1. **Prerequisites:** Node 20+, npm 10+, accounts for **hosted** Supabase / Vercel / Expo as needed. **Docker is not required** — this repo is normally used against Supabase Cloud; apply migrations via the Dashboard SQL editor or `npx supabase db push` after `supabase link` (see [ROLE-MAPPING.md](docs/campsite-v2-permissions/01-core-model-resolution/ROLE-MAPPING.md) §10).
 2. **Install:** From the repo root run `npm install`.
 3. **Environment:** Copy `.env.example` to `.env` at the repo root and set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and other keys referenced in `apps/web` and `supabase/functions`. The web app also merges root `.env` in `next.config.ts`.
 4. **Database:** Apply migrations from `supabase/migrations/` to your Supabase project (`supabase db push` or SQL editor). Bootstrap the first platform admin per Phase 5 notes in `DEPLOY.md` when using CGS admin.

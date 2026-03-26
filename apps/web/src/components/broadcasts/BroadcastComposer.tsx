@@ -11,6 +11,21 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 type CatRow = { id: string; name: string; dept_id: string };
 
+type DeptBroadcastCaps = {
+  send_org_wide: boolean;
+  mandatory_broadcast: boolean;
+  pin_broadcasts: boolean;
+};
+
+function parseDeptBroadcastCaps(raw: unknown): DeptBroadcastCaps {
+  const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return {
+    send_org_wide: Boolean(o.send_org_wide),
+    mandatory_broadcast: Boolean(o.mandatory_broadcast),
+    pin_broadcasts: Boolean(o.pin_broadcasts),
+  };
+}
+
 function formatSupabaseWriteError(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) {
     const o = e as { message: string; details?: string; hint?: string; code?: string };
@@ -105,6 +120,11 @@ export function BroadcastComposer({
   const [draftId, setDraftId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [caps, setCaps] = useState<DeptBroadcastCaps | null>(null);
+  const [capsLoading, setCapsLoading] = useState(false);
+  const [isOrgWide, setIsOrgWide] = useState(false);
+  const [isMandatory, setIsMandatory] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const dirty = useRef(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -126,7 +146,35 @@ export function BroadcastComposer({
 
   useEffect(() => {
     dirty.current = true;
-  }, [title, body, displayDeptId, displayCatId, schedule, scheduledAt]);
+  }, [title, body, displayDeptId, displayCatId, schedule, scheduledAt, isOrgWide, isMandatory, isPinned]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!displayDeptId) {
+      setCaps(null);
+      setCapsLoading(false);
+      return;
+    }
+    setIsOrgWide(false);
+    setIsMandatory(false);
+    setIsPinned(false);
+    setCaps(null);
+    setCapsLoading(true);
+    void supabase
+      .rpc('get_my_dept_broadcast_caps', { p_dept_id: displayDeptId })
+      .then((res) => {
+        if (cancelled) return;
+        setCapsLoading(false);
+        if (res.error) {
+          setCaps({ send_org_wide: false, mandatory_broadcast: false, pin_broadcasts: false });
+          return;
+        }
+        setCaps(parseDeptBroadcastCaps(res.data));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [displayDeptId, supabase]);
 
   const minScheduleIso = useMemo(() => {
     const t = new Date(Date.now() + 5 * 60 * 1000);
@@ -152,6 +200,9 @@ export function BroadcastComposer({
         body: body ?? '',
         status: 'draft' as const,
         created_by: userId,
+        is_org_wide: isOrgWide,
+        is_mandatory: isMandatory,
+        is_pinned: isPinned,
       };
       if (draftId) {
         const { error: ue } = await supabase.from('broadcasts').update(row).eq('id', draftId).eq('created_by', userId);
@@ -170,7 +221,21 @@ export function BroadcastComposer({
     } finally {
       setSaving(false);
     }
-  }, [role, displayDeptId, displayCatId, title, body, orgId, userId, supabase, draftId, cats]);
+  }, [
+    role,
+    displayDeptId,
+    displayCatId,
+    title,
+    body,
+    orgId,
+    userId,
+    supabase,
+    draftId,
+    cats,
+    isOrgWide,
+    isMandatory,
+    isPinned,
+  ]);
 
   useEffect(() => {
     if (!canComposeBroadcast(role)) return;
@@ -223,6 +288,9 @@ export function BroadcastComposer({
           body: body ?? '',
           status: 'pending_approval' as const,
           created_by: userId,
+          is_org_wide: false,
+          is_mandatory: false,
+          is_pinned: false,
         };
         const { error: e } = await supabase.from('broadcasts').insert(row);
         if (e) throw e;
@@ -252,6 +320,9 @@ export function BroadcastComposer({
           status: 'scheduled' as const,
           scheduled_at: when.toISOString(),
           created_by: userId,
+          is_org_wide: isOrgWide,
+          is_mandatory: isMandatory,
+          is_pinned: isPinned,
         };
         const { error: e } = await supabase.from('broadcasts').insert(row);
         if (e) throw e;
@@ -259,6 +330,9 @@ export function BroadcastComposer({
         setBody('');
         setSchedule(false);
         setScheduledAt('');
+        setIsOrgWide(false);
+        setIsMandatory(false);
+        setIsPinned(false);
         onCreated?.();
         return;
       }
@@ -273,11 +347,17 @@ export function BroadcastComposer({
         status: 'sent' as const,
         sent_at: new Date().toISOString(),
         created_by: userId,
+        is_org_wide: isOrgWide,
+        is_mandatory: isMandatory,
+        is_pinned: isPinned,
       };
       const { error: e } = await supabase.from('broadcasts').insert(row);
       if (e) throw e;
       setTitle('');
       setBody('');
+      setIsOrgWide(false);
+      setIsMandatory(false);
+      setIsPinned(false);
       onCreated?.();
     } catch (e: unknown) {
       setError(formatSupabaseWriteError(e));
@@ -293,6 +373,11 @@ export function BroadcastComposer({
       </p>
     );
   }
+
+  const showDeliveryOptions =
+    !isBroadcastDraftOnlyRole(role) &&
+    caps &&
+    (caps.send_org_wide || caps.mandatory_broadcast || caps.pin_broadcasts);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -360,6 +445,74 @@ export function BroadcastComposer({
           ) : null}
         </div>
       </div>
+
+      {!isBroadcastDraftOnlyRole(role) && displayDeptId ? (
+        <div className="rounded-lg border border-[var(--campsite-border)] p-3">
+          <p className="text-sm font-medium text-[var(--campsite-text)]">Delivery options</p>
+          <p className="mt-1 text-[12px] leading-snug text-[var(--campsite-text-secondary)]">
+            Shown when your role and department toggles allow org-wide reach, mandatory delivery, or pinning.
+          </p>
+          {capsLoading ? (
+            <p className="mt-2 text-xs text-[var(--campsite-text-secondary)]">Loading options…</p>
+          ) : showDeliveryOptions ? (
+            <div className="mt-3 space-y-2.5">
+              {caps.send_org_wide ? (
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 rounded border-[var(--campsite-border)]"
+                    checked={isOrgWide}
+                    onChange={(e) => setIsOrgWide(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-medium text-[var(--campsite-text)]">Org-wide</span>
+                    <span className="mt-0.5 block text-[12px] text-[var(--campsite-text-secondary)]">
+                      Send with organisation-wide intent. Subscribers still filter by category unless you also use
+                      mandatory.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+              {caps.mandatory_broadcast ? (
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 rounded border-[var(--campsite-border)]"
+                    checked={isMandatory}
+                    onChange={(e) => setIsMandatory(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-medium text-[var(--campsite-text)]">Mandatory</span>
+                    <span className="mt-0.5 block text-[12px] text-[var(--campsite-text-secondary)]">
+                      Deliver to everyone in the target audience regardless of category subscription.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+              {caps.pin_broadcasts ? (
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 rounded border-[var(--campsite-border)]"
+                    checked={isPinned}
+                    onChange={(e) => setIsPinned(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-medium text-[var(--campsite-text)]">Pin to top</span>
+                    <span className="mt-0.5 block text-[12px] text-[var(--campsite-text-secondary)]">
+                      Show this post before non-pinned items in the feed.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-2 text-[12px] text-[var(--campsite-text-secondary)]">
+              No extra delivery options for this department. An org admin can enable them under Admin → Departments.
+            </p>
+          )}
+        </div>
+      ) : null}
 
       <div>
         <div className="mb-1 flex flex-wrap gap-2">

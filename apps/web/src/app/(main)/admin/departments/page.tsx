@@ -30,13 +30,23 @@ export default async function AdminDepartmentsPage() {
   const catsByDept: Record<string, { id: string; name: string }[]> = {};
   const managersByDept: Record<string, { user_id: string; full_name: string }[]> = {};
   const memberCountByDept: Record<string, number> = {};
+  const broadcastPermsByDept: Record<string, { permission: string; min_role: string }[]> = {};
 
   if (deptIds.length) {
-    const [{ data: cats }, { data: dms }, { data: profs }] = await Promise.all([
+    const [{ data: cats }, { data: dms }, { data: profs }, { data: dbp }] = await Promise.all([
       supabase.from('dept_categories').select('id, name, dept_id').in('dept_id', deptIds),
       supabase.from('dept_managers').select('dept_id, user_id').in('dept_id', deptIds),
       supabase.from('profiles').select('id, full_name').eq('org_id', profile.org_id),
+      supabase.from('dept_broadcast_permissions').select('dept_id, permission, min_role').in('dept_id', deptIds),
     ]);
+    for (const row of dbp ?? []) {
+      const did = row.dept_id as string;
+      if (!broadcastPermsByDept[did]) broadcastPermsByDept[did] = [];
+      broadcastPermsByDept[did].push({
+        permission: row.permission as string,
+        min_role: row.min_role as string,
+      });
+    }
     const nameByUser = new Map((profs ?? []).map((p) => [p.id as string, p.full_name as string]));
     for (const c of cats ?? []) {
       const did = c.dept_id as string;
@@ -69,6 +79,7 @@ export default async function AdminDepartmentsPage() {
   return (
     <AdminDepartmentsClient
       orgId={profile.org_id}
+      currentUserId={user.id}
       initialDepartments={(departments ?? []) as {
         id: string;
         name: string;
@@ -79,6 +90,7 @@ export default async function AdminDepartmentsPage() {
       categoriesByDept={catsByDept}
       managersByDept={managersByDept}
       memberCountByDept={memberCountByDept}
+      broadcastPermsByDept={broadcastPermsByDept}
       staffOptions={(staff ?? []) as { id: string; full_name: string; role: string }[]}
     />
   );

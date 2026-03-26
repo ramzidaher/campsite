@@ -15,7 +15,11 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "supabase": "npx supabase@latest",
+    "supabase:db:push": "npx supabase@latest db push",
+    "supabase:functions:deploy:verify": "npx supabase@latest functions deploy staff-discount-verify",
+    "supabase:functions:deploy:broadcast-notify": "npx supabase@latest functions deploy process-broadcast-notifications --no-verify-jwt"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

@@ -28,8 +28,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <View
-        pointerEvents="box-none"
-        style={[styles.stack, StyleSheet.absoluteFillObject]}
+        style={[styles.stack, StyleSheet.absoluteFillObject, { pointerEvents: 'box-none' }]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >

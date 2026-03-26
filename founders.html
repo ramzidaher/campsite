@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campsite — Founder HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0a0a0b;
+  --surface:#111113;
+  --surface2:#18181b;
+  --surface3:#1e1e22;
+  --border:#2a2a2f;
+  --border2:#333338;
+  --text:#f0efe8;
+  --text2:#9898a0;
+  --text3:#58585f;
+  --accent:#e8e0cc;
+  --gold:#c9a84c;
+  --gold2:#e8c97a;
+  --green:#3ecf8e;
+  --red:#f87171;
+  --blue:#60a5fa;
+  --purple:#a78bfa;
+  --font:'Geist',sans-serif;
+  --serif:'Instrument Serif',serif;
+  --sidebar-w:260px;
+  --topbar-h:58px;
+  --radius:10px;
+  --t:0.16s ease;
+}
+
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);height:100vh;background:var(--surface);display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100;overflow-y:auto;border-right:1px solid var(--border)}
+.sidebar::-webkit-scrollbar{width:0}
+
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.brand-icon{width:34px;height:34px;background:linear-gradient(135deg,#c9a84c,#e8c97a);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.brand-text{font-family:var(--serif);font-size:18px;color:var(--accent);letter-spacing:-.2px}
+.brand-badge{margin-left:auto;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.2);padding:2px 7px;border-radius:999px;white-space:nowrap}
+
+.sidebar-founder{padding:12px 18px;border-bottom:1px solid var(--border)}
+.founder-card{display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:9px}
+.founder-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c9a84c,#8b5e3c);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:#fff;flex-shrink:0}
+.founder-name{font-size:12.5px;font-weight:500;color:var(--text)}
+.founder-role{font-size:10.5px;color:var(--gold);margin-top:1px;font-weight:500}
+.founder-caret{margin-left:auto;font-size:12px;color:var(--text3)}
+
+.nav-section{padding:10px 10px 0}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--text3);text-transform:uppercase;padding:8px 8px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:400;transition:background var(--t),color var(--t);position:relative;user-select:none;margin-bottom:1px}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface3);color:var(--accent);font-weight:500}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--gold);border-radius:0 3px 3px 0}
+.nav-icon{width:18px;text-align:center;font-size:14px;flex-shrink:0;opacity:.7}
+.nav-item.active .nav-icon{opacity:1}
+.nav-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 6px;border-radius:999px;min-width:18px;text-align:center}
+.nb-red{background:rgba(248,113,113,.15);color:#f87171}
+.nb-gold{background:rgba(201,168,76,.12);color:var(--gold2)}
+.nb-muted{background:var(--surface3);color:var(--text3)}
+
+.sidebar-spacer{flex:1}
+.sidebar-bottom{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.sb-link{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;cursor:pointer;color:var(--text3);font-size:12px;transition:background var(--t),color var(--t)}
+.sb-link:hover{background:var(--surface2);color:var(--text2)}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;overflow-y:auto;overflow-x:hidden}
+.topbar{height:var(--topbar-h);display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:50;gap:14px}
+.topbar-breadcrumb{display:flex;align-items:center;gap:7px;flex:1}
+.bc-home{font-size:12.5px;color:var(--text3);cursor:pointer;transition:color var(--t)}
+.bc-home:hover{color:var(--text2)}
+.bc-sep{color:var(--text3);font-size:13px}
+.bc-current{font-size:12.5px;font-weight:500;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.live-dot{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--green);font-weight:500}
+.live-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text2);transition:background var(--t),color var(--t)}
+.icon-btn:hover{background:var(--surface3);color:var(--text)}
+.topbar-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#c9a84c,#8b5e3c);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;cursor:pointer}
+
+/* ── PAGE SYSTEM ── */
+.page{display:none;flex-direction:column;animation:fadeUp .2s ease both}
+.page.active{display:flex}
+.page-inner{padding:26px 28px;flex:1}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.page-title{font-family:var(--serif);font-size:27px;letter-spacing:-.3px;margin-bottom:3px;color:var(--accent)}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:26px}
+.section-title{font-family:var(--serif);font-size:16px;color:var(--text);letter-spacing:-.1px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-pad{padding:20px}
+
+/* ── STAT CARDS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;cursor:default;transition:border-color var(--t),box-shadow var(--t)}
+.stat-card:hover{border-color:var(--border2);box-shadow:0 0 0 1px var(--border2),0 8px 24px rgba(0,0,0,.4)}
+.stat-label{font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.stat-icon{font-size:14px;opacity:.6}
+.stat-value{font-family:var(--serif);font-size:33px;letter-spacing:-.5px;line-height:1;color:var(--accent)}
+.stat-sub{font-size:12px;color:var(--text3);margin-top:7px;display:flex;align-items:center;gap:4px}
+.up{color:var(--green)}
+.dn{color:var(--red)}
+.stat-bar{margin-top:10px;height:2px;background:var(--border);border-radius:99px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:99px}
+.fill-gold{background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.fill-green{background:var(--green)}
+.fill-blue{background:var(--blue)}
+.fill-purple{background:var(--purple)}
+
+/* ── CAMPSITE GRID ── */
+.campsite-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px}
+.campsite-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0;overflow:hidden;cursor:pointer;transition:border-color var(--t),transform var(--t),box-shadow var(--t)}
+.campsite-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.campsite-header{padding:16px 18px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.campsite-name{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:3px}
+.campsite-location{font-size:11.5px;color:var(--text3);display:flex;align-items:center;gap:4px}
+.campsite-status{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px}
+.cs-open{background:rgba(62,207,142,.1);color:var(--green);border:1px solid rgba(62,207,142,.2)}
+.cs-seasonal{background:rgba(201,168,76,.1);color:var(--gold2);border:1px solid rgba(201,168,76,.2)}
+.cs-closed{background:rgba(248,113,113,.08);color:var(--red);border:1px solid rgba(248,113,113,.15)}
+.campsite-body{padding:16px 18px}
+.campsite-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:14px}
+.cm-item{}
+.cm-val{font-family:var(--serif);font-size:19px;color:var(--text);letter-spacing:-.2px}
+.cm-lbl{font-size:10.5px;color:var(--text3);margin-top:1px;text-transform:uppercase;letter-spacing:.06em}
+.campsite-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.campsite-mgr{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2)}
+.cm-av{width:22px;height:22px;border-radius:50%;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:var(--text3);flex-shrink:0}
+.campsite-arrow{font-size:13px;color:var(--text3);opacity:.5}
+.campsite-card:hover .campsite-arrow{opacity:1;color:var(--gold)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;font-family:var(--font);transition:all var(--t);white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--gold),#a8793a);color:#0a0a0b}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-ghost{background:none;border:1px solid var(--border2);color:var(--text2)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
+.btn-success{background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+.btn-success:hover{background:rgba(62,207,142,.2);filter:brightness(1.05)}
+.btn-danger{background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2)}
+.btn-danger:hover{background:rgba(248,113,113,.14)}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead tr{border-bottom:1px solid var(--border)}
+thead th{text-align:left;padding:10px 14px;font-size:10.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background var(--t)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+tbody td{padding:11px 14px;vertical-align:middle}
+.td-name{display:flex;align-items:center;gap:9px}
+.td-av{width:28px;height:28px;border-radius:50%;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--text2);flex-shrink:0}
+
+/* ── STATUS BADGES ── */
+.sb{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500}
+.sb-active{background:rgba(62,207,142,.1);color:var(--green)}
+.sb-pending{background:rgba(248,113,113,.1);color:var(--red)}
+.sb-inactive{background:var(--surface3);color:var(--text3)}
+.sb-dot{width:4px;height:4px;border-radius:50%;background:currentColor}
+
+/* ── ROLE BADGES ── */
+.rb{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600}
+.rb-admin{background:rgba(201,168,76,.12);color:var(--gold2);border:1px solid rgba(201,168,76,.2)}
+.rb-mgr{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.15)}
+.rb-coord{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.15)}
+.rb-staff{background:var(--surface3);color:var(--text2);border:1px solid var(--border2)}
+
+/* ── ACTIVITY ── */
+.activity-item{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.activity-icon{width:30px;height:30px;border-radius:50%;border:1px solid var(--border2);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.activity-text{flex:1;font-size:12.5px;line-height:1.55;color:var(--text2)}
+.activity-text strong{color:var(--text);font-weight:500}
+.activity-time{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* ── SEARCH ── */
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 12px;height:36px;transition:border-color var(--t)}
+.search-bar:focus-within{border-color:var(--gold)}
+.search-bar input{border:none;background:none;font-family:var(--font);font-size:12.5px;color:var(--text);outline:none;width:100%}
+.search-bar input::placeholder{color:var(--text3)}
+
+/* ── FILTER PILLS ── */
+.filter-pill{padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:none;font-size:12px;color:var(--text3);cursor:pointer;transition:all var(--t);font-family:var(--font)}
+.filter-pill:hover{background:var(--surface2);color:var(--text2)}
+.filter-pill.active{background:rgba(201,168,76,.1);color:var(--gold2);border-color:rgba(201,168,76,.25)}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:22px}
+.tab{padding:10px 16px;font-size:12.5px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--t),border-color var(--t)}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--gold)}
+
+/* ── TOGGLE ── */
+.toggle{width:36px;height:20px;background:var(--surface3);border-radius:999px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:1px solid var(--border2)}
+.toggle.on{background:var(--gold)}
+.toggle::after{content:'';position:absolute;width:13px;height:13px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s}
+.toggle.on::after{transform:translateX(16px)}
+
+/* ── ALERT ── */
+.alert{padding:12px 14px;border-radius:8px;font-size:12.5px;display:flex;align-items:flex-start;gap:9px;margin-bottom:16px}
+.alert-warn{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);color:#fca5a5}
+.alert-info{background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.18);color:#93c5fd}
+.alert-success{background:rgba(62,207,142,.06);border:1px solid rgba(62,207,142,.2);color:#6ee7b7}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(4px)}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:600px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.7);transform:translateY(16px) scale(.98);transition:transform .22s ease}
+.overlay.open .modal{transform:none}
+.modal-lg{width:860px}
+.modal-header{padding:22px 24px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-title{font-family:var(--serif);font-size:20px;color:var(--accent)}
+.modal-close{width:28px;height:28px;border-radius:7px;border:1px solid var(--border2);background:none;cursor:pointer;font-size:13px;color:var(--text3);display:flex;align-items:center;justify-content:center;transition:all var(--t)}
+.modal-close:hover{background:var(--surface2);color:var(--text)}
+.modal-body{padding:22px 24px}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:10px;background:var(--surface)}
+
+/* ── FIELD ── */
+.field{margin-bottom:15px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color var(--t)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}
+.field select option{background:var(--surface)}
+
+/* ── REVENUE CHART ── */
+.mini-chart{display:flex;align-items:flex-end;gap:3px;height:44px;margin-top:10px}
+.bar{flex:1;border-radius:3px 3px 0 0;background:var(--surface3);transition:background var(--t);min-height:4px;cursor:default}
+.bar.highlight{background:linear-gradient(180deg,var(--gold2),var(--gold))}
+.bar:hover{background:rgba(201,168,76,.5)}
+
+/* ── PERFORMANCE ROW ── */
+.perf-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.perf-row:last-child{border-bottom:none}
+.perf-label{font-size:13px;font-weight:500;color:var(--text);flex:1}
+.perf-bar-wrap{width:140px;height:4px;background:var(--border);border-radius:99px;overflow:hidden}
+.perf-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.perf-val{font-size:12.5px;color:var(--text2);width:52px;text-align:right;font-family:var(--serif)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:10px 18px;border-radius:10px;font-size:13px;font-weight:500;pointer-events:none;opacity:0;transition:opacity .2s,transform .2s;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.5);white-space:nowrap;display:flex;align-items:center;gap:7px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+/* ── GOLD RULE ── */
+.gold-rule{width:32px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin-bottom:18px}
+
+/* ── OVERVIEW HERO ── */
+.overview-hero{background:linear-gradient(135deg,var(--surface) 0%,#14130e 100%);border:1px solid var(--border);border-radius:var(--radius);padding:26px 28px;margin-bottom:22px;position:relative;overflow:hidden}
+.overview-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.08) 0%,transparent 70%);pointer-events:none}
+.overview-hero-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.hero-title{font-family:var(--serif);font-size:22px;color:var(--accent);margin-bottom:4px}
+.hero-sub{font-size:13px;color:var(--text2)}
+.hero-time{font-size:11.5px;color:var(--text3);text-align:right}
+.hero-date{font-size:22px;font-family:var(--serif);color:var(--text);margin-top:2px}
+.hero-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-radius:8px;overflow:hidden}
+.hero-metric{background:var(--surface2);padding:14px 16px}
+.hm-val{font-family:var(--serif);font-size:21px;letter-spacing:-.3px;color:var(--accent)}
+.hm-lbl{font-size:10.5px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── CAMPSITE DETAIL MODAL ── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.detail-stat{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px 16px}
+.ds-val{font-family:var(--serif);font-size:24px;color:var(--accent)}
+.ds-lbl{font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.ds-trend{font-size:11px;margin-top:5px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════
+     SIDEBAR
+═══════════════════════════════ -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">⛺</div>
+    <div class="brand-text">Campsite</div>
+    <div class="brand-badge">Founder</div>
+  </div>
+
+  <div class="sidebar-founder">
+    <div class="founder-card">
+      <div class="founder-av">JR</div>
+      <div>
+        <div class="founder-name">James Reeve</div>
+        <div class="founder-role">Co-Founder & CEO</div>
+      </div>
+      <div class="founder-caret">⌄</div>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" onclick="navTo('overview',this)"><div class="nav-icon">◈</div> Company Overview</div>
+    <div class="nav-item" onclick="navTo('campsites',this)"><div class="nav-icon">⛺</div> All Campsites <span class="nav-badge nb-gold">12</span></div>
+    <div class="nav-item" onclick="navTo('revenue',this)"><div class="nav-icon">₤</div> Revenue & Finance</div>
+    <div class="nav-item" onclick="navTo('growth',this)"><div class="nav-icon">↗</div> Growth & Analytics</div>
+
+    <div class="nav-label" style="margin-top:4px">Operations</div>
+    <div class="nav-item" onclick="navTo('members',this)"><div class="nav-icon">◎</div> All Members <span class="nav-badge nb-muted">348</span></div>
+    <div class="nav-item" onclick="navTo('pending-global',this)"><div class="nav-icon">⏳</div> Pending Approvals <span class="nav-badge nb-red">14</span></div>
+    <div class="nav-item" onclick="navTo('broadcasts-hq',this)"><div class="nav-icon">📡</div> Broadcasts HQ</div>
+    <div class="nav-item" onclick="navTo('rota-hq',this)"><div class="nav-icon">📅</div> Rota Overview</div>
+
+    <div class="nav-label" style="margin-top:4px">Platform</div>
+    <div class="nav-item" onclick="navTo('audit-hq',this)"><div class="nav-icon">🔎</div> Audit Log</div>
+    <div class="nav-item" onclick="navTo('settings-hq',this)"><div class="nav-icon">⚙</div> Platform Settings</div>
+  </div>
+
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-bottom">
+    <div class="sb-link">📖 Documentation</div>
+    <div class="sb-link">💬 Support</div>
+    <div class="sb-link" style="color:#f87171">⬡ Sign out</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     MAIN
+═══════════════════════════════ -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-breadcrumb">
+      <span class="bc-home" onclick="navTo('overview', document.querySelector('.nav-item'))">Founder HQ</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-current" id="bc-current">Company Overview</span>
+    </div>
+    <div class="topbar-right">
+      <div class="live-dot">Live</div>
+      <div class="icon-btn" title="Notifications">🔔</div>
+      <div class="icon-btn" title="Export" onclick="showToast('📊 Exporting report…')">⬇</div>
+      <div class="topbar-av" title="Profile">JR</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: COMPANY OVERVIEW
+  ════════════════════════════ -->
+  <div class="page active" id="page-overview">
+    <div class="page-inner">
+      <!-- Hero strip -->
+      <div class="overview-hero">
+        <div class="overview-hero-top">
+          <div>
+            <div class="hero-title">Good morning, James ☀️</div>
+            <div class="hero-sub">Here's your live company pulse across all 12 campsites.</div>
+          </div>
+          <div class="hero-time">
+            <div style="color:var(--text3);font-size:11.5px">Today</div>
+            <div class="hero-date">Thu, 26 Mar 2026</div>
+          </div>
+        </div>
+        <div class="hero-metrics">
+          <div class="hero-metric"><div class="hm-val">12</div><div class="hm-lbl">Active Sites</div></div>
+          <div class="hero-metric"><div class="hm-val">348</div><div class="hm-lbl">Total Members</div></div>
+          <div class="hero-metric"><div class="hm-val">£87.4k</div><div class="hm-lbl">MRR</div></div>
+          <div class="hero-metric"><div class="hm-val">94.2%</div><div class="hm-lbl">Avg Occupancy</div></div>
+          <div class="hero-metric"><div class="hm-val">14</div><div class="hm-lbl">Pending Actions</div></div>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Revenue (YTD) <span class="stat-icon">💷</span></div>
+          <div class="stat-value">£1.04M</div>
+          <div class="stat-sub"><span class="up">↑ 22%</span> &nbsp;vs last year</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-gold" style="width:72%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Members <span class="stat-icon">👤</span></div>
+          <div class="stat-value">348</div>
+          <div class="stat-sub"><span class="up">+38</span> &nbsp;this month</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-green" style="width:81%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Bookings / Site <span class="stat-icon">📅</span></div>
+          <div class="stat-value">189</div>
+          <div class="stat-sub"><span class="up">↑ 11%</span> &nbsp;vs last month</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-blue" style="width:63%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Net Promoter Score <span class="stat-icon">⭐</span></div>
+          <div class="stat-value">78</div>
+          <div class="stat-sub"><span class="up">↑ 4pts</span> &nbsp;since Jan</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-purple" style="width:78%"></div></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+        <!-- Left col -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- Top campsites -->
+          <div class="card">
+            <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border)">
+              <div class="section-head" style="margin:0">
+                <div class="section-title">Top Performing Campsites</div>
+                <button class="btn btn-ghost btn-sm" onclick="navTo('campsites', document.querySelectorAll('.nav-item')[1])">View all →</button>
+              </div>
+            </div>
+            <div class="card-pad" style="padding-top:14px">
+              <div id="top-campsites-list"></div>
+            </div>
+          </div>
+
+          <!-- Recent activity -->
+          <div class="card">
+            <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border)">
+              <div class="section-head" style="margin:0">
+                <div class="section-title">Cross-Site Activity</div>
+                <span style="font-size:11.5px;color:var(--text3)">Last 24 hours</span>
+              </div>
+            </div>
+            <div class="card-pad" style="padding-top:6px;padding-bottom:6px">
+              <div id="overview-activity"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right col -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- Alerts -->
+          <div>
+            <div class="section-head"><div class="section-title">Alerts</div><span style="font-size:11.5px;color:var(--text3)">3 active</span></div>
+            <div class="alert alert-warn">⚠️ <span><strong>Lakeside Peak</strong> — occupancy at 102%, overbooking risk</span></div>
+            <div class="alert alert-info">ℹ️ <span><strong>Birchwood Valley</strong> — awaiting licence renewal (12 days)</span></div>
+            <div class="alert alert-success">✓ <span><strong>Glenshee Highlands</strong> — just passed safety inspection</span></div>
+          </div>
+
+          <!-- Revenue by site chart -->
+          <div class="card card-pad">
+            <div class="section-head" style="margin-bottom:10px"><div class="section-title">Monthly Revenue</div><span style="font-size:11.5px;color:var(--text3)">Mar 2026</span></div>
+            <div style="font-family:var(--serif);font-size:26px;color:var(--accent)">£87.4k</div>
+            <div style="font-size:11.5px;color:var(--green);margin-top:2px">↑ 18% vs Feb</div>
+            <div class="mini-chart" id="monthly-chart"></div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:5px"><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span style="color:var(--gold2);font-weight:600">Mar</span></div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="card card-pad">
+            <div class="section-title" style="margin-bottom:12px">Quick Actions</div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" onclick="navTo('pending-global',document.querySelectorAll('.nav-item')[5])">⏳ &nbsp;Review 14 pending approvals</button>
+              <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" onclick="openModal('modal-new-site')">⛺ &nbsp;Add new campsite</button>
+              <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" onclick="navTo('revenue',document.querySelectorAll('.nav-item')[2])">📊 &nbsp;View revenue report</button>
+              <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" onclick="navTo('broadcasts-hq',document.querySelectorAll('.nav-item')[6])">📡 &nbsp;Send company broadcast</button>
+              <button class="btn btn-ghost btn-sm" style="justify-content:flex-start" onclick="navTo('audit-hq',document.querySelectorAll('.nav-item')[8])">🔎 &nbsp;View audit trail</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: ALL CAMPSITES
+  ════════════════════════════ -->
+  <div class="page" id="page-campsites">
+    <div class="page-inner">
+      <div class="section-head" style="margin-bottom:20px">
+        <div>
+          <div class="page-title">All Campsites</div>
+          <div class="page-sub">12 locations — click any site to open its admin dashboard</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-new-site')">+ Add Campsite</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+        <div class="search-bar" style="width:240px">
+          <span style="color:var(--text3);font-size:12px">🔍</span>
+          <input type="text" placeholder="Search sites…" oninput="filterCampsites(this.value)">
+        </div>
+        <button class="filter-pill active" onclick="filterCs('all',this)">All</button>
+        <button class="filter-pill" onclick="filterCs('open',this)">Open</button>
+        <button class="filter-pill" onclick="filterCs('seasonal',this)">Seasonal</button>
+        <button class="filter-pill" onclick="filterCs('closed',this)">Closed</button>
+        <div style="margin-left:auto;font-size:12px;color:var(--text3)">Sorted by revenue ↓</div>
+      </div>
+
+      <div class="campsite-grid" id="campsite-grid"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: REVENUE
+  ════════════════════════════ -->
+  <div class="page" id="page-revenue">
+    <div class="page-inner">
+      <div class="page-title">Revenue & Finance</div>
+      <div class="page-sub">Consolidated financials across all 12 campsites</div>
+
+      <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card">
+          <div class="stat-label">Total Revenue (YTD) <span class="stat-icon">💷</span></div>
+          <div class="stat-value">£1.04M</div>
+          <div class="stat-sub"><span class="up">↑ 22%</span> &nbsp;vs 2025</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-gold" style="width:72%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Monthly Recurring Revenue <span class="stat-icon">📈</span></div>
+          <div class="stat-value">£87.4k</div>
+          <div class="stat-sub"><span class="up">↑ 18%</span> &nbsp;vs Feb 2026</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-green" style="width:67%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Revenue / Site <span class="stat-icon">⛺</span></div>
+          <div class="stat-value">£7.3k</div>
+          <div class="stat-sub"><span class="up">↑ 9%</span> &nbsp;vs last month</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-blue" style="width:55%"></div></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border)">
+            <div class="section-title">Revenue by Site (March)</div>
+          </div>
+          <div class="card-pad" style="padding-top:14px" id="revenue-by-site"></div>
+        </div>
+        <div class="card">
+          <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border)">
+            <div class="section-title">Monthly Trend (Oct–Mar)</div>
+          </div>
+          <div class="card-pad">
+            <div style="height:160px;display:flex;align-items:flex-end;gap:6px">
+              <div id="revenue-trend-chart" style="display:flex;align-items:flex-end;gap:6px;width:100%;height:100%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:8px"><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span style="color:var(--gold2);font-weight:600">Mar</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: GROWTH
+  ════════════════════════════ -->
+  <div class="page" id="page-growth">
+    <div class="page-inner">
+      <div class="page-title">Growth & Analytics</div>
+      <div class="page-sub">Platform-wide engagement, retention and expansion data</div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Member Growth (MoM) <span class="stat-icon">↗</span></div>
+          <div class="stat-value">+12.4%</div>
+          <div class="stat-sub"><span class="up">Best</span> &nbsp;month in 14 months</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-green" style="width:82%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Retention Rate <span class="stat-icon">🔄</span></div>
+          <div class="stat-value">88.7%</div>
+          <div class="stat-sub"><span class="up">↑ 2.1pts</span> &nbsp;vs last quarter</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-blue" style="width:89%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">New Sites This Year <span class="stat-icon">⛺</span></div>
+          <div class="stat-value">3</div>
+          <div class="stat-sub">Target: <span class="up">5 by Dec</span></div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-gold" style="width:60%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Platform Uptime <span class="stat-icon">⚡</span></div>
+          <div class="stat-value">99.9%</div>
+          <div class="stat-sub">30-day rolling average</div>
+          <div class="stat-bar"><div class="stat-bar-fill fill-purple" style="width:99%"></div></div>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="section-title" style="margin-bottom:16px">Member Signups by Site (March)</div>
+        <div id="signup-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: ALL MEMBERS
+  ════════════════════════════ -->
+  <div class="page" id="page-members">
+    <div class="page-inner">
+      <div class="page-title">All Members</div>
+      <div class="page-sub">348 members across 12 campsites — global view</div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+        <div class="search-bar" style="width:240px">
+          <span style="color:var(--text3);font-size:12px">🔍</span>
+          <input type="text" placeholder="Search name, email or site…">
+        </div>
+        <select style="height:36px;padding:0 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12.5px;outline:none">
+          <option>All campsites</option>
+          <option>Lakeside Peak</option>
+          <option>Birchwood Valley</option>
+          <option>Glenshee Highlands</option>
+          <option>Riverstone Glen</option>
+        </select>
+        <select style="height:36px;padding:0 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12.5px;outline:none">
+          <option>All roles</option>
+          <option>Super Admin</option>
+          <option>Manager</option>
+          <option>Coordinator</option>
+          <option>Weekly Paid</option>
+        </select>
+        <button class="filter-pill active">All</button>
+        <button class="filter-pill">Active</button>
+        <button class="filter-pill">Pending</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table id="global-members-table">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Campsite</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="global-members-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: PENDING APPROVALS
+  ════════════════════════════ -->
+  <div class="page" id="page-pending-global">
+    <div class="page-inner">
+      <div class="page-title">Pending Approvals</div>
+      <div class="page-sub">14 members awaiting approval across all campsites</div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Member</th><th>Campsite</th><th>Role Requested</th><th>Submitted</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="pending-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: BROADCASTS HQ
+  ════════════════════════════ -->
+  <div class="page" id="page-broadcasts-hq">
+    <div class="page-inner">
+      <div class="section-head" style="margin-bottom:20px">
+        <div>
+          <div class="page-title">Broadcasts HQ</div>
+          <div class="page-sub">Send to one site, a group, or the entire company</div>
+        </div>
+        <button class="btn btn-primary" onclick="showToast('📡 Opening broadcast composer…')">+ New Broadcast</button>
+      </div>
+      <div class="card card-pad">
+        <div class="alert alert-info" style="margin-bottom:18px">ℹ️ As a founder you can broadcast to all 348 members simultaneously, or target by campsite, department, or role.</div>
+        <div class="section-title" style="margin-bottom:14px">Recent Broadcasts</div>
+        <div id="broadcasts-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: ROTA OVERVIEW
+  ════════════════════════════ -->
+  <div class="page" id="page-rota-hq">
+    <div class="page-inner">
+      <div class="page-title">Rota Overview</div>
+      <div class="page-sub">Upcoming shifts across all campsites — week of 24–28 Mar</div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Staff Member</th><th>Campsite</th><th>Date</th><th>Time</th><th>Role</th></tr>
+            </thead>
+            <tbody id="rota-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: AUDIT LOG
+  ════════════════════════════ -->
+  <div class="page" id="page-audit-hq">
+    <div class="page-inner">
+      <div class="page-title">Platform Audit Log</div>
+      <div class="page-sub">All events across all campsites — full admin trail</div>
+      <div class="card card-pad" id="audit-log-card"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════
+       PAGE: SETTINGS
+  ════════════════════════════ -->
+  <div class="page" id="page-settings-hq">
+    <div class="page-inner">
+      <div class="page-title">Platform Settings</div>
+      <div class="page-sub">Global configuration for the entire Campsite platform</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card card-pad">
+          <div class="section-title" style="margin-bottom:16px">Feature Flags</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)">
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Google Sheets Rota Sync</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px">Auto-sync shifts from linked spreadsheets</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)">
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Discount QR Codes</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px">Enable member discount scanning</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)">
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Multi-site broadcasts</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px">Allow cross-site mass messaging</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0">
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Beta Features</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px">Enable unreleased functionality</div></div>
+              <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card card-pad">
+          <div class="section-title" style="margin-bottom:16px">Billing & Plan</div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:16px;margin-bottom:14px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);font-weight:600;margin-bottom:6px">Enterprise Plan</div>
+            <div style="font-family:var(--serif);font-size:26px;color:var(--accent)">£2,400<span style="font-size:14px;color:var(--text3)">/mo</span></div>
+            <div style="font-size:12px;color:var(--text2);margin-top:5px">12 sites · Unlimited members · Priority support</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">Manage billing →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ═══════════════════════════════
+     CAMPSITE DETAIL MODAL
+═══════════════════════════════ -->
+<div class="overlay" id="modal-campsite" onclick="handleOverlay(event,'modal-campsite')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-cs-name">Lakeside Peak</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px" id="modal-cs-loc">📍 Lake District, Cumbria</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-primary btn-sm" id="open-site-btn" onclick="openCampsiteAdmin()">Open Site Admin →</button>
+        <button class="modal-close" onclick="closeModal('modal-campsite')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid" id="modal-cs-stats"></div>
+      <div class="tab-bar">
+        <div class="tab active" onclick="csTab('members',this)">Members</div>
+        <div class="tab" onclick="csTab('rota',this)">Rota</div>
+        <div class="tab" onclick="csTab('broadcasts',this)">Broadcasts</div>
+        <div class="tab" onclick="csTab('settings',this)">Settings</div>
+      </div>
+      <div id="cs-tab-members">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:8px 12px;text-align:left;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Member</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Role</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Status</th>
+          </tr></thead>
+          <tbody id="modal-cs-members-tbody"></tbody>
+        </table>
+      </div>
+      <div id="cs-tab-rota" style="display:none">
+        <div class="alert alert-info">📅 Rota for this site loads from Google Sheets integration. <a href="#" style="color:var(--blue);text-decoration:none" onclick="showToast('Opening Google Sheets…')">Open sheet →</a></div>
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:8px 12px;text-align:left;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase">Staff</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase">Date</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase">Time</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase">Role</th>
+          </tr></thead>
+          <tbody id="modal-cs-rota-tbody"></tbody>
+        </table>
+      </div>
+      <div id="cs-tab-broadcasts" style="display:none">
+        <div id="modal-cs-broadcasts"></div>
+      </div>
+      <div id="cs-tab-settings" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">Booking system active</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px">Accept live bookings on this site</div></div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">Member approval required</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px">Managers must approve new members</div></div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0">
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">Public listing</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px">Show on the Campsite directory</div></div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW CAMPSITE MODAL -->
+<div class="overlay" id="modal-new-site" onclick="handleOverlay(event,'modal-new-site')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add New Campsite</div>
+      <button class="modal-close" onclick="closeModal('modal-new-site')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Site Name</label><input type="text" placeholder="e.g. Heather Moor"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label>County / Region</label><input type="text" placeholder="e.g. North Yorkshire"></div>
+        <div class="field"><label>Country</label><select><option>England</option><option>Scotland</option><option>Wales</option><option>Northern Ireland</option></select></div>
+      </div>
+      <div class="field"><label>Status</label>
+        <select><option>Open</option><option>Seasonal</option><option>Closed</option></select>
+      </div>
+      <div class="field"><label>Site Manager Email</label><input type="email" placeholder="manager@example.com"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-site')">Cancel</button>
+      <button class="btn btn-primary" onclick="showToast('⛺ Campsite created ✓');closeModal('modal-new-site')">Create Campsite</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Done</div>
+
+<script>
+/* ═══════════════════ DATA ═══════════════════ */
+
+const CAMPSITES = [
+  { id:1,  name:'Lakeside Peak',       location:'Lake District, Cumbria',      status:'open',     members:42, bookings:312, revenue:11200, occ:96, mgr:'Sarah A.',    mgr_init:'SA' },
+  { id:2,  name:'Birchwood Valley',    location:'Brecon Beacons, Wales',       status:'open',     members:38, bookings:274, revenue:9800,  occ:88, mgr:'Tom W.',      mgr_init:'TW' },
+  { id:3,  name:'Glenshee Highlands',  location:'Cairngorms, Scotland',        status:'open',     members:35, bookings:291, revenue:10100, occ:92, mgr:'Fiona M.',    mgr_init:'FM' },
+  { id:4,  name:'Riverstone Glen',     location:'Peak District, Derbyshire',   status:'open',     members:29, bookings:208, revenue:7600,  occ:84, mgr:'Alex J.',     mgr_init:'AJ' },
+  { id:5,  name:'Ashdown Forest',      location:'East Sussex',                 status:'open',     members:26, bookings:195, revenue:7200,  occ:79, mgr:'Priya M.',    mgr_init:'PM' },
+  { id:6,  name:'Cliffside Bay',       location:'North Devon Coast',           status:'open',     members:31, bookings:226, revenue:8400,  occ:91, mgr:'Matt R.',     mgr_init:'MR' },
+  { id:7,  name:'Mossy Stone Creek',   location:'Yorkshire Dales',             status:'open',     members:24, bookings:183, revenue:6800,  occ:82, mgr:'Lena K.',     mgr_init:'LK' },
+  { id:8,  name:'Heather Moor',        location:'Northumberland',              status:'seasonal', members:18, bookings:102, revenue:4200,  occ:61, mgr:'Jack S.',     mgr_init:'JS' },
+  { id:9,  name:'Silverwater Loch',    location:'Loch Lomond, Scotland',       status:'seasonal', members:22, bookings:144, revenue:5600,  occ:73, mgr:'Nina O.',     mgr_init:'NO' },
+  { id:10, name:'Fernwood Glade',      location:'New Forest, Hampshire',       status:'open',     members:28, bookings:217, revenue:8100,  occ:87, mgr:'Sam B.',      mgr_init:'SB' },
+  { id:11, name:'Saltmarsh Edge',      location:'Norfolk Broads',              status:'closed',   members:14, bookings:0,   revenue:0,     occ:0,  mgr:'Unassigned',  mgr_init:'—' },
+  { id:12, name:'Copperfield Ridge',   location:'Exmoor, Somerset',            status:'seasonal', members:21, bookings:131, revenue:5100,  occ:68, mgr:'Cara T.',     mgr_init:'CT' },
+];
+
+const GLOBAL_MEMBERS = [
+  { initials:'SA', name:'Sarah Al-Amin',  email:'sarah@lakesidepeak.co.uk',     site:'Lakeside Peak',      role:'admin',   status:'active',   joined:'Jan 2024' },
+  { initials:'TW', name:'Tom Wilson',     email:'t.wilson@birchwood.co.uk',     site:'Birchwood Valley',   role:'admin',   status:'active',   joined:'Feb 2024' },
+  { initials:'AJ', name:'Alex Johnson',   email:'a.j@riverstone.co.uk',         site:'Riverstone Glen',    role:'mgr',     status:'active',   joined:'Mar 2024' },
+  { initials:'PM', name:'Priya Mehta',    email:'p.mehta@ashdown.co.uk',        site:'Ashdown Forest',     role:'mgr',     status:'active',   joined:'Mar 2024' },
+  { initials:'TO', name:'Tom Okafor',     email:'t.okafor@lakesidepeak.co.uk',  site:'Lakeside Peak',      role:'coord',   status:'active',   joined:'Apr 2024' },
+  { initials:'LK', name:'Lena Kim',       email:'l.kim@mossystone.co.uk',       site:'Mossy Stone Creek',  role:'mgr',     status:'active',   joined:'Apr 2024' },
+  { initials:'SP', name:'Sophie Park',    email:'s.park@birchwood.co.uk',       site:'Birchwood Valley',   role:'coord',   status:'active',   joined:'Jun 2024' },
+  { initials:'MW', name:'Marcus Webb',    email:'m.webb@cliffside.co.uk',       site:'Cliffside Bay',      role:'staff',   status:'active',   joined:'Sep 2024' },
+  { initials:'CJ', name:'Chloe Jensen',   email:'c.j@heathermoor.co.uk',        site:'Heather Moor',       role:'staff',   status:'inactive', joined:'Sep 2024' },
+  { initials:'RN', name:'Ravi Nair',      email:'r.nair@fernwood.co.uk',        site:'Fernwood Glade',     role:'staff',   status:'active',   joined:'Oct 2024' },
+  { initials:'KP', name:'Kate Phillips',  email:'k.p@glenshee.co.uk',           site:'Glenshee Highlands', role:'coord',   status:'active',   joined:'Nov 2024' },
+  { initials:'DB', name:'Dan Brown',      email:'d.b@fernwood.co.uk',           site:'Fernwood Glade',     role:'staff',   status:'pending',  joined:'Mar 2026' },
+];
+
+const PENDING_GLOBAL = [
+  { initials:'DB', name:'Dan Brown',      email:'d.b@fernwood.co.uk',       site:'Fernwood Glade',     role:'Weekly Paid Staff', time:'2 hours ago' },
+  { initials:'ML', name:'Maya Liu',       email:'m.l@lakesidepeak.co.uk',   site:'Lakeside Peak',      role:'Assistant',         time:'5 hours ago' },
+  { initials:'JK', name:'Jake Kowalski',  email:'j.k@riverstone.co.uk',     site:'Riverstone Glen',    role:'Coordinator',       time:'Yesterday' },
+  { initials:'EN', name:'Ellie Nguyen',   email:'e.n@cliffside.co.uk',      site:'Cliffside Bay',      role:'Weekly Paid Staff', time:'Yesterday' },
+  { initials:'RL', name:'Raj Lakhani',    email:'r.l@birchwood.co.uk',      site:'Birchwood Valley',   role:'Assistant',         time:'2 days ago' },
+];
+
+const ROTA_GLOBAL = [
+  { name:'Alex Johnson',  site:'Riverstone Glen',    date:'Mon 24 Mar', time:'09:00–13:00', role:'Events Desk' },
+  { name:'Marcus Webb',   site:'Cliffside Bay',      date:'Mon 24 Mar', time:'14:00–18:00', role:'Front Desk' },
+  { name:'Tom Okafor',    site:'Lakeside Peak',      date:'Tue 25 Mar', time:'10:00–14:00', role:'Events Desk' },
+  { name:'Lena Kim',      site:'Mossy Stone Creek',  date:'Wed 26 Mar', time:'09:00–17:00', role:'Campaign Lead' },
+  { name:'Sophie Park',   site:'Birchwood Valley',   date:'Wed 26 Mar', time:'15:00–19:00', role:'Events Desk' },
+  { name:'Priya Mehta',   site:'Ashdown Forest',     date:'Thu 27 Mar', time:'10:00–16:00', role:'Drop-in Coord.' },
+  { name:'Kate Phillips', site:'Glenshee Highlands', date:'Thu 27 Mar', time:'09:00–13:00', role:'Reception' },
+  { name:'Marcus Webb',   site:'Cliffside Bay',      date:'Fri 28 Mar', time:'14:00–18:00', role:'Front Desk' },
+];
+
+const BROADCASTS = [
+  { icon:'📡', title:'Spring Opening — All Sites',            by:'James Reeve (Founder)',    sent:'2 hours ago',   reach:'All 348 members' },
+  { icon:'📡', title:'Safety Update — Lakeside Peak',         by:'Sarah Al-Amin',            sent:'Yesterday',     reach:'42 members' },
+  { icon:'📡', title:'Wellbeing Session — Ashdown Forest',    by:'Priya Mehta',              sent:'2 days ago',    reach:'26 members' },
+  { icon:'📡', title:'Spring Volunteer Drive',                by:'Alex Johnson',             sent:'24 Mar',        reach:'29 members' },
+];
+
+const ACTIVITY = [
+  { icon:'✅', text:'<strong>Sarah Al-Amin</strong> approved <strong>Jake Kowalski</strong> at Riverstone Glen', time:'14 min ago' },
+  { icon:'📡', text:'<strong>You</strong> sent "Spring Opening" broadcast to all 348 members', time:'2 hours ago' },
+  { icon:'👤', text:'<strong>Dan Brown</strong> registered at Fernwood Glade — pending verification', time:'2 hours ago' },
+  { icon:'🎖', text:'<strong>Tom Wilson</strong> promoted Sophie Park from Assistant → Coordinator', time:'5 hours ago' },
+  { icon:'🔗', text:'Google Sheets sync completed for Cliffside Bay — 14 shifts updated', time:'7 hours ago' },
+  { icon:'⛺', text:'New campsite <strong>Saltmarsh Edge</strong> listed (closed) by James Reeve', time:'Yesterday' },
+];
+
+const CS_MEMBERS = {
+  1: [
+    { initials:'SA', name:'Sarah Al-Amin',  role:'admin', status:'active' },
+    { initials:'TO', name:'Tom Okafor',     role:'coord', status:'active' },
+    { initials:'ML', name:'Maya Liu',       role:'staff', status:'pending' },
+  ]
+};
+
+const CS_ROTA = {
+  1: [
+    { name:'Tom Okafor',   date:'Tue 25 Mar', time:'10:00–14:00', role:'Events Desk' },
+    { name:'Marcus Webb',  date:'Wed 26 Mar', time:'14:00–18:00', role:'Front Desk' },
+  ]
+};
+
+let currentCampsiteId = null;
+
+/* ═══════════════════ NAVIGATION ═══════════════════ */
+const PAGE_LABELS = {
+  overview:'Company Overview',campsites:'All Campsites',revenue:'Revenue & Finance',
+  growth:'Growth & Analytics',members:'All Members','pending-global':'Pending Approvals',
+  'broadcasts-hq':'Broadcasts HQ','rota-hq':'Rota Overview','audit-hq':'Audit Log',
+  'settings-hq':'Platform Settings'
+};
+
+function navTo(page, clickedEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+
+  if (clickedEl) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    clickedEl.classList.add('active');
+  }
+  document.getElementById('bc-current').textContent = PAGE_LABELS[page] || page;
+}
+
+/* ═══════════════════ RENDER FUNCTIONS ═══════════════════ */
+
+function renderOverview() {
+  // Monthly chart
+  const vals = [58, 63, 71, 62, 74, 87];
+  const max = Math.max(...vals);
+  document.getElementById('monthly-chart').innerHTML = vals.map((v,i) =>
+    `<div class="bar${i===5?' highlight':''}" style="height:${Math.max(8,(v/max)*44)}px" title="£${v}k"></div>`
+  ).join('');
+
+  // Top campsites
+  const sorted = [...CAMPSITES].filter(c=>c.status!=='closed').sort((a,b)=>b.revenue-a.revenue).slice(0,5);
+  document.getElementById('top-campsites-list').innerHTML = sorted.map((c,i) => `
+    <div class="perf-row" style="cursor:pointer" onclick="openCampsiteDetail(${c.id})">
+      <div style="width:18px;text-align:center;font-family:var(--serif);font-size:13px;color:var(--text3)">${i+1}</div>
+      <div class="perf-label">${c.name}<div style="font-size:11px;color:var(--text3);font-weight:400">${c.location}</div></div>
+      <div class="perf-bar-wrap"><div class="perf-bar" style="width:${Math.round(c.revenue/11200*100)}%"></div></div>
+      <div class="perf-val">£${(c.revenue/1000).toFixed(1)}k</div>
+    </div>`).join('');
+
+  // Activity
+  document.getElementById('overview-activity').innerHTML = ACTIVITY.map(a => `
+    <div class="activity-item">
+      <div class="activity-icon">${a.icon}</div>
+      <div><div class="activity-text">${a.text}</div><div class="activity-time">${a.time}</div></div>
+    </div>`).join('');
+}
+
+function renderCampsites() {
+  document.getElementById('campsite-grid').innerHTML = CAMPSITES.map(c => {
+    const statusCls = c.status==='open'?'cs-open':c.status==='seasonal'?'cs-seasonal':'cs-closed';
+    const statusLabel = c.status==='open'?'● Open':c.status==='seasonal'?'◐ Seasonal':'○ Closed';
+    return `
+    <div class="campsite-card" onclick="openCampsiteDetail(${c.id})">
+      <div class="campsite-header">
+        <div>
+          <div class="campsite-name">${c.name}</div>
+          <div class="campsite-location">📍 ${c.location}</div>
+        </div>
+        <span class="campsite-status ${statusCls}">${statusLabel}</span>
+      </div>
+      <div class="campsite-body">
+        <div class="campsite-metrics">
+          <div class="cm-item"><div class="cm-val">${c.members}</div><div class="cm-lbl">Members</div></div>
+          <div class="cm-item"><div class="cm-val">${c.status==='closed'?'—':c.bookings}</div><div class="cm-lbl">Bookings</div></div>
+          <div class="cm-item"><div class="cm-val">${c.status==='closed'?'—':'£'+(c.revenue/1000).toFixed(1)+'k'}</div><div class="cm-lbl">Revenue</div></div>
+          <div class="cm-item"><div class="cm-val">${c.status==='closed'?'—':c.occ+'%'}</div><div class="cm-lbl">Occupancy</div></div>
+        </div>
+      </div>
+      <div class="campsite-footer">
+        <div class="campsite-mgr">
+          <div class="cm-av">${c.mgr_init}</div>
+          ${c.mgr}
+        </div>
+        <span class="campsite-arrow">→</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterCampsites(q) {
+  const cards = document.querySelectorAll('#campsite-grid .campsite-card');
+  cards.forEach((card, i) => {
+    const name = CAMPSITES[i].name.toLowerCase();
+    const loc = CAMPSITES[i].location.toLowerCase();
+    card.style.display = (name+loc).includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+function filterCs(type, el) {
+  document.querySelectorAll('#page-campsites .filter-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  const cards = document.querySelectorAll('#campsite-grid .campsite-card');
+  cards.forEach((card, i) => {
+    const s = CAMPSITES[i].status;
+    card.style.display = (type==='all' || s===type) ? '' : 'none';
+  });
+}
+
+function renderMembers() {
+  const roleMap = {admin:'rb-admin',mgr:'rb-mgr',coord:'rb-coord',staff:'rb-staff'};
+  const roleLbl = {admin:'Super Admin',mgr:'Manager',coord:'Coordinator',staff:'Weekly Paid'};
+  document.getElementById('global-members-tbody').innerHTML = GLOBAL_MEMBERS.map(m => `
+    <tr>
+      <td><div class="td-name"><div class="td-av">${m.initials}</div><div><div style="font-weight:500;color:var(--text)">${m.name}</div><div style="font-size:11px;color:var(--text3)">${m.email}</div></div></div></td>
+      <td style="color:var(--text2)">${m.site}</td>
+      <td><span class="rb ${roleMap[m.role]||'rb-staff'}">${roleLbl[m.role]||m.role}</span></td>
+      <td><span class="sb sb-${m.status}"><span class="sb-dot"></span>${m.status.charAt(0).toUpperCase()+m.status.slice(1)}</span></td>
+      <td style="color:var(--text3)">${m.joined}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="showToast('Opening member…')">Edit</button></td>
+    </tr>`).join('');
+}
+
+function renderPending() {
+  document.getElementById('pending-tbody').innerHTML = PENDING_GLOBAL.map(p => `
+    <tr>
+      <td><div class="td-name"><div class="td-av">${p.initials}</div><div><div style="font-weight:500;color:var(--text)">${p.name}</div><div style="font-size:11px;color:var(--text3)">${p.email}</div></div></div></td>
+      <td style="color:var(--text2)">${p.site}</td>
+      <td style="color:var(--text2)">${p.role}</td>
+      <td style="color:var(--text3)">${p.time}</td>
+      <td style="display:flex;gap:6px;padding-top:11px">
+        <button class="btn btn-success btn-sm" onclick="showToast('✅ Approved '+this.closest('tr').querySelector('.td-name div div').textContent)">Approve</button>
+        <button class="btn btn-danger btn-sm" style="background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2)" onclick="showToast('Rejected')">Reject</button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderRota() {
+  document.getElementById('rota-tbody').innerHTML = ROTA_GLOBAL.map(r => `
+    <tr>
+      <td style="color:var(--text)">${r.name}</td>
+      <td style="color:var(--text2)">${r.site}</td>
+      <td style="color:var(--text2)">${r.date}</td>
+      <td style="color:var(--text2)">${r.time}</td>
+      <td style="color:var(--text3)">${r.role}</td>
+    </tr>`).join('');
+}
+
+function renderBroadcasts() {
+  document.getElementById('broadcasts-list').innerHTML = BROADCASTS.map(b => `
+    <div class="activity-item">
+      <div class="activity-icon">${b.icon}</div>
+      <div style="flex:1">
+        <div class="activity-text"><strong>${b.title}</strong></div>
+        <div class="activity-time">${b.by} · ${b.sent} · ${b.reach}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showToast('Opening broadcast…')">View</button>
+    </div>`).join('');
+}
+
+function renderAudit() {
+  document.getElementById('audit-log-card').innerHTML = `
+    <div class="section-title" style="margin-bottom:14px">Platform Audit Trail</div>
+    ${ACTIVITY.concat([
+      { icon:'⚙️', text:'Platform settings updated by <strong>James Reeve</strong> — billing renewed', time:'25 Mar, 09:00' },
+      { icon:'⛺', text:'Campsite <strong>Saltmarsh Edge</strong> created by <strong>James Reeve</strong>', time:'24 Mar, 14:22' },
+      { icon:'🔒', text:'<strong>Chloe Jensen</strong>\'s account deactivated by <strong>Tom Wilson</strong>', time:'24 Mar, 10:00' },
+    ]).map(a => `
+      <div class="activity-item">
+        <div class="activity-icon">${a.icon}</div>
+        <div><div class="activity-text">${a.text}</div><div class="activity-time">${a.time}</div></div>
+      </div>`).join('')}`;
+}
+
+function renderRevenue() {
+  const sites = CAMPSITES.filter(c=>c.revenue>0).sort((a,b)=>b.revenue-a.revenue);
+  const max = sites[0].revenue;
+  document.getElementById('revenue-by-site').innerHTML = sites.map(c => `
+    <div class="perf-row">
+      <div class="perf-label">${c.name}<div style="font-size:11px;color:var(--text3);font-weight:400">${c.location}</div></div>
+      <div class="perf-bar-wrap" style="width:120px"><div class="perf-bar" style="width:${Math.round(c.revenue/max*100)}%"></div></div>
+      <div class="perf-val">£${(c.revenue/1000).toFixed(1)}k</div>
+    </div>`).join('');
+
+  const vals = [58000,63000,71000,62000,74000,87400];
+  const mmax = Math.max(...vals);
+  document.getElementById('revenue-trend-chart').innerHTML = vals.map((v,i) =>
+    `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%">
+      <div style="flex:1;display:flex;align-items:flex-end;width:100%">
+        <div style="width:100%;height:${Math.max(8,Math.round(v/mmax*100))}%;border-radius:4px 4px 0 0;background:${i===5?'linear-gradient(180deg,var(--gold2),var(--gold))':'var(--surface3)'};transition:background var(--t)" title="£${(v/1000).toFixed(0)}k"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderGrowth() {
+  const sites = CAMPSITES.filter(c=>c.status!=='closed').slice(0,8);
+  const newSignups = [8,5,12,3,6,9,4,7];
+  document.getElementById('signup-chart').innerHTML = sites.map((c,i) => `
+    <div class="perf-row">
+      <div class="perf-label">${c.name}<div style="font-size:11px;color:var(--text3);font-weight:400">+${newSignups[i]} new members</div></div>
+      <div class="perf-bar-wrap" style="width:180px"><div class="perf-bar" style="width:${Math.round(newSignups[i]/12*100)}%"></div></div>
+      <div class="perf-val">${newSignups[i]}</div>
+    </div>`).join('');
+}
+
+/* ═══════════════════ CAMPSITE DETAIL MODAL ═══════════════════ */
+
+function openCampsiteDetail(id) {
+  const c = CAMPSITES.find(x=>x.id===id);
+  if (!c) return;
+  currentCampsiteId = id;
+
+  document.getElementById('modal-cs-name').textContent = c.name;
+  document.getElementById('modal-cs-loc').textContent = '📍 ' + c.location;
+
+  // Stats
+  const statusCls = c.status==='open'?'cs-open':c.status==='seasonal'?'cs-seasonal':'cs-closed';
+  document.getElementById('modal-cs-stats').innerHTML = `
+    <div class="detail-stat"><div class="ds-val">${c.members}</div><div class="ds-lbl">Members</div></div>
+    <div class="detail-stat"><div class="ds-val">${c.status==='closed'?'—':c.bookings}</div><div class="ds-lbl">Bookings (Month)</div></div>
+    <div class="detail-stat"><div class="ds-val">${c.status==='closed'?'—':'£'+(c.revenue/1000).toFixed(1)+'k'}</div><div class="ds-lbl">Revenue (Month)</div><div class="ds-trend ${c.status==='closed'?'':'up'}">↑ 14%&nbsp;&nbsp;vs last month</div></div>
+    <div class="detail-stat"><div class="ds-val">${c.status==='closed'?'—':c.occ+'%'}</div><div class="ds-lbl">Occupancy</div><div class="ds-trend" style="color:var(--text3)">Manager: ${c.mgr}</div></div>
+  `;
+
+  // Members tab
+  const members = CS_MEMBERS[id] || [
+    { initials:c.mgr_init, name:c.mgr, role:'admin', status:'active' },
+    { initials:'ST', name:'Staff Member', role:'staff', status:'active' },
+  ];
+  const roleMap = {admin:'rb-admin',mgr:'rb-mgr',coord:'rb-coord',staff:'rb-staff'};
+  const roleLbl = {admin:'Super Admin',mgr:'Manager',coord:'Coordinator',staff:'Weekly Paid'};
+  document.getElementById('modal-cs-members-tbody').innerHTML = members.map(m => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:10px 12px"><div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:50%;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:var(--text3)">${m.initials}</div><span style="font-size:12.5px;color:var(--text)">${m.name}</span></div></td>
+      <td style="padding:10px 12px"><span class="rb ${roleMap[m.role]||'rb-staff'}" style="font-size:10.5px">${roleLbl[m.role]||m.role}</span></td>
+      <td style="padding:10px 12px"><span class="sb sb-${m.status}" style="font-size:10.5px"><span class="sb-dot"></span>${m.status.charAt(0).toUpperCase()+m.status.slice(1)}</span></td>
+    </tr>`).join('');
+
+  // Rota tab
+  const rota = CS_ROTA[id] || ROTA_GLOBAL.slice(0,3);
+  document.getElementById('modal-cs-rota-tbody').innerHTML = rota.map(r => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:10px 12px;color:var(--text)">${r.name}</td>
+      <td style="padding:10px 12px;color:var(--text2)">${r.date||r.date}</td>
+      <td style="padding:10px 12px;color:var(--text2)">${r.time}</td>
+      <td style="padding:10px 12px;color:var(--text3)">${r.role}</td>
+    </tr>`).join('');
+
+  // Broadcasts tab
+  document.getElementById('modal-cs-broadcasts').innerHTML = BROADCASTS.slice(0,2).map(b => `
+    <div class="activity-item">
+      <div class="activity-icon">${b.icon}</div>
+      <div><div class="activity-text"><strong>${b.title}</strong></div><div class="activity-time">${b.by} · ${b.sent}</div></div>
+    </div>`).join('');
+
+  csTab('members', document.querySelector('#modal-campsite .tab-bar .tab'));
+  openModal('modal-campsite');
+}
+
+function openCampsiteAdmin() {
+  closeModal('modal-campsite');
+  showToast('⛺ Opening Site Admin for ' + CAMPSITES.find(c=>c.id===currentCampsiteId)?.name);
+  // In production this would navigate to the campsite's admin URL
+}
+
+function csTab(tab, el) {
+  ['members','rota','broadcasts','settings'].forEach(t => {
+    document.getElementById('cs-tab-'+t).style.display = t===tab ? '' : 'none';
+  });
+  document.querySelectorAll('#modal-campsite .tab-bar .tab').forEach(t => t.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+
+/* ═══════════════════ MODAL HELPERS ═══════════════════ */
+function openModal(id) { document.getElementById(id).classList.add('open') }
+function closeModal(id) { document.getElementById(id).classList.remove('open') }
+function handleOverlay(e, id) { if(e.target===document.getElementById(id)) closeModal(id) }
+
+/* ═══════════════════ TOAST ═══════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ═══════════════════ INIT ═══════════════════ */
+renderOverview();
+renderCampsites();
+renderMembers();
+renderPending();
+renderRota();
+renderBroadcasts();
+renderAudit();
+renderRevenue();
+renderGrowth();
+</script>
+</body>
+</html>

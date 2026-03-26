@@ -360,6 +360,10 @@ verify_jwt = true
 [functions.staff-discount-verify]
 verify_jwt = true
 
+# Service-role Bearer only; lists notification recipients per `broadcast_notification_jobs` row.
+[functions.process-broadcast-notifications]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

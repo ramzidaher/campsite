@@ -34,9 +34,20 @@
   color: var(--text);
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   --serif: var(--fh-serif), 'Instrument Serif', serif;
+  position: relative;
+}
+
+/* Row shell: sidebar (fixed) + scrollable main — keeps modals/toast out of the flex row */
+.founder-hq-root .founder-hq-body {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 
 .founder-hq-root .sidebar {
@@ -265,6 +276,7 @@
 .founder-hq-root .main {
   margin-left: var(--sidebar-w);
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 100vh;

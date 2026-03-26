@@ -7,6 +7,7 @@ import {
   CAMPSITES,
   CS_MEMBERS,
   CS_ROTA,
+  type BroadcastRow,
   type Campsite,
   type CampsiteStatus,
   escapeHtml,
@@ -14,6 +15,7 @@ import {
   getBroadcasts,
   GLOBAL_MEMBERS,
   PENDING_GLOBAL,
+  type PendingRow,
   ROTA_GLOBAL,
 } from '@/components/founders/mockData';
 
@@ -76,7 +78,7 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
   const [activePage, setActivePage] = useState<FounderPageKey>('overview');
   const [csFilter, setCsFilter] = useState<CampsiteStatus | 'all'>('all');
   const [csQuery, setCsQuery] = useState('');
-  const [modal, setModal] = useState<'campsite' | 'new-site' | null>(null);
+  const [modal, setModal] = useState<'campsite' | 'new-site' | 'broadcast' | null>(null);
   const [currentCampsiteId, setCurrentCampsiteId] = useState<number | null>(null);
   const [csTab, setCsTab] = useState<'members' | 'rota' | 'broadcasts' | 'settings'>('members');
   const [toast, setToast] = useState<string | null>(null);
@@ -87,8 +89,30 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
   const [siteBooking, setSiteBooking] = useState(true);
   const [siteApproval, setSiteApproval] = useState(true);
   const [sitePublic, setSitePublic] = useState(true);
+  const [pendingList, setPendingList] = useState<PendingRow[]>(() => [...PENDING_GLOBAL]);
+  const [memberQuery, setMemberQuery] = useState('');
+  const [memberSite, setMemberSite] = useState<string>('all');
+  const [memberRole, setMemberRole] = useState<string>('all');
+  const [memberStatusTab, setMemberStatusTab] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
+  const [newSite, setNewSite] = useState({
+    name: '',
+    region: '',
+    country: 'England',
+    status: 'Open' as 'Open' | 'Seasonal' | 'Closed',
+    managerEmail: '',
+  });
+  const [broadcastDraft, setBroadcastDraft] = useState({
+    title: '',
+    audience: 'all' as 'all' | 'site',
+    siteId: CAMPSITES[0]?.id ?? 1,
+    body: '',
+  });
+  const [sentBroadcasts, setSentBroadcasts] = useState<BroadcastRow[]>([]);
 
-  const broadcasts = useMemo(() => getBroadcasts(user.displayName), [user.displayName]);
+  const broadcasts = useMemo(() => {
+    const base = getBroadcasts(user.displayName);
+    return [...sentBroadcasts, ...base];
+  }, [sentBroadcasts, user.displayName]);
   const activity = useMemo(() => getActivity(user.displayName), [user.displayName]);
 
   const hour = new Date().getHours();
@@ -151,6 +175,24 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
     return sites.map((c, i) => ({ c, n: newSignups[i] ?? 0 }));
   }, []);
 
+  const pendingCount = pendingList.length;
+
+  const memberSiteOptions = useMemo(() => {
+    const names = [...new Set(CAMPSITES.map((c) => c.name))].sort();
+    return ['all', ...names];
+  }, []);
+
+  const filteredMembers = useMemo(() => {
+    const q = memberQuery.toLowerCase().trim();
+    return GLOBAL_MEMBERS.filter((m) => {
+      if (memberSite !== 'all' && m.site !== memberSite) return false;
+      if (memberRole !== 'all' && m.role !== memberRole) return false;
+      if (memberStatusTab !== 'all' && m.status !== memberStatusTab) return false;
+      if (!q) return true;
+      return `${m.name} ${m.email} ${m.site}`.toLowerCase().includes(q);
+    });
+  }, [memberQuery, memberSite, memberRole, memberStatusTab]);
+
   const auditExtra = useMemo(
     () => [
       {
@@ -211,6 +253,59 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
     showToast(`⛺ Opening Site Admin for ${name}`);
   };
 
+  const approvePending = (email: string) => {
+    const row = pendingList.find((p) => p.email === email);
+    setPendingList((list) => list.filter((p) => p.email !== email));
+    showToast(`✅ Approved ${row?.name ?? 'member'}`);
+  };
+
+  const rejectPending = (email: string) => {
+    const row = pendingList.find((p) => p.email === email);
+    setPendingList((list) => list.filter((p) => p.email !== email));
+    showToast(`Rejected: ${row?.name ?? 'request'}`);
+  };
+
+  const submitBroadcast = () => {
+    const title = broadcastDraft.title.trim();
+    if (!title) {
+      showToast('Add a broadcast title');
+      return;
+    }
+    const cs = CAMPSITES.find((c) => c.id === broadcastDraft.siteId);
+    const reach =
+      broadcastDraft.audience === 'all'
+        ? 'All 348 members'
+        : `${cs?.name ?? 'Site'} · ${cs?.members ?? 0} members`;
+    setSentBroadcasts((prev) => [
+      {
+        icon: '📡',
+        title,
+        by: `${user.displayName} (Founder)`,
+        sent: 'Just now',
+        reach,
+      },
+      ...prev,
+    ]);
+    setBroadcastDraft({
+      title: '',
+      audience: 'all',
+      siteId: CAMPSITES[0]?.id ?? 1,
+      body: '',
+    });
+    setModal(null);
+    showToast('📡 Broadcast sent');
+  };
+
+  const createNewSite = () => {
+    if (!newSite.name.trim()) {
+      showToast('Enter a site name');
+      return;
+    }
+    showToast(`⛺ Campsite “${newSite.name.trim()}” created ✓`);
+    setNewSite({ name: '', region: '', country: 'England', status: 'Open', managerEmail: '' });
+    setModal(null);
+  };
+
   const NavBtn = ({
     page,
     icon,
@@ -244,6 +339,7 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
 
   return (
     <>
+      <div className="founder-hq-body">
       <div className="sidebar">
         <div className="sidebar-brand">
           <div className="brand-icon">⛺</div>
@@ -265,15 +361,15 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
         <div className="nav-section">
           <div className="nav-label">Overview</div>
           <NavBtn page="overview" icon="◈" label="Company Overview" />
-          <NavBtn page="campsites" icon="⛺" label="All Campsites" badge="12" badgeClass="nb-gold" />
+          <NavBtn page="campsites" icon="⛺" label="All Campsites" badge={String(CAMPSITES.length)} badgeClass="nb-gold" />
           <NavBtn page="revenue" icon="₤" label="Revenue & Finance" />
           <NavBtn page="growth" icon="↗" label="Growth & Analytics" />
 
           <div className="nav-label" style={{ marginTop: 4 }}>
             Operations
           </div>
-          <NavBtn page="members" icon="◎" label="All Members" badge="348" badgeClass="nb-muted" />
-          <NavBtn page="pending-global" icon="⏳" label="Pending Approvals" badge="14" badgeClass="nb-red" />
+          <NavBtn page="members" icon="◎" label="All Members" badge={String(GLOBAL_MEMBERS.length)} badgeClass="nb-muted" />
+          <NavBtn page="pending-global" icon="⏳" label="Pending Approvals" badge={String(pendingCount)} badgeClass="nb-red" />
           <NavBtn page="broadcasts-hq" icon="📡" label="Broadcasts HQ" />
           <NavBtn page="rota-hq" icon="📅" label="Rota Overview" />
 
@@ -353,7 +449,7 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                   <div className="hm-lbl">Avg Occupancy</div>
                 </div>
                 <div className="hero-metric">
-                  <div className="hm-val">14</div>
+                  <div className="hm-val">{pendingCount}</div>
                   <div className="hm-lbl">Pending Actions</div>
                 </div>
               </div>
@@ -544,7 +640,7 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                     <button type="button" className="btn btn-ghost btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => navTo('pending-global')}>
-                      ⏳ &nbsp;Review 14 pending approvals
+                      ⏳ &nbsp;Review {pendingCount} pending approval{pendingCount === 1 ? '' : 's'}
                     </button>
                     <button type="button" className="btn btn-ghost btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => setModal('new-site')}>
                       ⛺ &nbsp;Add new campsite
@@ -846,31 +942,37 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
               <div className="search-bar" style={{ width: 240 }}>
                 <span style={{ color: 'var(--text3)', fontSize: 12 }}>🔍</span>
-                <input type="text" placeholder="Search name, email or site…" />
+                <input
+                  type="text"
+                  placeholder="Search name, email or site…"
+                  value={memberQuery}
+                  onChange={(e) => setMemberQuery(e.target.value)}
+                />
               </div>
-              <select className="fh-muted-select">
-                <option>All campsites</option>
-                <option>Lakeside Peak</option>
-                <option>Birchwood Valley</option>
-                <option>Glenshee Highlands</option>
-                <option>Riverstone Glen</option>
+              <select className="fh-muted-select" value={memberSite} onChange={(e) => setMemberSite(e.target.value)}>
+                {memberSiteOptions.map((s) => (
+                  <option key={s} value={s}>
+                    {s === 'all' ? 'All campsites' : s}
+                  </option>
+                ))}
               </select>
-              <select className="fh-muted-select">
-                <option>All roles</option>
-                <option>Super Admin</option>
-                <option>Manager</option>
-                <option>Coordinator</option>
-                <option>Weekly Paid</option>
+              <select className="fh-muted-select" value={memberRole} onChange={(e) => setMemberRole(e.target.value)}>
+                <option value="all">All roles</option>
+                <option value="admin">Super Admin</option>
+                <option value="mgr">Manager</option>
+                <option value="coord">Coordinator</option>
+                <option value="staff">Weekly Paid</option>
               </select>
-              <button type="button" className="filter-pill active">
-                All
-              </button>
-              <button type="button" className="filter-pill">
-                Active
-              </button>
-              <button type="button" className="filter-pill">
-                Pending
-              </button>
+              {(['all', 'active', 'pending', 'inactive'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`filter-pill${memberStatusTab === tab ? ' active' : ''}`}
+                  onClick={() => setMemberStatusTab(tab)}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
             </div>
 
             <div className="card">
@@ -887,35 +989,43 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {GLOBAL_MEMBERS.map((m) => (
-                      <tr key={m.email}>
-                        <td>
-                          <div className="td-name">
-                            <div className="td-av">{m.initials}</div>
-                            <div>
-                              <div style={{ fontWeight: 500, color: 'var(--text)' }}>{m.name}</div>
-                              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ color: 'var(--text2)' }}>{m.site}</td>
-                        <td>
-                          <span className={`rb ${ROLE_MAP[m.role] ?? 'rb-staff'}`}>{ROLE_LBL[m.role] ?? m.role}</span>
-                        </td>
-                        <td>
-                          <span className={`sb sb-${m.status}`}>
-                            <span className="sb-dot" />
-                            {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
-                          </span>
-                        </td>
-                        <td style={{ color: 'var(--text3)' }}>{m.joined}</td>
-                        <td>
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => showToast('Opening member…')}>
-                            Edit
-                          </button>
+                    {filteredMembers.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ color: 'var(--text2)', padding: '20px 14px' }}>
+                          No members match these filters.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredMembers.map((m) => (
+                        <tr key={m.email}>
+                          <td>
+                            <div className="td-name">
+                              <div className="td-av">{m.initials}</div>
+                              <div>
+                                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{m.name}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ color: 'var(--text2)' }}>{m.site}</td>
+                          <td>
+                            <span className={`rb ${ROLE_MAP[m.role] ?? 'rb-staff'}`}>{ROLE_LBL[m.role] ?? m.role}</span>
+                          </td>
+                          <td>
+                            <span className={`sb sb-${m.status}`}>
+                              <span className="sb-dot" />
+                              {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
+                            </span>
+                          </td>
+                          <td style={{ color: 'var(--text3)' }}>{m.joined}</td>
+                          <td>
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => showToast('Opening member…')}>
+                              Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -927,46 +1037,56 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
         <div className={`page${activePage === 'pending-global' ? ' active' : ''}`}>
           <div className="page-inner">
             <div className="page-title">Pending Approvals</div>
-            <div className="page-sub">14 members awaiting approval across all campsites</div>
+            <div className="page-sub">
+              {pendingCount === 0
+                ? 'No members awaiting approval'
+                : `${pendingCount} member${pendingCount === 1 ? '' : 's'} awaiting approval across all campsites`}
+            </div>
             <div className="card">
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Member</th>
-                      <th>Campsite</th>
-                      <th>Role Requested</th>
-                      <th>Submitted</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {PENDING_GLOBAL.map((p) => (
-                      <tr key={p.email}>
-                        <td>
-                          <div className="td-name">
-                            <div className="td-av">{p.initials}</div>
-                            <div>
-                              <div style={{ fontWeight: 500, color: 'var(--text)' }}>{p.name}</div>
-                              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{p.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ color: 'var(--text2)' }}>{p.site}</td>
-                        <td style={{ color: 'var(--text2)' }}>{p.role}</td>
-                        <td style={{ color: 'var(--text3)' }}>{p.time}</td>
-                        <td style={{ display: 'flex', gap: 6, paddingTop: 11 }}>
-                          <button type="button" className="btn btn-success btn-sm" onClick={() => showToast(`✅ Approved ${p.name}`)}>
-                            Approve
-                          </button>
-                          <button type="button" className="btn btn-danger btn-sm" onClick={() => showToast('Rejected')}>
-                            Reject
-                          </button>
-                        </td>
+                {pendingCount === 0 ? (
+                  <div className="card-pad" style={{ color: 'var(--text2)', fontSize: 13 }}>
+                    You&apos;re all caught up — new requests will appear here.
+                  </div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Member</th>
+                        <th>Campsite</th>
+                        <th>Role Requested</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {pendingList.map((p) => (
+                        <tr key={p.email}>
+                          <td>
+                            <div className="td-name">
+                              <div className="td-av">{p.initials}</div>
+                              <div>
+                                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{p.name}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{p.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ color: 'var(--text2)' }}>{p.site}</td>
+                          <td style={{ color: 'var(--text2)' }}>{p.role}</td>
+                          <td style={{ color: 'var(--text3)' }}>{p.time}</td>
+                          <td style={{ display: 'flex', gap: 6, paddingTop: 11 }}>
+                            <button type="button" className="btn btn-success btn-sm" onClick={() => approvePending(p.email)}>
+                              Approve
+                            </button>
+                            <button type="button" className="btn btn-danger btn-sm" onClick={() => rejectPending(p.email)}>
+                              Reject
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>
@@ -980,7 +1100,7 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                 <div className="page-title">Broadcasts HQ</div>
                 <div className="page-sub">Send to one site, a group, or the entire company</div>
               </div>
-              <button type="button" className="btn btn-primary" onClick={() => showToast('📡 Opening broadcast composer…')}>
+              <button type="button" className="btn btn-primary" onClick={() => setModal('broadcast')}>
                 + New Broadcast
               </button>
             </div>
@@ -1126,6 +1246,7 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Campsite modal */}
@@ -1327,16 +1448,26 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
           <div className="modal-body">
             <div className="field">
               <label>Site Name</label>
-              <input type="text" placeholder="e.g. Heather Moor" />
+              <input
+                type="text"
+                placeholder="e.g. Heather Moor"
+                value={newSite.name}
+                onChange={(e) => setNewSite((s) => ({ ...s, name: e.target.value }))}
+              />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="field">
                 <label>County / Region</label>
-                <input type="text" placeholder="e.g. North Yorkshire" />
+                <input
+                  type="text"
+                  placeholder="e.g. North Yorkshire"
+                  value={newSite.region}
+                  onChange={(e) => setNewSite((s) => ({ ...s, region: e.target.value }))}
+                />
               </div>
               <div className="field">
                 <label>Country</label>
-                <select>
+                <select value={newSite.country} onChange={(e) => setNewSite((s) => ({ ...s, country: e.target.value }))}>
                   <option>England</option>
                   <option>Scotland</option>
                   <option>Wales</option>
@@ -1346,7 +1477,10 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             </div>
             <div className="field">
               <label>Status</label>
-              <select>
+              <select
+                value={newSite.status}
+                onChange={(e) => setNewSite((s) => ({ ...s, status: e.target.value as typeof newSite.status }))}
+              >
                 <option>Open</option>
                 <option>Seasonal</option>
                 <option>Closed</option>
@@ -1354,22 +1488,89 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             </div>
             <div className="field">
               <label>Site Manager Email</label>
-              <input type="email" placeholder="manager@example.com" />
+              <input
+                type="email"
+                placeholder="manager@example.com"
+                value={newSite.managerEmail}
+                onChange={(e) => setNewSite((s) => ({ ...s, managerEmail: e.target.value }))}
+              />
             </div>
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-ghost" onClick={() => setModal(null)}>
               Cancel
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                showToast('⛺ Campsite created ✓');
-                setModal(null);
-              }}
-            >
+            <button type="button" className="btn btn-primary" onClick={createNewSite}>
               Create Campsite
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* New broadcast modal */}
+      <div
+        className={`overlay${modal === 'broadcast' ? ' open' : ''}`}
+        role="presentation"
+        onClick={(e) => e.target === e.currentTarget && setModal(null)}
+      >
+        <div className="modal">
+          <div className="modal-header">
+            <div className="modal-title">New Broadcast</div>
+            <button type="button" className="modal-close" onClick={() => setModal(null)}>
+              ✕
+            </button>
+          </div>
+          <div className="modal-body">
+            <div className="field">
+              <label>Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Spring site briefing"
+                value={broadcastDraft.title}
+                onChange={(e) => setBroadcastDraft((d) => ({ ...d, title: e.target.value }))}
+              />
+            </div>
+            <div className="field">
+              <label>Audience</label>
+              <select
+                value={broadcastDraft.audience}
+                onChange={(e) => setBroadcastDraft((d) => ({ ...d, audience: e.target.value as 'all' | 'site' }))}
+              >
+                <option value="all">All members (company-wide)</option>
+                <option value="site">Single campsite</option>
+              </select>
+            </div>
+            {broadcastDraft.audience === 'site' && (
+              <div className="field">
+                <label>Campsite</label>
+                <select
+                  value={broadcastDraft.siteId}
+                  onChange={(e) => setBroadcastDraft((d) => ({ ...d, siteId: Number(e.target.value) }))}
+                >
+                  {CAMPSITES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="field">
+              <label>Message</label>
+              <textarea
+                rows={4}
+                placeholder="Write your message…"
+                value={broadcastDraft.body}
+                onChange={(e) => setBroadcastDraft((d) => ({ ...d, body: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-ghost" onClick={() => setModal(null)}>
+              Cancel
+            </button>
+            <button type="button" className="btn btn-primary" onClick={submitBroadcast}>
+              Send broadcast
             </button>
           </div>
         </div>

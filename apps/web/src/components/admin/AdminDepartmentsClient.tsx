@@ -15,6 +15,67 @@ type Dept = {
 
 type FilterKey = 'all' | 'department' | 'society' | 'club';
 
+type BroadcastPermRow = { permission: string; min_role: string };
+
+type MinRoleOpt = 'manager' | 'coordinator' | 'coordinator_only';
+
+/** Matches `dept_broadcast_permissions.permission` + Plan 02 spec. */
+const DEPT_BROADCAST_PERM_DEFS: {
+  permission: string;
+  label: string;
+  hint: string;
+  minRoleOptions: MinRoleOpt[];
+}[] = [
+  {
+    permission: 'send_org_wide',
+    label: 'Send org-wide',
+    hint: 'Target the whole organisation from this department (subject to subscriptions unless mandatory).',
+    minRoleOptions: ['manager', 'coordinator'],
+  },
+  {
+    permission: 'send_no_approval',
+    label: 'Send without approval',
+    hint: 'Coordinators in this department can publish without manager approval.',
+    minRoleOptions: ['coordinator_only'],
+  },
+  {
+    permission: 'edit_others_broadcasts',
+    label: 'Edit others’ broadcasts',
+    hint: 'Edit posts from other authors in scope for this department.',
+    minRoleOptions: ['manager', 'coordinator'],
+  },
+  {
+    permission: 'delete_dept_broadcasts',
+    label: 'Delete broadcasts in this department',
+    hint: 'Remove any broadcast tied to this department.',
+    minRoleOptions: ['manager', 'coordinator'],
+  },
+  {
+    permission: 'delete_org_broadcasts',
+    label: 'Delete org-wide broadcasts',
+    hint: 'Remove any broadcast across the organisation.',
+    minRoleOptions: ['manager'],
+  },
+  {
+    permission: 'pin_broadcasts',
+    label: 'Pin broadcasts',
+    hint: 'Pin posts to the top of the feed for subscribers.',
+    minRoleOptions: ['manager'],
+  },
+  {
+    permission: 'mandatory_broadcast',
+    label: 'Mandatory broadcasts',
+    hint: 'Mark sends as mandatory so they bypass category subscription filters.',
+    minRoleOptions: ['manager'],
+  },
+];
+
+function minRoleLabel(r: MinRoleOpt): string {
+  if (r === 'coordinator_only') return 'Coordinators only';
+  if (r === 'coordinator') return 'Managers & coordinators';
+  return 'Managers (dept managers)';
+}
+
 function typeIcon(t: string) {
   if (t === 'society') return '👥';
   if (t === 'club') return '⚽';
@@ -39,17 +100,21 @@ function pillClass(active: boolean) {
 
 export function AdminDepartmentsClient({
   orgId,
+  currentUserId,
   initialDepartments,
   categoriesByDept,
   managersByDept,
   memberCountByDept,
+  broadcastPermsByDept,
   staffOptions,
 }: {
   orgId: string;
+  currentUserId: string;
   initialDepartments: Dept[];
   categoriesByDept: Record<string, { id: string; name: string }[]>;
   managersByDept: Record<string, { user_id: string; full_name: string }[]>;
   memberCountByDept: Record<string, number>;
+  broadcastPermsByDept: Record<string, BroadcastPermRow[]>;
   staffOptions: { id: string; full_name: string; role: string }[];
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -155,6 +220,36 @@ export function AdminDepartmentsClient({
 
   async function removeManager(deptId: string, userId: string) {
     const { error } = await supabase.from('dept_managers').delete().eq('dept_id', deptId).eq('user_id', userId);
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function upsertBroadcastPerm(deptId: string, permission: string, min_role: MinRoleOpt) {
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase.from('dept_broadcast_permissions').upsert(
+      {
+        dept_id: deptId,
+        permission,
+        min_role,
+        granted_by: currentUserId,
+      },
+      { onConflict: 'dept_id,permission' }
+    );
+    setBusy(false);
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function revokeBroadcastPerm(deptId: string, permission: string) {
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase
+      .from('dept_broadcast_permissions')
+      .delete()
+      .eq('dept_id', deptId)
+      .eq('permission', permission);
+    setBusy(false);
     if (error) setMsg(error.message);
     else void refresh();
   }
@@ -296,6 +391,7 @@ export function AdminDepartmentsClient({
 
       {detailDept ? (
         <ModalOverlay
+          wide
           title={detailDept.name}
           subtitle={`${typeLabel(detailDept.type)} · ${memberCountByDept[detailDept.id] ?? 0} members`}
           onClose={() => setDetailDept(null)}
@@ -305,12 +401,15 @@ export function AdminDepartmentsClient({
             categories={categoriesByDept[detailDept.id] ?? []}
             managers={managersByDept[detailDept.id] ?? []}
             staffOptions={staffOptions}
+            broadcastPerms={broadcastPermsByDept[detailDept.id] ?? []}
             busy={busy}
             onSave={(x) => void saveDept(x)}
             onAddCat={(name) => void addCategory(detailDept.id, name)}
             onRemoveCat={(id) => void removeCategory(id)}
             onAddMgr={(uid) => void addManager(detailDept.id, uid)}
             onRemoveMgr={(uid) => void removeManager(detailDept.id, uid)}
+            onUpsertBroadcastPerm={(perm, minRole) => void upsertBroadcastPerm(detailDept.id, perm, minRole)}
+            onRevokeBroadcastPerm={(perm) => void revokeBroadcastPerm(detailDept.id, perm)}
           />
         </ModalOverlay>
       ) : null}
@@ -406,11 +505,13 @@ function DeptGridCard({
 function ModalOverlay({
   title,
   subtitle,
+  wide,
   children,
   onClose,
 }: {
   title: string;
   subtitle?: string;
+  wide?: boolean;
   children: ReactNode;
   onClose: () => void;
 }) {
@@ -424,7 +525,10 @@ function ModalOverlay({
         role="dialog"
         aria-modal="true"
         aria-labelledby="dept-modal-title"
-        className="max-h-[min(90vh,720px)] w-full max-w-lg overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.07)]"
+        className={[
+          'max-h-[min(90vh,800px)] w-full overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.07)]',
+          wide ? 'max-w-2xl' : 'max-w-lg',
+        ].join(' ')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 border-b border-[#d8d8d8] px-6 py-4">
@@ -454,23 +558,29 @@ function DeptDetailForm({
   categories,
   managers,
   staffOptions,
+  broadcastPerms,
   busy,
   onSave,
   onAddCat,
   onRemoveCat,
   onAddMgr,
   onRemoveMgr,
+  onUpsertBroadcastPerm,
+  onRevokeBroadcastPerm,
 }: {
   dept: Dept;
   categories: { id: string; name: string }[];
   managers: { user_id: string; full_name: string }[];
   staffOptions: { id: string; full_name: string; role: string }[];
+  broadcastPerms: BroadcastPermRow[];
   busy: boolean;
   onSave: (d: Dept) => void;
   onAddCat: (name: string) => void;
   onRemoveCat: (id: string) => void;
   onAddMgr: (userId: string) => void;
   onRemoveMgr: (userId: string) => void;
+  onUpsertBroadcastPerm: (permission: string, minRole: MinRoleOpt) => void;
+  onRevokeBroadcastPerm: (permission: string) => void;
 }) {
   const [edit, setEdit] = useState(dept);
   const [catName, setCatName] = useState('');
@@ -530,6 +640,67 @@ function DeptDetailForm({
       >
         Save department
       </button>
+
+      <div className="mt-6 border-t border-[#d8d8d8] pt-4">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast permissions</p>
+        <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
+          Off by default. Grants extra broadcast powers for this department; baseline role rules still apply.
+        </p>
+        <ul className="mt-3 space-y-3">
+          {DEPT_BROADCAST_PERM_DEFS.map((def) => {
+            const row = broadcastPerms.find((p) => p.permission === def.permission);
+            const enabled = Boolean(row);
+            const minRole = (row?.min_role as MinRoleOpt | undefined) ?? def.minRoleOptions[0];
+            const safeMin = def.minRoleOptions.includes(minRole) ? minRole : def.minRoleOptions[0];
+            return (
+              <li
+                key={def.permission}
+                className="rounded-lg border border-[#eceae6] bg-[#faf9f6] px-3 py-2.5"
+              >
+                <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap sm:items-center sm:justify-between">
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-[#d8d8d8]"
+                      checked={enabled}
+                      disabled={busy}
+                      onChange={(e) => {
+                        if (e.target.checked) onUpsertBroadcastPerm(def.permission, def.minRoleOptions[0]);
+                        else onRevokeBroadcastPerm(def.permission);
+                      }}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-medium text-[#121212]">{def.label}</span>
+                      <span className="mt-0.5 block text-[12px] leading-snug text-[#6b6b6b]">{def.hint}</span>
+                    </span>
+                  </label>
+                  {enabled && def.minRoleOptions.length > 1 ? (
+                    <select
+                      className="w-full shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[12px] text-[#121212] sm:w-[200px]"
+                      value={safeMin}
+                      disabled={busy}
+                      onChange={(e) =>
+                        onUpsertBroadcastPerm(def.permission, e.target.value as MinRoleOpt)
+                      }
+                      aria-label={`Minimum role for ${def.label}`}
+                    >
+                      {def.minRoleOptions.map((r) => (
+                        <option key={r} value={r}>
+                          {minRoleLabel(r)}
+                        </option>
+                      ))}
+                    </select>
+                  ) : enabled ? (
+                    <span className="shrink-0 rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11px] text-[#6b6b6b]">
+                      {minRoleLabel(def.minRoleOptions[0])}
+                    </span>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       <div className="mt-6 border-t border-[#d8d8d8] pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast categories</p>

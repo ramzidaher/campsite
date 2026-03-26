@@ -147,7 +147,7 @@ export function AppShell({
           aria-label="Main"
         >
           <div className="space-y-0.5">
-            <NavLink href="/dashboard" icon="◼" label="Dashboard" onNavigate={closeMobile} />
+            <NavLink href="/dashboard" icon="📊" label="Dashboard" onNavigate={closeMobile} />
             <NavLink
               href="/broadcasts"
               icon="📡"

@@ -36,6 +36,41 @@ type Props = {
 
 const pageSize = 20;
 
+/** Persisted so we skip Plan 02 REST shape after first failure (avoids a 400 on every refresh). */
+const BROADCAST_FEED_LEGACY_LS = 'campsite.bf.feed_legacy_select';
+
+function readBroadcastFeedLegacyLs(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(BROADCAST_FEED_LEGACY_LS) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function persistBroadcastFeedLegacyLs() {
+  try {
+    window.localStorage.setItem(BROADCAST_FEED_LEGACY_LS, '1');
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function clearBroadcastFeedLegacyLs() {
+  try {
+    window.localStorage.removeItem(BROADCAST_FEED_LEGACY_LS);
+  } catch {
+    /* */
+  }
+}
+
+function forceLegacyBroadcastFeedSelect(): boolean {
+  return process.env.NEXT_PUBLIC_BROADCAST_FEED_LEGACY === '1';
+}
+
+/** In-memory hint for the session (Plan 02 columns + pin ordering unavailable). */
+let broadcastFeedApiMode: 'plan02' | 'legacy' | null = null;
+
 type FeedPage = { rows: FeedRow[]; hasMore: boolean };
 
 export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function BroadcastFeed(
@@ -104,20 +139,50 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     queryFn: async ({ pageParam }): Promise<FeedPage> => {
       const from = pageParam * pageSize;
       const to = from + pageSize - 1;
-      let query = supabase
-        .from('broadcasts')
-        .select('id,title,body,sent_at,dept_id,cat_id,created_by')
-        .eq('org_id', orgId)
-        .eq('status', 'sent')
-        .order('sent_at', { ascending: false })
-        .range(from, to);
 
-      if (deptFilter.size) query = query.in('dept_id', [...deptFilter]);
-      if (catFilter.size) query = query.in('cat_id', [...catFilter]);
+      const run = async (mode: 'plan02' | 'legacy') => {
+        const select =
+          mode === 'plan02'
+            ? 'id,title,body,sent_at,dept_id,cat_id,created_by,is_mandatory,is_pinned,is_org_wide'
+            : 'id,title,body,sent_at,dept_id,cat_id,created_by';
+        let q = supabase
+          .from('broadcasts')
+          .select(select)
+          .eq('org_id', orgId)
+          .eq('status', 'sent');
+        if (mode === 'plan02') {
+          q = q.order('is_pinned', { ascending: false }).order('sent_at', { ascending: false });
+        } else {
+          q = q.order('sent_at', { ascending: false });
+        }
+        if (deptFilter.size) q = q.in('dept_id', [...deptFilter]);
+        if (catFilter.size) q = q.in('cat_id', [...catFilter]);
+        return q.range(from, to);
+      };
 
-      const { data, error } = await query;
+      const useLegacy =
+        forceLegacyBroadcastFeedSelect() ||
+        broadcastFeedApiMode === 'legacy' ||
+        readBroadcastFeedLegacyLs();
+
+      let mode: 'plan02' | 'legacy' = useLegacy ? 'legacy' : 'plan02';
+      let { data, error } = await run(mode);
+
+      if (error && mode === 'plan02') {
+        const legacyResult = await run('legacy');
+        if (!legacyResult.error) {
+          broadcastFeedApiMode = 'legacy';
+          persistBroadcastFeedLegacyLs();
+          data = legacyResult.data;
+          error = null;
+        }
+      } else if (!error) {
+        broadcastFeedApiMode = mode;
+        if (mode === 'plan02') clearBroadcastFeedLegacyLs();
+      }
+
       if (error) throw error;
-      const raw = (data ?? []) as RawBroadcast[];
+      const raw = (data ?? []) as unknown as RawBroadcast[];
       const rows = await enrichBroadcastRows(supabase, userId, raw);
       return { rows, hasMore: raw.length === pageSize };
     },
@@ -249,6 +314,21 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
                     {preview(b.body)}
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    {b.is_pinned ? (
+                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
+                        Pinned
+                      </span>
+                    ) : null}
+                    {b.is_mandatory ? (
+                      <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-medium text-red-900">
+                        Mandatory
+                      </span>
+                    ) : null}
+                    {b.is_org_wide ? (
+                      <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-900">
+                        Org-wide
+                      </span>
+                    ) : null}
                     <span
                       className={[
                         'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium',

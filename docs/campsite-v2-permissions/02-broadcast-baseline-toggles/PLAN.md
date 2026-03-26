@@ -91,12 +91,18 @@ Current code ties **manager-level dept access** to [dept_managers](../../supabas
 
 ## Deliverables checklist (when executing)
 
-- [ ] Migration(s): table + columns + functions (Plan 08).
-- [ ] Replace/adjust `broadcast_status_allowed_for_insert`, `user_may_broadcast_to_dept` (or successor) for org-wide and no-approval paths.
-- [ ] RLS: select/update/delete for edit-others and delete tiers.
-- [ ] Edge function / job: if org-wide changes fan-out or category resolution, update delivery logic.
-- [ ] API or RPC for “can I pin / mandatory / org-wide” for UI (optional single `get_broadcast_capabilities` RPC).
-- [ ] Tests: SQL or integration tests for stacking examples above.
+- [x] Migration(s): `20260330200000_broadcast_dept_permissions.sql` — `dept_broadcast_permissions`, `is_mandatory` / `is_pinned` / `is_org_wide`, helpers, RLS (insert/update/delete/edit-others), `search_broadcasts` order.
+- [x] Replace `broadcast_status_allowed_for_insert` usage with `broadcast_form_allowed(status, dept_id, flags…)`; coordinator `send_no_approval` + flag checks on anchor `dept_id`.
+- [x] `user_may_broadcast_to_dept`: legacy `super_admin` may target any org dept (same as `org_admin`); org-wide remains anchor `dept_id` + `is_org_wide` + toggles — no separate successor function.
+- [x] Notification fan-out contract: `user_should_receive_sent_broadcast` + `broadcast_notification_recipient_user_ids`; Edge `process-broadcast-notifications` (service-role Bearer) lists pending jobs + recipient counts — wire Expo/FCM + `processed_at` next.
+- [x] Org Admin UI: grant/revoke rows in `dept_broadcast_permissions` per department (`AdminDepartmentsClient` + migrations through `20260331120000…`).
+- [x] Composer UI: toggles for pin / mandatory / org-wide via `get_my_dept_broadcast_caps` + `broadcast_form_allowed` on write (`BroadcastComposer`).
+- [x] API or RPC: `get_my_dept_broadcast_caps(p_dept_id)` (`20260331140000_get_my_dept_broadcast_caps.sql`).
+- [x] Smoke verification: [`verify_dept_broadcast_plan02.sql`](../../../supabase/scripts/verify_dept_broadcast_plan02.sql) (objects + manual QA for § Stacking examples).
+- [x] Mobile feed: `apps/mobile/app/(tabs)/broadcasts.tsx` + `lib/broadcastFeedQuery.ts` (badges, pull-to-refresh, legacy column fallback via AsyncStorage).
+- [x] Web legacy hint: remove `NEXT_PUBLIC_BROADCAST_FEED_LEGACY` after migration; clear `localStorage` key `campsite.bf.feed_legacy_select` once to re-enable pin ordering (or leave unset after fresh deploy).
+
+**Out of this plan (separate epics):** Plans **05–09** (rota matrix, discounts, org-admin polish, etc.) — not part of Plan 02 broadcast slice.
 
 ---
 

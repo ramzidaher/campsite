@@ -38,7 +38,9 @@ flowchart LR
 
 - Stored in `broadcasts`; full-text search via generated `search_tsv` + `search_broadcasts()` RPC.
 - **Web feed (Phase 6):** `@tanstack/react-query` with stale-while-revalidate, infinite pagination, and optional offline read queue (`broadcastReadQueue.ts`).
-- Push delivery and scheduling live in Phase 2 tables (`push_tokens`, `broadcast_notification_jobs`).
+- **Visibility (Plan 02):** `user_should_receive_sent_broadcast(user, row)` is the single rule for **sent** posts (mandatory bypass, `user_subscriptions`, creator, org admins). `broadcast_visible_to_reader` delegates to it for `status = sent`.
+- **Push fan-out:** `broadcast_notification_jobs` enqueue on send; Edge Function `process-broadcast-notifications` (service-role Bearer) calls `broadcast_notification_recipient_user_ids(broadcast_id)` to list recipients — wire Expo/FCM + `push_tokens` next, then mark jobs `processed_at`.
+- **Mobile:** `app/(tabs)/broadcasts.tsx` + `lib/broadcastFeedQuery.ts` mirror the web REST shape with the same legacy fallback as web when flag columns are absent.
 
 ## Staff discount QR
 

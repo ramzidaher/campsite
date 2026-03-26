@@ -1,6 +1,6 @@
 # Role mapping — Option A (product spec → codebase)
 
-**Status:** implemented in app + migration `20260329120000_v2_profile_roles.sql` (apply via `supabase db push` / your pipeline).  
+**Status:** implemented in app + migration `20260329120000_v2_profile_roles.sql` — apply per **§10** (no Docker required).  
 **Authority:** [mainaccesslevel.md](../../../mainaccesslevel.md) (v2) + this file.  
 **Consumers:** DB migrations, RLS, Edge Functions, `@campsite/types`, web/mobile gates, admin UI.
 
@@ -119,4 +119,40 @@ Allowed keys must match **canonical** `profiles.role` values that are tenant-fac
 - [mainaccesslevel.md](../../../mainaccesslevel.md) — full matrices and broadcast toggles.
 - [02-broadcast-baseline-toggles/PLAN.md](../02-broadcast-baseline-toggles/PLAN.md) — broadcast implementation contract (depends on this mapping).
 
-*Document version: 1.2 — O2 clarified: no `weekly_paid` role; not equivalent to admin/DM.*
+---
+
+## 10. Applying the v2 roles migration (hosted Supabase — **no Docker**)
+
+This project is intended to run against **Supabase Cloud**. You do **not** need Docker or `supabase start`.
+
+### Option A — Supabase Dashboard (simplest)
+
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**.
+2. Paste the full contents of [`supabase/migrations/20260329120000_v2_profile_roles.sql`](../../../supabase/migrations/20260329120000_v2_profile_roles.sql) and run it **once** per environment (staging, then production).
+3. If the editor times out, split into logical chunks (discount_tiers block → profiles block → functions → policies), or use Option B.
+
+### Option B — Supabase CLI against the remote project (no local DB)
+
+1. Install CLI ad hoc: `npm run supabase -- --version` (uses `npx supabase@latest` from repo root).
+2. `npx supabase@latest login`
+3. `cd` to repo root and link: `npx supabase@latest link --project-ref <your-project-ref>` (ref is in Dashboard → Project Settings → General).
+4. Push pending migrations: `npm run supabase:db:push`  
+   This applies any migration files under `supabase/migrations/` that are not yet recorded in the remote migration history — **no Docker**.
+
+### Verify
+
+Run queries in [`supabase/scripts/verify_v2_roles.sql`](../../../supabase/scripts/verify_v2_roles.sql). You want **no** rows from the first query (no legacy roles left on `profiles`). Fix the email in query (3) to confirm your user is `org_admin`.
+
+After the DB shows `org_admin`, the app’s `super_admin` compatibility shim is optional; you can remove it in a later cleanup PR.
+
+### Edge Function — discount QR verify
+
+If you use verification in production, redeploy after DB role names change:
+
+`npm run supabase:functions:deploy:verify`
+
+(Requires CLI logged in and project linked, same as Option B.)
+
+---
+
+*Document version: 1.3 — §10: Docker-free hosted apply + verify + function deploy.*

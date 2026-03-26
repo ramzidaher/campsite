@@ -14,6 +14,9 @@ type Row = {
   title: string;
   body: string;
   sent_at: string | null;
+  is_mandatory?: boolean;
+  is_pinned?: boolean;
+  is_org_wide?: boolean;
   departments: { name: string } | null;
   dept_categories: { name: string } | null;
   profiles: { full_name: string } | null;
@@ -90,6 +93,21 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
       </Link>
 
       <div className="flex flex-wrap gap-2">
+        {initial.is_pinned ? (
+          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
+            Pinned
+          </span>
+        ) : null}
+        {initial.is_mandatory ? (
+          <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-medium text-red-900">
+            Mandatory
+          </span>
+        ) : null}
+        {initial.is_org_wide ? (
+          <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-900">
+            Org-wide
+          </span>
+        ) : null}
         <span className="rounded-full bg-[var(--campsite-bg)] px-2 py-0.5 text-xs text-[var(--campsite-text-secondary)]">
           {initial.departments?.name ?? 'Department'}
         </span>
