@@ -4,7 +4,7 @@ import { fetchDashboardStatCounts } from '@campsite/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isApproverRole } from '@campsite/types';
 
-import { countPendingApprovalsForViewer, loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
+import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
 
@@ -78,11 +78,14 @@ export async function loadPendingApprovalsPreview(
 
 export async function getPendingApprovalCount(
   supabase: SupabaseClient,
-  userId: string,
-  orgId: string,
+  _userId: string,
+  _orgId: string,
   role: string
 ): Promise<number> {
-  return countPendingApprovalsForViewer(supabase, userId, orgId, role);
+  if (!isApproverRole(role)) return 0;
+  const { data, error } = await supabase.rpc('pending_approvals_nav_count');
+  if (error || data === null || data === undefined) return 0;
+  return typeof data === 'number' ? data : Number(data);
 }
 
 export async function loadDashboardHome(

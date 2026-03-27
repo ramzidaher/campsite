@@ -1,7 +1,6 @@
 import { AppShell } from '@/components/AppShell';
 import { MainProviders } from '@/components/providers/MainProviders';
 import { ThemeRoot } from '@/components/ThemeRoot';
-import { getPendingApprovalCount } from '@/lib/dashboard/loadDashboardHome';
 import { canAccessOrgAdminArea, getMainShellAdminNavItems } from '@/lib/adminGates';
 import { createClient } from '@/lib/supabase/server';
 import { isApproverRole, isManagerRole } from '@campsite/types';
@@ -44,12 +43,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, org_id, full_name, avatar_url')
-      .eq('id', user.id)
-      .maybeSingle();
+    const [profileRes, unreadRes] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('role, org_id, full_name, avatar_url, organisations(name, logo_url)')
+        .eq('id', user.id)
+        .maybeSingle(),
+      supabase.rpc('broadcast_unread_count'),
+    ]);
 
+    const profile = profileRes.data;
     hasTenantProfile = Boolean(profile);
     const rawRole = profile?.role as string | null | undefined;
     profileRole = rawRole != null && String(rawRole).trim() !== '' ? String(rawRole).trim() : null;
@@ -62,10 +65,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const orgId = profile?.org_id as string | undefined;
     const needsPendingBadge = Boolean(orgId && profileRole && isApproverRole(profileRole));
 
-    const [orgRes, udRes, unreadRes, pendingRes] = await Promise.all([
-      orgId
-        ? supabase.from('organisations').select('name, logo_url').eq('id', orgId).maybeSingle()
-        : Promise.resolve({ data: null as { name: string; logo_url: string | null } | null }),
+    const orgEmbed = profile?.organisations as
+      | { name: string; logo_url: string | null }
+      | { name: string; logo_url: string | null }[]
+      | null
+      | undefined;
+    const orgRow = Array.isArray(orgEmbed) ? orgEmbed[0] : orgEmbed;
+    if (orgRow?.name) orgName = orgRow.name;
+    if (orgRow && 'logo_url' in orgRow) orgLogoUrl = orgRow.logo_url ?? null;
+
+    const uc = unreadRes.data;
+    if (typeof uc === 'number') unreadBroadcasts = uc;
+    else if (uc !== null && uc !== undefined) unreadBroadcasts = Number(uc);
+
+    const [udRes, pendingRes] = await Promise.all([
       orgId
         ? supabase
             .from('user_departments')
@@ -74,25 +87,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             .limit(1)
             .maybeSingle()
         : Promise.resolve({ data: null }),
-      supabase.rpc('broadcast_unread_count'),
-      needsPendingBadge && orgId && profileRole
-        ? getPendingApprovalCount(supabase, user.id, orgId, profileRole)
-        : Promise.resolve(0),
+      needsPendingBadge
+        ? supabase.rpc('pending_approvals_nav_count')
+        : Promise.resolve({ data: null as number | null }),
     ]);
 
     if (orgId) {
-      orgName = (orgRes.data?.name as string) ?? orgName;
-      orgLogoUrl = (orgRes.data?.logo_url as string | null) ?? null;
       const ud = udRes.data as { departments?: unknown } | null;
       const d = ud?.departments as { name: string } | { name: string }[] | null;
       deptLine = Array.isArray(d) ? d[0]?.name ?? null : d?.name ?? null;
     }
 
-    const uc = unreadRes.data;
-    if (typeof uc === 'number') unreadBroadcasts = uc;
-    else if (uc !== null && uc !== undefined) unreadBroadcasts = Number(uc);
-
-    pendingApprovalCount = pendingRes;
+    const pc = pendingRes.data;
+    if (typeof pc === 'number') pendingApprovalCount = pc;
+    else if (pc !== null && pc !== undefined) pendingApprovalCount = Number(pc);
 
     showManager = isManagerRole(profileRole);
   }

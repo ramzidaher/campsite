@@ -60,17 +60,6 @@ async function scopedPendingProfiles(
   return list;
 }
 
-/** Fast count for nav badges — same scope as {@link loadPendingApprovalRows}, skips per-user dept joins. */
-export async function countPendingApprovalsForViewer(
-  supabase: SupabaseClient,
-  viewerId: string,
-  orgId: string,
-  viewerRole: string
-): Promise<number> {
-  const list = await scopedPendingProfiles(supabase, viewerId, orgId, viewerRole);
-  return list.length;
-}
-
 /** Pending profiles the viewer may approve (managers see only their departments). */
 export async function loadPendingApprovalRows(
   supabase: SupabaseClient,
