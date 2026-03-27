@@ -47,7 +47,8 @@ export async function middleware(request: NextRequest) {
   }
 
   const pathname = request.nextUrl.pathname;
-  const isCallback = pathname.startsWith('/auth/callback');
+  const isAuthEmailReturn =
+    pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm');
 
   if (pathname.startsWith('/platform')) {
     const dest = request.nextUrl.clone();
@@ -76,7 +77,7 @@ export async function middleware(request: NextRequest) {
     }
     if (
       (pathname.startsWith('/register') || pathname.startsWith('/forgot-password')) &&
-      !isCallback
+      !isAuthEmailReturn
     ) {
       const h = request.nextUrl.clone();
       h.pathname = '/login';
@@ -84,7 +85,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (!user && !isAuthPath(pathname) && pathname !== '/' && !isCallback) {
+  if (!user && !isAuthPath(pathname) && pathname !== '/' && !isAuthEmailReturn) {
     const login = request.nextUrl.clone();
     login.pathname = '/login';
     login.searchParams.set('next', pathname);
