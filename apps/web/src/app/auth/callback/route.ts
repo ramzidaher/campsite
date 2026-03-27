@@ -45,16 +45,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=auth`);
   }
 
-  const response = NextResponse.redirect(`${origin}${next}`);
+  const pendingCookies: { name: string; value: string; options?: Record<string, unknown> }[] = [];
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
-        );
+        pendingCookies.push(...cookiesToSet);
       },
     },
   });
@@ -79,12 +77,29 @@ export async function GET(request: NextRequest) {
   if (user) {
     const done = await completeRegistrationProfileIfNeeded(supabase, user);
     if (!done.ok) {
-      return NextResponse.redirect(
+      const errResponse = NextResponse.redirect(
         `${origin}/pending?registration_error=${encodeURIComponent(done.message)}`
       );
+      for (const { name, value, options } of pendingCookies) {
+        errResponse.cookies.set(name, value, options as Parameters<typeof errResponse.cookies.set>[2]);
+      }
+      return errResponse;
     }
     await syncRegistrationAvatarToProfileIfEmpty(supabase, user);
   }
 
+  let redirectPath = next;
+  const meta = user?.user_metadata as Record<string, unknown> | undefined;
+  const mustSetPassword = meta?.must_set_password === true;
+  const isInviteType = typeRaw === 'invite';
+  if (user && (mustSetPassword || isInviteType)) {
+    const inviteHint = isInviteType && !mustSetPassword ? '&from_invite=1' : '';
+    redirectPath = `/auth/set-password?next=${encodeURIComponent(next)}${inviteHint}`;
+  }
+
+  const response = NextResponse.redirect(`${origin}${redirectPath}`);
+  for (const { name, value, options } of pendingCookies) {
+    response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2]);
+  }
   return response;
 }

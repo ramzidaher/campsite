@@ -320,7 +320,7 @@ export function AdminUsersClient({
     setInviteOpen(false);
     if (data.sentInviteEmail) {
       setSuccessMsg(
-        `Invitation email sent to ${inviteEmail.trim()}. They can set a password from the message.`
+        `Invitation email sent to ${inviteEmail.trim()}. They should open the link, create a password, then they’ll reach the app.`
       );
     } else {
       setSuccessMsg(
@@ -362,8 +362,9 @@ export function AdminUsersClient({
             ) : null}
           </p>
           <p className="mt-2 max-w-2xl text-[12px] leading-relaxed text-[#9b9b9b]">
-            <strong className="font-medium text-[#6b6b6b]">Email invite</strong> sends a Supabase sign-up link with
-            the role and teams you choose. <strong className="font-medium text-[#6b6b6b]">Invite link</strong> still
+            <strong className="font-medium text-[#6b6b6b]">Email invite</strong> sends a link to accept the invite,
+            choose a password, then enter the app with the role and teams you choose.{' '}
+            <strong className="font-medium text-[#6b6b6b]">Invite link</strong> still
             opens self-registration: new joiners are <strong className="font-medium text-[#6b6b6b]">Unassigned</strong>{' '}
             and <strong className="font-medium text-[#6b6b6b]">Pending</strong> until an approver sets their role.
           </p>

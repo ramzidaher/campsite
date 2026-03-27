@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
 
   if (redirectTo) {
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName },
+      data: { full_name: fullName, must_set_password: true },
       redirectTo,
     });
 

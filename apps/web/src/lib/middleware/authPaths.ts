@@ -4,6 +4,7 @@ const AUTH_PATHS = [
   '/forgot-password',
   '/auth/callback',
   '/auth/confirm',
+  '/auth/set-password',
 ] as const;
 
 export function isAuthPath(pathname: string): boolean {
