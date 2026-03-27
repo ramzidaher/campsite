@@ -5,15 +5,47 @@ import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
 import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 import { NextRequest, NextResponse } from 'next/server';
 
-function inviteCallbackUrl(req: NextRequest): string | null {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '');
-  const next = encodeURIComponent('/dashboard');
-  const path = `/auth/callback?next=${next}`;
-  if (configured) return `${configured}${path}`;
+const LOCALHOST_SITE_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
+function trimBaseUrl(raw: string | undefined): string | null {
+  const t = raw?.trim().replace(/\/$/, '');
+  return t?.length ? t : null;
+}
+
+/**
+ * Base URL for Supabase invite `redirectTo`. Must match Supabase → Auth → Redirect URLs.
+ * On Vercel, a local `NEXT_PUBLIC_SITE_URL` from dev often gets baked into builds — we skip
+ * localhost there and use `VERCEL_URL` or the incoming request host instead.
+ */
+function inviteCallbackBaseUrl(req: NextRequest): string | null {
+  const siteUrl = trimBaseUrl(process.env.SITE_URL);
+  const nextPublic = trimBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
+  const onVercel = process.env.VERCEL === '1';
+  const vercelHost = trimBaseUrl(process.env.VERCEL_URL);
+
+  if (siteUrl) return siteUrl;
+
+  if (nextPublic) {
+    const isLocal = LOCALHOST_SITE_RE.test(nextPublic);
+    if (!(isLocal && onVercel)) return nextPublic;
+  }
+
+  if (vercelHost) {
+    return `https://${vercelHost}`;
+  }
+
   const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host');
   const proto = req.headers.get('x-forwarded-proto') ?? 'https';
   if (!host) return null;
-  return `${proto}://${host}${path}`;
+  return `${proto}://${host}`;
+}
+
+function inviteCallbackUrl(req: NextRequest): string | null {
+  const base = inviteCallbackBaseUrl(req);
+  const next = encodeURIComponent('/dashboard');
+  const path = `/auth/callback?next=${next}`;
+  if (!base) return null;
+  return `${base}${path}`;
 }
 
 function isAlreadyRegisteredInviteError(message: string): boolean {
