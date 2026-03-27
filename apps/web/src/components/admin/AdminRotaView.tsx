@@ -35,7 +35,8 @@ function StatCard({
   );
 }
 
-export function AdminRotaView({ data, viewerRole }: { data: AdminRotaDashboardModel; viewerRole: string }) {
+/** Rota management under `/admin/rota` — only org admins reach this view (`admin/layout.tsx`). */
+export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
   const coverage =
     data.coveragePct != null ? `${data.coveragePct}%` : '—';
   const coverageSub =
@@ -46,12 +47,6 @@ export function AdminRotaView({ data, viewerRole }: { data: AdminRotaDashboardMo
   const syncTitle = data.lastSyncLabel ?? 'No imports yet';
   const syncSub = data.lastSyncSub ?? 'Run a sync from the Sheets import wizard';
 
-  const managerScope = viewerRole === 'manager';
-  const sub =
-    managerScope
-      ? 'Import and manage schedules for departments you can access'
-      : 'Import, edit and manage working schedules for all departments';
-
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -59,12 +54,9 @@ export function AdminRotaView({ data, viewerRole }: { data: AdminRotaDashboardMo
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
             Rota management
           </h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">{sub}</p>
-          {managerScope ? (
-            <p className="mt-1 text-[12px] text-[#9b9b9b]">
-              Counts and the table reflect shifts you can see (e.g. your assignments and managed departments).
-            </p>
-          ) : null}
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            Import, edit and manage working schedules for all departments.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link

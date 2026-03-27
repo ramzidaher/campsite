@@ -1,7 +1,13 @@
 import Link from 'next/link';
-import { completeRegistrationProfileIfNeeded } from '@/lib/auth/completeRegistrationProfile';
+import {
+  completeRegistrationProfileIfNeeded,
+  syncRegistrationAvatarToProfileIfEmpty,
+} from '@/lib/auth/completeRegistrationProfile';
+import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+
+import { retryEnsureRegistrationProfile } from './actions';
 
 export default async function PendingPage({
   searchParams,
@@ -17,17 +23,46 @@ export default async function PendingPage({
     redirect('/login');
   }
 
-  const { data: profileRow } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+  const founder = await isPlatformFounder(supabase, user.id);
+
+  await syncRegistrationAvatarToProfileIfEmpty(supabase, user);
+
+  let { data: profileRow } = await supabase
+    .from('profiles')
+    .select('id,status')
+    .eq('id', user.id)
+    .maybeSingle();
   if (!profileRow) {
+    if (founder) {
+      redirect('/founders');
+    }
     const filled = await completeRegistrationProfileIfNeeded(supabase, user);
     if (!filled.ok) {
+      const orgCreator = filled.kind === 'org_creator_pending';
       return (
         <div className="mx-auto max-w-lg">
           <h1 className="text-xl font-semibold text-[var(--campsite-text)]">Couldn&apos;t finish setup</h1>
           <p className="mt-2 text-sm text-[var(--campsite-text-secondary)]">{filled.message}</p>
-          <p className="mt-4 text-sm text-[var(--campsite-text-secondary)]">
-            Ask an organisation admin to add you manually, or try registering again after signing out.
-          </p>
+          {orgCreator ? (
+            <>
+              <p className="mt-4 text-sm text-[var(--campsite-text-secondary)]">
+                You created a new organisation — no manager approval is required. Often signing out and
+                back in fixes this immediately.
+              </p>
+              <form action={retryEnsureRegistrationProfile} className="mt-6">
+                <button
+                  type="submit"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[var(--campsite-accent)] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:w-auto"
+                >
+                  Retry workspace setup
+                </button>
+              </form>
+            </>
+          ) : (
+            <p className="mt-4 text-sm text-[var(--campsite-text-secondary)]">
+              Ask an organisation admin to add you manually, or try registering again after signing out.
+            </p>
+          )}
           <Link
             href="/login"
             className="mt-4 inline-block text-sm font-medium text-[var(--campsite-accent)] underline"
@@ -37,7 +72,11 @@ export default async function PendingPage({
         </div>
       );
     }
-    const { data: after } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+    const { data: after } = await supabase
+      .from('profiles')
+      .select('id,status')
+      .eq('id', user.id)
+      .maybeSingle();
     if (!after) {
       return (
         <div className="mx-auto max-w-lg">
@@ -56,6 +95,22 @@ export default async function PendingPage({
         </div>
       );
     }
+    profileRow = after;
+  }
+
+  if (profileRow.status === 'active') {
+    if (founder) {
+      const { data: activeProf } = await supabase
+        .from('profiles')
+        .select('org_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (activeProf?.org_id) {
+        redirect('/session-choice');
+      }
+      redirect('/founders');
+    }
+    redirect('/dashboard');
   }
 
   const emailVerified = Boolean(user.email_confirmed_at);
@@ -65,8 +120,9 @@ export default async function PendingPage({
     <div className="mx-auto max-w-lg">
       <h1 className="text-xl font-semibold text-[var(--campsite-text)]">Awaiting approval</h1>
       <p className="mt-2 text-sm text-[var(--campsite-text-secondary)]">
-        Your account is pending verification by a manager in your department. You will receive an
-        email once approved.
+        A manager in your organisation still needs to approve your membership before you can use
+        Campsite. That is separate from confirming your email (see below if applicable). You will
+        get an email when you have been approved.
       </p>
       {registrationError ? (
         <div

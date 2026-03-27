@@ -1106,6 +1106,11 @@
   outline: none;
   transition: border-color var(--t);
 }
+.founder-hq-root .field input::placeholder,
+.founder-hq-root .field textarea::placeholder {
+  color: var(--text3);
+  opacity: 1;
+}
 .founder-hq-root .field input:focus,
 .founder-hq-root .field select:focus,
 .founder-hq-root .field textarea:focus {

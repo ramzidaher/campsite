@@ -59,7 +59,7 @@ Current CHECK on `profiles.role` (Phase 1):
 | `super_admin`          | `org_admin`            | Full org admin; rename everywhere (RLS, RPCs, TS, Edge Functions). |
 | `manager`              | `manager`              | Unchanged code; verify alignment with spec matrices. |
 | `coordinator`          | `coordinator`          | Unchanged code. |
-| `assistant`            | `administrator`        | Spec “Administrator”; broadcast baseline = draft-only send path, etc. |
+| `assistant`            | `administrator`        | Spec “Administrator”; broadcasts = **full send** (like manager); DM/CSA stay draft + approval. |
 | `senior_manager`       | `manager`              | **Product approved (§8 O3):** migrate rows to `manager`; extra powers only via department toggles / spec — no `senior_manager` literal after migration. |
 | `weekly_paid`          | `csa` (default)        | **Role removed (§8 O2):** `weekly_paid` must not appear in CHECK or UI after migration. **Default** data fix: `UPDATE … SET role = 'csa'` for existing rows so constraints succeed; **Org Admin should recategorise** anyone who should be `administrator` or `duty_manager`. Remove `weekly_paid` from `discount_tiers` (merge into `csa` tier or org-specific cleanup). |
 | `society_leader`       | `society_leader`       | **Product approved (§8 O1):** keep value temporarily; no remap to `coordinator` until societies spec + implementation land. |

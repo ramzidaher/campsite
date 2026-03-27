@@ -64,7 +64,8 @@ export function AdminOrgBulkApprove({
     <div className="mt-8 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-amber-950">
-          <strong>{pendingCount}</strong> pending verification(s). Super admins can approve everyone in one step.
+          <strong>{pendingCount}</strong> pending verification(s). Organisation admins can approve everyone in one
+          step.
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 text-sm text-amber-950">

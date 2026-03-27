@@ -4,7 +4,9 @@ import { ThemeRoot } from '@/components/ThemeRoot';
 import { getPendingApprovalCount } from '@/lib/dashboard/loadDashboardHome';
 import { canAccessOrgAdminArea, getMainShellAdminNavItems } from '@/lib/adminGates';
 import { createClient } from '@/lib/supabase/server';
-import { isApproverRole } from '@campsite/types';
+import { isApproverRole, isManagerRole } from '@campsite/types';
+
+export const dynamic = 'force-dynamic';
 
 function roleLabel(role: string): string {
   const m: Record<string, string> = {
@@ -16,6 +18,7 @@ function roleLabel(role: string): string {
     duty_manager: 'Duty manager',
     csa: 'CSA',
     society_leader: 'Society leader',
+    unassigned: 'Pending role',
   };
   return m[role] ?? role;
 }
@@ -28,49 +31,70 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   let profileRole: string | null = null;
   let orgName = 'Organisation';
-  let userName = 'Member';
+  let orgLogoUrl: string | null = null;
+  let userName = 'Account';
+  let userAvatarUrl: string | null = null;
   let userRoleLabel = '';
+  let hasTenantProfile = false;
   let deptLine: string | null = null;
   let unreadBroadcasts = 0;
   let pendingApprovalCount = 0;
   let showManager = false;
 
   if (user) {
+    const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
+
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, org_id, full_name')
+      .select('role, org_id, full_name, avatar_url')
       .eq('id', user.id)
       .maybeSingle();
 
+    hasTenantProfile = Boolean(profile);
     const rawRole = profile?.role as string | null | undefined;
     profileRole = rawRole != null && String(rawRole).trim() !== '' ? String(rawRole).trim() : null;
-    userName = (profile?.full_name as string)?.trim() || 'Member';
+    userName = hasTenantProfile
+      ? (profile?.full_name as string)?.trim() || emailLocal || 'Account'
+      : emailLocal || 'Finish setup';
+    userAvatarUrl = (profile?.avatar_url as string | null) ?? null;
     userRoleLabel = profileRole ? roleLabel(profileRole) : '';
 
-    if (profile?.org_id) {
-      const orgId = profile.org_id as string;
-      const { data: org } = await supabase.from('organisations').select('name').eq('id', orgId).maybeSingle();
-      orgName = (org?.name as string) ?? orgName;
+    const orgId = profile?.org_id as string | undefined;
+    const needsPendingBadge = Boolean(orgId && profileRole && isApproverRole(profileRole));
 
-      const { data: ud } = await supabase
-        .from('user_departments')
-        .select('departments(name)')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
+    const [orgRes, udRes, unreadRes, pendingRes] = await Promise.all([
+      orgId
+        ? supabase.from('organisations').select('name, logo_url').eq('id', orgId).maybeSingle()
+        : Promise.resolve({ data: null as { name: string; logo_url: string | null } | null }),
+      orgId
+        ? supabase
+            .from('user_departments')
+            .select('departments(name)')
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase.rpc('broadcast_unread_count'),
+      needsPendingBadge && orgId && profileRole
+        ? getPendingApprovalCount(supabase, user.id, orgId, profileRole)
+        : Promise.resolve(0),
+    ]);
+
+    if (orgId) {
+      orgName = (orgRes.data?.name as string) ?? orgName;
+      orgLogoUrl = (orgRes.data?.logo_url as string | null) ?? null;
+      const ud = udRes.data as { departments?: unknown } | null;
       const d = ud?.departments as { name: string } | { name: string }[] | null;
       deptLine = Array.isArray(d) ? d[0]?.name ?? null : d?.name ?? null;
-
-      if (profileRole && isApproverRole(profileRole)) {
-        pendingApprovalCount = await getPendingApprovalCount(supabase, user.id, orgId, profileRole);
-      }
     }
 
-    const { data: uc } = await supabase.rpc('broadcast_unread_count');
+    const uc = unreadRes.data;
     if (typeof uc === 'number') unreadBroadcasts = uc;
     else if (uc !== null && uc !== undefined) unreadBroadcasts = Number(uc);
 
-    showManager = profileRole === 'manager';
+    pendingApprovalCount = pendingRes;
+
+    showManager = isManagerRole(profileRole);
   }
 
   const adminNavItemsRaw = getMainShellAdminNavItems(profileRole);
@@ -89,8 +113,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <MainProviders>
         <AppShell
           orgName={orgName}
+          orgLogoUrl={orgLogoUrl}
           userName={userName}
+          userAvatarUrl={userAvatarUrl}
           userRoleLabel={userRoleLabel}
+          hasTenantProfile={hasTenantProfile}
           deptLine={deptLine}
           profileRole={profileRole}
           unreadBroadcasts={unreadBroadcasts}

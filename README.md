@@ -65,7 +65,7 @@ Use a **monorepo** (e.g. **Turborepo**) with shared packages:
 | Web | Next.js 14+ App Router + TypeScript |
 | Backend | Node.js; **tRPC or REST** (simpler to maintain wins) |
 | Database | **PostgreSQL** via **Supabase** |
-| Auth | **Supabase Auth** (email/password + magic link) |
+| Auth | **Supabase Auth** (email/password) |
 | Files | **Supabase Storage** |
 | Push | **Expo Push** (mobile); browser push (web) |
 | Scheduling | **pg_cron** or **BullMQ + Redis** for scheduled broadcasts |

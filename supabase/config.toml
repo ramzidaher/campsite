@@ -192,7 +192,7 @@ anonymous_users = 100000
 token_refresh = 100000
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
 sign_in_sign_ups = 100000
-# Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
+# Number of OTP verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 100000
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
 web3 = 30

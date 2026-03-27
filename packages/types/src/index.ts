@@ -12,6 +12,7 @@ export {
   type ProfileStatus,
   isOrgAdminRole,
   isApproverRole,
+  isManagerRole,
   canVerifyStaffDiscountQr,
   rolesAssignableOnApprove,
 } from './roles';
@@ -24,4 +25,19 @@ export {
   isBroadcastDraftOnlyRole,
 } from './broadcasts';
 
-export { canViewOrgWideDashboardStats } from './dashboard';
+export {
+  canViewDashboardStatTiles,
+  canViewOrgWideDashboardStats,
+  dashboardAggregateScope,
+  type DashboardAggregateScope,
+} from './dashboard';
+
+export { canManageCalendarManualEvents } from './calendar';
+
+export {
+  canEditRotaShifts,
+  canViewRotaDepartmentScope,
+  canViewRotaFullOrgGrid,
+} from './rota';
+
+export { PLATFORM_ADMIN_MEMBERSHIP_TABLE } from './platform';

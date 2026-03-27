@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 const ROLE_LABEL: Record<string, string> = {
+  unassigned: 'Unassigned',
   org_admin: 'Org admin',
   manager: 'Manager',
   coordinator: 'Coordinator',

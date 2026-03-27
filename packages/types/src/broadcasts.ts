@@ -26,7 +26,7 @@ export function isBroadcastApproverRole(role: ProfileRole | string | null | unde
   return role === 'manager' || isOrgAdminRole(role);
 }
 
-/** Draft + submit-for-approval only (v2 baseline for administrator / duty manager / CSA). */
+/** Draft + submit-for-approval only (duty manager + CSA). Administrators send like managers (no approval required). */
 export function isBroadcastDraftOnlyRole(role: ProfileRole | string | null | undefined): boolean {
-  return role === 'administrator' || role === 'duty_manager' || role === 'csa';
+  return role === 'duty_manager' || role === 'csa';
 }

@@ -76,6 +76,7 @@ function initials(name: string) {
 }
 
 export function AdminUsersClient({
+  assignableRoles,
   initialRows,
   departments,
   defaultFilters,
@@ -83,6 +84,7 @@ export function AdminUsersClient({
   orgSlug,
   totalMemberCount,
 }: {
+  assignableRoles: ProfileRole[];
   initialRows: UserRow[];
   departments: { id: string; name: string; type: string; is_archived: boolean }[];
   defaultFilters: { q?: string; dept?: string; status?: string; role?: string };
@@ -98,6 +100,13 @@ export function AdminUsersClient({
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<ProfileRole>('csa');
+  const [inviteDepts, setInviteDepts] = useState<Set<string>>(new Set());
 
   const [edit, setEdit] = useState<UserRow | null>(null);
   const [editRole, setEditRole] = useState<ProfileRole>('csa');
@@ -109,6 +118,11 @@ export function AdminUsersClient({
   const activeDepts = departments.filter((d) => !d.is_archived);
   const orgAdminAssignableRoles = useMemo(() => rolesAssignableOnApprove('org_admin'), []);
   const [bulkApproveRole, setBulkApproveRole] = useState<ProfileRole>('csa');
+
+  const defaultInviteRole = useMemo((): ProfileRole => {
+    if (assignableRoles.includes('csa')) return 'csa';
+    return assignableRoles[0] ?? 'csa';
+  }, [assignableRoles]);
 
   const filterHref = useCallback(
     (patch: Record<string, string | undefined>) => {
@@ -269,6 +283,53 @@ export function AdminUsersClient({
     router.refresh();
   }
 
+  function openInviteModal() {
+    setMsg(null);
+    setSuccessMsg(null);
+    setInviteName('');
+    setInviteEmail('');
+    setInviteRole(defaultInviteRole);
+    setInviteDepts(new Set());
+    setInviteOpen(true);
+  }
+
+  async function submitInvite() {
+    setBusy('invite');
+    setMsg(null);
+    setSuccessMsg(null);
+    const res = await fetch('/api/admin/invite-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: inviteEmail.trim(),
+        full_name: inviteName.trim(),
+        role: inviteRole,
+        department_ids: [...inviteDepts],
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      ok?: boolean;
+      sentInviteEmail?: boolean;
+    };
+    setBusy(null);
+    if (!res.ok) {
+      setMsg(data.error ?? 'Invite failed');
+      return;
+    }
+    setInviteOpen(false);
+    if (data.sentInviteEmail) {
+      setSuccessMsg(
+        `Invitation email sent to ${inviteEmail.trim()}. They can set a password from the message.`
+      );
+    } else {
+      setSuccessMsg(
+        `${inviteEmail.trim()} already has an account. Their membership in this organisation was updated (role and teams). No invite email was sent — they can sign in as usual.`
+      );
+    }
+    router.refresh();
+  }
+
   async function setUserStatus(id: string, status: string) {
     setBusy(id);
     const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
@@ -301,18 +362,25 @@ export function AdminUsersClient({
             ) : null}
           </p>
           <p className="mt-2 max-w-2xl text-[12px] leading-relaxed text-[#9b9b9b]">
-            <strong className="font-medium text-[#6b6b6b]">Invite link</strong> opens self-registration for this org.
-            New accounts are created as <strong className="font-medium text-[#6b6b6b]">Unassigned</strong>{' '}
-            with status <strong className="font-medium text-[#6b6b6b]">Pending</strong>. An approver chooses
-            their role (CSA, duty manager, etc.) when approving. You can still change role later here.
+            <strong className="font-medium text-[#6b6b6b]">Email invite</strong> sends a Supabase sign-up link with
+            the role and teams you choose. <strong className="font-medium text-[#6b6b6b]">Invite link</strong> still
+            opens self-registration: new joiners are <strong className="font-medium text-[#6b6b6b]">Unassigned</strong>{' '}
+            and <strong className="font-medium text-[#6b6b6b]">Pending</strong> until an approver sets their role.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={inviteHref}
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <button
+            type="button"
+            onClick={() => openInviteModal()}
             className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
           >
-            + Invite member
+            + Invite by email
+          </button>
+          <Link
+            href={inviteHref}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+          >
+            Open self-signup link
           </Link>
         </div>
       </div>
@@ -424,6 +492,11 @@ export function AdminUsersClient({
         </Link>
       </div>
 
+      {successMsg ? (
+        <p className="mb-3 text-sm text-[#15803d]" role="status">
+          {successMsg}
+        </p>
+      ) : null}
       {msg ? <p className="mb-3 text-sm text-[#b91c1c]">{msg}</p> : null}
 
       <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
@@ -566,6 +639,123 @@ export function AdminUsersClient({
           Next
         </button>
       </div>
+
+      {inviteOpen ? (
+        <div
+          className="fixed inset-0 z-[200] flex items-end justify-center bg-black/45 p-4 backdrop-blur-[3px] sm:items-center"
+          role="presentation"
+          onClick={() => setInviteOpen(false)}
+        >
+          <div
+            className="max-h-[92vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_16px_40px_rgba(0,0,0,0.08)]"
+            role="dialog"
+            aria-labelledby="invite-member-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#d8d8d8] px-6 py-5">
+              <h2 id="invite-member-title" className="font-authSerif text-xl text-[#121212]">
+                Invite member
+              </h2>
+              <button
+                type="button"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#d8d8d8] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                onClick={() => setInviteOpen(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <p className="mb-4 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+                We email them a link to set a password and sign in. Their account is created in your organisation with
+                the access level below (departments are optional).
+              </p>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Full name
+                <input
+                  type="text"
+                  autoComplete="name"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                  placeholder="e.g. Alex Smith"
+                />
+              </label>
+              <label className="mt-4 block text-[12.5px] font-medium text-[#6b6b6b]">
+                Email
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                  placeholder="name@example.com"
+                />
+              </label>
+              <label className="mt-4 block text-[12.5px] font-medium text-[#6b6b6b]">
+                Access level
+                <select
+                  className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as ProfileRole)}
+                >
+                  {assignableRoles.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_OPTION_LABEL[r] ?? r.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <fieldset className="mt-4">
+                <legend className="text-[12.5px] font-medium text-[#6b6b6b]">
+                  Departments <span className="font-normal text-[#9b9b9b]">(optional)</span>
+                </legend>
+                <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3">
+                  {activeDepts.length === 0 ? (
+                    <p className="text-[12.5px] text-[#9b9b9b]">No departments yet — add teams under Admin → Departments.</p>
+                  ) : (
+                    activeDepts.map((d) => (
+                      <label key={d.id} className="flex cursor-pointer items-center gap-2 text-[13px] text-[#121212]">
+                        <input
+                          type="checkbox"
+                          className="rounded border-[#d8d8d8]"
+                          checked={inviteDepts.has(d.id)}
+                          onChange={(e) => {
+                            setInviteDepts((s) => {
+                              const n = new Set(s);
+                              if (e.target.checked) n.add(d.id);
+                              else n.delete(d.id);
+                              return n;
+                            });
+                          }}
+                        />
+                        {d.name}
+                      </label>
+                    ))
+                  )}
+                </div>
+              </fieldset>
+            </div>
+            <div className="flex flex-col gap-2 border-t border-[#d8d8d8] bg-white px-6 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1] sm:order-1"
+                onClick={() => setInviteOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy === 'invite' || !inviteName.trim() || !inviteEmail.trim()}
+                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50 sm:order-2"
+                onClick={() => void submitInvite()}
+              >
+                {busy === 'invite' ? 'Sending…' : 'Send invite email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {edit ? (
         <div

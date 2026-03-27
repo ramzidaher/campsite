@@ -56,6 +56,7 @@ export function ProfileSettings({
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
+    // Omit role/org_id/status — RLS self-update + trigger block self role; status only via deactivate().
     const { error } = await supabase
       .from('profiles')
       .update({

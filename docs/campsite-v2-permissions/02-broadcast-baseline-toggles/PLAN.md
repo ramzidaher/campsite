@@ -12,7 +12,7 @@ Today’s schema and helpers live in [supabase/migrations/20250326000001_phase2_
 
 | Area | Today | v2 spec |
 |------|--------|---------|
-| Compose | `user_may_compose_broadcasts()` — includes `assistant`, `coordinator`, `manager`, `senior_manager`, `super_admin`, `society_leader` | Baseline: Administrator / DM / CSA = **draft only**; align role names with v2 mapping (Plan 01 table) |
+| Compose | `user_may_compose_broadcasts()` — includes `assistant`, `coordinator`, `manager`, `senior_manager`, `super_admin`, `society_leader` | Baseline: **DM / CSA = draft + approval**; **Administrator = full send** (like manager); align role names with v2 mapping (Plan 01 table) |
 | Target dept | `user_may_broadcast_to_dept(p_dept_id)` — manager via `dept_managers`, coordinator/assistant via `user_departments` | Same **explicit `dept_id`** idea; org-wide is **new** (toggle + `is_org_wide` / routing) |
 | Status on insert | `broadcast_status_allowed_for_insert` — `assistant` → draft/pending only; others also scheduled/sent | Coordinator **send_no_approval** toggle: allow `sent`/`scheduled` without manager path when toggle + role |
 | Approval | `broadcasts_update_manager` — `dept_managers` for broadcast’s `dept_id`, or `super_admin`/`senior_manager` | Keep dept-scoped managers; add toggle logic so some coordinator posts **skip** pending |
@@ -26,12 +26,12 @@ Applies regardless of department toggles (spec names; map to `profiles.role` in 
 | Permission | Org Admin | Manager | Coordinator | Administrator | Duty Manager | CSA |
 |------------|-----------|---------|-------------|---------------|--------------|-----|
 | View broadcast feed | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Send to own department | ✓ | ✓ | ✓ | Draft only | Draft only | Draft only |
-| Send without approval (own posts) | ✓ | ✓ | ✓ | — | — | — |
+| Send to own department | ✓ | ✓ | ✓ | ✓ (full send) | Draft only | Draft only |
+| Send without approval (own posts) | ✓ | ✓ | ✓ | ✓ | — | — |
 | Approve pending broadcasts | ✓ | ✓ (dept) | — | — | — | — |
 | Delete own broadcasts | ✓ | ✓ | ✓ | — | — | — |
 | Edit own broadcasts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Schedule broadcasts | ✓ | ✓ | ✓ | — | — | — |
+| Schedule broadcasts | ✓ | ✓ | ✓ | ✓ | — | — |
 
 **Implementation note:** “Approve pending” must remain **row-scoped** to the broadcast’s `dept_id` (manager is approver for **that** department’s queue), consistent with [broadcasts_update_manager](../../supabase/migrations/20250326000001_phase2_broadcasts.sql).
 

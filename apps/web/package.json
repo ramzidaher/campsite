@@ -11,6 +11,7 @@
     "test": "jest --config jest.config.cjs"
   },
   "dependencies": {
+    "@campsite/api": "*",
     "@campsite/theme": "*",
     "@campsite/types": "*",
     "@campsite/ui": "*",

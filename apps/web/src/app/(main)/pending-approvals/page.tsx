@@ -13,11 +13,11 @@ export default async function PendingApprovalsPage() {
 
   const { data: me } = await supabase
     .from('profiles')
-    .select('role,org_id,id')
+    .select('role,org_id,id,status')
     .eq('id', user.id)
     .single();
 
-  if (!me || !isApproverRole(me.role)) {
+  if (!me || me.status !== 'active' || !isApproverRole(me.role)) {
     redirect('/dashboard');
   }
 

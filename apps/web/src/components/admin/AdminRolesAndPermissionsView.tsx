@@ -15,7 +15,8 @@ const ROLE_BLURB: Record<string, string> = {
   org_admin: 'Full tenant control: members, structure, broadcasts, rota, discounts, and org settings.',
   manager: 'Team oversight, pending approvals, and the manager workspace.',
   coordinator: 'Day-to-day coordination; department-scoped approvals where enabled.',
-  administrator: 'Operational staff; broadcasts and rota self-service; no org admin screens.',
+  administrator:
+    'Operational staff; can send and schedule broadcasts without manager approval (dept-scoped); rota self-service; no org admin screens.',
   duty_manager: 'Like administrator plus discount QR verification where enabled.',
   csa: 'Frontline staff: rota, broadcasts, discount card.',
   society_leader: 'Leads a society or club slice of the org.',

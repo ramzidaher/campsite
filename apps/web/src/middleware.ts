@@ -3,36 +3,14 @@ import type { User } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { isAuthPath } from './lib/middleware/authPaths';
+import { resolveHostRequestContext } from './lib/middleware/resolveHostRequestContext';
 import { getSupabasePublicKey, getSupabaseUrl } from './lib/supabase/env';
-
-const PLATFORM_ADMIN_HOST = 'admin.campsite.app';
-const ROOT_DOMAIN = 'campsite.app';
-
-const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/auth/callback'];
-
-function isAuthPath(pathname: string) {
-  return AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
 
 export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
-  let orgSlug: string | null = null;
-  let isPlatformAdmin = false;
-
-  if (host === PLATFORM_ADMIN_HOST || host.startsWith('admin.localhost')) {
-    isPlatformAdmin = true;
-  } else {
-    const hostname = host.split(':')[0] ?? '';
-    if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
-      orgSlug = hostname.replace(`.${ROOT_DOMAIN}`, '');
-    } else if (hostname.endsWith('.localhost')) {
-      orgSlug = hostname.replace('.localhost', '');
-    }
-  }
   const url = request.nextUrl.clone();
-  if (!orgSlug && url.searchParams.get('org')) {
-    orgSlug = url.searchParams.get('org');
-  }
+  const { orgSlug, isPlatformAdmin } = resolveHostRequestContext(host, url.searchParams.get('org'));
 
   const nextHeaders = new Headers(request.headers);
   if (orgSlug) {

@@ -57,10 +57,13 @@ export function AuthOrgCardMobile({ hideChange }: { hideChange?: boolean }) {
 export function AuthChrome({
   children,
   hideOrgChange,
+  hideOrgCard,
 }: {
   children: ReactNode;
   /** Hide “Change” on register flow */
   hideOrgChange?: boolean;
+  /** Hide workspace card on login / forgot-password (redundant next to wordmark) */
+  hideOrgCard?: boolean;
 }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -79,7 +82,7 @@ export function AuthChrome({
             </View>
             <Text style={styles.wordmark}>Campsite</Text>
           </View>
-          <AuthOrgCardMobile hideChange={hideOrgChange} />
+          {hideOrgCard ? null : <AuthOrgCardMobile hideChange={hideOrgChange} />}
           {children}
         </ScrollView>
       </KeyboardAvoidingView>

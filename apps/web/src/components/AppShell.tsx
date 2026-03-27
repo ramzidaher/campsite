@@ -17,6 +17,19 @@ function initials(name: string) {
   return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
 }
 
+/** Only allow http(s) image URLs for org logo (same idea as registration avatar). */
+function safeHttpImageUrl(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  try {
+    const u = new URL(t);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return t;
+  } catch {
+    return null;
+  }
+}
+
 function NavLink({
   href,
   icon,
@@ -62,8 +75,11 @@ function NavLink({
 export function AppShell({
   children,
   orgName,
+  orgLogoUrl = null,
   userName,
+  userAvatarUrl = null,
   userRoleLabel,
+  hasTenantProfile,
   deptLine,
   profileRole,
   unreadBroadcasts,
@@ -74,8 +90,13 @@ export function AppShell({
 }: {
   children: React.ReactNode;
   orgName: string;
+  /** Public image URL from `organisations.logo_url` when set. */
+  orgLogoUrl?: string | null;
   userName: string;
+  userAvatarUrl?: string | null;
   userRoleLabel: string;
+  /** False when signed in but no `profiles` row yet (e.g. mid-registration). */
+  hasTenantProfile: boolean;
   deptLine: string | null;
   profileRole: string | null;
   unreadBroadcasts: number;
@@ -87,6 +108,8 @@ export function AppShell({
 }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
+  const [orgLogoFailed, setOrgLogoFailed] = useState(false);
+  const [userAvatarFailed, setUserAvatarFailed] = useState(false);
 
   useEffect(() => {
     try {
@@ -98,9 +121,21 @@ export function AppShell({
     }
   }, []);
 
+  const safeOrgLogo = useMemo(() => safeHttpImageUrl(orgLogoUrl ?? null), [orgLogoUrl]);
+  useEffect(() => {
+    setOrgLogoFailed(false);
+  }, [safeOrgLogo]);
+
+  const safeUserAvatar = useMemo(() => safeHttpImageUrl(userAvatarUrl ?? null), [userAvatarUrl]);
+  useEffect(() => {
+    setUserAvatarFailed(false);
+  }, [safeUserAvatar]);
+
   const showApprovals = isApproverRole(profileRole);
   const userInitials = useMemo(() => initials(userName), [userName]);
   const orgInitials = useMemo(() => initials(orgName), [orgName]);
+  const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
+  const showUserAvatar = Boolean(safeUserAvatar) && !userAvatarFailed;
 
   const closeMobile = () => setMobileNav(false);
 
@@ -134,8 +169,17 @@ export function AppShell({
             className="flex w-full cursor-pointer items-center gap-2 rounded-lg bg-white/[0.07] px-2.5 py-2 text-left transition-colors hover:bg-white/[0.11]"
             title="Organisation"
           >
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] bg-white/20 text-[11px] font-semibold text-white">
-              {orgInitials}
+            <div className="flex h-6 w-6 shrink-0 overflow-hidden rounded-[5px] bg-white/20 text-[11px] font-semibold text-white">
+              {showOrgLogo ? (
+                <img
+                  src={safeOrgLogo!}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onError={() => setOrgLogoFailed(true)}
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center">{orgInitials}</span>
+              )}
             </div>
             <span className="min-w-0 flex-1 truncate text-xs font-medium text-white/[0.8]">{orgName}</span>
             <span className="shrink-0 text-[10px] text-white/35">⌄</span>
@@ -265,14 +309,29 @@ export function AppShell({
           onClick={closeMobile}
           className="relative z-[1] mt-auto flex items-center gap-2.5 border-t border-white/[0.07] px-3 py-3.5 transition-colors hover:bg-white/[0.06]"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.18] text-[13px] font-semibold text-[#faf9f6]">
-            {userInitials}
+          <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white/[0.18] text-[13px] font-semibold text-[#faf9f6]">
+            {showUserAvatar ? (
+              <img
+                src={safeUserAvatar!}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={() => setUserAvatarFailed(true)}
+              />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center">{userInitials}</span>
+            )}
           </div>
           <div className="min-w-0 flex-1 overflow-hidden">
             <div className="truncate text-[12.5px] font-medium text-white/[0.85]">{userName}</div>
             <div className="truncate text-[11px] text-white/35">
-              {userRoleLabel}
-              {deptLine ? ` · ${deptLine}` : ''}
+              {hasTenantProfile ? (
+                <>
+                  {userRoleLabel}
+                  {deptLine ? ` · ${deptLine}` : ''}
+                </>
+              ) : (
+                'Finish registration'
+              )}
             </div>
           </div>
           <span className="shrink-0 text-sm text-white/30">⚙</span>
@@ -290,7 +349,12 @@ export function AppShell({
           </button>
           <span className="ml-3 font-authSerif text-lg text-white">Campsite</span>
         </div>
-        <AppTopBar userInitials={userInitials} hasNotifDot={unreadBroadcasts > 0} />
+        <AppTopBar
+          userInitials={userInitials}
+          avatarImageSrc={showUserAvatar ? safeUserAvatar! : null}
+          onAvatarImageError={() => setUserAvatarFailed(true)}
+          hasNotifDot={unreadBroadcasts > 0}
+        />
         <div className="flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       </div>
     </div>

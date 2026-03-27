@@ -1,6 +1,6 @@
 'use client';
 
-import { isOrgAdminRole, type ProfileRole } from '@campsite/types';
+import { canManageCalendarManualEvents, type ProfileRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 import {
   addMonths,
@@ -102,9 +102,7 @@ export function CalendarClient({ profile }: { profile: Profile }) {
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [eventFormOpen, setEventFormOpen] = useState(false);
 
-  const canManage =
-    profile.role === 'manager' ||
-    isOrgAdminRole(profile.role);
+  const canManage = canManageCalendarManualEvents(profile.role);
 
   const todayStart = useMemo(() => {
     const t = new Date();

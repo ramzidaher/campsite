@@ -13,6 +13,10 @@ export function canAccessOrgAdminArea(role: ProfileRole | string | null | undefi
   return isOrgAdminRole(normalizedProfileRole(role));
 }
 
+/**
+ * Sub-gates for `/admin/*` pages. Today each maps to `isOrgAdminRole`; split here (not ad hoc in pages)
+ * if product later allows e.g. settings-only delegates without full org admin.
+ */
 export function canManageOrgUsers(role: ProfileRole | string | null | undefined): boolean {
   return isOrgAdminRole(role);
 }
@@ -44,7 +48,7 @@ export function getMainShellAdminNavItems(
   const r = normalizedProfileRole(role);
   if (!canAccessOrgAdminArea(r)) return null;
   return [
-    { href: '/admin', label: 'Overview', icon: '◼' },
+    { href: '/admin', label: 'Overview', icon: '🏠' },
     { href: '/admin/users', label: 'All members', icon: '👥' },
     { href: '/admin/pending', label: 'Pending approval', icon: '⏳' },
     { href: '/admin/roles', label: 'Roles & permissions', icon: '🏅' },

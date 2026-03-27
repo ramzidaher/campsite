@@ -36,9 +36,13 @@ function titleForPath(pathname: string) {
 
 export function AppTopBar({
   userInitials,
+  avatarImageSrc = null,
+  onAvatarImageError,
   hasNotifDot,
 }: {
   userInitials: string;
+  avatarImageSrc?: string | null;
+  onAvatarImageError?: () => void;
   hasNotifDot?: boolean;
 }) {
   const pathname = usePathname() ?? '';
@@ -85,10 +89,19 @@ export function AppTopBar({
         </Link>
         <Link
           href="/settings"
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 border-transparent bg-[#121212] text-[13px] font-semibold text-[#faf9f6] transition-colors hover:border-[#121212]"
+          className="flex h-[34px] w-[34px] items-center justify-center overflow-hidden rounded-full border-2 border-transparent bg-[#121212] text-[13px] font-semibold text-[#faf9f6] transition-colors hover:border-[#121212]"
           title="Settings"
         >
-          {userInitials}
+          {avatarImageSrc ? (
+            <img
+              src={avatarImageSrc}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => onAvatarImageError?.()}
+            />
+          ) : (
+            userInitials
+          )}
         </Link>
       </div>
     </header>

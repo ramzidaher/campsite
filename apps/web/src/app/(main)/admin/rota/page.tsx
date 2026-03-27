@@ -12,7 +12,7 @@ export default async function AdminRotaPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, status, role')
+    .select('org_id, status')
     .eq('id', user.id)
     .single();
 
@@ -20,5 +20,5 @@ export default async function AdminRotaPage() {
 
   const data = await loadAdminRotaDashboard(supabase, profile.org_id as string);
 
-  return <AdminRotaView data={data} viewerRole={profile.role as string} />;
+  return <AdminRotaView data={data} />;
 }

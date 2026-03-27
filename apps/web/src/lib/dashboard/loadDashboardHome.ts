@@ -1,9 +1,10 @@
 import 'server-only';
 
+import { fetchDashboardStatCounts } from '@campsite/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { canViewOrgWideDashboardStats, isApproverRole } from '@campsite/types';
+import { isApproverRole } from '@campsite/types';
 
-import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
+import { countPendingApprovalsForViewer, loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
 
@@ -25,12 +26,12 @@ export type DashboardHomeModel = {
   orgName: string;
   userName: string;
   profileRole: string;
-  /** Org-wide sent count; omitted when the viewer must not see org aggregates. */
+  /** Sent broadcasts count; omitted when the viewer must not see KPI tiles. */
   broadcastTotal?: number;
-  /** Org-wide active profile count; omitted when the viewer must not see org aggregates. */
+  /** Active members count (org- or dept-scoped); omitted when the viewer must not see KPI tiles. */
   memberActiveTotal?: number;
-  /** Active profiles created in the last 7 days — set when `adminOverview` loader option is used. */
-  newMembersWeek?: number;
+  /** How KPI counts were computed — drives dashboard copy. */
+  dashboardStatScope?: 'org' | 'dept';
   pendingCount: number | null;
   unreadCount: number;
   shiftsThisWeek: number;
@@ -41,11 +42,6 @@ export type DashboardHomeModel = {
   calendarEventDays: number[];
   calendarYear: number;
   calendarMonth: number;
-};
-
-export type LoadDashboardHomeOptions = {
-  /** `/admin` overview: org-wide shift count (next 7 days), new members this week. */
-  adminOverview?: boolean;
 };
 
 /** Monday-start week in local timezone */
@@ -86,16 +82,14 @@ export async function getPendingApprovalCount(
   orgId: string,
   role: string
 ): Promise<number> {
-  const rows = await loadPendingApprovalsPreview(supabase, userId, orgId, role);
-  return rows.length;
+  return countPendingApprovalsForViewer(supabase, userId, orgId, role);
 }
 
 export async function loadDashboardHome(
   supabase: SupabaseClient,
   userId: string,
   orgId: string,
-  profile: { full_name: string | null; role: string },
-  options?: LoadDashboardHomeOptions
+  profile: { full_name: string | null; role: string }
 ): Promise<DashboardHomeModel> {
   const { data: orgRow } = await supabase.from('organisations').select('name').eq('id', orgId).single();
   const orgName = (orgRow?.name as string) ?? 'Organisation';
@@ -103,65 +97,22 @@ export async function loadDashboardHome(
   const now = new Date();
   const w0 = startOfLocalWeek(now);
   const w1 = endOfLocalWeek(now);
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 7);
-
-  const adminOverview = options?.adminOverview === true;
-  const showOrgAggregates = canViewOrgWideDashboardStats(profile.role);
-
-  const broadcastCountQuery = showOrgAggregates
-    ? supabase
-        .from('broadcasts')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .eq('status', 'sent')
-    : Promise.resolve({ count: null as number | null });
-
-  const memberActiveCountQuery = showOrgAggregates
-    ? supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .eq('status', 'active')
-    : Promise.resolve({ count: null as number | null });
-
-  const shiftsQuery = adminOverview
-    ? supabase
-        .from('rota_shifts')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .gte('start_time', now.toISOString())
-        .lt('start_time', new Date(now.getTime() + 7 * 86400000).toISOString())
-    : supabase
-        .from('rota_shifts')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .gte('start_time', w0.toISOString())
-        .lt('start_time', w1.toISOString());
-
-  const newMembersQuery = adminOverview
-    ? supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .eq('status', 'active')
-        .gte('created_at', weekAgo.toISOString())
-    : Promise.resolve({ count: 0 as number | null });
 
   const [
-    { count: broadcastTotal },
-    { count: memberActiveTotal },
+    statCounts,
     { count: shiftsThisWeek },
-    { count: newMembersWeekCount },
     { data: nextShifts },
     { data: recentRaw },
     { data: eventsRaw },
     unreadRpc,
   ] = await Promise.all([
-    broadcastCountQuery,
-    memberActiveCountQuery,
-    shiftsQuery,
-    newMembersQuery,
+    fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
+    supabase
+      .from('rota_shifts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('start_time', w0.toISOString())
+      .lt('start_time', w1.toISOString()),
     supabase
       .from('rota_shifts')
       .select('start_time,end_time,role_label')
@@ -238,13 +189,13 @@ export async function loadDashboardHome(
     orgName,
     userName: profile.full_name?.trim() || 'there',
     profileRole: profile.role,
-    ...(showOrgAggregates
+    ...(statCounts
       ? {
-          broadcastTotal: broadcastTotal ?? 0,
-          memberActiveTotal: memberActiveTotal ?? 0,
+          broadcastTotal: statCounts.broadcastTotal,
+          memberActiveTotal: statCounts.memberActiveTotal,
+          dashboardStatScope: statCounts.statScope,
         }
       : {}),
-    ...(adminOverview ? { newMembersWeek: newMembersWeekCount ?? 0 } : {}),
     pendingCount,
     unreadCount,
     shiftsThisWeek: shiftsThisWeek ?? 0,

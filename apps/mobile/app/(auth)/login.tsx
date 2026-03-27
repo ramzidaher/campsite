@@ -3,7 +3,7 @@ import { AuthChrome } from '@/components/auth/AuthChrome';
 
 export default function LoginScreen() {
   return (
-    <AuthChrome>
+    <AuthChrome hideOrgCard>
       <LoginForm />
     </AuthChrome>
   );

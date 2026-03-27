@@ -43,6 +43,12 @@ function categoriesForDepartment(map: Map<string, CatRow[]>, deptId: string): Ca
   return map.get(deptId.trim().toLowerCase()) ?? [];
 }
 
+export type BroadcastComposeOutcome =
+  | 'draft_saved'
+  | 'submitted_for_approval'
+  | 'sent'
+  | 'scheduled';
+
 type Props = {
   supabase: SupabaseClient;
   orgId: string;
@@ -50,7 +56,8 @@ type Props = {
   role: ProfileRole;
   departments: DeptRow[];
   categoriesByDept: Map<string, CatRow[]>;
-  onCreated?: () => void;
+  /** Called after a successful save/send; use to switch tabs or refresh lists. */
+  onCreated?: (outcome: BroadcastComposeOutcome) => void;
 };
 
 const TITLE_MAX = 120;
@@ -284,7 +291,7 @@ export function BroadcastComposer({
     try {
       if (mode === 'draft') {
         const saved = await persistDraft();
-        if (saved) onCreated?.();
+        if (saved) onCreated?.('draft_saved');
         return;
       }
 
@@ -306,7 +313,7 @@ export function BroadcastComposer({
         setTitle('');
         setBody('');
         setDraftId(null);
-        onCreated?.();
+        onCreated?.('submitted_for_approval');
         return;
       }
 
@@ -342,7 +349,7 @@ export function BroadcastComposer({
         setIsOrgWide(false);
         setIsMandatory(false);
         setIsPinned(false);
-        onCreated?.();
+        onCreated?.('scheduled');
         return;
       }
 
@@ -367,7 +374,7 @@ export function BroadcastComposer({
       setIsOrgWide(false);
       setIsMandatory(false);
       setIsPinned(false);
-      onCreated?.();
+      onCreated?.('sent');
     } catch (e: unknown) {
       setError(formatSupabaseWriteError(e));
     } finally {

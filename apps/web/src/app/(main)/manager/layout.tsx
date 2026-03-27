@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { isManagerRole } from '@campsite/types';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -16,7 +17,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (profile.role !== 'manager') redirect('/broadcasts');
+  if (!isManagerRole(profile.role)) redirect('/broadcasts');
 
   return (
     <div className="flex flex-col gap-6 md:flex-row">

@@ -1,15 +1,30 @@
 'use client';
 
+import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { uploadUserAvatar } from '@/lib/storage/uploadUserAvatar';
+import {
+  isValidWorkspaceSlug,
+  normalizeWorkspaceSlugInput,
+  suggestSlugFromOrganisationName,
+} from '@/lib/org/slug';
 
 type Org = { id: string; name: string; slug: string; logo_url: string | null };
 type Dept = { id: string; name: string; type: 'department' | 'society' | 'club' };
 type Cat = { id: string; dept_id: string; name: string };
 
-const STEP_LABELS = ['Account', 'Organisation', 'Teams', 'Subscriptions', 'Review'] as const;
+const JOIN_STEP_LABELS = [
+  'Account',
+  'Organisation',
+  'Profile (optional)',
+  'Teams',
+  'Subscriptions',
+  'Review',
+] as const;
+const CREATE_ORG_STEP_LABELS = ['Account', 'Organisation', 'Profile (optional)', 'Review'] as const;
 
 function passwordStrengthScore(pw: string): { score: number; label: string; color: string; width: string } {
   let score = 0;
@@ -37,15 +52,15 @@ function passwordStrength(pw: string): 'weak' | 'ok' | 'strong' {
   return 'weak';
 }
 
-function StepProgress({ step }: { step: number }) {
+function StepProgress({ step, labels }: { step: number; labels: readonly string[] }) {
   return (
     <div className="mb-8">
       <p className="mb-3 text-center text-[11.5px] font-medium text-[#9b9b9b] md:hidden">
-        Step {step} of {STEP_LABELS.length}: {STEP_LABELS[step - 1]}
+        Step {step} of {labels.length}: {labels[step - 1]}
       </p>
       <div className="hidden md:block">
         <div className="flex w-full">
-          {STEP_LABELS.map((label, i) => {
+          {labels.map((label, i) => {
             const n = i + 1;
             const isDone = n < step;
             const isActive = n === step;
@@ -78,8 +93,8 @@ function StepProgress({ step }: { step: number }) {
                   <div
                     className={[
                       'h-px min-w-2 flex-1',
-                      i === STEP_LABELS.length - 1 ? 'max-w-0 min-w-0 flex-[0]' : '',
-                      i < STEP_LABELS.length - 1 && step > i + 1 ? 'bg-[#15803d]' : i < STEP_LABELS.length - 1 ? 'bg-[#d8d8d8]' : '',
+                      i === labels.length - 1 ? 'max-w-0 min-w-0 flex-[0]' : '',
+                      i < labels.length - 1 && step > i + 1 ? 'bg-[#15803d]' : i < labels.length - 1 ? 'bg-[#d8d8d8]' : '',
                     ].join(' ')}
                     aria-hidden
                   />
@@ -103,6 +118,10 @@ function StepProgress({ step }: { step: number }) {
 
 export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | null }) {
   const router = useRouter();
+  /** Invite link (`/register?org=slug`) — only then can users join an existing org from this wizard. */
+  const inviteFlow = Boolean(initialOrgSlug);
+  /** Create a new tenant; user becomes org_admin (not the same as platform founders). */
+  const createOrgFlow = !inviteFlow;
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -110,15 +129,28 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
   const [confirm, setConfirm] = useState('');
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [newOrgName, setNewOrgName] = useState('');
+  const [orgSlugInput, setOrgSlugInput] = useState('');
+  /** Once true, organisation name changes no longer overwrite the short-name field. */
+  const [orgSlugUserEdited, setOrgSlugUserEdited] = useState(false);
   const [depts, setDepts] = useState<Dept[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
   const [selectedDeptIds, setSelectedDeptIds] = useState<Set<string>>(new Set());
   const [subscribed, setSubscribed] = useState<Record<string, boolean>>({});
+  /** Uploaded after sign-up when a session exists; URL is written to auth metadata for profile creation. */
+  const [optionalAvatarFile, setOptionalAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const strength = passwordStrength(password);
   const strengthVis = passwordStrengthScore(password);
+  const workspaceSlugNormalized = useMemo(
+    () => normalizeWorkspaceSlugInput(orgSlugInput),
+    [orgSlugInput]
+  );
+  const stepLabels = inviteFlow ? JOIN_STEP_LABELS : CREATE_ORG_STEP_LABELS;
 
   const loadOrgs = useCallback(async () => {
     const supabase = createClient();
@@ -170,17 +202,34 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
   }, []);
 
   useEffect(() => {
-    void loadOrgs();
-  }, [loadOrgs]);
+    if (inviteFlow) {
+      void loadOrgs();
+    }
+  }, [inviteFlow, loadOrgs]);
 
   useEffect(() => {
-    if (!orgs.length || !initialOrgSlug || orgId) return;
+    if (!inviteFlow || !orgs.length || !initialOrgSlug || orgId) return;
     const match = orgs.find((o) => o.slug === initialOrgSlug);
     if (match) {
       setOrgId(match.id);
       void loadDepartments(match.id);
     }
-  }, [orgs, initialOrgSlug, orgId, loadDepartments]);
+  }, [inviteFlow, orgs, initialOrgSlug, orgId, loadDepartments]);
+
+  useEffect(() => {
+    if (!createOrgFlow || orgSlugUserEdited) return;
+    setOrgSlugInput(suggestSlugFromOrganisationName(newOrgName));
+  }, [createOrgFlow, newOrgName, orgSlugUserEdited]);
+
+  useEffect(() => {
+    if (!optionalAvatarFile) {
+      setAvatarPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(optionalAvatarFile);
+    setAvatarPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [optionalAvatarFile]);
 
   function toggleDept(id: string) {
     setSelectedDeptIds((prev) => {
@@ -205,48 +254,121 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       setError('Choose a stronger password (8+ characters, mix of letters and numbers).');
       return;
     }
-    if (!orgId) {
-      setError('Select an organisation.');
-      return;
-    }
-    if (selectedDeptIds.size === 0) {
-      setError('Select at least one department, society, or club.');
-      return;
-    }
 
-    setLoading(true);
     const supabase = createClient();
     const origin = window.location.origin;
-    const registerSubscriptions = cats
-      .filter((c) => selectedDeptIds.has(c.dept_id))
-      .map((c) => ({
-        cat_id: c.id,
-        subscribed: subscribed[c.id] ?? true,
-      }));
-    const { data, error: signErr } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          register_org_id: orgId,
-          register_dept_ids: JSON.stringify([...selectedDeptIds]),
-          register_subscriptions: JSON.stringify(registerSubscriptions),
+    let signUpData: {
+      user: { id: string } | null;
+      session: unknown;
+    };
+    const emailRedirectTo = createOrgFlow
+      ? `${origin}/auth/callback?next=/dashboard`
+      : `${origin}/auth/callback?next=/pending`;
+
+    if (createOrgFlow) {
+      const nameTrim = newOrgName.trim();
+      if (nameTrim.length < 1) {
+        setError('Please enter your organisation name.');
+        return;
+      }
+      if (nameTrim.length > 120) {
+        setError('Please shorten your organisation name to 120 characters or fewer.');
+        return;
+      }
+      if (!isValidWorkspaceSlug(workspaceSlugNormalized)) {
+        setError(
+          'We need at least two letters or numbers in your short name (no spaces). Add a word to your organisation name above, or type a short name you prefer in the second box.'
+        );
+        return;
+      }
+
+      setLoading(true);
+      const createMeta: Record<string, string> = {
+        full_name: fullName,
+        register_create_org_name: nameTrim,
+        register_create_org_slug: workspaceSlugNormalized,
+      };
+      const { data, error: signErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: createMeta,
+          emailRedirectTo,
         },
-        emailRedirectTo: `${origin}/auth/callback?next=/pending`,
-      },
-    });
-    if (signErr || !data.user) {
-      setLoading(false);
-      setError(signErr?.message ?? 'Could not create account.');
-      return;
+      });
+      if (signErr || !data.user) {
+        setLoading(false);
+        setError(signErr?.message ?? 'Could not create account.');
+        return;
+      }
+      signUpData = data;
+    } else {
+      if (!orgId) {
+        setError('Select an organisation.');
+        return;
+      }
+      if (selectedDeptIds.size === 0) {
+        setError('Select at least one department, society, or club.');
+        return;
+      }
+
+      setLoading(true);
+      const registerSubscriptions = cats
+        .filter((c) => selectedDeptIds.has(c.dept_id))
+        .map((c) => ({
+          cat_id: c.id,
+          subscribed: subscribed[c.id] ?? true,
+        }));
+      const joinMeta: Record<string, string> = {
+        full_name: fullName,
+        register_org_id: orgId,
+        register_dept_ids: JSON.stringify([...selectedDeptIds]),
+        register_subscriptions: JSON.stringify(registerSubscriptions),
+      };
+      const { data, error: signErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: joinMeta,
+          emailRedirectTo,
+        },
+      });
+      if (signErr || !data.user) {
+        setLoading(false);
+        setError(signErr?.message ?? 'Could not create account.');
+        return;
+      }
+      signUpData = data;
     }
 
-    const userId = data.user.id;
+    const userId = signUpData.user!.id;
+    /** Set when a file was uploaded; profile row may already exist from the auth trigger before metadata had the URL. */
+    let uploadedAvatarPublicUrl: string | null = null;
     const { completeRegistrationProfileIfNeeded } = await import('@/lib/auth/completeRegistrationProfile');
 
-    let sessionUser = data.user;
-    if (data.session) {
+    async function withUploadedAvatarIfPresent(userRow: User): Promise<User> {
+      if (!optionalAvatarFile) return userRow;
+      const up = await uploadUserAvatar(supabase, userRow.id, optionalAvatarFile);
+      if (!up.ok) {
+        throw new Error(up.message);
+      }
+      uploadedAvatarPublicUrl = up.publicUrl;
+      const { data: upd, error: ue } = await supabase.auth.updateUser({
+        data: { register_avatar_url: up.publicUrl },
+      });
+      if (ue) throw new Error(ue.message);
+      return upd.user ?? userRow;
+    }
+
+    let sessionUser = signUpData.user as User;
+    if (signUpData.session) {
+      try {
+        sessionUser = await withUploadedAvatarIfPresent(sessionUser);
+      } catch (err) {
+        setLoading(false);
+        setError(err instanceof Error ? err.message : 'Could not upload photo.');
+        return;
+      }
       const done = await completeRegistrationProfileIfNeeded(supabase, sessionUser);
       if (!done.ok) {
         setLoading(false);
@@ -258,6 +380,13 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       const { data: sess } = await supabase.auth.getSession();
       if (sess.session?.user) {
         sessionUser = sess.session.user;
+        try {
+          sessionUser = await withUploadedAvatarIfPresent(sessionUser);
+        } catch (err) {
+          setLoading(false);
+          setError(err instanceof Error ? err.message : 'Could not upload photo.');
+          return;
+        }
         const done = await completeRegistrationProfileIfNeeded(supabase, sessionUser);
         if (!done.ok) {
           setLoading(false);
@@ -269,7 +398,11 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
 
     const { data: sessFinal } = await supabase.auth.getSession();
     if (sessFinal.session) {
-      const { data: prof } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('id,status')
+        .eq('id', userId)
+        .maybeSingle();
       if (!prof) {
         setLoading(false);
         setError(
@@ -277,14 +410,34 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         );
         return;
       }
+      if (uploadedAvatarPublicUrl) {
+        const { error: syncErr } = await supabase.rpc('sync_my_registration_avatar', {
+          p_url: uploadedAvatarPublicUrl,
+        });
+        if (syncErr) {
+          setLoading(false);
+          setError(syncErr.message);
+          return;
+        }
+      }
       setLoading(false);
-      router.replace('/pending');
+      if (prof.status === 'active') {
+        router.replace('/');
+      } else {
+        router.replace('/pending');
+      }
       router.refresh();
       return;
     }
 
     setLoading(false);
-    router.replace('/register/done');
+    if (createOrgFlow && isValidWorkspaceSlug(workspaceSlugNormalized)) {
+      router.replace(
+        `/register/done?creator=1&org=${encodeURIComponent(workspaceSlugNormalized)}`
+      );
+    } else {
+      router.replace('/register/done');
+    }
     router.refresh();
   }
 
@@ -317,7 +470,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         </button>
       )}
 
-      <StepProgress step={step} />
+      <StepProgress step={step} labels={stepLabels} />
 
       {error ? (
         <p className="mb-6 rounded-[10px] bg-red-500/10 px-3 py-2 text-sm text-[#b91c1c]">{error}</p>
@@ -427,42 +580,133 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         <div>
           <h2 className="auth-title">Your organisation</h2>
           <p className="auth-sub mb-8">
-            {initialOrgSlug
-              ? 'We matched your workspace from the URL. You can change it if needed.'
-              : 'Select the organisation you belong to.'}
+            {inviteFlow
+              ? 'We matched your workspace from the invite link. You can change the organisation below if needed.'
+              : 'Tell us your union or society name. We’ll suggest a simple web address your team can use to join—change it only if you want to.'}
           </p>
-          <div className="mb-8">
-            <label className="auth-label" htmlFor="reg-org">
-              Organisation
-            </label>
-            <select
-              id="reg-org"
-              className="auth-input appearance-none bg-white"
-              value={orgId ?? ''}
-              onChange={(e) => {
-                const id = e.target.value || null;
-                setOrgId(id);
-                if (id) void loadDepartments(id);
-              }}
-              required
-            >
-              <option value="">Select…</option>
-              {orgs.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
-          </div>
+
+          {inviteFlow ? (
+            <div className="mb-8">
+              <label className="auth-label" htmlFor="reg-org">
+                Organisation
+              </label>
+              <select
+                id="reg-org"
+                className="auth-input appearance-none bg-white"
+                value={orgId ?? ''}
+                onChange={(e) => {
+                  const id = e.target.value || null;
+                  setOrgId(id);
+                  if (id) void loadDepartments(id);
+                }}
+                required
+              >
+                <option value="">Select…</option>
+                {orgs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="mb-8 space-y-5">
+              <div>
+                <label className="auth-label" htmlFor="reg-org-name">
+                  What&apos;s your organisation called?
+                </label>
+                <input
+                  id="reg-org-name"
+                  className="auth-input"
+                  value={newOrgName}
+                  onChange={(e) => setNewOrgName(e.target.value)}
+                  placeholder="e.g. Riverside Students' Union"
+                  maxLength={120}
+                  required
+                />
+              </div>
+              {isValidWorkspaceSlug(workspaceSlugNormalized) ? (
+                <p className="rounded-xl border border-[#e8e6e3] bg-white px-4 py-3 text-[13px] leading-relaxed text-[#525252]">
+                  <span className="font-medium text-[#121212]">Your team will use:</span>{' '}
+                  <span className="whitespace-nowrap font-medium text-[#121212]">
+                    {workspaceSlugNormalized}.campsite.app
+                  </span>
+                  <span className="text-[#6b6b6b]"> to open your workspace and invitation links.</span>
+                </p>
+              ) : newOrgName.trim().length > 0 ? (
+                <p className="text-[12px] leading-relaxed text-[#9b9b9b]">
+                  Keep typing your organisation name—we&apos;ll build a simple address from it. You can
+                  adjust it in the next box if needed.
+                </p>
+              ) : null}
+              <div>
+                <label className="auth-label" htmlFor="reg-org-slug">
+                  Short name for invitations
+                </label>
+                <p className="mb-1.5 text-[11.5px] text-[#9b9b9b]">
+                  We suggest this from your organisation name—change it only if you want something different.
+                </p>
+                <input
+                  id="reg-org-slug"
+                  className="auth-input text-[15px]"
+                  value={orgSlugInput}
+                  onChange={(e) => {
+                    setOrgSlugUserEdited(true);
+                    setOrgSlugInput(e.target.value);
+                  }}
+                  placeholder="e.g. riverside-union"
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-describedby="reg-org-slug-hint"
+                />
+                <p id="reg-org-slug-hint" className="mt-1.5 text-[11.5px] leading-relaxed text-[#9b9b9b]">
+                  Letters and numbers are fine; we add hyphens for you. This stays the same after
+                  signup—contact support if you need to change it later.
+                </p>
+              </div>
+              <p className="rounded-xl bg-[#f5f4f1] p-3 text-[12px] leading-relaxed text-[#6b6b6b]">
+                After you sign in, you can invite people and add teams. We start you with one team called{' '}
+                <strong className="font-medium text-[#121212]">General</strong>.
+              </p>
+            </div>
+          )}
           <div className="flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(1)}>
+            <button
+              type="button"
+              className="auth-btn-ghost flex-1"
+              onClick={() => {
+                if (createOrgFlow) setOrgSlugUserEdited(false);
+                setStep(1);
+              }}
+            >
               ← Back
             </button>
             <button
               type="button"
               className="auth-btn-primary flex-[2]"
-              onClick={() => orgId && setStep(3)}
-              disabled={!orgId}
+              onClick={() => {
+                setError(null);
+                if (inviteFlow) {
+                  if (!orgId) {
+                    setError('Select an organisation.');
+                    return;
+                  }
+                  setStep(3);
+                  return;
+                }
+                const nameTrim = newOrgName.trim();
+                if (nameTrim.length < 1) {
+                  setError('Please enter your organisation name.');
+                  return;
+                }
+                if (!isValidWorkspaceSlug(workspaceSlugNormalized)) {
+                  setError(
+                    'We need at least two letters or numbers in the short name (no spaces). Add a word to your organisation name, or edit the short name box.'
+                  );
+                  return;
+                }
+                setStep(3);
+              }}
             >
               Continue →
             </button>
@@ -471,6 +715,99 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       ) : null}
 
       {step === 3 ? (
+        <div>
+          <h2 className="auth-title">Profile photo (optional)</h2>
+          <p className="auth-sub mb-6">
+            Add a picture for your profile if you like—you can skip this and add or change it later in
+            Settings.
+          </p>
+          <input
+            ref={avatarFileInputRef}
+            id="reg-avatar-file"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="sr-only"
+            onChange={(e) => {
+              setError(null);
+              const f = e.target.files?.[0] ?? null;
+              if (!f) {
+                setOptionalAvatarFile(null);
+                return;
+              }
+              const allowed = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+              if (!allowed.has(f.type)) {
+                setError('Please choose a JPEG, PNG, WebP, or GIF image.');
+                e.target.value = '';
+                return;
+              }
+              if (f.size > 5 * 1024 * 1024) {
+                setError('Image must be 5 MB or smaller.');
+                e.target.value = '';
+                return;
+              }
+              setOptionalAvatarFile(f);
+            }}
+          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <label
+              htmlFor="reg-avatar-file"
+              className="auth-btn-ghost inline-flex cursor-pointer items-center justify-center"
+            >
+              Choose photo
+            </label>
+            {optionalAvatarFile ? (
+              <button
+                type="button"
+                className="text-[13px] font-medium text-[#9b9b9b] underline decoration-[#9b9b9b] underline-offset-2 hover:text-[#121212]"
+                onClick={() => {
+                  setOptionalAvatarFile(null);
+                  if (avatarFileInputRef.current) avatarFileInputRef.current.value = '';
+                }}
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+          <p className="mt-2 text-[11.5px] leading-relaxed text-[#9b9b9b]">
+            JPEG, PNG, WebP, or GIF, up to 5 MB. If you must confirm your email before signing in, you can
+            add a photo in Settings afterward.
+          </p>
+          {avatarPreviewUrl ? (
+            <div className="mt-5 flex flex-col items-center gap-2">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Preview</p>
+              <img
+                src={avatarPreviewUrl}
+                alt=""
+                className="h-20 w-20 rounded-full border border-[#e8e6e3] bg-[#f5f4f1] object-cover"
+              />
+            </div>
+          ) : null}
+          <div className="mt-8 flex gap-3">
+            <button
+              type="button"
+              className="auth-btn-ghost flex-1"
+              onClick={() => {
+                setError(null);
+                setStep(2);
+              }}
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              className="auth-btn-primary flex-[2]"
+              onClick={() => {
+                setError(null);
+                setStep(4);
+              }}
+            >
+              {optionalAvatarFile ? 'Continue →' : 'Skip →'}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === 4 && inviteFlow ? (
         <div>
           <h2 className="auth-title">Select teams</h2>
           <p className="auth-sub mb-6">
@@ -522,13 +859,13 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
             ) : null
           )}
           <div className="mt-2 flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(2)}>
+            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(3)}>
               ← Back
             </button>
             <button
               type="button"
               className="auth-btn-primary flex-[2]"
-              onClick={() => selectedDeptIds.size > 0 && setStep(4)}
+              onClick={() => selectedDeptIds.size > 0 && setStep(5)}
               disabled={selectedDeptIds.size === 0}
             >
               Continue →
@@ -537,7 +874,76 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         </div>
       ) : null}
 
-      {step === 4 ? (
+      {step === 4 && createOrgFlow ? (
+        <div>
+          <h2 className="auth-title">Review & submit</h2>
+          <p className="auth-sub mb-6">
+            Check everything looks right, then create your workspace
+          </p>
+          <div className="mb-4 rounded-xl bg-[#f5f4f1] p-4">
+            <p className="mb-3 text-[13px] font-medium text-[#9b9b9b]">Account</p>
+            <div className="flex flex-col gap-2 text-[13px]">
+              <div className="flex justify-between gap-4">
+                <span className="text-[#6b6b6b]">Name</span>
+                <span className="font-medium text-[#121212]">{fullName || '—'}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-[#6b6b6b]">Email</span>
+                <span className="break-all text-right font-medium text-[#121212]">{email || '—'}</span>
+              </div>
+              {optionalAvatarFile ? (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-[#6b6b6b]">Photo</span>
+                  <span className="text-right text-[12px] font-medium text-[#121212]">Added</span>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-[#6b6b6b]">Photo</span>
+                  <span className="text-right text-[12px] text-[#9b9b9b]">Skipped (add later in Settings)</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="mb-6 rounded-xl bg-[#f5f4f1] p-4">
+            <p className="mb-3 text-[13px] font-medium text-[#9b9b9b]">Organisation</p>
+            <div className="flex flex-col gap-2 text-[13px]">
+              <div className="flex justify-between gap-4">
+                <span className="text-[#6b6b6b]">Name</span>
+                <span className="text-right font-medium text-[#121212]">{newOrgName.trim() || '—'}</span>
+              </div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
+                <span className="text-[#6b6b6b]">Where your team signs in</span>
+                <span className="break-all text-right font-medium text-[#121212] sm:max-w-[min(100%,14rem)]">
+                  {workspaceSlugNormalized ? `${workspaceSlugNormalized}.campsite.app` : '—'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="mb-6 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] p-4 text-[13px] leading-relaxed text-[#6b6b6b]">
+            <strong className="mb-1 block text-[#121212]">What happens next?</strong>
+            We create your workspace and sign you in. You can then invite colleagues and set things up from
+            the Admin section.
+          </div>
+          <div className="flex gap-3">
+            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(3)}>
+              ← Back
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              className="auth-btn-primary flex-[2]"
+              onClick={() => void submit()}
+            >
+              {loading ? (
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : null}
+              Create your workspace
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === 5 && inviteFlow ? (
         <div>
           <h2 className="auth-title">Subscriptions</h2>
           <p className="auth-sub mb-6">
@@ -576,17 +982,17 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
             );
           })}
           <div className="mt-4 flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(3)}>
+            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(4)}>
               ← Back
             </button>
-            <button type="button" className="auth-btn-primary flex-[2]" onClick={() => setStep(5)}>
+            <button type="button" className="auth-btn-primary flex-[2]" onClick={() => setStep(6)}>
               Continue →
             </button>
           </div>
         </div>
       ) : null}
 
-      {step === 5 ? (
+      {step === 6 && inviteFlow ? (
         <div>
           <h2 className="auth-title">Review & submit</h2>
           <p className="auth-sub mb-6">
@@ -607,6 +1013,17 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
                 <span className="text-[#6b6b6b]">Organisation</span>
                 <span className="text-right font-medium text-[#121212]">{orgName ?? '—'}</span>
               </div>
+              {optionalAvatarFile ? (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-[#6b6b6b]">Photo</span>
+                  <span className="text-right text-[12px] font-medium text-[#121212]">Added</span>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-[#6b6b6b]">Photo</span>
+                  <span className="text-right text-[12px] text-[#9b9b9b]">Skipped (add later in Settings)</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="mb-6 rounded-xl bg-[#f5f4f1] p-4">
@@ -631,7 +1048,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
             usually within one working day.
           </div>
           <div className="flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(4)}>
+            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(5)}>
               ← Back
             </button>
             <button

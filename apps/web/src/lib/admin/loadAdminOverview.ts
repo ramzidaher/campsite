@@ -37,6 +37,7 @@ export type AdminOverviewModel = {
 };
 
 const ROLE_ORDER = [
+  'unassigned',
   'org_admin',
   'super_admin',
   'manager',
@@ -48,6 +49,7 @@ const ROLE_ORDER = [
 ] as const;
 
 const ROLE_LABEL: Record<string, string> = {
+  unassigned: 'Pending role',
   org_admin: 'Org admin',
   super_admin: 'Org admin (legacy)',
   manager: 'Manager',

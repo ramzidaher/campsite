@@ -15,8 +15,8 @@ export default function RegisterDoneScreen() {
         </Text>
         <View style={styles.box}>
           <Text style={styles.boxText}>
-            You can close the app and come back after you receive confirmation. If you used a magic link
-            or verified email, you may already be signed in.
+            You can close the app and come back after you receive confirmation. If you verified your
+            email, you may already be signed in.
           </Text>
         </View>
         <Link href="/(auth)/login" asChild>

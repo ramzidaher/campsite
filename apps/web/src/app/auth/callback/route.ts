@@ -2,7 +2,10 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { completeRegistrationProfileIfNeeded } from '@/lib/auth/completeRegistrationProfile';
+import {
+  completeRegistrationProfileIfNeeded,
+  syncRegistrationAvatarToProfileIfEmpty,
+} from '@/lib/auth/completeRegistrationProfile';
 import { getSupabasePublicKey, getSupabaseUrl } from '@/lib/supabase/env';
 
 export async function GET(request: NextRequest) {
@@ -43,6 +46,7 @@ export async function GET(request: NextRequest) {
             `${origin}/pending?registration_error=${encodeURIComponent(done.message)}`
           );
         }
+        await syncRegistrationAvatarToProfileIfEmpty(supabase, user);
       }
       return response;
     }

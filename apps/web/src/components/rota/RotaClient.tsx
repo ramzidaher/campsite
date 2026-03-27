@@ -1,6 +1,11 @@
 'use client';
 
-import { isOrgAdminRole, type ProfileRole } from '@campsite/types';
+import {
+  canEditRotaShifts,
+  canViewRotaDepartmentScope,
+  canViewRotaFullOrgGrid,
+  type ProfileRole,
+} from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 import { addWeeks, endOfWeekExclusive, startOfWeekMonday } from '@/lib/datetime';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -110,9 +115,9 @@ export function RotaClient({ profile }: { profile: Profile }) {
   const [filterDept, setFilterDept] = useState<string>('');
   const [shiftEditorOpen, setShiftEditorOpen] = useState(false);
 
-  const canTeam = profile.role === 'manager' || isOrgAdminRole(profile.role);
-  const canFull = isOrgAdminRole(profile.role);
-  const canEdit = profile.role === 'manager' || isOrgAdminRole(profile.role);
+  const canTeam = canViewRotaDepartmentScope(profile.role);
+  const canFull = canViewRotaFullOrgGrid(profile.role);
+  const canEdit = canEditRotaShifts(profile.role);
 
   useEffect(() => {
     void (async () => {

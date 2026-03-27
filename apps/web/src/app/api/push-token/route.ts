@@ -1,3 +1,4 @@
+import { parsePushTokenBody } from '@/lib/push/parsePushTokenBody';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -11,18 +12,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { token?: string; platform?: 'web' | 'ios' | 'android' };
+  let raw: unknown;
   try {
-    body = (await req.json()) as { token?: string; platform?: 'web' | 'ios' | 'android' };
+    raw = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const token = body.token?.trim();
-  const platform = body.platform ?? 'web';
-  if (!token) {
-    return NextResponse.json({ error: 'token required' }, { status: 400 });
+  const parsed = parsePushTokenBody(raw);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: parsed.status });
   }
+  const { token, platform } = parsed;
 
   const { error } = await supabase.from('push_tokens').upsert(
     {

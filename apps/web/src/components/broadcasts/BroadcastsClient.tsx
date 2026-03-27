@@ -7,9 +7,11 @@ import {
   isBroadcastDraftOnlyRole,
 } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { BroadcastComposer } from './BroadcastComposer';
+import Link from 'next/link';
 import { BroadcastFeed, type BroadcastFeedHandle } from './BroadcastFeed';
 import { departmentsForBroadcast, type DeptRow } from './dept-scope';
 
@@ -20,7 +22,7 @@ type Profile = {
   full_name: string;
 };
 
-type Tab = 'feed' | 'compose' | 'drafts' | 'scheduled' | 'pending';
+type Tab = 'feed' | 'compose' | 'drafts' | 'submitted' | 'scheduled' | 'pending';
 
 /** Toolbar filter: all, unread only, or a single department id */
 type FeedPill = 'all' | 'unread' | string;
@@ -34,15 +36,30 @@ export function BroadcastsClient({
   initialTab,
 }: {
   profile: Profile;
-  /** Deep-link from overview CTAs, e.g. `?tab=compose` */
+  /** Deep-link from overview CTAs, e.g. `?tab=compose` or `?tab=submitted` */
   initialTab?: Tab;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const searchParams = useSearchParams();
   const feedRef = useRef<BroadcastFeedHandle>(null);
   const [tab, setTab] = useState<Tab>(() => {
-    if (initialTab === 'compose' && canComposeBroadcast(profile.role)) return 'compose';
-    if (initialTab === 'scheduled' && isBroadcastDraftOnlyRole(profile.role)) return 'feed';
-    return 'feed';
+    const r = profile.role;
+    const compose = canComposeBroadcast(r);
+    const showScheduled = compose && !isBroadcastDraftOnlyRole(r);
+    switch (initialTab) {
+      case 'compose':
+        return compose ? 'compose' : 'feed';
+      case 'submitted':
+        return compose ? 'submitted' : 'feed';
+      case 'drafts':
+        return compose ? 'drafts' : 'feed';
+      case 'scheduled':
+        return showScheduled ? 'scheduled' : 'feed';
+      case 'pending':
+        return isBroadcastApproverRole(r) ? 'pending' : 'feed';
+      default:
+        return 'feed';
+    }
   });
   const [departments, setDepartments] = useState<DeptRow[]>([]);
   const [userDeptIds, setUserDeptIds] = useState<Set<string>>(new Set());
@@ -54,6 +71,7 @@ export function BroadcastsClient({
   const [hydrated, setHydrated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [unread, setUnread] = useState(0);
+  const [submittedPendingCount, setSubmittedPendingCount] = useState(0);
 
   useEffect(() => {
     try {
@@ -102,11 +120,20 @@ export function BroadcastsClient({
   }, [hydrated, deptFilter, catFilter, feedPill]);
 
   const loadMeta = useCallback(async () => {
-    const [{ data: deps }, { data: ud }, { data: dm }] = await Promise.all([
+    const compose = canComposeBroadcast(profile.role);
+    const [{ data: deps }, { data: ud }, { data: dm }, submittedHead] = await Promise.all([
       supabase.from('departments').select('id,org_id,name,type,is_archived').eq('org_id', profile.org_id),
       supabase.from('user_departments').select('dept_id').eq('user_id', profile.id),
       supabase.from('dept_managers').select('dept_id').eq('user_id', profile.id),
+      compose
+        ? supabase
+            .from('broadcasts')
+            .select('id', { count: 'exact', head: true })
+            .eq('created_by', profile.id)
+            .eq('status', 'pending_approval')
+        : Promise.resolve({ count: null as number | null }),
     ]);
+    setSubmittedPendingCount(typeof submittedHead.count === 'number' ? submittedHead.count : 0);
     setDepartments((deps ?? []) as DeptRow[]);
     setUserDeptIds(new Set((ud ?? []).map((r) => r.dept_id as string)));
     setManagedDeptIds(new Set((dm ?? []).map((r) => r.dept_id as string)));
@@ -134,6 +161,10 @@ export function BroadcastsClient({
 
   useEffect(() => {
     if (tab === 'compose') void loadMeta();
+  }, [tab, loadMeta]);
+
+  useEffect(() => {
+    if (tab === 'submitted') void loadMeta();
   }, [tab, loadMeta]);
 
   const draftOnlyRole = isBroadcastDraftOnlyRole(profile.role);
@@ -201,6 +232,17 @@ export function BroadcastsClient({
   const showScheduledTab = composeAllowed && !draftOnlyRole;
   const primaryComposeCta = composeAllowed && !draftOnlyRole;
 
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (!t) return;
+    if (t === 'feed') setTab('feed');
+    else if (t === 'submitted' && composeAllowed) setTab('submitted');
+    else if (t === 'compose' && composeAllowed) setTab('compose');
+    else if (t === 'drafts' && composeAllowed) setTab('drafts');
+    else if (t === 'scheduled' && showScheduledTab) setTab('scheduled');
+    else if (t === 'pending' && isBroadcastApproverRole(profile.role)) setTab('pending');
+  }, [searchParams, composeAllowed, showScheduledTab, profile.role]);
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 px-5 sm:px-[28px]">
@@ -227,6 +269,7 @@ export function BroadcastsClient({
               ? ([['compose', draftOnlyRole ? 'New draft' : 'Compose']] as const)
               : []),
             ...(composeAllowed ? ([['drafts', 'My drafts']] as const) : []),
+            ...(composeAllowed ? ([['submitted', 'Sent for approval']] as const) : []),
             ...(showScheduledTab ? ([['scheduled', 'Scheduled']] as const) : []),
             ...(isBroadcastApproverRole(profile.role) ? ([['pending', 'Pending approval']] as const) : []),
           ] as const
@@ -240,6 +283,11 @@ export function BroadcastsClient({
             {label}
             {id === 'feed' && unread > 0 ? (
               <span className="ml-1 rounded-full bg-white/20 px-1.5 text-xs">{unread}</span>
+            ) : null}
+            {id === 'submitted' && submittedPendingCount > 0 ? (
+              <span className="ml-1 rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-950">
+                {submittedPendingCount}
+              </span>
             ) : null}
           </button>
         ))}
@@ -336,9 +384,11 @@ export function BroadcastsClient({
             role={profile.role}
             departments={scopedDepts}
             categoriesByDept={categoriesByDept}
-            onCreated={() => {
-              setTab('feed');
+            onCreated={(outcome) => {
               void loadMeta();
+              if (outcome === 'submitted_for_approval') setTab('submitted');
+              else if (outcome === 'draft_saved') setTab('drafts');
+              else setTab('feed');
             }}
           />
         </div>
@@ -354,6 +404,16 @@ export function BroadcastsClient({
             {draftOnlyRole ? '✏ New draft' : '✏ New broadcast'}
           </button>
           <DraftsScheduledList supabase={supabase} userId={profile.id} mode="draft" />
+        </div>
+      ) : null}
+
+      {tab === 'submitted' && composeAllowed ? (
+        <div className="space-y-4 px-5 py-6 sm:px-[28px]">
+          <p className="max-w-xl text-sm leading-relaxed text-[#6b6b6b]">
+            These messages are waiting for an approver in your organisation. You’ll see them on the feed once
+            they’re approved. If one is rejected, it won’t be sent — check with your manager if you’re unsure.
+          </p>
+          <MySubmissionsPendingList supabase={supabase} userId={profile.id} />
         </div>
       ) : null}
 
@@ -380,6 +440,68 @@ export function BroadcastsClient({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function MySubmissionsPendingList({
+  supabase,
+  userId,
+}: {
+  supabase: import('@supabase/supabase-js').SupabaseClient;
+  userId: string;
+}) {
+  const [rows, setRows] = useState<{ id: string; title: string; updated_at: string | null }[]>([]);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from('broadcasts')
+      .select('id,title,updated_at')
+      .eq('created_by', userId)
+      .eq('status', 'pending_approval')
+      .order('updated_at', { ascending: false });
+    setRows((data ?? []) as typeof rows);
+  }, [supabase, userId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <ul className="space-y-2">
+      {rows.map((r) => (
+        <li
+          key={r.id}
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#d8d8d8] bg-white px-4 py-3 text-sm"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-[#121212]">{(r.title ?? '').trim() || 'Untitled'}</span>
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-950 ring-1 ring-amber-200/80">
+                Awaiting approval
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-[#6b6b6b]">
+              Last updated{' '}
+              {r.updated_at
+                ? new Date(r.updated_at).toLocaleString(undefined, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })
+                : '—'}
+            </p>
+          </div>
+          <Link
+            href={`/broadcasts/${r.id}`}
+            className="shrink-0 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-1.5 text-xs font-medium text-[#121212] transition hover:bg-[#f5f4f1]"
+          >
+            Open
+          </Link>
+        </li>
+      ))}
+      {rows.length === 0 ? (
+        <p className="text-sm text-[#6b6b6b]">Nothing waiting for approval right now.</p>
+      ) : null}
+    </ul>
   );
 }
 

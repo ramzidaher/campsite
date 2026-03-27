@@ -1,5 +1,6 @@
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
 export default async function SettingsPage({
   searchParams,
@@ -18,7 +19,7 @@ export default async function SettingsPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return null;
+    redirect('/login');
   }
   const { data: profile } = await supabase
     .from('profiles')

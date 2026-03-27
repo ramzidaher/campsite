@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { isStaffDiscountVerifierRole } from '../_shared/staff_discount_verifier_roles.ts';
 import {
   decodePayload,
   parseTokenString,
@@ -93,8 +94,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const r = scanner.role as string;
-  if (!['manager', 'org_admin', 'super_admin', 'duty_manager'].includes(r)) {
+  if (!isStaffDiscountVerifierRole(scanner.role as string)) {
     return new Response(JSON.stringify({ error: 'Not allowed to verify cards' }), {
       status: 403,
       headers: { ...cors, 'Content-Type': 'application/json' },

@@ -13,6 +13,8 @@ type Row = {
   org_id: string;
   title: string;
   body: string;
+  /** When not `sent`, we skip read receipts and may show status UI. */
+  status?: string;
   sent_at: string | null;
   is_mandatory?: boolean;
   is_pinned?: boolean;
@@ -30,6 +32,10 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
 
   useEffect(() => {
     if (marked) return;
+    if (initial.status && initial.status !== 'sent') {
+      setMarked(true);
+      return;
+    }
     void (async () => {
       const offline = typeof navigator !== 'undefined' && !navigator.onLine;
       if (offline) {
@@ -96,6 +102,19 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
       </Link>
 
       <div className="mt-6 rounded-2xl border border-[var(--campsite-border)] bg-white p-6 shadow-[0_1px_3px_rgba(18,18,18,0.06)] sm:p-8">
+        {initial.status === 'pending_approval' ? (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-semibold">Awaiting approval</p>
+            <p className="mt-1 text-amber-950/90">
+              This message is not on the organisation feed yet. An approver still needs to publish or reject it.
+              Track it anytime from{' '}
+              <Link href="/broadcasts?tab=submitted" className="font-medium text-amber-950 underline decoration-amber-800/40 underline-offset-2">
+                Sent for approval
+              </Link>
+              .
+            </p>
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           {initial.is_pinned ? (
             <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-950">

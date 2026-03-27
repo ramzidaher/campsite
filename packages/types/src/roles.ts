@@ -43,7 +43,15 @@ export function isApproverRole(role: string | null | undefined): boolean {
   return isOrgAdminRole(role) || role === 'manager' || role === 'coordinator';
 }
 
-/** Staff discount QR verification (scanner) — org admin, manager, duty manager. */
+/** Department manager workspace (`/manager` layout + shell link). Not org admin. */
+export function isManagerRole(role: string | null | undefined): boolean {
+  return role?.trim() === 'manager';
+}
+
+/**
+ * Staff discount QR verification (scanner) — org admin, manager, duty manager.
+ * Edge Function allowlist: `supabase/functions/_shared/staff_discount_verifier_roles.ts`
+ */
 export function canVerifyStaffDiscountQr(role: string | null | undefined): boolean {
   return isOrgAdminRole(role) || role === 'manager' || role === 'duty_manager';
 }

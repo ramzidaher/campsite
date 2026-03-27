@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { authColors } from '@/constants/authTheme';
 import { useAuth } from '@/lib/AuthContext';
 
-/** Deep-link target for magic link / password recovery (tokens handled in AuthProvider). */
+/** Deep-link target for email confirmation / password recovery (tokens handled in AuthProvider). */
 export default function AuthCallbackScreen() {
   const router = useRouter();
   const { session, loading } = useAuth();

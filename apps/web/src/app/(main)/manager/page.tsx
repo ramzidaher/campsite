@@ -1,6 +1,7 @@
 import { ManagerDashboardClient } from '@/components/admin/ManagerDashboardClient';
 import { endOfWeekExclusive, startOfWeekMonday } from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
+import { isManagerRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function ManagerDashboardPage() {
@@ -16,7 +17,7 @@ export default async function ManagerDashboardPage() {
     .eq('id', user.id)
     .single();
 
-  if (!profile?.org_id || profile.status !== 'active' || profile.role !== 'manager') {
+  if (!profile?.org_id || profile.status !== 'active' || !isManagerRole(profile.role)) {
     redirect('/broadcasts');
   }
 

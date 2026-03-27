@@ -1,9 +1,9 @@
 import { RotaSyncHistory } from '@/components/admin/RotaSyncHistory';
 import { SheetsImportWizard } from '@/components/admin/SheetsImportWizard';
 import { createClient } from '@/lib/supabase/server';
-import { isOrgAdminRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
+/** Access control: parent `admin/layout.tsx` (org admin, active, org_id). This page only loads `org_id` for the wizard. */
 export default async function RotaImportPage() {
   const supabase = await createClient();
   const {
@@ -13,15 +13,11 @@ export default async function RotaImportPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, role, status')
+    .select('org_id')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile?.org_id) redirect('/login');
-  if (profile.status !== 'active') redirect('/pending');
-  if (!isOrgAdminRole(profile.role)) {
-    redirect('/broadcasts');
-  }
+  if (!profile?.org_id) redirect('/broadcasts');
 
   return (
     <>

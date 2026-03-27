@@ -1,6 +1,7 @@
 import { AdminUsersClient } from '@/components/admin/AdminUsersClient';
 import { createClient } from '@/lib/supabase/server';
 import { canManageOrgUsers } from '@/lib/adminGates';
+import { rolesAssignableOnApprove } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function AdminUsersPage({
@@ -95,8 +96,11 @@ export default async function AdminUsersPage({
     }
   }
 
+  const assignableRoles = rolesAssignableOnApprove(profile.role as string);
+
   return (
     <AdminUsersClient
+      assignableRoles={assignableRoles}
       initialRows={filtered.map((p) => ({
         id: p.id as string,
         full_name: p.full_name as string,

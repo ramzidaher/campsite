@@ -1,23 +1,28 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { createClient } from '@/lib/supabase/client';
 import {
-  CAMPSITES,
-  CS_MEMBERS,
-  CS_ROTA,
-  type BroadcastRow,
-  type Campsite,
-  type CampsiteStatus,
-  escapeHtml,
-  getActivity,
-  getBroadcasts,
-  GLOBAL_MEMBERS,
-  PENDING_GLOBAL,
-  type PendingRow,
-  ROTA_GLOBAL,
-} from '@/components/founders/mockData';
+  deactivatePlatformOrg,
+  deletePlatformOrgUser,
+  permanentlyDeletePlatformOrg,
+} from '@/app/(founders)/founders/platform-actions';
+import {
+  type FounderMember,
+  type FounderOrg,
+  type FounderOrgProfile,
+  parseFounderOrgProfiles,
+} from '@/components/founders/founderTypes';
+import { type BroadcastRow, escapeHtml, getBroadcasts, ROTA_GLOBAL } from '@/components/founders/mockData';
+import { relTime } from '@/lib/format/relTime';
+import {
+  isValidWorkspaceSlug,
+  normalizeWorkspaceSlugInput,
+  suggestSlugFromOrganisationName,
+} from '@/lib/org/slug';
+import { createClient } from '@/lib/supabase/client';
+import { tenantAdminDashboardUrl } from '@/lib/tenant/adminUrl';
 
 export type FounderHqUser = {
   displayName: string;
@@ -49,6 +54,13 @@ function greeting(hour: number, firstName: string) {
 }
 
 const ROLE_MAP: Record<string, string> = {
+  org_admin: 'rb-admin',
+  manager: 'rb-mgr',
+  coordinator: 'rb-coord',
+  administrator: 'rb-coord',
+  duty_manager: 'rb-mgr',
+  csa: 'rb-staff',
+  society_leader: 'rb-coord',
   admin: 'rb-admin',
   mgr: 'rb-mgr',
   coord: 'rb-coord',
@@ -56,64 +68,123 @@ const ROLE_MAP: Record<string, string> = {
 };
 
 const ROLE_LBL: Record<string, string> = {
+  org_admin: 'Org admin',
+  manager: 'Manager',
+  coordinator: 'Coordinator',
+  administrator: 'Administrator',
+  duty_manager: 'Duty manager',
+  csa: 'CSA',
+  society_leader: 'Society leader',
   admin: 'Super Admin',
   mgr: 'Manager',
   coord: 'Coordinator',
   staff: 'Weekly Paid',
 };
 
-function statusCls(s: CampsiteStatus) {
-  if (s === 'open') return 'cs-open';
-  if (s === 'seasonal') return 'cs-seasonal';
-  return 'cs-closed';
+type OrgStatusFilter = 'all' | 'open' | 'closed';
+
+function orgStatusFilter(o: FounderOrg, f: OrgStatusFilter): boolean {
+  if (f === 'all') return true;
+  if (f === 'open') return o.is_active;
+  return !o.is_active;
 }
 
-function statusLabel(s: CampsiteStatus) {
-  if (s === 'open') return '● Open';
-  if (s === 'seasonal') return '◐ Seasonal';
-  return '○ Closed';
+function statusClsFromOrg(o: FounderOrg) {
+  return o.is_active ? 'cs-open' : 'cs-closed';
 }
 
-export function FounderHqApp({ user }: { user: FounderHqUser }) {
+function statusLabelFromOrg(o: FounderOrg) {
+  return o.is_active ? '● Active' : '○ Inactive';
+}
+
+function memberInitials(name: string) {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  if (p.length === 0) return '?';
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
+}
+
+function formatJoined(iso: string) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return '—';
+  }
+}
+
+export function FounderHqApp({
+  user,
+  initialOrgs,
+  initialAllMembers,
+  loadError,
+}: {
+  user: FounderHqUser;
+  initialOrgs: FounderOrg[];
+  initialAllMembers: FounderMember[];
+  loadError?: string;
+}) {
+  const router = useRouter();
+  const [orgs, setOrgs] = useState<FounderOrg[]>(initialOrgs);
+  const [allMembers, setAllMembers] = useState<FounderMember[]>(initialAllMembers);
+
+  useEffect(() => {
+    setOrgs(initialOrgs);
+  }, [initialOrgs]);
+  useEffect(() => {
+    setAllMembers(initialAllMembers);
+  }, [initialAllMembers]);
+
   const [activePage, setActivePage] = useState<FounderPageKey>('overview');
-  const [csFilter, setCsFilter] = useState<CampsiteStatus | 'all'>('all');
+  const [csFilter, setCsFilter] = useState<OrgStatusFilter>('all');
   const [csQuery, setCsQuery] = useState('');
   const [modal, setModal] = useState<'campsite' | 'new-site' | 'broadcast' | null>(null);
-  const [currentCampsiteId, setCurrentCampsiteId] = useState<number | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [csTab, setCsTab] = useState<'members' | 'rota' | 'broadcasts' | 'settings'>('members');
   const [toast, setToast] = useState<string | null>(null);
   const [flagSheets, setFlagSheets] = useState(true);
   const [flagDiscount, setFlagDiscount] = useState(true);
   const [flagBroadcast, setFlagBroadcast] = useState(true);
   const [flagBeta, setFlagBeta] = useState(false);
-  const [siteBooking, setSiteBooking] = useState(true);
-  const [siteApproval, setSiteApproval] = useState(true);
-  const [sitePublic, setSitePublic] = useState(true);
-  const [pendingList, setPendingList] = useState<PendingRow[]>(() => [...PENDING_GLOBAL]);
   const [memberQuery, setMemberQuery] = useState('');
   const [memberSite, setMemberSite] = useState<string>('all');
   const [memberRole, setMemberRole] = useState<string>('all');
   const [memberStatusTab, setMemberStatusTab] = useState<'all' | 'active' | 'pending' | 'inactive'>('all');
-  const [newSite, setNewSite] = useState({
+  const [newSite, setNewSite] = useState({ name: '', slug: '' });
+  const [newSiteSlugTouched, setNewSiteSlugTouched] = useState(false);
+  const [creatingOrg, setCreatingOrg] = useState(false);
+  const [modalOrgMembers, setModalOrgMembers] = useState<FounderOrgProfile[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersLoadErr, setMembersLoadErr] = useState<string | null>(null);
+  const [settingsDraft, setSettingsDraft] = useState({
     name: '',
-    region: '',
-    country: 'England',
-    status: 'Open' as 'Open' | 'Seasonal' | 'Closed',
-    managerEmail: '',
+    slug: '',
+    logo_url: '',
+    is_active: true,
   });
+  const [permanentDeleteConfirm, setPermanentDeleteConfirm] = useState('');
+  const [busySaveOrg, setBusySaveOrg] = useState(false);
+  const [busyDeactivate, setBusyDeactivate] = useState(false);
+  const [busyHardDelete, setBusyHardDelete] = useState(false);
+  const [busyRemoveUserId, setBusyRemoveUserId] = useState<string | null>(null);
+  const firstOrgId = orgs[0]?.id ?? '';
   const [broadcastDraft, setBroadcastDraft] = useState({
     title: '',
     audience: 'all' as 'all' | 'site',
-    siteId: CAMPSITES[0]?.id ?? 1,
+    siteId: firstOrgId,
     body: '',
   });
   const [sentBroadcasts, setSentBroadcasts] = useState<BroadcastRow[]>([]);
+
+  useEffect(() => {
+    if (broadcastDraft.siteId || !orgs[0]?.id) return;
+    setBroadcastDraft((d) => ({ ...d, siteId: orgs[0]!.id }));
+  }, [orgs, broadcastDraft.siteId]);
 
   const broadcasts = useMemo(() => {
     const base = getBroadcasts(user.displayName);
     return [...sentBroadcasts, ...base];
   }, [sentBroadcasts, user.displayName]);
-  const activity = useMemo(() => getActivity(user.displayName), [user.displayName]);
 
   const hour = new Date().getHours();
   const heroGreeting = `${greeting(hour, user.firstName)} ☀️`;
@@ -141,102 +212,192 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
     setActivePage(page);
   }, []);
 
-  const filteredCampsites = useMemo(() => {
+  const totalMemberCount = allMembers.length;
+  const activeOrgCount = useMemo(() => orgs.filter((o) => o.is_active).length, [orgs]);
+  const totalBroadcasts = useMemo(() => orgs.reduce((s, o) => s + o.broadcast_count, 0), [orgs]);
+  const inactiveOrgCount = useMemo(() => orgs.filter((o) => !o.is_active).length, [orgs]);
+  const pendingMembers = useMemo(
+    () => allMembers.filter((m) => m.status === 'pending'),
+    [allMembers]
+  );
+  const pendingApprovalsCount = pendingMembers.length;
+  const activeMembersCount = useMemo(
+    () => allMembers.filter((m) => m.status === 'active').length,
+    [allMembers]
+  );
+
+  const platformActivityLines = useMemo(() => {
+    type Raw = { at: number; key: string; icon: string; html: string };
+    const raw: Raw[] = [];
+    for (const o of orgs) {
+      const at = Date.parse(o.created_at);
+      if (!Number.isNaN(at)) {
+        raw.push({
+          at,
+          key: `org-${o.id}`,
+          icon: '⛺',
+          html: `Organisation <strong>${escapeHtml(o.name)}</strong> <span style="color:var(--text3)">(${escapeHtml(o.slug)})</span>`,
+        });
+      }
+    }
+    for (const m of allMembers) {
+      const at = Date.parse(m.created_at);
+      if (Number.isNaN(at)) continue;
+      const st = m.status === 'pending' ? 'pending approval' : m.status;
+      raw.push({
+        at,
+        key: `mem-${m.id}`,
+        icon: m.status === 'pending' ? '⏳' : '👤',
+        html: `<strong>${escapeHtml(m.full_name)}</strong> · ${escapeHtml(m.org_name)} <span style="color:var(--text3)">(${escapeHtml(st)})</span>`,
+      });
+    }
+    return raw
+      .sort((a, b) => b.at - a.at)
+      .slice(0, 12)
+      .map((r) => ({
+        key: r.key,
+        icon: r.icon,
+        html: r.html,
+        time: relTime(new Date(r.at).toISOString()),
+      }));
+  }, [orgs, allMembers]);
+
+  const platformAlerts = useMemo(() => {
+    type A = { kind: 'warn' | 'info' | 'success'; html: string };
+    const out: A[] = [];
+    for (const o of orgs.filter((x) => !x.is_active).slice(0, 3)) {
+      out.push({
+        kind: 'warn',
+        html: `<strong>${escapeHtml(o.name)}</strong> is inactive — tenants cannot use this workspace.`,
+      });
+    }
+    if (pendingApprovalsCount > 0) {
+      out.push({
+        kind: 'info',
+        html: `${pendingApprovalsCount} profile${pendingApprovalsCount === 1 ? '' : 's'} with <strong>pending</strong> status across organisations.`,
+      });
+    }
+    if (out.length === 0) {
+      out.push({
+        kind: 'success',
+        html: 'No inactive organisations and no pending profiles in the snapshot.',
+      });
+    }
+    return out;
+  }, [orgs, pendingApprovalsCount]);
+
+  const snapshotOrgBars = useMemo(() => {
+    const sorted = [...orgs].sort((a, b) => b.user_count - a.user_count).slice(0, 6);
+    const max = Math.max(1, sorted[0]?.user_count ?? 1);
+    return sorted.map((o, i) => ({
+      key: o.id,
+      label: o.name,
+      n: o.user_count,
+      h: Math.max(8, Math.round((o.user_count / max) * 44)),
+      highlight: i === 0 && sorted.length > 0,
+    }));
+  }, [orgs]);
+
+  const growthSitesReal = useMemo(() => {
+    const cutoff = Date.now() - 30 * 86400000;
+    const map = new Map<string, number>();
+    for (const m of allMembers) {
+      const t = Date.parse(m.created_at);
+      if (Number.isNaN(t) || t < cutoff) continue;
+      map.set(m.org_id, (map.get(m.org_id) ?? 0) + 1);
+    }
+    return [...orgs]
+      .filter((o) => o.is_active)
+      .map((c) => ({ c, n: map.get(c.id) ?? 0 }))
+      .sort((a, b) => b.n - a.n || b.c.user_count - a.c.user_count)
+      .slice(0, 8);
+  }, [orgs, allMembers]);
+
+  const filteredOrgs = useMemo(() => {
     const q = csQuery.toLowerCase().trim();
-    return CAMPSITES.filter((c) => {
-      if (csFilter !== 'all' && c.status !== csFilter) return false;
+    return orgs.filter((o) => {
+      if (!orgStatusFilter(o, csFilter)) return false;
       if (!q) return true;
-      return `${c.name} ${c.location}`.toLowerCase().includes(q);
+      return `${o.name} ${o.slug}`.toLowerCase().includes(q);
     });
-  }, [csFilter, csQuery]);
+  }, [orgs, csFilter, csQuery]);
 
-  const topCampsites = useMemo(() => {
-    return [...CAMPSITES]
-      .filter((c) => c.status !== 'closed')
-      .sort((a, b) => b.revenue - a.revenue)
+  const topOrgs = useMemo(() => {
+    return [...orgs]
+      .filter((o) => o.is_active)
+      .sort((a, b) => b.user_count - a.user_count)
       .slice(0, 5);
-  }, []);
-
-  const monthlyVals = [58, 63, 71, 62, 74, 87];
-  const monthlyMax = Math.max(...monthlyVals);
+  }, [orgs]);
 
   const revenueSites = useMemo(() => {
-    const sites = CAMPSITES.filter((c) => c.revenue > 0).sort((a, b) => b.revenue - a.revenue);
-    const max = sites[0]?.revenue ?? 1;
+    const sites = [...orgs].filter((o) => o.user_count > 0).sort((a, b) => b.user_count - a.user_count);
+    const max = sites[0]?.user_count ?? 1;
     return { sites, max };
-  }, []);
+  }, [orgs]);
 
   const revenueTrend = [58000, 63000, 71000, 62000, 74000, 87400];
   const revenueTrendMax = Math.max(...revenueTrend);
 
-  const growthSites = useMemo(() => {
-    const sites = CAMPSITES.filter((c) => c.status !== 'closed').slice(0, 8);
-    const newSignups = [8, 5, 12, 3, 6, 9, 4, 7];
-    return sites.map((c, i) => ({ c, n: newSignups[i] ?? 0 }));
-  }, []);
-
-  const pendingCount = pendingList.length;
+  const growthBarMax = useMemo(() => Math.max(1, ...growthSitesReal.map((x) => x.n), 1), [growthSitesReal]);
 
   const memberSiteOptions = useMemo(() => {
-    const names = [...new Set(CAMPSITES.map((c) => c.name))].sort();
+    const names = [...new Set(orgs.map((o) => o.name))].sort();
     return ['all', ...names];
-  }, []);
+  }, [orgs]);
 
   const filteredMembers = useMemo(() => {
     const q = memberQuery.toLowerCase().trim();
-    return GLOBAL_MEMBERS.filter((m) => {
-      if (memberSite !== 'all' && m.site !== memberSite) return false;
+    return allMembers.filter((m) => {
+      if (memberSite !== 'all' && m.org_name !== memberSite) return false;
       if (memberRole !== 'all' && m.role !== memberRole) return false;
       if (memberStatusTab !== 'all' && m.status !== memberStatusTab) return false;
       if (!q) return true;
-      return `${m.name} ${m.email} ${m.site}`.toLowerCase().includes(q);
+      const em = m.email ?? '';
+      return `${m.full_name} ${em} ${m.org_name}`.toLowerCase().includes(q);
     });
-  }, [memberQuery, memberSite, memberRole, memberStatusTab]);
+  }, [allMembers, memberQuery, memberSite, memberRole, memberStatusTab]);
 
-  const auditExtra = useMemo(
-    () => [
-      {
-        icon: '⚙️',
-        html: `Platform settings updated by <strong>${escapeHtml(user.displayName)}</strong> — billing renewed`,
-        time: '25 Mar, 09:00',
-      },
-      {
-        icon: '⛺',
-        html: `Campsite <strong>Saltmarsh Edge</strong> created by <strong>${escapeHtml(user.displayName)}</strong>`,
-        time: '24 Mar, 14:22',
-      },
-      {
-        icon: '🔒',
-        html: "<strong>Chloe Jensen</strong>'s account deactivated by <strong>Tom Wilson</strong>",
-        time: '24 Mar, 10:00',
-      },
-    ],
-    [user.displayName]
+  const currentOrg: FounderOrg | undefined = useMemo(
+    () => orgs.find((x) => x.id === selectedOrgId),
+    [orgs, selectedOrgId]
   );
 
-  const currentCampsite: Campsite | undefined = useMemo(
-    () => CAMPSITES.find((x) => x.id === currentCampsiteId),
-    [currentCampsiteId]
-  );
+  useEffect(() => {
+    if (modal !== 'campsite' || !selectedOrgId) return;
+    let cancelled = false;
+    (async () => {
+      setMembersLoading(true);
+      setMembersLoadErr(null);
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc('platform_org_profiles_list', { p_org_id: selectedOrgId });
+      if (cancelled) return;
+      setMembersLoading(false);
+      if (error) {
+        setMembersLoadErr(error.message);
+        setModalOrgMembers([]);
+        return;
+      }
+      setModalOrgMembers(parseFounderOrgProfiles(data));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [modal, selectedOrgId]);
 
-  const modalMembers = useMemo(() => {
-    if (!currentCampsite) return [];
-    const id = currentCampsite.id;
-    const fromCs = CS_MEMBERS[id];
-    if (fromCs) return fromCs;
-    return [
-      { initials: currentCampsite.mgr_init, name: currentCampsite.mgr, role: 'admin' as const, status: 'active' as const },
-      { initials: 'ST', name: 'Staff Member', role: 'staff' as const, status: 'active' as const },
-    ];
-  }, [currentCampsite]);
+  const modalRota = useMemo(() => ROTA_GLOBAL.slice(0, 3), []);
 
-  const modalRota = useMemo(() => {
-    if (!currentCampsite) return [];
-    return CS_ROTA[currentCampsite.id] ?? ROTA_GLOBAL.slice(0, 3);
-  }, [currentCampsite]);
-
-  const openCampsiteDetail = (id: number) => {
-    setCurrentCampsiteId(id);
+  const openOrgDetail = (id: string) => {
+    const o = orgs.find((x) => x.id === id);
+    if (o) {
+      setSettingsDraft({
+        name: o.name,
+        slug: o.slug,
+        logo_url: o.logo_url ?? '',
+        is_active: o.is_active,
+      });
+      setPermanentDeleteConfirm('');
+    }
+    setSelectedOrgId(id);
     setCsTab('members');
     setModal('campsite');
   };
@@ -248,22 +409,112 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
   };
 
   const openCampsiteAdmin = () => {
+    const o = orgs.find((c) => c.id === selectedOrgId);
     setModal(null);
-    const name = CAMPSITES.find((c) => c.id === currentCampsiteId)?.name ?? 'site';
-    showToast(`⛺ Opening Site Admin for ${name}`);
+    if (!o) {
+      showToast('Organisation not found');
+      return;
+    }
+    window.location.href = tenantAdminDashboardUrl(o.slug);
   };
 
-  const approvePending = (email: string) => {
-    const row = pendingList.find((p) => p.email === email);
-    setPendingList((list) => list.filter((p) => p.email !== email));
-    showToast(`✅ Approved ${row?.name ?? 'member'}`);
-  };
+  async function saveOrgSettings() {
+    if (!selectedOrgId) return;
+    const slug = normalizeWorkspaceSlugInput(settingsDraft.slug);
+    if (!isValidWorkspaceSlug(slug)) {
+      showToast('Enter a valid subdomain slug (2–63 chars, lowercase letters, numbers, hyphens).');
+      return;
+    }
+    setBusySaveOrg(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('organisations')
+      .update({
+        name: settingsDraft.name.trim(),
+        slug,
+        logo_url: settingsDraft.logo_url.trim() ? settingsDraft.logo_url.trim() : null,
+        is_active: settingsDraft.is_active,
+      })
+      .eq('id', selectedOrgId);
+    setBusySaveOrg(false);
+    if (error) {
+      showToast(error.message);
+      return;
+    }
+    setOrgs((prev) =>
+      prev.map((o) =>
+        o.id === selectedOrgId
+          ? {
+              ...o,
+              name: settingsDraft.name.trim(),
+              slug,
+              logo_url: settingsDraft.logo_url.trim() ? settingsDraft.logo_url.trim() : null,
+              is_active: settingsDraft.is_active,
+            }
+          : o
+      )
+    );
+    showToast('Organisation saved');
+    router.refresh();
+  }
 
-  const rejectPending = (email: string) => {
-    const row = pendingList.find((p) => p.email === email);
-    setPendingList((list) => list.filter((p) => p.email !== email));
-    showToast(`Rejected: ${row?.name ?? 'request'}`);
-  };
+  async function handleDeactivateOrg() {
+    if (!selectedOrgId) return;
+    setBusyDeactivate(true);
+    const r = await deactivatePlatformOrg(selectedOrgId);
+    setBusyDeactivate(false);
+    if (!r.ok) {
+      showToast(r.error);
+      return;
+    }
+    setSettingsDraft((s) => ({ ...s, is_active: false }));
+    setOrgs((prev) => prev.map((o) => (o.id === selectedOrgId ? { ...o, is_active: false } : o)));
+    showToast('Organisation deactivated');
+    router.refresh();
+  }
+
+  async function handlePermanentDeleteOrg() {
+    if (!selectedOrgId || !currentOrg) return;
+    if (permanentDeleteConfirm.trim() !== currentOrg.name.trim()) {
+      showToast('Type the organisation name exactly to confirm deletion.');
+      return;
+    }
+    setBusyHardDelete(true);
+    const r = await permanentlyDeletePlatformOrg(selectedOrgId);
+    setBusyHardDelete(false);
+    if (!r.ok) {
+      showToast(r.error);
+      return;
+    }
+    showToast('Organisation permanently deleted');
+    setModal(null);
+    setSelectedOrgId(null);
+    setOrgs((prev) => prev.filter((o) => o.id !== selectedOrgId));
+    setAllMembers((prev) => prev.filter((m) => m.org_id !== selectedOrgId));
+    router.refresh();
+  }
+
+  async function handleRemoveMember(orgId: string, profileUserId: string) {
+    setBusyRemoveUserId(profileUserId);
+    const r = await deletePlatformOrgUser(orgId, profileUserId);
+    setBusyRemoveUserId(null);
+    if (!r.ok) {
+      showToast(r.error);
+      return;
+    }
+    showToast('User removed');
+    setModalOrgMembers((prev) => prev.filter((m) => m.id !== profileUserId));
+    setAllMembers((prev) => prev.filter((m) => m.id !== profileUserId));
+    setOrgs((prev) =>
+      prev.map((o) => (o.id === orgId ? { ...o, user_count: Math.max(0, o.user_count - 1) } : o))
+    );
+    router.refresh();
+  }
+
+  useEffect(() => {
+    if (newSiteSlugTouched || !newSite.name.trim()) return;
+    setNewSite((s) => ({ ...s, slug: suggestSlugFromOrganisationName(s.name) }));
+  }, [newSite.name, newSiteSlugTouched]);
 
   const submitBroadcast = () => {
     const title = broadcastDraft.title.trim();
@@ -271,11 +522,11 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
       showToast('Add a broadcast title');
       return;
     }
-    const cs = CAMPSITES.find((c) => c.id === broadcastDraft.siteId);
+    const site = orgs.find((c) => c.id === broadcastDraft.siteId);
     const reach =
       broadcastDraft.audience === 'all'
-        ? 'All 348 members'
-        : `${cs?.name ?? 'Site'} · ${cs?.members ?? 0} members`;
+        ? `All ${totalMemberCount} members`
+        : `${site?.name ?? 'Organisation'} · ${site?.user_count ?? 0} members`;
     setSentBroadcasts((prev) => [
       {
         icon: '📡',
@@ -289,21 +540,53 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
     setBroadcastDraft({
       title: '',
       audience: 'all',
-      siteId: CAMPSITES[0]?.id ?? 1,
+      siteId: orgs[0]?.id ?? '',
       body: '',
     });
     setModal(null);
     showToast('📡 Broadcast sent');
   };
 
-  const createNewSite = () => {
+  const createNewSite = async () => {
     if (!newSite.name.trim()) {
-      showToast('Enter a site name');
+      showToast('Enter an organisation name');
       return;
     }
-    showToast(`⛺ Campsite “${newSite.name.trim()}” created ✓`);
-    setNewSite({ name: '', region: '', country: 'England', status: 'Open', managerEmail: '' });
+    const slug = normalizeWorkspaceSlugInput(newSite.slug || suggestSlugFromOrganisationName(newSite.name));
+    if (!isValidWorkspaceSlug(slug)) {
+      showToast('Enter a valid subdomain slug (2–63 chars).');
+      return;
+    }
+    setCreatingOrg(true);
+    const supabase = createClient();
+    const { data: row, error } = await supabase
+      .from('organisations')
+      .insert({ name: newSite.name.trim(), slug, is_active: true })
+      .select('id, name, slug, is_active, created_at, logo_url')
+      .single();
+    setCreatingOrg(false);
+    if (error) {
+      showToast(error.message);
+      return;
+    }
+    if (row) {
+      const added: FounderOrg = {
+        id: row.id as string,
+        name: row.name as string,
+        slug: row.slug as string,
+        is_active: Boolean(row.is_active),
+        created_at: (row.created_at as string) ?? '',
+        logo_url: (row.logo_url as string | null) ?? null,
+        user_count: 0,
+        broadcast_count: 0,
+      };
+      setOrgs((prev) => [...prev, added]);
+    }
+    showToast(`Organisation “${newSite.name.trim()}” created`);
+    setNewSite({ name: '', slug: '' });
+    setNewSiteSlugTouched(false);
     setModal(null);
+    router.refresh();
   };
 
   const NavBtn = ({
@@ -361,15 +644,21 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
         <div className="nav-section">
           <div className="nav-label">Overview</div>
           <NavBtn page="overview" icon="◈" label="Company Overview" />
-          <NavBtn page="campsites" icon="⛺" label="All Campsites" badge={String(CAMPSITES.length)} badgeClass="nb-gold" />
+          <NavBtn page="campsites" icon="⛺" label="All Campsites" badge={String(orgs.length)} badgeClass="nb-gold" />
           <NavBtn page="revenue" icon="₤" label="Revenue & Finance" />
           <NavBtn page="growth" icon="↗" label="Growth & Analytics" />
 
           <div className="nav-label" style={{ marginTop: 4 }}>
             Operations
           </div>
-          <NavBtn page="members" icon="◎" label="All Members" badge={String(GLOBAL_MEMBERS.length)} badgeClass="nb-muted" />
-          <NavBtn page="pending-global" icon="⏳" label="Pending Approvals" badge={String(pendingCount)} badgeClass="nb-red" />
+          <NavBtn page="members" icon="◎" label="All Members" badge={String(totalMemberCount)} badgeClass="nb-muted" />
+          <NavBtn
+            page="pending-global"
+            icon="⏳"
+            label="Pending Approvals"
+            badge={String(pendingApprovalsCount)}
+            badgeClass="nb-red"
+          />
           <NavBtn page="broadcasts-hq" icon="📡" label="Broadcasts HQ" />
           <NavBtn page="rota-hq" icon="📅" label="Rota Overview" />
 
@@ -395,6 +684,22 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
       </div>
 
       <div className="main">
+        {loadError ? (
+          <div
+            role="alert"
+            style={{
+              margin: '0 0 12px 0',
+              padding: '12px 16px',
+              background: 'var(--surface2)',
+              border: '1px solid #f87171',
+              borderRadius: 8,
+              fontSize: 13,
+              color: 'var(--text)',
+            }}
+          >
+            <strong>Could not load platform data:</strong> {loadError}
+          </div>
+        ) : null}
         <div className="topbar">
           <div className="topbar-breadcrumb">
             <button type="button" className="bc-home" onClick={() => navTo('overview')}>
@@ -424,7 +729,9 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
               <div className="overview-hero-top">
                 <div>
                   <div className="hero-title">{heroGreeting}</div>
-                  <div className="hero-sub">Here&apos;s your live company pulse across all 12 campsites.</div>
+                  <div className="hero-sub">
+                    Here&apos;s your live company pulse across {orgs.length} organisation{orgs.length === 1 ? '' : 's'}.
+                  </div>
                 </div>
                 <div className="hero-time">
                   <div style={{ color: 'var(--text3)', fontSize: 11.5 }}>Today</div>
@@ -433,24 +740,24 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
               </div>
               <div className="hero-metrics">
                 <div className="hero-metric">
-                  <div className="hm-val">12</div>
-                  <div className="hm-lbl">Active Sites</div>
+                  <div className="hm-val">{activeOrgCount}</div>
+                  <div className="hm-lbl">Active orgs</div>
                 </div>
                 <div className="hero-metric">
-                  <div className="hm-val">348</div>
-                  <div className="hm-lbl">Total Members</div>
+                  <div className="hm-val">{totalMemberCount}</div>
+                  <div className="hm-lbl">Total members</div>
                 </div>
                 <div className="hero-metric">
-                  <div className="hm-val">£87.4k</div>
-                  <div className="hm-lbl">MRR</div>
+                  <div className="hm-val">{totalBroadcasts}</div>
+                  <div className="hm-lbl">Broadcasts (all orgs)</div>
                 </div>
                 <div className="hero-metric">
-                  <div className="hm-val">94.2%</div>
-                  <div className="hm-lbl">Avg Occupancy</div>
+                  <div className="hm-val">{activeMembersCount}</div>
+                  <div className="hm-lbl">Active members</div>
                 </div>
                 <div className="hero-metric">
-                  <div className="hm-val">{pendingCount}</div>
-                  <div className="hm-lbl">Pending Actions</div>
+                  <div className="hm-val">{pendingApprovalsCount}</div>
+                  <div className="hm-lbl">Pending profiles</div>
                 </div>
               </div>
             </div>
@@ -458,50 +765,67 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             <div className="stats-row">
               <div className="stat-card">
                 <div className="stat-label">
-                  Total Revenue (YTD) <span className="stat-icon">💷</span>
+                  Organisations <span className="stat-icon">⛺</span>
                 </div>
-                <div className="stat-value">£1.04M</div>
+                <div className="stat-value">{orgs.length}</div>
                 <div className="stat-sub">
-                  <span className="up">↑ 22%</span> &nbsp;vs last year
+                  <span className="up">{activeOrgCount} active</span>
+                  {inactiveOrgCount > 0 ? ` · ${inactiveOrgCount} inactive` : ''}
                 </div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-gold" style={{ width: '72%' }} />
+                  <div
+                    className="stat-bar-fill fill-gold"
+                    style={{
+                      width: `${orgs.length ? Math.min(100, Math.round((activeOrgCount / orgs.length) * 100)) : 0}%`,
+                    }}
+                  />
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">
-                  Total Members <span className="stat-icon">👤</span>
+                  Total members <span className="stat-icon">👤</span>
                 </div>
-                <div className="stat-value">348</div>
+                <div className="stat-value">{totalMemberCount}</div>
                 <div className="stat-sub">
-                  <span className="up">+38</span> &nbsp;this month
+                  {activeMembersCount} active · {pendingApprovalsCount} pending
                 </div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-green" style={{ width: '81%' }} />
+                  <div
+                    className="stat-bar-fill fill-green"
+                    style={{
+                      width: `${totalMemberCount ? Math.min(100, Math.round((activeMembersCount / totalMemberCount) * 100)) : 0}%`,
+                    }}
+                  />
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">
-                  Avg Bookings / Site <span className="stat-icon">📅</span>
+                  Broadcasts (sent) <span className="stat-icon">📡</span>
                 </div>
-                <div className="stat-value">189</div>
-                <div className="stat-sub">
-                  <span className="up">↑ 11%</span> &nbsp;vs last month
-                </div>
+                <div className="stat-value">{totalBroadcasts}</div>
+                <div className="stat-sub">Across all organisations</div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-blue" style={{ width: '63%' }} />
+                  <div
+                    className="stat-bar-fill fill-blue"
+                    style={{
+                      width: `${Math.min(100, Math.max(8, totalBroadcasts > 0 ? Math.round((totalBroadcasts / (totalBroadcasts + 20)) * 100) : 6))}%`,
+                    }}
+                  />
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">
-                  Net Promoter Score <span className="stat-icon">⭐</span>
+                  Pending approvals <span className="stat-icon">⏳</span>
                 </div>
-                <div className="stat-value">78</div>
-                <div className="stat-sub">
-                  <span className="up">↑ 4pts</span> &nbsp;since Jan
-                </div>
+                <div className="stat-value">{pendingApprovalsCount}</div>
+                <div className="stat-sub">Profiles with pending status</div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-purple" style={{ width: '78%' }} />
+                  <div
+                    className="stat-bar-fill fill-purple"
+                    style={{
+                      width: `${Math.min(100, Math.max(6, pendingApprovalsCount > 0 ? Math.round((pendingApprovalsCount / Math.max(pendingApprovalsCount, 12)) * 100) : 6))}%`,
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -511,20 +835,22 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                 <div className="card">
                   <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
                     <div className="section-head" style={{ margin: 0 }}>
-                      <div className="section-title">Top Performing Campsites</div>
+                      <div className="section-title">Largest organisations (by members)</div>
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => navTo('campsites')}>
                         View all →
                       </button>
                     </div>
                   </div>
                   <div className="card-pad" style={{ paddingTop: 14 }}>
-                    {topCampsites.map((c, i) => (
+                    {topOrgs.map((c, i) => {
+                      const maxU = Math.max(1, topOrgs[0]?.user_count ?? 1);
+                      return (
                       <div
                         key={c.id}
                         className="perf-row"
                         style={{ cursor: 'pointer' }}
-                        onClick={() => openCampsiteDetail(c.id)}
-                        onKeyDown={(e) => e.key === 'Enter' && openCampsiteDetail(c.id)}
+                        onClick={() => openOrgDetail(c.id)}
+                        onKeyDown={(e) => e.key === 'Enter' && openOrgDetail(c.id)}
                         role="button"
                         tabIndex={0}
                       >
@@ -541,34 +867,40 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                         </div>
                         <div className="perf-label">
                           {c.name}
-                          <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>{c.location}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>{c.slug}</div>
                         </div>
                         <div className="perf-bar-wrap">
-                          <div className="perf-bar" style={{ width: `${Math.round((c.revenue / 11200) * 100)}%` }} />
+                          <div className="perf-bar" style={{ width: `${Math.round((c.user_count / maxU) * 100)}%` }} />
                         </div>
-                        <div className="perf-val">£{(c.revenue / 1000).toFixed(1)}k</div>
+                        <div className="perf-val">{c.user_count}</div>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 </div>
 
                 <div className="card">
                   <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
                     <div className="section-head" style={{ margin: 0 }}>
-                      <div className="section-title">Cross-Site Activity</div>
-                      <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>Last 24 hours</span>
+                      <div className="section-title">Recent activity</div>
+                      <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>From live org &amp; profile data</span>
                     </div>
                   </div>
                   <div className="card-pad" style={{ paddingTop: 6, paddingBottom: 6 }}>
-                    {activity.map((a, idx) => (
-                      <div key={idx} className="activity-item">
-                        <div className="activity-icon">{a.icon}</div>
-                        <div>
-                          <div className="activity-text" dangerouslySetInnerHTML={{ __html: a.html }} />
-                          <div className="activity-time">{a.time}</div>
-                        </div>
+                    {platformActivityLines.length === 0 ? (
+                      <div style={{ fontSize: 13, color: 'var(--text2)', padding: '10px 0' }}>
+                        No organisations or members yet — activity will appear here as you onboard tenants.
                       </div>
-                    ))}
+                    ) : (
+                      platformActivityLines.map((a) => (
+                        <div key={a.key} className="activity-item">
+                          <div className="activity-icon">{a.icon}</div>
+                          <div>
+                            <div className="activity-text" dangerouslySetInnerHTML={{ __html: a.html }} />
+                            <div className="activity-time">{a.time}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -577,60 +909,56 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                 <div>
                   <div className="section-head">
                     <div className="section-title">Alerts</div>
-                    <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>3 active</span>
+                    <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>{platformAlerts.length} from data</span>
                   </div>
-                  <div className="alert alert-warn">
-                    ⚠️{' '}
-                    <span>
-                      <strong>Lakeside Peak</strong> — occupancy at 102%, overbooking risk
-                    </span>
-                  </div>
-                  <div className="alert alert-info">
-                    ℹ️{' '}
-                    <span>
-                      <strong>Birchwood Valley</strong> — awaiting licence renewal (12 days)
-                    </span>
-                  </div>
-                  <div className="alert alert-success">
-                    ✓{' '}
-                    <span>
-                      <strong>Glenshee Highlands</strong> — just passed safety inspection
-                    </span>
-                  </div>
+                  {platformAlerts.map((a, i) => (
+                    <div
+                      key={i}
+                      className={a.kind === 'warn' ? 'alert alert-warn' : a.kind === 'info' ? 'alert alert-info' : 'alert alert-success'}
+                    >
+                      {a.kind === 'warn' ? '⚠️' : a.kind === 'info' ? 'ℹ️' : '✓'}{' '}
+                      <span dangerouslySetInnerHTML={{ __html: a.html }} />
+                    </div>
+                  ))}
                 </div>
 
                 <div className="card card-pad">
                   <div className="section-head" style={{ marginBottom: 10 }}>
-                    <div className="section-title">Monthly Revenue</div>
-                    <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>Mar 2026</span>
+                    <div className="section-title">Members by organisation</div>
+                    <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>Top {snapshotOrgBars.length} by headcount</span>
                   </div>
-                  <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--accent)' }}>£87.4k</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--green)', marginTop: 2 }}>↑ 18% vs Feb</div>
+                  <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--accent)' }}>{totalMemberCount}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 2 }}>Total members on the platform</div>
                   <div className="mini-chart">
-                    {monthlyVals.map((v, i) => (
-                      <div
-                        key={i}
-                        className={`bar${i === 5 ? ' highlight' : ''}`}
-                        style={{ height: Math.max(8, (v / monthlyMax) * 44) }}
-                        title={`£${v}k`}
-                      />
-                    ))}
+                    {snapshotOrgBars.length === 0 ? (
+                      <div style={{ fontSize: 12, color: 'var(--text3)', paddingTop: 8 }}>No organisations yet</div>
+                    ) : (
+                      snapshotOrgBars.map((b) => (
+                        <div
+                          key={b.key}
+                          className={`bar${b.highlight ? ' highlight' : ''}`}
+                          style={{ height: b.h }}
+                          title={`${b.label}: ${b.n} members`}
+                        />
+                      ))
+                    )}
                   </div>
                   <div
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      fontSize: 10,
+                      fontSize: 9,
                       color: 'var(--text3)',
                       marginTop: 5,
+                      gap: 4,
+                      flexWrap: 'wrap',
                     }}
                   >
-                    <span>Oct</span>
-                    <span>Nov</span>
-                    <span>Dec</span>
-                    <span>Jan</span>
-                    <span>Feb</span>
-                    <span style={{ color: 'var(--gold2)', fontWeight: 600 }}>Mar</span>
+                    {snapshotOrgBars.map((b) => (
+                      <span key={b.key} style={{ maxWidth: 72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={b.label}>
+                        {b.label}
+                      </span>
+                    ))}
                   </div>
                 </div>
 
@@ -640,7 +968,7 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                     <button type="button" className="btn btn-ghost btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => navTo('pending-global')}>
-                      ⏳ &nbsp;Review {pendingCount} pending approval{pendingCount === 1 ? '' : 's'}
+                      ⏳ &nbsp;Review {pendingApprovalsCount} pending approval{pendingApprovalsCount === 1 ? '' : 's'}
                     </button>
                     <button type="button" className="btn btn-ghost btn-sm" style={{ justifyContent: 'flex-start' }} onClick={() => setModal('new-site')}>
                       ⛺ &nbsp;Add new campsite
@@ -666,66 +994,75 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
           <div className="page-inner">
             <div className="section-head" style={{ marginBottom: 20 }}>
               <div>
-                <div className="page-title">All Campsites</div>
-                <div className="page-sub">12 locations — click any site to open its admin dashboard</div>
+                <div className="page-title">All organisations</div>
+                <div className="page-sub">
+                  {orgs.length} tenant{orgs.length === 1 ? '' : 's'} — click to manage members and settings
+                </div>
               </div>
               <button type="button" className="btn btn-primary" onClick={() => setModal('new-site')}>
-                + Add Campsite
+                + Add organisation
               </button>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
               <div className="search-bar" style={{ width: 240 }}>
                 <span style={{ color: 'var(--text3)', fontSize: 12 }}>🔍</span>
-                <input type="text" placeholder="Search sites…" value={csQuery} onChange={(e) => setCsQuery(e.target.value)} />
+                <input type="text" placeholder="Search…" value={csQuery} onChange={(e) => setCsQuery(e.target.value)} />
               </div>
-              {(['all', 'open', 'seasonal', 'closed'] as const).map((f) => (
+              {(['all', 'open', 'closed'] as const).map((f) => (
                 <button
                   key={f}
                   type="button"
                   className={`filter-pill${csFilter === f ? ' active' : ''}`}
                   onClick={() => setCsFilter(f)}
                 >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'closed' ? 'Inactive' : f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
               ))}
-              <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)' }}>Sorted by revenue ↓</div>
+              <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)' }}>Sorted by name</div>
             </div>
 
             <div className="campsite-grid">
-              {filteredCampsites.map((c) => (
-                <div key={c.id} className="campsite-card" onClick={() => openCampsiteDetail(c.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && openCampsiteDetail(c.id)}>
+              {[...filteredOrgs].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
+                <div
+                  key={c.id}
+                  className="campsite-card"
+                  onClick={() => openOrgDetail(c.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && openOrgDetail(c.id)}
+                >
                   <div className="campsite-header">
                     <div>
                       <div className="campsite-name">{c.name}</div>
-                      <div className="campsite-location">📍 {c.location}</div>
+                      <div className="campsite-location">📍 {c.slug}</div>
                     </div>
-                    <span className={`campsite-status ${statusCls(c.status)}`}>{statusLabel(c.status)}</span>
+                    <span className={`campsite-status ${statusClsFromOrg(c)}`}>{statusLabelFromOrg(c)}</span>
                   </div>
                   <div className="campsite-body">
                     <div className="campsite-metrics">
                       <div className="cm-item">
-                        <div className="cm-val">{c.members}</div>
+                        <div className="cm-val">{c.user_count}</div>
                         <div className="cm-lbl">Members</div>
                       </div>
                       <div className="cm-item">
-                        <div className="cm-val">{c.status === 'closed' ? '—' : c.bookings}</div>
+                        <div className="cm-val">{c.broadcast_count}</div>
+                        <div className="cm-lbl">Broadcasts</div>
+                      </div>
+                      <div className="cm-item">
+                        <div className="cm-val">—</div>
                         <div className="cm-lbl">Bookings</div>
                       </div>
                       <div className="cm-item">
-                        <div className="cm-val">{c.status === 'closed' ? '—' : `£${(c.revenue / 1000).toFixed(1)}k`}</div>
+                        <div className="cm-val">—</div>
                         <div className="cm-lbl">Revenue</div>
-                      </div>
-                      <div className="cm-item">
-                        <div className="cm-val">{c.status === 'closed' ? '—' : `${c.occ}%`}</div>
-                        <div className="cm-lbl">Occupancy</div>
                       </div>
                     </div>
                   </div>
                   <div className="campsite-footer">
                     <div className="campsite-mgr">
-                      <div className="cm-av">{c.mgr_init}</div>
-                      {c.mgr}
+                      <div className="cm-av">{c.slug.slice(0, 2).toUpperCase()}</div>
+                      {c.slug}.localhost
                     </div>
                     <span className="campsite-arrow">→</span>
                   </div>
@@ -783,19 +1120,19 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="card">
                 <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
-                  <div className="section-title">Revenue by Site (March)</div>
+                  <div className="section-title">Members by organisation</div>
                 </div>
                 <div className="card-pad" style={{ paddingTop: 14 }}>
                   {revenueSites.sites.map((c) => (
                     <div key={c.id} className="perf-row">
                       <div className="perf-label">
                         {c.name}
-                        <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>{c.location}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>{c.slug}</div>
                       </div>
                       <div className="perf-bar-wrap" style={{ width: 120 }}>
-                        <div className="perf-bar" style={{ width: `${Math.round((c.revenue / revenueSites.max) * 100)}%` }} />
+                        <div className="perf-bar" style={{ width: `${Math.round((c.user_count / revenueSites.max) * 100)}%` }} />
                       </div>
-                      <div className="perf-val">£{(c.revenue / 1000).toFixed(1)}k</div>
+                      <div className="perf-val">{c.user_count}</div>
                     </div>
                   ))}
                 </div>
@@ -915,20 +1252,24 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
 
             <div className="card card-pad">
               <div className="section-title" style={{ marginBottom: 16 }}>
-                Member Signups by Site (March)
+                New members (last 30 days)
               </div>
-              {growthSites.map(({ c, n }) => (
-                <div key={c.id} className="perf-row">
-                  <div className="perf-label">
-                    {c.name}
-                    <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>+{n} new members</div>
+              {growthSitesReal.length === 0 ? (
+                <div style={{ fontSize: 13, color: 'var(--text2)' }}>No new profiles created in the last 30 days.</div>
+              ) : (
+                growthSitesReal.map(({ c, n }) => (
+                  <div key={c.id} className="perf-row">
+                    <div className="perf-label">
+                      {c.name}
+                      <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>{c.slug}</div>
+                    </div>
+                    <div className="perf-bar-wrap" style={{ width: 180 }}>
+                      <div className="perf-bar" style={{ width: `${Math.round((n / growthBarMax) * 100)}%` }} />
+                    </div>
+                    <div className="perf-val">{n}</div>
                   </div>
-                  <div className="perf-bar-wrap" style={{ width: 180 }}>
-                    <div className="perf-bar" style={{ width: `${Math.round((n / 12) * 100)}%` }} />
-                  </div>
-                  <div className="perf-val">{n}</div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -937,7 +1278,10 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
         <div className={`page${activePage === 'members' ? ' active' : ''}`}>
           <div className="page-inner">
             <div className="page-title">All Members</div>
-            <div className="page-sub">348 members across 12 campsites — global view</div>
+            <div className="page-sub">
+              {totalMemberCount} member{totalMemberCount === 1 ? '' : 's'} across {orgs.length} organisation
+              {orgs.length === 1 ? '' : 's'} — global view
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
               <div className="search-bar" style={{ width: 240 }}>
@@ -952,16 +1296,19 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
               <select className="fh-muted-select" value={memberSite} onChange={(e) => setMemberSite(e.target.value)}>
                 {memberSiteOptions.map((s) => (
                   <option key={s} value={s}>
-                    {s === 'all' ? 'All campsites' : s}
+                    {s === 'all' ? 'All organisations' : s}
                   </option>
                 ))}
               </select>
               <select className="fh-muted-select" value={memberRole} onChange={(e) => setMemberRole(e.target.value)}>
                 <option value="all">All roles</option>
-                <option value="admin">Super Admin</option>
-                <option value="mgr">Manager</option>
-                <option value="coord">Coordinator</option>
-                <option value="staff">Weekly Paid</option>
+                <option value="org_admin">Org admin</option>
+                <option value="manager">Manager</option>
+                <option value="coordinator">Coordinator</option>
+                <option value="administrator">Administrator</option>
+                <option value="duty_manager">Duty manager</option>
+                <option value="csa">CSA</option>
+                <option value="society_leader">Society leader</option>
               </select>
               {(['all', 'active', 'pending', 'inactive'] as const).map((tab) => (
                 <button
@@ -981,7 +1328,7 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                   <thead>
                     <tr>
                       <th>Member</th>
-                      <th>Campsite</th>
+                      <th>Organisation</th>
                       <th>Role</th>
                       <th>Status</th>
                       <th>Joined</th>
@@ -997,17 +1344,17 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                       </tr>
                     ) : (
                       filteredMembers.map((m) => (
-                        <tr key={m.email}>
+                        <tr key={m.id}>
                           <td>
                             <div className="td-name">
-                              <div className="td-av">{m.initials}</div>
+                              <div className="td-av">{memberInitials(m.full_name)}</div>
                               <div>
-                                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{m.name}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.email}</div>
+                                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{m.full_name}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.email ?? '—'}</div>
                               </div>
                             </div>
                           </td>
-                          <td style={{ color: 'var(--text2)' }}>{m.site}</td>
+                          <td style={{ color: 'var(--text2)' }}>{m.org_name}</td>
                           <td>
                             <span className={`rb ${ROLE_MAP[m.role] ?? 'rb-staff'}`}>{ROLE_LBL[m.role] ?? m.role}</span>
                           </td>
@@ -1017,10 +1364,15 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                               {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
                             </span>
                           </td>
-                          <td style={{ color: 'var(--text3)' }}>{m.joined}</td>
+                          <td style={{ color: 'var(--text3)' }}>{formatJoined(m.created_at)}</td>
                           <td>
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => showToast('Opening member…')}>
-                              Edit
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              disabled={busyRemoveUserId === m.id}
+                              onClick={() => void handleRemoveMember(m.org_id, m.id)}
+                            >
+                              {busyRemoveUserId === m.id ? '…' : 'Remove'}
                             </button>
                           </td>
                         </tr>
@@ -1038,49 +1390,50 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
           <div className="page-inner">
             <div className="page-title">Pending Approvals</div>
             <div className="page-sub">
-              {pendingCount === 0
+              {pendingApprovalsCount === 0
                 ? 'No members awaiting approval'
-                : `${pendingCount} member${pendingCount === 1 ? '' : 's'} awaiting approval across all campsites`}
+                : `${pendingApprovalsCount} profile${pendingApprovalsCount === 1 ? '' : 's'} with pending status across all organisations`}
             </div>
             <div className="card">
               <div className="table-wrap">
-                {pendingCount === 0 ? (
+                {pendingApprovalsCount === 0 ? (
                   <div className="card-pad" style={{ color: 'var(--text2)', fontSize: 13 }}>
-                    You&apos;re all caught up — new requests will appear here.
+                    You&apos;re all caught up — new requests will appear here when registrations use pending approval.
                   </div>
                 ) : (
                   <table>
                     <thead>
                       <tr>
                         <th>Member</th>
-                        <th>Campsite</th>
-                        <th>Role Requested</th>
+                        <th>Organisation</th>
+                        <th>Role</th>
                         <th>Submitted</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {pendingList.map((p) => (
-                        <tr key={p.email}>
+                      {pendingMembers.map((p) => (
+                        <tr key={p.id}>
                           <td>
                             <div className="td-name">
-                              <div className="td-av">{p.initials}</div>
+                              <div className="td-av">{memberInitials(p.full_name)}</div>
                               <div>
-                                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{p.name}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{p.email}</div>
+                                <div style={{ fontWeight: 500, color: 'var(--text)' }}>{p.full_name}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{p.email ?? '—'}</div>
                               </div>
                             </div>
                           </td>
-                          <td style={{ color: 'var(--text2)' }}>{p.site}</td>
-                          <td style={{ color: 'var(--text2)' }}>{p.role}</td>
-                          <td style={{ color: 'var(--text3)' }}>{p.time}</td>
-                          <td style={{ display: 'flex', gap: 6, paddingTop: 11 }}>
-                            <button type="button" className="btn btn-success btn-sm" onClick={() => approvePending(p.email)}>
-                              Approve
-                            </button>
-                            <button type="button" className="btn btn-danger btn-sm" onClick={() => rejectPending(p.email)}>
-                              Reject
-                            </button>
+                          <td style={{ color: 'var(--text2)' }}>{p.org_name}</td>
+                          <td style={{ color: 'var(--text2)' }}>{ROLE_LBL[p.role] ?? p.role}</td>
+                          <td style={{ color: 'var(--text3)' }}>{relTime(p.created_at)}</td>
+                          <td style={{ paddingTop: 11 }}>
+                            <a
+                              className="btn btn-primary btn-sm"
+                              href={tenantAdminDashboardUrl(p.org_slug)}
+                              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+                            >
+                              Open org admin →
+                            </a>
                           </td>
                         </tr>
                       ))}
@@ -1106,7 +1459,8 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             </div>
             <div className="card card-pad">
               <div className="alert alert-info" style={{ marginBottom: 18 }}>
-                ℹ️ As a founder you can broadcast to all 348 members simultaneously, or target by campsite, department, or role.
+                ℹ️ As a founder you can broadcast to all {totalMemberCount} members simultaneously, or target by organisation
+                (UI mock — sending is not wired to live broadcasts yet).
               </div>
               <div className="section-title" style={{ marginBottom: 14 }}>
                 Recent Broadcasts
@@ -1169,20 +1523,24 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
         <div className={`page${activePage === 'audit-hq' ? ' active' : ''}`}>
           <div className="page-inner">
             <div className="page-title">Platform Audit Log</div>
-            <div className="page-sub">All events across all campsites — full admin trail</div>
+            <div className="page-sub">Recent org and profile events from the database (not a full immutable audit trail yet)</div>
             <div className="card card-pad">
               <div className="section-title" style={{ marginBottom: 14 }}>
-                Platform Audit Trail
+                Recent events
               </div>
-              {[...activity, ...auditExtra].map((a, idx) => (
-                <div key={idx} className="activity-item">
-                  <div className="activity-icon">{a.icon}</div>
-                  <div>
-                    <div className="activity-text" dangerouslySetInnerHTML={{ __html: a.html }} />
-                    <div className="activity-time">{a.time}</div>
+              {platformActivityLines.length === 0 ? (
+                <div style={{ fontSize: 13, color: 'var(--text2)' }}>No events to show yet.</div>
+              ) : (
+                platformActivityLines.map((a) => (
+                  <div key={`audit-${a.key}`} className="activity-item">
+                    <div className="activity-icon">{a.icon}</div>
+                    <div>
+                      <div className="activity-text" dangerouslySetInnerHTML={{ __html: a.html }} />
+                      <div className="activity-time">{a.time}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1249,23 +1607,23 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
       </div>
       </div>
 
-      {/* Campsite modal */}
+      {/* Organisation modal */}
       <div
         className={`overlay${modal === 'campsite' ? ' open' : ''}`}
         id="modal-campsite"
         role="presentation"
         onClick={(e) => e.target === e.currentTarget && setModal(null)}
       >
-        {currentCampsite && (
+        {currentOrg && (
           <div className="modal modal-lg">
             <div className="modal-header">
               <div>
-                <div className="modal-title">{currentCampsite.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>📍 {currentCampsite.location}</div>
+                <div className="modal-title">{currentOrg.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>📍 {currentOrg.slug}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button type="button" className="btn btn-primary btn-sm" onClick={openCampsiteAdmin}>
-                  Open Site Admin →
+                  Open org admin →
                 </button>
                 <button type="button" className="modal-close" onClick={() => setModal(null)}>
                   ✕
@@ -1275,23 +1633,25 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             <div className="modal-body">
               <div className="detail-grid">
                 <div className="detail-stat">
-                  <div className="ds-val">{currentCampsite.members}</div>
+                  <div className="ds-val">{currentOrg.user_count}</div>
                   <div className="ds-lbl">Members</div>
                 </div>
                 <div className="detail-stat">
-                  <div className="ds-val">{currentCampsite.status === 'closed' ? '—' : currentCampsite.bookings}</div>
-                  <div className="ds-lbl">Bookings (Month)</div>
+                  <div className="ds-val">{currentOrg.broadcast_count}</div>
+                  <div className="ds-lbl">Broadcasts</div>
                 </div>
                 <div className="detail-stat">
-                  <div className="ds-val">{currentCampsite.status === 'closed' ? '—' : `£${(currentCampsite.revenue / 1000).toFixed(1)}k`}</div>
-                  <div className="ds-lbl">Revenue (Month)</div>
-                  <div className={`ds-trend${currentCampsite.status === 'closed' ? '' : ' up'}`}>↑ 14%&nbsp;&nbsp;vs last month</div>
-                </div>
-                <div className="detail-stat">
-                  <div className="ds-val">{currentCampsite.status === 'closed' ? '—' : `${currentCampsite.occ}%`}</div>
-                  <div className="ds-lbl">Occupancy</div>
+                  <div className="ds-val">—</div>
+                  <div className="ds-lbl">Revenue</div>
                   <div className="ds-trend" style={{ color: 'var(--text3)' }}>
-                    Manager: {currentCampsite.mgr}
+                    Not tracked here
+                  </div>
+                </div>
+                <div className="detail-stat">
+                  <div className="ds-val">{currentOrg.is_active ? 'Active' : 'Inactive'}</div>
+                  <div className="ds-lbl">Status</div>
+                  <div className="ds-trend" style={{ color: 'var(--text3)' }}>
+                    Created {formatJoined(currentOrg.created_at)}
                   </div>
                 </div>
               </div>
@@ -1310,17 +1670,23 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                 </button>
               </div>
               <div style={{ display: csTab === 'members' ? 'block' : 'none' }}>
+                {membersLoading ? (
+                  <p style={{ fontSize: 13, color: 'var(--text2)', padding: '12px 0' }}>Loading members…</p>
+                ) : membersLoadErr ? (
+                  <p style={{ fontSize: 13, color: '#b91c1c', padding: '12px 0' }}>{membersLoadErr}</p>
+                ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
                       <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Member</th>
                       <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Role</th>
                       <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {modalMembers.map((m) => (
-                      <tr key={m.name} style={{ borderBottom: '1px solid var(--border)' }}>
+                    {modalOrgMembers.map((m) => (
+                      <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ padding: '10px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div
@@ -1338,9 +1704,12 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                                 color: 'var(--text3)',
                               }}
                             >
-                              {m.initials}
+                              {memberInitials(m.full_name)}
                             </div>
-                            <span style={{ fontSize: 12.5, color: 'var(--text)' }}>{m.name}</span>
+                            <div>
+                              <div style={{ fontSize: 12.5, color: 'var(--text)' }}>{m.full_name}</div>
+                              <div style={{ fontSize: 10, color: 'var(--text3)' }}>{m.email ?? '—'}</div>
+                            </div>
                           </div>
                         </td>
                         <td style={{ padding: '10px 12px' }}>
@@ -1354,10 +1723,21 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                             {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
                           </span>
                         </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            disabled={busyRemoveUserId === m.id}
+                            onClick={() => void handleRemoveMember(currentOrg.id, m.id)}
+                          >
+                            {busyRemoveUserId === m.id ? '…' : 'Remove'}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                )}
               </div>
               <div style={{ display: csTab === 'rota' ? 'block' : 'none' }}>
                 <div className="alert alert-info">
@@ -1403,28 +1783,87 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                 ))}
               </div>
               <div style={{ display: csTab === 'settings' ? 'block' : 'none' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Booking system active</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>Accept live bookings on this site</div>
-                    </div>
-                    <button type="button" className={`toggle${siteBooking ? ' on' : ''}`} onClick={() => setSiteBooking((v) => !v)} aria-label="Toggle booking" />
+                <p style={{ fontSize: 12, color: '#b45309', marginBottom: 14 }}>
+                  Changing the subdomain slug breaks existing links and bookmarks for this tenant.
+                </p>
+                <div className="field">
+                  <label>Organisation name</label>
+                  <input
+                    type="text"
+                    value={settingsDraft.name}
+                    onChange={(e) => setSettingsDraft((s) => ({ ...s, name: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Subdomain slug</label>
+                  <input
+                    type="text"
+                    value={settingsDraft.slug}
+                    onChange={(e) => {
+                      setSettingsDraft((s) => ({ ...s, slug: e.target.value }));
+                    }}
+                  />
+                </div>
+                <div className="field">
+                  <label>Logo URL (optional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://…"
+                    value={settingsDraft.logo_url}
+                    onChange={(e) => setSettingsDraft((s) => ({ ...s, logo_url: e.target.value }))}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderTop: '1px solid var(--border)', marginTop: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Organisation active</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>Inactive tenants cannot sign in on their subdomain</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Member approval required</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>Managers must approve new members</div>
-                    </div>
-                    <button type="button" className={`toggle${siteApproval ? ' on' : ''}`} onClick={() => setSiteApproval((v) => !v)} aria-label="Toggle approval" />
+                  <button
+                    type="button"
+                    className={`toggle${settingsDraft.is_active ? ' on' : ''}`}
+                    onClick={() => setSettingsDraft((s) => ({ ...s, is_active: !s.is_active }))}
+                    aria-label="Toggle active"
+                  />
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                  <button type="button" className="btn btn-primary" disabled={busySaveOrg} onClick={() => void saveOrgSettings()}>
+                    {busySaveOrg ? 'Saving…' : 'Save changes'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={busyDeactivate || !currentOrg.is_active}
+                    onClick={() => void handleDeactivateOrg()}
+                  >
+                    {busyDeactivate ? '…' : 'Deactivate organisation'}
+                  </button>
+                </div>
+                <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#b91c1c', marginBottom: 8 }}>Danger zone</div>
+                  <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10 }}>
+                    Deletes all member accounts in this organisation, then removes the organisation and related data.
+                    <strong> Platform founders</strong> (users in <code style={{ fontSize: 11 }}>platform_admins</code>) are
+                    not deleted — they are only removed from this org.
+                    Type the organisation name <strong>{currentOrg.name}</strong> to confirm.
+                  </p>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <input
+                      type="text"
+                      placeholder="Organisation name"
+                      value={permanentDeleteConfirm}
+                      onChange={(e) => setPermanentDeleteConfirm(e.target.value)}
+                      autoComplete="off"
+                      aria-label="Type organisation name to confirm permanent deletion"
+                    />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0' }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Public listing</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>Show on the Campsite directory</div>
-                    </div>
-                    <button type="button" className={`toggle${sitePublic ? ' on' : ''}`} onClick={() => setSitePublic((v) => !v)} aria-label="Toggle public listing" />
-                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    disabled={busyHardDelete}
+                    onClick={() => void handlePermanentDeleteOrg()}
+                  >
+                    {busyHardDelete ? 'Deleting…' : 'Permanently delete organisation'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1440,59 +1879,31 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
       >
         <div className="modal">
           <div className="modal-header">
-            <div className="modal-title">Add New Campsite</div>
+            <div className="modal-title">Add organisation</div>
             <button type="button" className="modal-close" onClick={() => setModal(null)}>
               ✕
             </button>
           </div>
           <div className="modal-body">
             <div className="field">
-              <label>Site Name</label>
+              <label>Organisation name</label>
               <input
                 type="text"
-                placeholder="e.g. Heather Moor"
+                placeholder="e.g. Sussex Students Union"
                 value={newSite.name}
                 onChange={(e) => setNewSite((s) => ({ ...s, name: e.target.value }))}
               />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div className="field">
-                <label>County / Region</label>
-                <input
-                  type="text"
-                  placeholder="e.g. North Yorkshire"
-                  value={newSite.region}
-                  onChange={(e) => setNewSite((s) => ({ ...s, region: e.target.value }))}
-                />
-              </div>
-              <div className="field">
-                <label>Country</label>
-                <select value={newSite.country} onChange={(e) => setNewSite((s) => ({ ...s, country: e.target.value }))}>
-                  <option>England</option>
-                  <option>Scotland</option>
-                  <option>Wales</option>
-                  <option>Northern Ireland</option>
-                </select>
-              </div>
-            </div>
             <div className="field">
-              <label>Status</label>
-              <select
-                value={newSite.status}
-                onChange={(e) => setNewSite((s) => ({ ...s, status: e.target.value as typeof newSite.status }))}
-              >
-                <option>Open</option>
-                <option>Seasonal</option>
-                <option>Closed</option>
-              </select>
-            </div>
-            <div className="field">
-              <label>Site Manager Email</label>
+              <label>Subdomain slug</label>
               <input
-                type="email"
-                placeholder="manager@example.com"
-                value={newSite.managerEmail}
-                onChange={(e) => setNewSite((s) => ({ ...s, managerEmail: e.target.value }))}
+                type="text"
+                placeholder="e.g. sussex-union"
+                value={newSite.slug}
+                onChange={(e) => {
+                  setNewSiteSlugTouched(true);
+                  setNewSite((s) => ({ ...s, slug: e.target.value }));
+                }}
               />
             </div>
           </div>
@@ -1500,8 +1911,8 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
             <button type="button" className="btn btn-ghost" onClick={() => setModal(null)}>
               Cancel
             </button>
-            <button type="button" className="btn btn-primary" onClick={createNewSite}>
-              Create Campsite
+            <button type="button" className="btn btn-primary" disabled={creatingOrg} onClick={() => void createNewSite()}>
+              {creatingOrg ? 'Creating…' : 'Create organisation'}
             </button>
           </div>
         </div>
@@ -1537,17 +1948,17 @@ export function FounderHqApp({ user }: { user: FounderHqUser }) {
                 onChange={(e) => setBroadcastDraft((d) => ({ ...d, audience: e.target.value as 'all' | 'site' }))}
               >
                 <option value="all">All members (company-wide)</option>
-                <option value="site">Single campsite</option>
+                <option value="site">Single organisation</option>
               </select>
             </div>
             {broadcastDraft.audience === 'site' && (
               <div className="field">
-                <label>Campsite</label>
+                <label>Organisation</label>
                 <select
                   value={broadcastDraft.siteId}
-                  onChange={(e) => setBroadcastDraft((d) => ({ ...d, siteId: Number(e.target.value) }))}
+                  onChange={(e) => setBroadcastDraft((d) => ({ ...d, siteId: e.target.value }))}
                 >
-                  {CAMPSITES.map((c) => (
+                  {orgs.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>

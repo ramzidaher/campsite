@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { userIdsWithMembershipInDepartments } from '@/lib/admin/pendingApprovalScope';
+
 export type PendingApprovalRow = {
   id: string;
   full_name: string;
@@ -11,20 +13,28 @@ export type PendingApprovalRow = {
   departments: string[];
 };
 
-/** Pending profiles the viewer may approve (managers see only their departments). */
-export async function loadPendingApprovalRows(
+type PendingProfileScoped = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  created_at: string;
+  role: string | null;
+};
+
+/** Pending rows after org + role scope rules; no department-name enrichment. */
+async function scopedPendingProfiles(
   supabase: SupabaseClient,
   viewerId: string,
   orgId: string,
   viewerRole: string
-): Promise<PendingApprovalRow[]> {
+): Promise<PendingProfileScoped[]> {
   const { data: pending } = await supabase
     .from('profiles')
     .select('id,full_name,email,created_at,role')
     .eq('org_id', orgId)
     .eq('status', 'pending');
 
-  let list = pending ?? [];
+  let list = (pending ?? []) as PendingProfileScoped[];
 
   if (viewerRole === 'manager' || viewerRole === 'coordinator') {
     let deptIds: string[] = [];
@@ -38,11 +48,37 @@ export async function loadPendingApprovalRows(
     if (!deptIds.length) {
       list = [];
     } else {
-      const { data: ud } = await supabase.from('user_departments').select('user_id').in('dept_id', deptIds);
-      const allowed = new Set((ud ?? []).map((u) => u.user_id as string));
+      const { data: ud } = await supabase.from('user_departments').select('user_id, dept_id').in('dept_id', deptIds);
+      const allowed = userIdsWithMembershipInDepartments(
+        (ud ?? []) as { user_id: string; dept_id: string }[],
+        deptIds
+      );
       list = list.filter((p) => allowed.has(p.id as string));
     }
   }
+
+  return list;
+}
+
+/** Fast count for nav badges — same scope as {@link loadPendingApprovalRows}, skips per-user dept joins. */
+export async function countPendingApprovalsForViewer(
+  supabase: SupabaseClient,
+  viewerId: string,
+  orgId: string,
+  viewerRole: string
+): Promise<number> {
+  const list = await scopedPendingProfiles(supabase, viewerId, orgId, viewerRole);
+  return list.length;
+}
+
+/** Pending profiles the viewer may approve (managers see only their departments). */
+export async function loadPendingApprovalRows(
+  supabase: SupabaseClient,
+  viewerId: string,
+  orgId: string,
+  viewerRole: string
+): Promise<PendingApprovalRow[]> {
+  const list = await scopedPendingProfiles(supabase, viewerId, orgId, viewerRole);
 
   const ids = list.map((p) => p.id as string);
   const deptNames: Record<string, string[]> = {};
@@ -66,11 +102,11 @@ export async function loadPendingApprovalRows(
   }
 
   return list.map((p) => ({
-    id: p.id as string,
-    full_name: (p.full_name as string) ?? '',
-    email: (p.email as string | null) ?? null,
-    created_at: p.created_at as string,
-    role: (p.role as string) ?? 'csa',
-    departments: deptNames[p.id as string] ?? [],
+    id: p.id,
+    full_name: p.full_name ?? '',
+    email: p.email ?? null,
+    created_at: p.created_at,
+    role: p.role ?? 'unassigned',
+    departments: deptNames[p.id] ?? [],
   }));
 }

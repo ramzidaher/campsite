@@ -1,4 +1,6 @@
 import { FounderHqApp } from '@/components/founders/FounderHqApp';
+import { parseFounderMembers, parseFounderOrgs } from '@/components/founders/founderTypes';
+import { requirePlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -16,12 +18,15 @@ export default async function FoundersPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/founders');
 
-  const { data: pa } = await supabase
-    .from('platform_admins')
-    .select('user_id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  if (!pa) redirect('/');
+  await requirePlatformFounder(supabase, user.id);
+
+  const [{ data: orgRpc, error: orgRpcError }, { data: memRpc, error: memRpcError }] = await Promise.all([
+    supabase.rpc('platform_organisations_list'),
+    supabase.rpc('platform_profiles_list_all'),
+  ]);
+  const initialOrgs = parseFounderOrgs(orgRpc);
+  const initialAllMembers = parseFounderMembers(memRpc);
+  const loadError = [orgRpcError?.message, memRpcError?.message].filter(Boolean).join(' — ') || undefined;
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -44,6 +49,9 @@ export default async function FoundersPage() {
 
   return (
     <FounderHqApp
+      initialOrgs={initialOrgs}
+      initialAllMembers={initialAllMembers}
+      loadError={loadError}
       user={{
         displayName,
         firstName,

@@ -1,5 +1,6 @@
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { loadDashboardHome } from '@/lib/dashboard/loadDashboardHome';
+import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import {
   canComposeBroadcast,
@@ -22,13 +23,18 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id, org_id, role, full_name, status')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile?.org_id) redirect('/login');
+  if (profileError || !profile?.org_id) {
+    if (await isPlatformFounder(supabase, user.id)) {
+      redirect('/founders');
+    }
+    redirect('/login');
+  }
   if (profile.status !== 'active') redirect('/pending');
 
   const role = profile.role as ProfileRole;

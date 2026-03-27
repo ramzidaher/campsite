@@ -55,23 +55,18 @@ export function DashboardHome({
   const statGridLg =
     statTileCount <= 2 ? 'lg:grid-cols-2' : statTileCount === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4';
 
-  const memberFootnote =
-    isAdmin && data.newMembersWeek !== undefined ? (
-      <div className="mt-2 space-y-0.5 text-xs text-[#9b9b9b]">
-        <p>Profiles with active status</p>
-        {data.newMembersWeek > 0 ? (
-          <p>
-            <span className="font-medium text-[#15803d]">↑ {data.newMembersWeek}</span> new this week
-          </p>
-        ) : (
-          <p>No new members in the last 7 days</p>
-        )}
-      </div>
-    ) : (
-      <div className="mt-2 text-xs text-[#9b9b9b]">
-        {membersStatHref ? 'Profiles with active status' : 'In your organisation'}
-      </div>
-    );
+  const statScope = data.dashboardStatScope;
+  const broadcastSentSubline =
+    statScope === 'dept' ? 'Sent in your department(s)' : 'Sent in your organisation';
+  const memberFootnote = (
+    <div className="mt-2 text-xs text-[#9b9b9b]">
+      {statScope === 'dept'
+        ? 'Active members in your department(s)'
+        : membersStatHref
+          ? 'Profiles with active status'
+          : 'In your organisation'}
+    </div>
+  );
 
   const memberTileInner = (
     <>
@@ -135,7 +130,7 @@ export function DashboardHome({
             <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
               {data.broadcastTotal}
             </div>
-            <div className="mt-2 text-xs text-[#9b9b9b]">Sent in your organisation</div>
+            <div className="mt-2 text-xs text-[#9b9b9b]">{broadcastSentSubline}</div>
             {isAdmin && data.broadcastTotal !== undefined ? (
               <StatBar pct={statFillPct(data.broadcastTotal, 200)} />
             ) : null}
