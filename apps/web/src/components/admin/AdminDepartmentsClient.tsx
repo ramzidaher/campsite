@@ -1,5 +1,6 @@
 'use client';
 
+import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -101,19 +102,24 @@ function pillClass(active: boolean) {
 export function AdminDepartmentsClient({
   orgId,
   currentUserId,
+  isOrgAdmin,
   initialDepartments,
   categoriesByDept,
   managersByDept,
   memberCountByDept,
+  membersByDept,
   broadcastPermsByDept,
   staffOptions,
 }: {
   orgId: string;
   currentUserId: string;
+  /** Org admins get full department settings; managers get member management for assigned departments only. */
+  isOrgAdmin: boolean;
   initialDepartments: Dept[];
   categoriesByDept: Record<string, { id: string; name: string }[]>;
   managersByDept: Record<string, { user_id: string; full_name: string }[]>;
   memberCountByDept: Record<string, number>;
+  membersByDept: Record<string, DeptMemberRow[]>;
   broadcastPermsByDept: Record<string, BroadcastPermRow[]>;
   staffOptions: { id: string; full_name: string; role: string }[];
 }) {
@@ -257,13 +263,31 @@ export function AdminDepartmentsClient({
     else void refresh();
   }
 
+  async function addDeptMember(deptId: string, userId: string) {
+    setMsg(null);
+    const { error } = await supabase.from('user_departments').insert({ dept_id: deptId, user_id: userId });
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function removeDeptMember(deptId: string, userId: string) {
+    setMsg(null);
+    const { error } = await supabase.from('user_departments').delete().eq('dept_id', deptId).eq('user_id', userId);
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
       <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Departments</h1>
+          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+            {isOrgAdmin ? 'Departments' : 'Your departments'}
+          </h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Manage all departments, societies and clubs in your organisation
+            {isOrgAdmin
+              ? 'Manage all departments, societies and clubs in your organisation'
+              : 'Departments you manage — view members and update who belongs in each'}
           </p>
           <p className="mt-1 text-[12px] text-[#9b9b9b]">
             {counts.all} total · {counts.department} department{counts.department === 1 ? '' : 's'} ·{' '}
@@ -271,16 +295,18 @@ export function AdminDepartmentsClient({
             {counts.club === 1 ? '' : 's'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setMsg(null);
-            setCreateOpen(true);
-          }}
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
-        >
-          + New Department
-        </button>
+        {isOrgAdmin ? (
+          <button
+            type="button"
+            onClick={() => {
+              setMsg(null);
+              setCreateOpen(true);
+            }}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+          >
+            + New Department
+          </button>
+        ) : null}
       </div>
 
       {msg ? <p className="mb-4 text-sm text-[#b91c1c]">{msg}</p> : null}
@@ -318,8 +344,14 @@ export function AdminDepartmentsClient({
 
       {filteredGrid.length === 0 ? (
         <div className="rounded-xl border border-[#d8d8d8] bg-white px-6 py-14 text-center">
-          <p className="text-[15px] font-medium text-[#6b6b6b]">No departments match</p>
-          <p className="mt-1 text-[13px] text-[#9b9b9b]">Try another filter or add a new department.</p>
+          <p className="text-[15px] font-medium text-[#6b6b6b]">
+            {isOrgAdmin ? 'No departments match' : 'No departments assigned'}
+          </p>
+          <p className="mt-1 text-[13px] text-[#9b9b9b]">
+            {isOrgAdmin
+              ? 'Try another filter or add a new department.'
+              : 'Ask an org admin to assign you as a manager on a department.'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -339,7 +371,7 @@ export function AdminDepartmentsClient({
         </div>
       )}
 
-      {createOpen ? (
+      {isOrgAdmin && createOpen ? (
         <ModalOverlay title="New department" onClose={() => setCreateOpen(false)}>
           <div className="grid gap-3">
             <label className="text-[13px] text-[#121212]">
@@ -400,7 +432,9 @@ export function AdminDepartmentsClient({
           onClose={() => setDetailDept(null)}
         >
           <DeptDetailForm
+            isOrgAdmin={isOrgAdmin}
             dept={detailDept}
+            members={membersByDept[detailDept.id] ?? []}
             categories={categoriesByDept[detailDept.id] ?? []}
             managers={managersByDept[detailDept.id] ?? []}
             staffOptions={staffOptions}
@@ -413,6 +447,8 @@ export function AdminDepartmentsClient({
             onRemoveMgr={(uid) => void removeManager(detailDept.id, uid)}
             onUpsertBroadcastPerm={(perm, minRole) => void upsertBroadcastPerm(detailDept.id, perm, minRole)}
             onRevokeBroadcastPerm={(perm) => void revokeBroadcastPerm(detailDept.id, perm)}
+            onAddMember={(uid) => void addDeptMember(detailDept.id, uid)}
+            onRemoveMember={(uid) => void removeDeptMember(detailDept.id, uid)}
           />
         </ModalOverlay>
       ) : null}
@@ -557,7 +593,9 @@ function ModalOverlay({
 }
 
 function DeptDetailForm({
+  isOrgAdmin,
   dept,
+  members,
   categories,
   managers,
   staffOptions,
@@ -570,8 +608,12 @@ function DeptDetailForm({
   onRemoveMgr,
   onUpsertBroadcastPerm,
   onRevokeBroadcastPerm,
+  onAddMember,
+  onRemoveMember,
 }: {
+  isOrgAdmin: boolean;
   dept: Dept;
+  members: DeptMemberRow[];
   categories: { id: string; name: string }[];
   managers: { user_id: string; full_name: string }[];
   staffOptions: { id: string; full_name: string; role: string }[];
@@ -584,10 +626,13 @@ function DeptDetailForm({
   onRemoveMgr: (userId: string) => void;
   onUpsertBroadcastPerm: (permission: string, minRole: MinRoleOpt) => void;
   onRevokeBroadcastPerm: (permission: string) => void;
+  onAddMember: (userId: string) => void;
+  onRemoveMember: (userId: string) => void;
 }) {
   const [edit, setEdit] = useState(dept);
   const [catName, setCatName] = useState('');
   const [mgrPick, setMgrPick] = useState('');
+  const [memberPick, setMemberPick] = useState('');
 
   useEffect(() => {
     setEdit(dept);
@@ -595,56 +640,127 @@ function DeptDetailForm({
 
   return (
     <>
-      <div className="grid gap-3">
-        <label className="text-[13px] text-[#121212]">
-          Name
-          <input
-            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
-            value={edit.name}
-            onChange={(e) => setEdit({ ...edit, name: e.target.value })}
-          />
-        </label>
-        <label className="text-[13px] text-[#121212]">
-          Type
-          <select
-            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
-            value={edit.type}
-            onChange={(e) => setEdit({ ...edit, type: e.target.value })}
-          >
-            <option value="department">Department</option>
-            <option value="society">Society</option>
-            <option value="club">Club</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-[13px] text-[#121212]">
-          <input
-            type="checkbox"
-            className="rounded border-[#d8d8d8]"
-            checked={edit.is_archived}
-            onChange={(e) => setEdit({ ...edit, is_archived: e.target.checked })}
-          />
-          Archived
-        </label>
-        <label className="text-[13px] text-[#121212]">
-          Description
-          <textarea
-            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
-            rows={3}
-            value={edit.description ?? ''}
-            onChange={(e) => setEdit({ ...edit, description: e.target.value || null })}
-          />
-        </label>
-      </div>
-      <button
-        type="button"
-        disabled={busy}
-        className="mt-4 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
-        onClick={() => onSave(edit)}
-      >
-        Save department
-      </button>
+      {!isOrgAdmin ? (
+        <p className="mb-4 text-[12px] leading-snug text-[#6b6b6b]">
+          Name, categories, broadcast rules and department managers are managed by an org admin. You can add or remove
+          members for this department below.
+        </p>
+      ) : null}
 
-      <div className="mt-6 border-t border-[#d8d8d8] pt-4">
+      {isOrgAdmin ? (
+        <>
+          <div className="grid gap-3">
+            <label className="text-[13px] text-[#121212]">
+              Name
+              <input
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+                value={edit.name}
+                onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+              />
+            </label>
+            <label className="text-[13px] text-[#121212]">
+              Type
+              <select
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+                value={edit.type}
+                onChange={(e) => setEdit({ ...edit, type: e.target.value })}
+              >
+                <option value="department">Department</option>
+                <option value="society">Society</option>
+                <option value="club">Club</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-[13px] text-[#121212]">
+              <input
+                type="checkbox"
+                className="rounded border-[#d8d8d8]"
+                checked={edit.is_archived}
+                onChange={(e) => setEdit({ ...edit, is_archived: e.target.checked })}
+              />
+              Archived
+            </label>
+            <label className="text-[13px] text-[#121212]">
+              Description
+              <textarea
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+                rows={3}
+                value={edit.description ?? ''}
+                onChange={(e) => setEdit({ ...edit, description: e.target.value || null })}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            className="mt-4 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+            onClick={() => onSave(edit)}
+          >
+            Save department
+          </button>
+        </>
+      ) : null}
+
+      <div className={`${isOrgAdmin ? 'mt-6' : ''} border-t border-[#d8d8d8] pt-4`}>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Members</p>
+        <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
+          People linked to this department for broadcasts, rota and approvals. Removing them here does not deactivate
+          their account.
+        </p>
+        <ul className="mt-2 max-h-[220px] space-y-1.5 overflow-y-auto text-[13px]">
+          {members.length === 0 ? (
+            <li className="text-[#9b9b9b]">No members yet.</li>
+          ) : (
+            members.map((m) => (
+              <li key={m.user_id} className="flex items-center justify-between gap-2 rounded-md py-0.5">
+                <span className="min-w-0 text-[#121212]">
+                  <span className="font-medium">{m.full_name}</span>
+                  <span className="ml-2 text-[11px] text-[#9b9b9b]">{m.role}</span>
+                </span>
+                <button
+                  type="button"
+                  className="shrink-0 text-[12px] text-[#b91c1c] hover:underline"
+                  onClick={() => onRemoveMember(m.user_id)}
+                >
+                  Remove
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+        <div className="mt-2 flex gap-2">
+          <select
+            className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            value={memberPick}
+            onChange={(e) => setMemberPick(e.target.value)}
+            aria-label="Add member"
+          >
+            <option value="">Add member…</option>
+            {staffOptions
+              .filter((s) => !members.some((m) => m.user_id === s.id))
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.full_name} ({s.role})
+                </option>
+              ))}
+          </select>
+          <button
+            type="button"
+            className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+            onClick={() => {
+              if (memberPick) {
+                onAddMember(memberPick);
+                setMemberPick('');
+              }
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      {isOrgAdmin ? (
+        <>
+          <div className="mt-6 border-t border-[#d8d8d8] pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast permissions</p>
         <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
           Off by default. Grants extra broadcast powers for this department; baseline role rules still apply.
@@ -740,51 +856,66 @@ function DeptDetailForm({
           </button>
         </div>
       </div>
+        </>
+      ) : null}
 
       <div className="mt-6 border-t border-[#d8d8d8] pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Managers</p>
+        <p className="mt-1 text-[12px] text-[#9b9b9b]">
+          {isOrgAdmin
+            ? 'Assign who can approve and manage this department.'
+            : 'Assigned by an org admin. Contact them to change department managers.'}
+        </p>
         <ul className="mt-2 space-y-1.5 text-[13px]">
-          {managers.map((m) => (
-            <li key={m.user_id} className="flex items-center justify-between gap-2">
-              <span className="text-[#6b6b6b]">{m.full_name}</span>
-              <button
-                type="button"
-                className="text-[12px] text-[#b91c1c] hover:underline"
-                onClick={() => onRemoveMgr(m.user_id)}
-              >
-                Remove
-              </button>
-            </li>
-          ))}
+          {managers.length === 0 ? (
+            <li className="text-[#9b9b9b]">No assigned manager</li>
+          ) : (
+            managers.map((m) => (
+              <li key={m.user_id} className="flex items-center justify-between gap-2">
+                <span className="text-[#6b6b6b]">{m.full_name}</span>
+                {isOrgAdmin ? (
+                  <button
+                    type="button"
+                    className="text-[12px] text-[#b91c1c] hover:underline"
+                    onClick={() => onRemoveMgr(m.user_id)}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </li>
+            ))
+          )}
         </ul>
-        <div className="mt-2 flex gap-2">
-          <select
-            className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
-            value={mgrPick}
-            onChange={(e) => setMgrPick(e.target.value)}
-          >
-            <option value="">Add manager…</option>
-            {staffOptions
-              .filter((s) => !managers.some((m) => m.user_id === s.id))
-              .map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.full_name} ({s.role})
-                </option>
-              ))}
-          </select>
-          <button
-            type="button"
-            className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
-            onClick={() => {
-              if (mgrPick) {
-                onAddMgr(mgrPick);
-                setMgrPick('');
-              }
-            }}
-          >
-            Add
-          </button>
-        </div>
+        {isOrgAdmin ? (
+          <div className="mt-2 flex gap-2">
+            <select
+              className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+              value={mgrPick}
+              onChange={(e) => setMgrPick(e.target.value)}
+            >
+              <option value="">Add manager…</option>
+              {staffOptions
+                .filter((s) => !managers.some((m) => m.user_id === s.id))
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name} ({s.role})
+                  </option>
+                ))}
+            </select>
+            <button
+              type="button"
+              className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              onClick={() => {
+                if (mgrPick) {
+                  onAddMgr(mgrPick);
+                  setMgrPick('');
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+        ) : null}
       </div>
     </>
   );

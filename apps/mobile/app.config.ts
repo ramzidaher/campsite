@@ -72,5 +72,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     orgSlug: process.env.EXPO_PUBLIC_ORG_SLUG ?? '',
     orgDisplayName: process.env.EXPO_PUBLIC_ORG_DISPLAY_NAME ?? '',
     orgHostLabel: process.env.EXPO_PUBLIC_ORG_HOST_LABEL ?? '',
+    /** Public web app origin (no trailing slash) — privacy link on mobile landing, optional. */
+    siteUrl: process.env.EXPO_PUBLIC_SITE_URL ?? '',
   },
 });

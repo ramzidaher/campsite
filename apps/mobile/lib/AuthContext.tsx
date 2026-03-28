@@ -1,11 +1,12 @@
 import type { Session, User } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
-import { useRouter, useSegments } from 'expo-router';
+import { usePathname, useRouter, useSegments } from 'expo-router';
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -27,6 +28,8 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   profile: ProfileRow | null;
+  /** True while fetching profile for the current session (avoids misrouting to register before load). */
+  profileLoading: boolean;
   loading: boolean;
   configured: boolean;
   refreshProfile: () => Promise<void>;
@@ -54,6 +57,7 @@ function parseAuthUrl(url: string) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const configured = isSupabaseConfigured();
   const profileLoadId = useRef(0);
@@ -103,13 +107,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [configured]);
 
+  useLayoutEffect(() => {
+    if (!session?.user || !configured) {
+      setProfileLoading(false);
+      return;
+    }
+    setProfileLoading(true);
+  }, [session?.user?.id, configured]);
+
   useEffect(() => {
     if (!session?.user) {
       setProfile(null);
       return;
     }
-    void refreshProfile();
-  }, [session, session?.user?.id, refreshProfile]);
+    if (!configured) {
+      setProfileLoading(false);
+      return;
+    }
+    let cancelled = false;
+    void refreshProfile().finally(() => {
+      if (!cancelled) setProfileLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, session?.user?.id, refreshProfile, configured]);
 
   useEffect(() => {
     if (!configured) return;
@@ -141,12 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       profile,
+      profileLoading,
       loading,
       configured,
       refreshProfile,
       signOut,
     }),
-    [session, profile, loading, configured, refreshProfile, signOut]
+    [session, profile, profileLoading, loading, configured, refreshProfile, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -159,10 +182,15 @@ export function useAuth() {
 }
 
 /** Expo Router auth redirects — mirrors web home gate (pending / inactive / profile). */
+function isLandingPathname(pathname: string) {
+  return pathname === '/' || pathname === '/index' || pathname === '';
+}
+
 export function useAuthGate() {
   const router = useRouter();
+  const pathname = usePathname() ?? '';
   const segments = useSegments();
-  const { session, profile, loading, configured } = useAuth();
+  const { session, profile, profileLoading, loading, configured } = useAuth();
   const inactiveHandled = useRef(false);
 
   useEffect(() => {
@@ -175,6 +203,7 @@ export function useAuthGate() {
 
   useEffect(() => {
     if (!configured || loading) return;
+    if (session && profileLoading) return;
 
     const s = segments as readonly string[];
     const root = s[0];
@@ -188,8 +217,8 @@ export function useAuthGate() {
     const onRegister = inAuth && second === 'register';
 
     if (!session) {
-      if (inAuth || onAuthCallback) return;
-      router.replace('/(auth)/login');
+      if (inAuth || onAuthCallback || isLandingPathname(pathname)) return;
+      router.replace('/');
       return;
     }
 
@@ -216,8 +245,8 @@ export function useAuthGate() {
       return;
     }
 
-    if (onPendingScreen || inAuth) {
+    if (onPendingScreen || inAuth || isLandingPathname(pathname)) {
       router.replace('/(tabs)');
     }
-  }, [configured, loading, session, profile, segments, router]);
+  }, [configured, loading, profileLoading, session, profile, segments, pathname, router]);
 }
