@@ -114,26 +114,29 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
   const previewTier = rows.find((r) => r.role === previewRole);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <Link href="/settings" className="text-sm text-emerald-400 hover:underline">
+    <div className="mx-auto max-w-3xl space-y-6 px-5 py-7 sm:px-[28px]">
+      <Link
+        href="/settings"
+        className="text-[13px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+      >
         ← Settings
       </Link>
       <div>
-        <h1 className="text-xl font-semibold text-[var(--campsite-text)]">Discount tiers</h1>
-        <p className="mt-1 text-sm text-[var(--campsite-text-secondary)]">
+        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Discount tiers</h1>
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">
           One tier per role. Staff see their tier on the discount card.
         </p>
       </div>
 
-      <section className="rounded-xl border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-4">
-        <h2 className="text-sm font-semibold text-[var(--campsite-text)]">Preview</h2>
-        <p className="mt-1 text-xs text-[var(--campsite-text-secondary)]">
+      <section className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+        <h2 className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">Preview</h2>
+        <p className="mt-1 text-[12.5px] text-[#6b6b6b]">
           This is what the selected role will see on their card (after you save tiers below).
         </p>
-        <label className="mt-3 block text-sm">
+        <label className="mt-3 block text-[13px] font-medium text-[#121212]">
           Role
           <select
-            className="mt-1 w-full rounded-md border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2 py-2"
+            className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
             value={previewRole}
             onChange={(e) => setPreviewRole(e.target.value as ProfileRole)}
           >
@@ -144,21 +147,21 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
             ))}
           </select>
         </label>
-        <div className="mt-3 rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-surface)] p-3 text-sm">
+        <div className="mt-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3 text-[13px]">
           {previewTier ? (
             <>
-              <p className="font-medium text-[var(--campsite-text)]">
+              <p className="font-medium text-[#121212]">
                 You&apos;re entitled to: {previewTier.label}
               </p>
               {previewTier.discount_value ? (
-                <p className="mt-1 text-[var(--campsite-text-secondary)]">{previewTier.discount_value}</p>
+                <p className="mt-1 text-[#6b6b6b]">{previewTier.discount_value}</p>
               ) : null}
               {previewTier.valid_at ? (
-                <p className="mt-1 text-[var(--campsite-text-secondary)]">Valid at: {previewTier.valid_at}</p>
+                <p className="mt-1 text-[#6b6b6b]">Valid at: {previewTier.valid_at}</p>
               ) : null}
             </>
           ) : (
-            <p className="text-[var(--campsite-text-secondary)]">
+            <p className="text-[#6b6b6b]">
               No discount configured. Contact your admin.
             </p>
           )}
@@ -167,40 +170,46 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--campsite-text-muted)]">
-            Tiers
-          </h2>
+          <h2 className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">Tiers</h2>
           <button
             type="button"
             disabled={rolesAvailable.length === 0}
             onClick={() => startNew()}
-            className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+            className="rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-40"
           >
             Add tier
           </button>
         </div>
         {loading ? (
-          <p className="text-sm text-[var(--campsite-text-secondary)]">Loading…</p>
+          <p className="text-[13px] text-[#6b6b6b]">Loading…</p>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-[var(--campsite-text-secondary)]">No tiers yet.</p>
+          <p className="text-[13px] text-[#6b6b6b]">No tiers yet.</p>
         ) : (
           <ul className="space-y-2">
             {rows.map((t) => (
               <li
                 key={t.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--campsite-border)] px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#d8d8d8] bg-white px-3 py-2.5 text-[13px]"
               >
                 <div>
-                  <span className="font-medium capitalize text-[var(--campsite-text)]">
+                  <span className="font-medium capitalize text-[#121212]">
                     {t.role.replace(/_/g, ' ')}
                   </span>
-                  <span className="text-[var(--campsite-text-secondary)]"> — {t.label}</span>
+                  <span className="text-[#6b6b6b]"> — {t.label}</span>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" className="text-emerald-400 hover:underline" onClick={() => startEdit(t)}>
+                  <button
+                    type="button"
+                    className="font-medium text-[#121212] underline underline-offset-2 hover:text-[#000]"
+                    onClick={() => startEdit(t)}
+                  >
                     Edit
                   </button>
-                  <button type="button" className="text-red-400 hover:underline" onClick={() => void remove(t.id)}>
+                  <button
+                    type="button"
+                    className="font-medium text-[#b91c1c] underline underline-offset-2 hover:text-[#991b1b]"
+                    onClick={() => void remove(t.id)}
+                  >
                     Delete
                   </button>
                 </div>
@@ -210,16 +219,16 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
         )}
       </section>
 
-      <section className="rounded-xl border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-4">
-        <h2 className="text-sm font-semibold text-[var(--campsite-text)]">
+      <section className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+        <h2 className="text-[13px] font-semibold text-[#121212]">
           {editing ? 'Edit tier' : 'New tier'}
         </h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
+          <label className="text-[13px] font-medium text-[#121212]">
             Role
             <select
               disabled={!!editing}
-              className="mt-1 w-full rounded-md border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2 py-2 disabled:opacity-60"
+              className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212] disabled:opacity-60"
               value={role}
               onChange={(e) => setRole(e.target.value as ProfileRole)}
             >
@@ -230,39 +239,39 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
               ))}
             </select>
           </label>
-          <label className="text-sm sm:col-span-2">
+          <label className="text-[13px] font-medium text-[#121212] sm:col-span-2">
             Label (shown on card)
             <input
-              className="mt-1 w-full rounded-md border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2 py-2"
+              className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder='e.g. "10% off food and drink"'
             />
           </label>
-          <label className="text-sm">
+          <label className="text-[13px] font-medium text-[#121212]">
             Discount value (display)
             <input
-              className="mt-1 w-full rounded-md border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2 py-2"
+              className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
               value={discountValue}
               onChange={(e) => setDiscountValue(e.target.value)}
               placeholder="10%"
             />
           </label>
-          <label className="text-sm">
+          <label className="text-[13px] font-medium text-[#121212]">
             Valid at (display)
             <input
-              className="mt-1 w-full rounded-md border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2 py-2"
+              className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
               value={validAt}
               onChange={(e) => setValidAt(e.target.value)}
               placeholder="All USSU venues"
             />
           </label>
         </div>
-        {msg ? <p className="mt-3 text-sm text-red-300">{msg}</p> : null}
+        {msg ? <p className="mt-3 text-[13px] text-[#b91c1c]">{msg}</p> : null}
         <button
           type="button"
           onClick={() => void save()}
-          className="mt-4 rounded-md bg-emerald-600 px-4 py-2 text-sm text-white"
+          className="mt-4 rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
         >
           Save tier
         </button>

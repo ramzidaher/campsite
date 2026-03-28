@@ -11,11 +11,11 @@ export async function RotaSyncHistory({ orgId }: { orgId: string }) {
 
   return (
     <section className="mt-10 space-y-3">
-      <h2 className="text-sm font-semibold text-[var(--campsite-text)]">Import history</h2>
-      {error ? <p className="text-sm text-red-300">{error.message}</p> : null}
-      <div className="overflow-x-auto rounded-xl border border-[var(--campsite-border)]">
-        <table className="w-full min-w-[520px] text-left text-sm">
-          <thead className="border-b border-[var(--campsite-border)] bg-[var(--campsite-surface)] text-xs uppercase text-[var(--campsite-text-muted)]">
+      <h2 className="text-[13px] font-semibold text-[#121212]">Import history</h2>
+      {error ? <p className="text-[13px] text-[#b91c1c]">{error.message}</p> : null}
+      <div className="overflow-x-auto rounded-xl border border-[#d8d8d8]">
+        <table className="w-full min-w-[520px] text-left text-[13px]">
+          <thead className="border-b border-[#d8d8d8] bg-[#f5f4f1] text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">
             <tr>
               <th className="px-3 py-2">Started</th>
               <th className="px-3 py-2">Source</th>
@@ -26,19 +26,19 @@ export async function RotaSyncHistory({ orgId }: { orgId: string }) {
           <tbody>
             {!data?.length ? (
               <tr>
-                <td colSpan={4} className="px-3 py-4 text-[var(--campsite-text-secondary)]">
+                <td colSpan={4} className="px-3 py-4 text-[#6b6b6b]">
                   No sync runs yet. Use Import now to record a manual sync.
                 </td>
               </tr>
             ) : (
               data.map((row) => (
-                <tr key={row.id} className="border-b border-[var(--campsite-border)]/60">
-                  <td className="px-3 py-2 text-[var(--campsite-text-secondary)]">
+                <tr key={row.id} className="border-b border-[#d8d8d8]/80">
+                  <td className="px-3 py-2 text-[#6b6b6b]">
                     {row.started_at ? new Date(row.started_at).toLocaleString() : '—'}
                   </td>
                   <td className="px-3 py-2">{row.source}</td>
                   <td className="px-3 py-2">{row.rows_imported}</td>
-                  <td className="px-3 py-2 text-xs text-[var(--campsite-text-muted)]">
+                  <td className="px-3 py-2 text-[12px] text-[#9b9b9b]">
                     {row.error_message ?? (row.finished_at ? '' : 'In progress')}
                   </td>
                 </tr>

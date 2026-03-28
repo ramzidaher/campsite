@@ -35,6 +35,8 @@ function NavLink({
   icon,
   label,
   badge,
+  secondaryBadge,
+  secondaryBadgeTitle,
   exact,
   onNavigate,
 }: {
@@ -42,6 +44,9 @@ function NavLink({
   icon: string;
   label: string;
   badge?: number;
+  /** e.g. broadcasts awaiting approval (shown beside unread). */
+  secondaryBadge?: number;
+  secondaryBadgeTitle?: string;
   /** When true, only this path counts as active (e.g. `/admin` vs `/admin/users`). */
   exact?: boolean;
   onNavigate?: () => void;
@@ -63,11 +68,24 @@ function NavLink({
     >
       <span className="w-5 shrink-0 text-center text-[15px]">{icon}</span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {badge !== undefined && badge > 0 ? (
-        <span className="ml-auto min-w-[18px] shrink-0 rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
-          {badge > 99 ? '99+' : badge}
-        </span>
-      ) : null}
+      <span className="ml-auto flex shrink-0 items-center gap-1">
+        {secondaryBadge !== undefined && secondaryBadge > 0 ? (
+          <span
+            className="min-w-[18px] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-[10px] font-semibold text-amber-950"
+            title={secondaryBadgeTitle ?? 'Needs attention'}
+          >
+            {secondaryBadge > 99 ? '99+' : secondaryBadge}
+          </span>
+        ) : null}
+        {badge !== undefined && badge > 0 ? (
+          <span
+            className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white"
+            title="Unread"
+          >
+            {badge > 99 ? '99+' : badge}
+          </span>
+        ) : null}
+      </span>
     </Link>
   );
 }
@@ -83,6 +101,7 @@ export function AppShell({
   deptLine,
   profileRole,
   unreadBroadcasts,
+  pendingBroadcastApprovals,
   pendingApprovalCount,
   showManager,
   adminNavItems = null,
@@ -100,6 +119,8 @@ export function AppShell({
   deptLine: string | null;
   profileRole: string | null;
   unreadBroadcasts: number;
+  /** Broadcasts in pending_approval the user can approve (managers: scoped depts). */
+  pendingBroadcastApprovals: number;
   pendingApprovalCount: number;
   showManager: boolean;
   adminNavItems?: MainShellAdminNavItem[] | null;
@@ -140,7 +161,7 @@ export function AppShell({
   const closeMobile = () => setMobileNav(false);
 
   return (
-    <div className="campsite-paper flex min-h-screen bg-[var(--campsite-bg)] text-[var(--campsite-text)]">
+    <div className="campsite-paper flex min-h-screen bg-[#faf9f6] text-[#121212]">
       {mobileNav ? (
         <button
           type="button"
@@ -196,6 +217,8 @@ export function AppShell({
               href="/broadcasts"
               icon="📡"
               label="Broadcasts"
+              secondaryBadge={pendingBroadcastApprovals > 0 ? pendingBroadcastApprovals : undefined}
+              secondaryBadgeTitle="Broadcasts awaiting your approval"
               badge={unreadBroadcasts > 0 ? unreadBroadcasts : undefined}
               onNavigate={closeMobile}
             />

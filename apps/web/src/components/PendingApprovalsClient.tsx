@@ -2,7 +2,7 @@
 
 import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -21,15 +21,32 @@ export type PendingRow = {
   full_name: string;
   email: string | null;
   created_at: string;
+  /** Requested role on registration (informational). */
+  role: string;
   departments: string[];
 };
+
+function initials(name: string) {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  if (p.length === 0) return '?';
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
+}
+
+function roleLine(role: string) {
+  return ROLE_LABEL[role] ?? role.replace(/_/g, ' ');
+}
+
+function metaLine(p: PendingRow) {
+  const dept = p.departments.length ? p.departments.join(' · ') : 'No department';
+  return `${dept} · ${roleLine(p.role)}`;
+}
 
 export function PendingApprovalsClient({
   initial,
   viewerRole,
 }: {
   initial: PendingRow[];
-  /** Used to explain scoped queue for managers/coordinators vs org-wide admin list. */
   viewerRole: string;
 }) {
   const router = useRouter();
@@ -37,6 +54,9 @@ export function PendingApprovalsClient({
   const [note, setNote] = useState<Record<string, string>>({});
   const [approveRoleById, setApproveRoleById] = useState<Record<string, ProfileRole>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
 
   const assignableRoles = useMemo(() => rolesAssignableOnApprove(viewerRole), [viewerRole]);
   const defaultApproveRole = useMemo((): ProfileRole => {
@@ -44,12 +64,30 @@ export function PendingApprovalsClient({
     return assignableRoles[0] ?? 'csa';
   }, [assignableRoles]);
 
+  useEffect(() => {
+    setRows(initial);
+    setRejectingId(null);
+    setMsg(null);
+  }, [initial]);
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return rows;
+    return rows.filter(
+      (r) =>
+        r.full_name.toLowerCase().includes(s) ||
+        (r.email ?? '').toLowerCase().includes(s) ||
+        metaLine(r).toLowerCase().includes(s)
+    );
+  }, [rows, q]);
+
   async function refresh() {
     router.refresh();
   }
 
   async function approve(id: string) {
     setBusy(id);
+    setMsg(null);
     try {
       const supabase = createClient();
       const { data: me } = await supabase.auth.getUser();
@@ -62,10 +100,11 @@ export function PendingApprovalsClient({
         p_role: rolePick,
       });
       if (error) {
-        alert(error.message);
+        setMsg(error.message);
         return;
       }
       setRows((r) => r.filter((x) => x.id !== id));
+      setRejectingId(null);
       void refresh();
     } finally {
       setBusy(null);
@@ -74,6 +113,7 @@ export function PendingApprovalsClient({
 
   async function reject(id: string) {
     setBusy(id);
+    setMsg(null);
     try {
       const supabase = createClient();
       const { data: me } = await supabase.auth.getUser();
@@ -85,92 +125,183 @@ export function PendingApprovalsClient({
         p_role: null,
       });
       if (error) {
-        alert(error.message);
+        setMsg(error.message);
         return;
       }
       setRows((r) => r.filter((x) => x.id !== id));
+      setRejectingId(null);
       void refresh();
     } finally {
       setBusy(null);
     }
   }
 
+  const scoped = viewerRole === 'manager' || viewerRole === 'coordinator';
+  const count = rows.length;
+
   if (!rows.length) {
-    const scoped = viewerRole === 'manager' || viewerRole === 'coordinator';
     return (
-      <div className="mt-6 space-y-2 text-sm text-[var(--campsite-text-secondary)]">
-        <p>No pending registrations.</p>
-        {scoped ? (
-          <p className="text-xs leading-relaxed text-[var(--campsite-text-muted)]">
-            You only see people who picked at least one department you manage (managers) or belong to
-            (coordinators). New joiners who chose other teams appear for your{' '}
-            <strong className="font-medium text-[var(--campsite-text-secondary)]">organisation admin</strong>{' '}
-            under Admin → Pending approval or All members (filter: Pending).
+      <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+        <div className="border-b border-[#d8d8d8] px-[18px] py-4">
+          <div className="flex items-center gap-2 text-[14px] font-medium text-[#121212]">
+            Pending verifications
+            <span className="rounded-full bg-[#d8d8d8] px-[7px] py-0.5 text-[10.5px] font-semibold text-[#6b6b6b]">
+              0
+            </span>
+          </div>
+        </div>
+        <div className="px-[18px] py-12 text-center">
+          <p className="text-[15px] font-medium text-[#121212]">No pending registrations</p>
+          <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-[#6b6b6b]">
+            You&apos;re all caught up. New joiners will show here when they request access.
           </p>
-        ) : null}
+          {scoped ? (
+            <div className="mx-auto mt-6 max-w-lg rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-left text-[12.5px] leading-relaxed text-[#6b6b6b]">
+              <p className="font-medium text-[#121212]">Scoped to your departments</p>
+              <p className="mt-1.5">
+                You only see people who picked at least one department you manage (managers) or belong to
+                (coordinators). Joiners who chose other teams appear for your{' '}
+                <span className="font-medium text-[#121212]">organisation admin</span> under Admin → Pending
+                approval or All members (filter: Pending).
+              </p>
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   }
 
   return (
-    <ul className="mt-6 space-y-4">
-      {rows.map((p) => (
-        <li
-          key={p.id}
-          className="rounded-xl border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-4"
-        >
-          <p className="font-medium text-[var(--campsite-text)]">{p.full_name}</p>
-          <p className="text-sm text-[var(--campsite-text-secondary)]">{p.email ?? '—'}</p>
-          <p className="mt-1 text-xs text-[var(--campsite-text-muted)]">
-            Requested {new Date(p.created_at).toLocaleString()}
-          </p>
-          <p className="mt-2 text-sm text-[var(--campsite-text-secondary)]">
-            Departments: {p.departments.length ? p.departments.join(', ') : '—'}
-          </p>
-          <label className="mt-3 block text-xs text-[var(--campsite-text-secondary)]">
-            Role after approval
-            <select
-              className="mt-1 block w-full max-w-xs rounded border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2 py-1.5 text-sm"
-              value={approveRoleById[p.id] ?? defaultApproveRole}
-              onChange={(e) =>
-                setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value as ProfileRole }))
-              }
-            >
-              {assignableRoles.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABEL[r] ?? r.replace(/_/g, ' ')}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="mt-3 block text-xs">
-            Rejection note (optional)
-            <input
-              className="mt-1 w-full rounded border border-[var(--campsite-border)] bg-[var(--campsite-surface)] px-2 py-1 text-sm"
-              value={note[p.id] ?? ''}
-              onChange={(e) => setNote((n) => ({ ...n, [p.id]: e.target.value }))}
-            />
-          </label>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy === p.id}
-              className="rounded-lg bg-[var(--campsite-success)] px-3 py-1.5 text-sm font-medium text-white"
-              onClick={() => void approve(p.id)}
-            >
-              Approve
-            </button>
-            <button
-              type="button"
-              disabled={busy === p.id}
-              className="rounded-lg bg-[var(--campsite-warning)] px-3 py-1.5 text-sm font-medium text-white"
-              onClick={() => void reject(p.id)}
-            >
-              Reject
-            </button>
+    <div>
+      <div className="mb-4 flex h-9 w-full max-w-[280px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3">
+        <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
+          🔍
+        </span>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search name, email, or department…"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
+          aria-label="Search pending members"
+        />
+      </div>
+
+      {msg ? (
+        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-950" role="alert">
+          {msg}
+        </p>
+      ) : null}
+
+      <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+        <div className="flex items-center justify-between gap-3 border-b border-[#d8d8d8] px-[18px] py-4">
+          <div className="flex items-center gap-2 text-[14px] font-medium text-[#121212]">
+            Pending verifications
+            <span className="rounded-full bg-[#E11D48] px-[7px] py-0.5 text-[10.5px] font-bold text-white">
+              {count > 99 ? '99+' : count}
+            </span>
           </div>
-        </li>
-      ))}
-    </ul>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="px-[18px] py-12 text-center text-[13px] text-[#9b9b9b]">No matches for your search.</p>
+        ) : (
+          <ul className="flex flex-col">
+            {filtered.map((p) => {
+              const openReject = rejectingId === p.id;
+              return (
+                <li
+                  key={p.id}
+                  className="flex flex-col gap-3 border-b border-[#d8d8d8] px-[18px] py-3 transition-colors last:border-b-0 hover:bg-[#f5f4f1]/80 sm:flex-row sm:items-center sm:gap-3"
+                >
+                  <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[12px] font-semibold text-[#121212]">
+                      {initials(p.full_name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14px] font-medium text-[#121212]">{p.full_name}</div>
+                      <div className="text-[12.5px] text-[#6b6b6b]">{metaLine(p)}</div>
+                      <div className="mt-0.5 text-[11px] text-[#9b9b9b]">
+                        {p.email ?? '—'} · Requested {new Date(p.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {openReject ? (
+                    <div className="flex w-full flex-col gap-2 sm:max-w-[280px] sm:shrink-0">
+                      <label className="text-[11px] text-[#6b6b6b]">
+                        Rejection note (optional)
+                        <input
+                          className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
+                          value={note[p.id] ?? ''}
+                          onChange={(e) => setNote((n) => ({ ...n, [p.id]: e.target.value }))}
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busy === p.id}
+                          className="rounded-lg bg-[#b91c1c] px-3 py-1.5 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                          onClick={() => void reject(p.id)}
+                        >
+                          Confirm reject
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+                          onClick={() => setRejectingId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+                      <label className="sr-only" htmlFor={`approve-role-${p.id}`}>
+                        Role after approval
+                      </label>
+                      <select
+                        id={`approve-role-${p.id}`}
+                        value={approveRoleById[p.id] ?? defaultApproveRole}
+                        onChange={(e) =>
+                          setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value as ProfileRole }))
+                        }
+                        className="h-9 min-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[12px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
+                      >
+                        {assignableRoles.map((r) => (
+                          <option key={r} value={r}>
+                            {ROLE_LABEL[r] ?? r}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          title="Approve"
+                          disabled={busy === p.id}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#15803d] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                          onClick={() => void approve(p.id)}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          title="Reject"
+                          disabled={busy === p.id}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-[#b91c1c] bg-white text-[15px] font-semibold text-[#b91c1c] transition-colors hover:bg-[#fef2f2] disabled:opacity-50"
+                          onClick={() => setRejectingId(p.id)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }

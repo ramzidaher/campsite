@@ -14,6 +14,8 @@ export default async function SettingsPage({
       : sp.google_error
         ? `Google: ${sp.google_error}`
         : null;
+  const googleFlashTone =
+    sp.google_connected === '1' ? ('success' as const) : sp.google_error ? ('error' as const) : null;
   const supabase = await createClient();
   const {
     data: { user },
@@ -30,15 +32,15 @@ export default async function SettingsPage({
     .single();
 
   return (
-    <div>
-      <h1 className="text-xl font-semibold text-[var(--campsite-text)]">Settings</h1>
-      <p className="mt-1 text-sm text-[var(--campsite-text-secondary)]">
-        Profile, appearance, and security.
-      </p>
-      <div className="mt-8">
-        <ProfileSettings
-          googleFlash={googleFlash}
-          initial={
+    <div className="mx-auto max-w-3xl px-5 pb-10 pt-6 sm:px-[28px]">
+      <header className="mb-8">
+        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Settings</h1>
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">Profile, appearance, notifications, and security.</p>
+      </header>
+      <ProfileSettings
+        googleFlash={googleFlash}
+        googleFlashTone={googleFlashTone}
+        initial={
             profile
               ? {
                   full_name: profile.full_name,
@@ -53,8 +55,7 @@ export default async function SettingsPage({
                 }
               : null
           }
-        />
-      </div>
+      />
     </div>
   );
 }

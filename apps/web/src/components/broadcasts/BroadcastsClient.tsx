@@ -7,9 +7,10 @@ import {
   isBroadcastDraftOnlyRole,
 } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { countPendingBroadcastApprovalsForViewer } from '@/lib/broadcasts/countPendingBroadcastApprovalsForViewer';
 import { BroadcastComposer } from './BroadcastComposer';
 import Link from 'next/link';
 import { BroadcastFeed, type BroadcastFeedHandle } from './BroadcastFeed';
@@ -40,6 +41,7 @@ export function BroadcastsClient({
   initialTab?: Tab;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const feedRef = useRef<BroadcastFeedHandle>(null);
   const [tab, setTab] = useState<Tab>(() => {
@@ -72,6 +74,7 @@ export function BroadcastsClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [unread, setUnread] = useState(0);
   const [submittedPendingCount, setSubmittedPendingCount] = useState(0);
+  const [pendingApprovalQueueCount, setPendingApprovalQueueCount] = useState(0);
 
   useEffect(() => {
     try {
@@ -121,7 +124,8 @@ export function BroadcastsClient({
 
   const loadMeta = useCallback(async () => {
     const compose = canComposeBroadcast(profile.role);
-    const [{ data: deps }, { data: ud }, { data: dm }, submittedHead] = await Promise.all([
+    const approver = isBroadcastApproverRole(profile.role);
+    const [{ data: deps }, { data: ud }, { data: dm }, submittedHead, pendingQueue] = await Promise.all([
       supabase.from('departments').select('id,org_id,name,type,is_archived').eq('org_id', profile.org_id),
       supabase.from('user_departments').select('dept_id').eq('user_id', profile.id),
       supabase.from('dept_managers').select('dept_id').eq('user_id', profile.id),
@@ -132,8 +136,16 @@ export function BroadcastsClient({
             .eq('created_by', profile.id)
             .eq('status', 'pending_approval')
         : Promise.resolve({ count: null as number | null }),
+      approver
+        ? countPendingBroadcastApprovalsForViewer(supabase, {
+            userId: profile.id,
+            orgId: profile.org_id,
+            role: profile.role,
+          })
+        : Promise.resolve(0),
     ]);
     setSubmittedPendingCount(typeof submittedHead.count === 'number' ? submittedHead.count : 0);
+    setPendingApprovalQueueCount(typeof pendingQueue === 'number' ? pendingQueue : 0);
     setDepartments((deps ?? []) as DeptRow[]);
     setUserDeptIds(new Set((ud ?? []).map((r) => r.dept_id as string)));
     setManagedDeptIds(new Set((dm ?? []).map((r) => r.dept_id as string)));
@@ -153,7 +165,7 @@ export function BroadcastsClient({
         dept_id: c.dept_id as string,
       }))
     );
-  }, [supabase, profile.org_id, profile.id]);
+  }, [supabase, profile.org_id, profile.id, profile.role]);
 
   useEffect(() => {
     void loadMeta();
@@ -165,6 +177,10 @@ export function BroadcastsClient({
 
   useEffect(() => {
     if (tab === 'submitted') void loadMeta();
+  }, [tab, loadMeta]);
+
+  useEffect(() => {
+    if (tab === 'pending') void loadMeta();
   }, [tab, loadMeta]);
 
   const draftOnlyRole = isBroadcastDraftOnlyRole(profile.role);
@@ -289,6 +305,18 @@ export function BroadcastsClient({
                 {submittedPendingCount}
               </span>
             ) : null}
+            {id === 'pending' && pendingApprovalQueueCount > 0 ? (
+              <span
+                className={[
+                  'ml-1 rounded-full px-1.5 text-xs font-semibold',
+                  tab === 'pending'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-amber-100 text-amber-950',
+                ].join(' ')}
+              >
+                {pendingApprovalQueueCount > 99 ? '99+' : pendingApprovalQueueCount}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -334,9 +362,9 @@ export function BroadcastsClient({
                 <button
                   type="button"
                   onClick={() => setTab('compose')}
-                  className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] shadow-sm transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
                 >
-                  Submit draft for approval
+                  ✏ Submit draft for approval
                 </button>
               ) : null}
             </div>
@@ -435,7 +463,10 @@ export function BroadcastsClient({
           <PendingBroadcastList
             supabase={supabase}
             profile={profile}
-            onDone={() => void loadMeta()}
+            onDone={() => {
+              void loadMeta();
+              router.refresh();
+            }}
           />
         </div>
       ) : null}

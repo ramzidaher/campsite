@@ -1,4 +1,5 @@
 import { canManageOrgUsers } from '@/lib/adminGates';
+import { isAuthUserAlreadyExistsError } from '@/lib/admin/sendOrgMemberAccessEmail';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
@@ -12,11 +13,6 @@ function trimBaseUrl(raw: string | undefined): string | null {
   return t?.length ? t : null;
 }
 
-/**
- * Base URL for Supabase invite `redirectTo`. Must match Supabase → Auth → Redirect URLs.
- * On Vercel, a local `NEXT_PUBLIC_SITE_URL` from dev often gets baked into builds — we skip
- * localhost there and use `VERCEL_URL` or the incoming request host instead.
- */
 function inviteCallbackBaseUrl(req: NextRequest): string | null {
   const siteUrl = trimBaseUrl(process.env.SITE_URL);
   const nextPublic = trimBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
@@ -46,16 +42,6 @@ function inviteCallbackUrl(req: NextRequest): string | null {
   const path = `/auth/callback?next=${next}`;
   if (!base) return null;
   return `${base}${path}`;
-}
-
-function isAlreadyRegisteredInviteError(message: string): boolean {
-  const m = message.toLowerCase();
-  return (
-    m.includes('already') ||
-    m.includes('registered') ||
-    m.includes('exists') ||
-    m.includes('duplicate')
-  );
 }
 
 const UUID_RE =
@@ -161,10 +147,10 @@ export async function POST(req: NextRequest) {
   }
 
   const deptArray = deptIds.length ? deptIds : [];
-
   const redirectTo = inviteCallbackUrl(req);
 
   let targetUserId: string | null = null;
+  let accessEmailChannel: 'invite' | 'magiclink' | null = null;
   let sentInviteEmail = false;
 
   if (redirectTo) {
@@ -176,7 +162,8 @@ export async function POST(req: NextRequest) {
     if (!inviteErr && invited?.user?.id) {
       targetUserId = invited.user.id;
       sentInviteEmail = true;
-    } else if (inviteErr && !isAlreadyRegisteredInviteError(inviteErr.message)) {
+      accessEmailChannel = 'invite';
+    } else if (inviteErr && !isAuthUserAlreadyExistsError(inviteErr.message)) {
       return NextResponse.json({ error: inviteErr.message }, { status: 400 });
     }
   }
@@ -210,10 +197,6 @@ export async function POST(req: NextRequest) {
     targetUserId = id;
   }
 
-  if (!targetUserId) {
-    return NextResponse.json({ error: 'Could not determine user for this invite.' }, { status: 500 });
-  }
-
   const { error: rpcErr } = await admin.rpc('admin_provision_invited_member', {
     p_user_id: targetUserId,
     p_org_id: orgId,
@@ -223,7 +206,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (rpcErr) {
-    if (sentInviteEmail) {
+    if (sentInviteEmail && targetUserId) {
       const { error: delErr } = await admin.auth.admin.deleteUser(targetUserId);
       if (delErr) {
         console.error(
@@ -238,5 +221,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: rpcErr.message || 'Could not finish setting up this member.' }, { status });
   }
 
-  return NextResponse.json({ ok: true, sentInviteEmail });
+  if (!sentInviteEmail && redirectTo) {
+    const { error: otpErr } = await admin.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: redirectTo,
+        shouldCreateUser: false,
+      },
+    });
+    if (!otpErr) {
+      accessEmailChannel = 'magiclink';
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    accessEmailChannel,
+    sentAccessEmail: accessEmailChannel !== null,
+  });
 }

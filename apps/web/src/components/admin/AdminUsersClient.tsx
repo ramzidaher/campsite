@@ -312,7 +312,8 @@ export function AdminUsersClient({
     const data = (await res.json().catch(() => ({}))) as {
       error?: string;
       ok?: boolean;
-      sentInviteEmail?: boolean;
+      sentAccessEmail?: boolean;
+      accessEmailChannel?: 'invite' | 'magiclink' | null;
     };
     setBusy(null);
     if (!res.ok) {
@@ -320,16 +321,50 @@ export function AdminUsersClient({
       return;
     }
     setInviteOpen(false);
-    if (data.sentInviteEmail) {
-      setSuccessMsg(
-        `Invitation email sent to ${inviteEmail.trim()}. They should open the link, create a password, then they’ll reach the app.`
-      );
+    const addr = inviteEmail.trim();
+    if (data.sentAccessEmail) {
+      if (data.accessEmailChannel === 'magiclink') {
+        setSuccessMsg(
+          `Sign-in link sent to ${addr}. They should open the email and use the link to access the app (same email to log in later).`
+        );
+      } else {
+        setSuccessMsg(
+          `Invitation email sent to ${addr}. They should open the link, create a password, then they’ll reach the app.`
+        );
+      }
     } else {
       setSuccessMsg(
-        `${inviteEmail.trim()} already has an account. Their membership in this organisation was updated (role and teams). No invite email was sent — they can sign in as usual.`
+        `${addr}: membership was updated, but we could not send an access email (check SITE_URL / NEXT_PUBLIC_SITE_URL and email settings). They can still sign in if they already have an account.`
       );
     }
     router.refresh();
+  }
+
+  async function resendAccessEmail(r: UserRow) {
+    if (r.id === currentUserId || !r.email?.trim()) return;
+    setBusy(`resend:${r.id}`);
+    setMsg(null);
+    setSuccessMsg(null);
+    const res = await fetch('/api/admin/resend-access-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: r.id }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      ok?: boolean;
+      accessEmailChannel?: 'invite' | 'magiclink';
+    };
+    setBusy(null);
+    if (!res.ok) {
+      setMsg(data.error ?? 'Could not resend email');
+      return;
+    }
+    if (data.accessEmailChannel === 'magiclink') {
+      setSuccessMsg(`Sign-in link sent again to ${r.email}.`);
+    } else {
+      setSuccessMsg(`Invitation email sent again to ${r.email}.`);
+    }
   }
 
   async function setUserStatus(id: string, status: string) {
@@ -584,7 +619,7 @@ export function AdminUsersClient({
                   <td className="px-3 py-3 align-middle">
                     <span
                       className={[
-                        'inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                        'inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold',
                         rolePillClass(r.role),
                       ].join(' ')}
                     >
@@ -611,6 +646,17 @@ export function AdminUsersClient({
                       >
                         Edit
                       </button>
+                      {r.id !== currentUserId && r.email?.trim() ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1] disabled:opacity-50"
+                          onClick={() => void resendAccessEmail(r)}
+                          disabled={busy !== null}
+                          title="Resend invite or magic link to their email"
+                        >
+                          {busy === `resend:${r.id}` ? 'Sending…' : 'Resend access email'}
+                        </button>
+                      ) : null}
                       {r.status === 'active' ? (
                         <button
                           type="button"

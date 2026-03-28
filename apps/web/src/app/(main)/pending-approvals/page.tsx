@@ -2,6 +2,7 @@ import { PendingApprovalsClient, type PendingRow } from '@/components/PendingApp
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { createClient } from '@/lib/supabase/server';
 import { isApproverRole } from '@campsite/types';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 export default async function PendingApprovalsPage() {
@@ -27,15 +28,30 @@ export default async function PendingApprovalsPage() {
     full_name: p.full_name,
     email: p.email,
     created_at: p.created_at,
+    role: p.role,
     departments: p.departments,
   }));
 
+  const showManagerLink = me.role === 'manager' || me.role === 'coordinator';
+
   return (
-    <div>
-      <h1 className="text-xl font-semibold text-[var(--campsite-text)]">Pending members</h1>
-      <p className="mt-1 text-sm text-[var(--campsite-text-secondary)]">
-        Approve or reject new registrations in your organisation.
-      </p>
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-[28px]">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Pending members</h1>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            Approve or reject new registrations before they can use the app.
+          </p>
+        </div>
+        {showManagerLink ? (
+          <Link
+            href="/manager"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+          >
+            Manager overview
+          </Link>
+        ) : null}
+      </div>
       <PendingApprovalsClient initial={rows} viewerRole={me.role as string} />
     </div>
   );

@@ -2,8 +2,9 @@ import { AppShell } from '@/components/AppShell';
 import { MainProviders } from '@/components/providers/MainProviders';
 import { ThemeRoot } from '@/components/ThemeRoot';
 import { canAccessOrgAdminArea, getMainShellAdminNavItems } from '@/lib/adminGates';
+import { countPendingBroadcastApprovalsForViewer } from '@/lib/broadcasts/countPendingBroadcastApprovalsForViewer';
 import { createClient } from '@/lib/supabase/server';
-import { isApproverRole, isManagerRole } from '@campsite/types';
+import { isApproverRole, isBroadcastApproverRole, isManagerRole } from '@campsite/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let deptLine: string | null = null;
   let unreadBroadcasts = 0;
   let pendingApprovalCount = 0;
+  let pendingBroadcastApprovals = 0;
   let showManager = false;
 
   if (user) {
@@ -64,6 +66,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
     const orgId = profile?.org_id as string | undefined;
     const needsPendingBadge = Boolean(orgId && profileRole && isApproverRole(profileRole));
+    const needsBroadcastPendingBadge = Boolean(
+      orgId && profileRole && isBroadcastApproverRole(profileRole)
+    );
 
     const orgEmbed = profile?.organisations as
       | { name: string; logo_url: string | null }
@@ -78,7 +83,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (typeof uc === 'number') unreadBroadcasts = uc;
     else if (uc !== null && uc !== undefined) unreadBroadcasts = Number(uc);
 
-    const [udRes, pendingRes] = await Promise.all([
+    const [udRes, pendingRes, broadcastPendingCount] = await Promise.all([
       orgId
         ? supabase
             .from('user_departments')
@@ -90,6 +95,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       needsPendingBadge
         ? supabase.rpc('pending_approvals_nav_count')
         : Promise.resolve({ data: null as number | null }),
+      needsBroadcastPendingBadge && orgId && profileRole
+        ? countPendingBroadcastApprovalsForViewer(supabase, {
+            userId: user.id,
+            orgId,
+            role: profileRole,
+          })
+        : Promise.resolve(0),
     ]);
 
     if (orgId) {
@@ -101,6 +113,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const pc = pendingRes.data;
     if (typeof pc === 'number') pendingApprovalCount = pc;
     else if (pc !== null && pc !== undefined) pendingApprovalCount = Number(pc);
+
+    if (typeof broadcastPendingCount === 'number') pendingBroadcastApprovals = broadcastPendingCount;
 
     showManager = isManagerRole(profileRole);
   }
@@ -129,6 +143,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           deptLine={deptLine}
           profileRole={profileRole}
           unreadBroadcasts={unreadBroadcasts}
+          pendingBroadcastApprovals={pendingBroadcastApprovals}
           pendingApprovalCount={pendingApprovalCount}
           showManager={showManager}
           adminNavItems={adminNavItems}

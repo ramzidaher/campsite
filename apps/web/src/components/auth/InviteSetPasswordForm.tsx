@@ -25,6 +25,7 @@ export function InviteSetPasswordForm({ nextPath, fromInvite = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
+  const [loginEmail, setLoginEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +46,7 @@ export function InviteSetPasswordForm({ nextPath, fromInvite = false }: Props) {
         router.replace(next);
         return;
       }
+      setLoginEmail(typeof user.email === 'string' && user.email.trim() ? user.email.trim() : null);
       setSessionReady(true);
     })();
     return () => {
@@ -89,9 +91,21 @@ export function InviteSetPasswordForm({ nextPath, fromInvite = false }: Props) {
   return (
     <div>
       <h2 className="auth-title">Create your password</h2>
-      <p className="auth-sub mb-8">
+      <p className="auth-sub mb-4">
         You&apos;re signed in from your invite. Choose a password so you can sign in next time.
       </p>
+      {loginEmail ? (
+        <p className="mb-8 rounded-lg border border-[#e5e5e5] bg-[#faf9f6] px-3.5 py-3 text-[13px] leading-relaxed text-[#454545]">
+          <span className="font-medium text-[#121212]">Your login email</span> is{' '}
+          <span className="font-mono text-[12.5px] text-[#121212]">{loginEmail}</span>
+          . Use this same address when you sign in with email and password later — it matches the invite we sent.
+        </p>
+      ) : (
+        <p className="auth-sub mb-8">
+          Use the <strong className="font-medium text-[#121212]">same email address</strong> you received the invite on
+          when you sign in next time.
+        </p>
+      )}
 
       <form onSubmit={(e) => void onSubmit(e)}>
         <div className="mb-4">

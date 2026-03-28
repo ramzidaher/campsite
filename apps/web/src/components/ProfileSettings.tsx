@@ -3,7 +3,7 @@
 import { accentPresets, type AccentPreset } from '@campsite/theme';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { isOrgAdminRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 
@@ -19,12 +19,65 @@ type Profile = {
   shift_reminder_before_minutes: number | null;
 };
 
+function profileRoleDisplay(role: string): string {
+  const m: Record<string, string> = {
+    org_admin: 'Org admin',
+    super_admin: 'Org admin',
+    manager: 'Manager',
+    coordinator: 'Coordinator',
+    administrator: 'Administrator',
+    duty_manager: 'Duty manager',
+    csa: 'CSA',
+    society_leader: 'Society leader',
+    unassigned: 'Pending role',
+  };
+  return m[role] ?? role.replace(/_/g, ' ');
+}
+
+function accentLabel(key: AccentPreset): string {
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function safeHttpImageUrl(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  try {
+    const u = new URL(t);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return t;
+  } catch {
+    return null;
+  }
+}
+
+function initials(name: string) {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  if (p.length === 0) return '?';
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
+}
+
+const fieldLabel = 'block text-[13px] font-medium text-[#121212]';
+const inputClass =
+  'mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] shadow-sm outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-1 focus:ring-[#121212]';
+const selectClass = inputClass;
+const sectionCard = 'rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6';
+const sectionTitle = 'mb-4 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]';
+const btnPrimary =
+  'inline-flex items-center justify-center rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-[#faf9f6] transition hover:bg-[#2a2a2a] disabled:pointer-events-none disabled:opacity-45';
+const btnSecondary =
+  'inline-flex items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#121212] transition hover:bg-[#f5f4f1] disabled:pointer-events-none disabled:opacity-45';
+const btnDanger =
+  'inline-flex items-center justify-center rounded-lg border border-[#b91c1c]/35 bg-[#b91c1c] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[#991b1b] disabled:pointer-events-none disabled:opacity-45';
+
 export function ProfileSettings({
   initial,
   googleFlash,
+  googleFlashTone,
 }: {
   initial: Profile | null;
   googleFlash?: string | null;
+  googleFlashTone?: 'success' | 'error' | null;
 }) {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(initial);
@@ -42,7 +95,19 @@ export function ProfileSettings({
   });
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState<string | null>(googleFlash ?? null);
+  const [msgTone, setMsgTone] = useState<'success' | 'error' | 'neutral'>(() => {
+    if (googleFlashTone === 'success') return 'success';
+    if (googleFlashTone === 'error') return 'error';
+    return 'neutral';
+  });
   const [loading, setLoading] = useState(false);
+  const [avatarPreviewFailed, setAvatarPreviewFailed] = useState(false);
+
+  const safeAvatar = useMemo(() => safeHttpImageUrl(avatarUrl), [avatarUrl]);
+
+  useEffect(() => {
+    setAvatarPreviewFailed(false);
+  }, [safeAvatar]);
 
   useEffect(() => {
     setProfile(initial);
@@ -50,13 +115,24 @@ export function ProfileSettings({
     setShiftReminder(m == null ? 'off' : m);
   }, [initial]);
 
+  useEffect(() => {
+    setMsg(googleFlash ?? null);
+    if (googleFlashTone === 'success') setMsgTone('success');
+    else if (googleFlashTone === 'error') setMsgTone('error');
+    else if (googleFlash != null) setMsgTone('neutral');
+  }, [googleFlash, googleFlashTone]);
+
+  function setFeedback(text: string, tone: 'success' | 'error' | 'neutral') {
+    setMsg(text);
+    setMsgTone(tone);
+  }
+
   async function saveProfile() {
     setLoading(true);
     setMsg(null);
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    // Omit role/org_id/status — RLS self-update + trigger block self role; status only via deactivate().
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -72,10 +148,10 @@ export function ProfileSettings({
       .eq('id', u.user.id);
     setLoading(false);
     if (error) {
-      setMsg(error.message);
+      setFeedback(error.message, 'error');
       return;
     }
-    setMsg('Saved.');
+    setFeedback('Saved.', 'success');
     router.refresh();
   }
 
@@ -86,11 +162,11 @@ export function ProfileSettings({
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) {
-      setMsg(error.message);
+      setFeedback(error.message, 'error');
       return;
     }
     setPassword('');
-    setMsg('Password updated.');
+    setFeedback('Password updated.', 'success');
   }
 
   async function logout() {
@@ -112,231 +188,264 @@ export function ProfileSettings({
       .eq('id', u.user.id);
     setLoading(false);
     if (error) {
-      setMsg(error.message);
+      setFeedback(error.message, 'error');
       return;
     }
     await supabase.auth.signOut();
     router.replace('/login');
   }
 
+  const flashClass =
+    msgTone === 'success'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+      : msgTone === 'error'
+        ? 'border-red-200 bg-red-50 text-red-950'
+        : 'border-[#d8d8d8] bg-[#f5f4f1] text-[#121212]';
+
   if (!profile) {
-    return <p className="text-sm text-[var(--campsite-text-secondary)]">Loading profile…</p>;
+    return (
+      <div className={sectionCard}>
+        <p className="text-[13px] text-[#6b6b6b]">Loading profile…</p>
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-8">
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--campsite-text-muted)]">
+    <div className="space-y-5">
+      {msg ? (
+        <div
+          role="status"
+          className={`rounded-xl border px-4 py-3 text-[13px] ${flashClass}`}
+        >
+          {msg}
+        </div>
+      ) : null}
+
+      <section className={sectionCard} aria-labelledby="settings-profile-heading">
+        <h2 id="settings-profile-heading" className={sectionTitle}>
           Profile
         </h2>
-        <label className="block text-sm">
-          Full name
-          <input
-            className="mt-1 w-full rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] px-3 py-2 text-sm"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-        </label>
-        <label className="block text-sm">
-          Avatar URL
-          <input
-            className="mt-1 w-full rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] px-3 py-2 text-sm"
-            value={avatarUrl}
-            onChange={(e) => setAvatarUrl(e.target.value)}
-            placeholder="https://…"
-          />
-        </label>
-        <p className="text-sm text-[var(--campsite-text-secondary)]">
-          Role: <span className="font-mono text-[var(--campsite-text)]">{profile.role}</span> — contact
-          an admin to change teams.
-        </p>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => void saveProfile()}
-          className="rounded-lg bg-[var(--campsite-accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
-          Save profile
-        </button>
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+          <div className="flex shrink-0 justify-center sm:justify-start">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#d8d8d8] bg-[#faf9f6] text-[22px] font-semibold text-[#6b6b6b] shadow-sm">
+              {safeAvatar && !avatarPreviewFailed ? (
+                <img
+                  src={safeAvatar}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onError={() => setAvatarPreviewFailed(true)}
+                />
+              ) : (
+                <span aria-hidden>{initials(fullName || 'Member')}</span>
+              )}
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 space-y-4">
+            <label className={fieldLabel}>
+              Full name
+              <input
+                className={inputClass}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                autoComplete="name"
+              />
+            </label>
+            <label className={fieldLabel}>
+              Avatar URL
+              <input
+                className={inputClass}
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+                placeholder="https://…"
+              />
+            </label>
+            <p className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+              <span className="font-medium text-[#121212]">{profileRoleDisplay(profile.role)}</span>
+              <span className="text-[#9b9b9b]"> · </span>
+              Contact an admin if you need a different role or team.
+            </p>
+            <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnPrimary}>
+              Save profile
+            </button>
+          </div>
+        </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--campsite-text-muted)]">
+      <section className={sectionCard} aria-labelledby="settings-appearance-heading">
+        <h2 id="settings-appearance-heading" className={sectionTitle}>
           Appearance
         </h2>
-        <label className="block text-sm">
-          Colour scheme
-          <select
-            className="mt-1 w-full rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] px-3 py-2 text-sm"
-            value={scheme}
-            onChange={(e) => setScheme(e.target.value)}
-          >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </label>
-        <label className="block text-sm">
-          Accent
-          <select
-            className="mt-1 w-full rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] px-3 py-2 text-sm"
-            value={accent}
-            onChange={(e) => setAccent(e.target.value)}
-          >
-            {(Object.keys(accentPresets) as AccentPreset[]).map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => void saveProfile()}
-          className="rounded-lg border border-[var(--campsite-border)] px-4 py-2 text-sm font-medium"
-        >
-          Save appearance
-        </button>
+        <div className="space-y-4">
+          <label className={fieldLabel}>
+            Colour scheme
+            <select className={selectClass} value={scheme} onChange={(e) => setScheme(e.target.value)}>
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <label className={fieldLabel}>
+            Accent
+            <select className={selectClass} value={accent} onChange={(e) => setAccent(e.target.value)}>
+              {(Object.keys(accentPresets) as AccentPreset[]).map((k) => (
+                <option key={k} value={k}>
+                  {accentLabel(k)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnSecondary}>
+            Save appearance
+          </button>
+        </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--campsite-text-muted)]">
+      <section className={sectionCard} aria-labelledby="settings-notifications-heading">
+        <h2 id="settings-notifications-heading" className={sectionTitle}>
           Notifications
         </h2>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={dnd} onChange={(e) => setDnd(e.target.checked)} />
-          Do Not Disturb hours
-        </label>
-        {dnd ? (
-          <div className="flex gap-2">
+        <div className="space-y-4">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
             <input
-              type="time"
-              className="rounded border border-[var(--campsite-border)] bg-[var(--campsite-bg)] px-2 py-1 text-sm"
-              value={dndStart}
-              onChange={(e) => setDndStart(e.target.value)}
+              type="checkbox"
+              checked={dnd}
+              onChange={(e) => setDnd(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
             />
-            <span className="self-center text-sm">to</span>
-            <input
-              type="time"
-              className="rounded border border-[var(--campsite-border)] bg-[var(--campsite-bg)] px-2 py-1 text-sm"
-              value={dndEnd}
-              onChange={(e) => setDndEnd(e.target.value)}
-            />
-          </div>
-        ) : null}
-        <label className="block text-sm">
-          Shift reminder (before start)
-          <select
-            className="mt-1 w-full rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] px-3 py-2 text-sm"
-            value={shiftReminder === 'off' ? 'off' : String(shiftReminder)}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v === 'off') setShiftReminder('off');
-              else setShiftReminder(Number(v));
-            }}
-          >
-            <option value="off">Off</option>
-            <option value={30}>30 minutes</option>
-            <option value={60}>1 hour</option>
-            <option value={120}>2 hours</option>
-            <option value={240}>4 hours</option>
-            <option value={1440}>1 day</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => void saveProfile()}
-          className="rounded-lg border border-[var(--campsite-border)] px-4 py-2 text-sm font-medium"
-        >
-          Save notification preferences
-        </button>
+            <span className="text-[13px] leading-snug text-[#121212]">
+              <span className="font-medium">Do Not Disturb</span>
+              <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                Quiet hours for reminders (times in your local timezone).
+              </span>
+            </span>
+          </label>
+          {dnd ? (
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <input
+                type="time"
+                className={`${inputClass} mt-0 w-auto min-w-[8.5rem] flex-1 sm:flex-none`}
+                value={dndStart}
+                onChange={(e) => setDndStart(e.target.value)}
+              />
+              <span className="text-[13px] text-[#9b9b9b]">to</span>
+              <input
+                type="time"
+                className={`${inputClass} mt-0 w-auto min-w-[8.5rem] flex-1 sm:flex-none`}
+                value={dndEnd}
+                onChange={(e) => setDndEnd(e.target.value)}
+              />
+            </div>
+          ) : null}
+          <label className={fieldLabel}>
+            Shift reminder (before start)
+            <select
+              className={selectClass}
+              value={shiftReminder === 'off' ? 'off' : String(shiftReminder)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'off') setShiftReminder('off');
+                else setShiftReminder(Number(v));
+              }}
+            >
+              <option value="off">Off</option>
+              <option value={30}>30 minutes</option>
+              <option value={60}>1 hour</option>
+              <option value={120}>2 hours</option>
+              <option value={240}>4 hours</option>
+              <option value={1440}>1 day</option>
+            </select>
+          </label>
+          <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnSecondary}>
+            Save notification preferences
+          </button>
+        </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--campsite-text-muted)]">
+      <section className={sectionCard} aria-labelledby="settings-integrations-heading">
+        <h2 id="settings-integrations-heading" className={sectionTitle}>
           Integrations
         </h2>
-        <p className="text-sm text-[var(--campsite-text-secondary)]">
-          Connect Google to sync your calendar or import a rota from Sheets (rota import: Admin → Rota
-          import).
+        <p className="mb-4 text-[13px] leading-relaxed text-[#6b6b6b]">
+          Connect Google to sync your calendar or import a rota from Sheets (rota import: Admin → Rota import).
         </p>
         <div className="flex flex-wrap gap-2">
-          <a
-            href="/api/google/oauth/start?type=calendar"
-            className="rounded-lg border border-[var(--campsite-border)] px-4 py-2 text-sm font-medium"
-          >
+          <a href="/api/google/oauth/start?type=calendar" className={btnSecondary}>
             Connect Google Calendar
           </a>
-          <a
-            href="/api/google/oauth/start?type=sheets"
-            className="rounded-lg border border-[var(--campsite-border)] px-4 py-2 text-sm font-medium"
-          >
+          <a href="/api/google/oauth/start?type=sheets" className={btnSecondary}>
             Connect Google Sheets
           </a>
         </div>
       </section>
 
       {isOrgAdminRole(profile.role) ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--campsite-text-muted)]">
+        <section className={sectionCard} aria-labelledby="settings-org-heading">
+          <h2 id="settings-org-heading" className={sectionTitle}>
             Organisation
           </h2>
-          <p className="text-sm text-[var(--campsite-text-secondary)]">
+          <p className="mb-4 text-[13px] text-[#6b6b6b]">
             Configure staff discount tiers shown on discount cards.
           </p>
-          <Link
-            href="/settings/discount-tiers"
-            className="inline-block rounded-lg border border-[var(--campsite-border)] px-4 py-2 text-sm font-medium"
-          >
+          <Link href="/settings/discount-tiers" className={btnSecondary}>
             Discount tiers
           </Link>
         </section>
       ) : null}
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--campsite-text-muted)]">
+      <section className={sectionCard} aria-labelledby="settings-security-heading">
+        <h2 id="settings-security-heading" className={sectionTitle}>
           Security
         </h2>
-        <label className="block text-sm">
-          New password
-          <input
-            type="password"
-            className="mt-1 w-full rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] px-3 py-2 text-sm"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-          />
-        </label>
-        <button
-          type="button"
-          disabled={loading || !password}
-          onClick={() => void changePassword()}
-          className="rounded-lg border border-[var(--campsite-border)] px-4 py-2 text-sm font-medium"
-        >
-          Update password
-        </button>
+        <div className="space-y-4">
+          <label className={fieldLabel}>
+            New password
+            <input
+              type="password"
+              className={inputClass}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={loading || !password}
+            onClick={() => void changePassword()}
+            className={btnSecondary}
+          >
+            Update password
+          </button>
+        </div>
       </section>
 
-      <section className="space-y-3 border-t border-[var(--campsite-border)] pt-6">
-        <button
-          type="button"
-          onClick={() => void logout()}
-          className="rounded-lg border border-[var(--campsite-border)] px-4 py-2 text-sm font-medium"
-        >
-          Log out
-        </button>
-        <button
-          type="button"
-          onClick={() => void deactivate()}
-          className="block rounded-lg bg-[var(--campsite-warning)] px-4 py-2 text-sm font-medium text-white"
-        >
+      <section
+        className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6"
+        aria-labelledby="settings-session-heading"
+      >
+        <h2 id="settings-session-heading" className={sectionTitle}>
+          Session
+        </h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <button type="button" onClick={() => void logout()} className={btnSecondary}>
+            Log out
+          </button>
+        </div>
+      </section>
+
+      <section
+        className="rounded-xl border border-red-200 bg-red-50/60 p-5 sm:p-6"
+        aria-labelledby="settings-danger-heading"
+      >
+        <h2 id="settings-danger-heading" className="mb-1 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-red-800/80">
+          Danger zone
+        </h2>
+        <p className="mb-4 text-[13px] text-red-950/70">
+          Deactivating removes your access until an administrator restores your account.
+        </p>
+        <button type="button" onClick={() => void deactivate()} disabled={loading} className={btnDanger}>
           Deactivate account
         </button>
       </section>
-
-      {msg ? <p className="text-sm text-[var(--campsite-text-secondary)]">{msg}</p> : null}
     </div>
   );
 }

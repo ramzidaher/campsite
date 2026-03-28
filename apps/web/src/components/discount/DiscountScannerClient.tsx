@@ -68,13 +68,16 @@ export function DiscountScannerClient() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
-      <Link href="/discount" className="text-sm text-emerald-400 hover:underline">
+    <div className="mx-auto max-w-lg space-y-6 px-5 py-7 sm:px-[28px]">
+      <Link
+        href="/discount"
+        className="text-[13px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+      >
         ← Back to discount card
       </Link>
       <div>
-        <h1 className="text-xl font-semibold text-[var(--campsite-text)]">Verify staff QR</h1>
-        <p className="mt-1 text-sm text-[var(--campsite-text-secondary)]">
+        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Verify staff QR</h1>
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">
           Point the camera at a colleague&apos;s discount QR code.
         </p>
       </div>
@@ -84,53 +87,53 @@ export function DiscountScannerClient() {
           <div
             key={sessionKey}
             id="staff-discount-scanner"
-            className="overflow-hidden rounded-lg border border-[var(--campsite-border)]"
+            className="overflow-hidden rounded-xl border border-[#d8d8d8]"
           />
           {!scannerReady ? (
-            <p className="text-sm text-[var(--campsite-text-secondary)]">Starting camera…</p>
+            <p className="text-[13px] text-[#6b6b6b]">Starting camera…</p>
           ) : null}
         </div>
       ) : result.valid ? (
-        <div className="space-y-4 rounded-xl border border-emerald-600/50 bg-emerald-900/20 p-4">
-          <div className="rounded-md bg-emerald-600 px-3 py-2 text-center text-sm font-semibold text-white">
+        <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="rounded-lg bg-[#15803d] px-3 py-2 text-center text-[13px] font-semibold text-white">
             Valid — Active Staff
           </div>
-          <dl className="space-y-2 text-sm">
+          <dl className="space-y-2 text-[13px]">
             <div>
-              <dt className="text-[var(--campsite-text-muted)]">Name</dt>
-              <dd className="font-medium text-[var(--campsite-text)]">{result.name}</dd>
+              <dt className="text-[#9b9b9b]">Name</dt>
+              <dd className="font-medium text-[#121212]">{result.name}</dd>
             </div>
             <div>
-              <dt className="text-[var(--campsite-text-muted)]">Role</dt>
-              <dd className="capitalize text-[var(--campsite-text)]">{result.role.replace(/_/g, ' ')}</dd>
+              <dt className="text-[#9b9b9b]">Role</dt>
+              <dd className="capitalize text-[#121212]">{result.role.replace(/_/g, ' ')}</dd>
             </div>
             <div>
-              <dt className="text-[var(--campsite-text-muted)]">Department</dt>
-              <dd className="text-[var(--campsite-text)]">{result.department}</dd>
+              <dt className="text-[#9b9b9b]">Department</dt>
+              <dd className="text-[#121212]">{result.department}</dd>
             </div>
             <div>
-              <dt className="text-[var(--campsite-text-muted)]">Entitled to</dt>
-              <dd className="text-[var(--campsite-text)]">{result.discount_label ?? '—'}</dd>
+              <dt className="text-[#9b9b9b]">Entitled to</dt>
+              <dd className="text-[#121212]">{result.discount_label ?? '—'}</dd>
             </div>
           </dl>
           <button
             type="button"
             onClick={() => scanAgain()}
-            className="w-full rounded-lg border border-[var(--campsite-border)] py-2 text-sm"
+            className="w-full rounded-lg border border-[#d8d8d8] bg-white py-2.5 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
           >
             Scan another
           </button>
         </div>
       ) : (
-        <div className="space-y-4 rounded-xl border border-red-600/50 bg-red-950/30 p-4">
-          <div className="rounded-md bg-red-600 px-3 py-2 text-center text-sm font-semibold text-white">
+        <div className="space-y-4 rounded-xl border border-red-200 bg-red-50 p-4">
+          <div className="rounded-lg bg-[#b91c1c] px-3 py-2 text-center text-[13px] font-semibold text-white">
             Invalid or expired card
           </div>
-          <p className="text-sm text-[var(--campsite-text-secondary)]">{result.error ?? 'Try again.'}</p>
+          <p className="text-[13px] text-[#6b6b6b]">{result.error ?? 'Try again.'}</p>
           <button
             type="button"
             onClick={() => scanAgain()}
-            className="w-full rounded-lg border border-[var(--campsite-border)] py-2 text-sm"
+            className="w-full rounded-lg border border-[#d8d8d8] bg-white py-2.5 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
           >
             Scan again
           </button>

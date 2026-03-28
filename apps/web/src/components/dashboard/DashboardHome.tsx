@@ -113,9 +113,9 @@ export function DashboardHome({
           {canCompose && !showPrimaryComposeCta ? (
             <Link
               href={composeHref}
-              className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] shadow-sm transition-opacity hover:opacity-90"
             >
-              Submit draft for approval
+              ✏ Submit draft for approval
             </Link>
           ) : null}
         </div>
