@@ -76,6 +76,7 @@ function initials(name: string) {
 }
 
 export function AdminUsersClient({
+  currentUserId,
   assignableRoles,
   initialRows,
   departments,
@@ -84,6 +85,7 @@ export function AdminUsersClient({
   orgSlug,
   totalMemberCount,
 }: {
+  currentUserId: string;
   assignableRoles: ProfileRole[];
   initialRows: UserRow[];
   departments: { id: string; name: string; type: string; is_archived: boolean }[];
@@ -338,6 +340,28 @@ export function AdminUsersClient({
       setMsg(error.message);
       return;
     }
+    router.refresh();
+  }
+
+  async function removeFromOrg(r: UserRow) {
+    if (r.id === currentUserId) return;
+    const ok = confirm(
+      `Remove ${r.full_name} from this organisation? They will lose access here. Their sign-in account stays; they can rejoin only if you invite them or they use your self-signup link again.`
+    );
+    if (!ok) return;
+    setBusy(r.id);
+    setMsg(null);
+    const { error } = await supabase.rpc('org_admin_remove_member', { p_target: r.id });
+    setBusy(null);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setSelected((s) => {
+      const n = new Set(s);
+      n.delete(r.id);
+      return n;
+    });
     router.refresh();
   }
 
@@ -604,6 +628,16 @@ export function AdminUsersClient({
                           disabled={busy === r.id}
                         >
                           Activate
+                        </button>
+                      ) : null}
+                      {r.id !== currentUserId ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-[#171717] bg-[#171717] px-2 py-1 text-[11.5px] font-medium text-[#faf9f6] hover:opacity-90 disabled:opacity-50"
+                          onClick={() => void removeFromOrg(r)}
+                          disabled={busy === r.id}
+                        >
+                          Remove from org
                         </button>
                       ) : null}
                     </div>

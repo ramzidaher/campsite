@@ -100,6 +100,7 @@ export default async function AdminUsersPage({
 
   return (
     <AdminUsersClient
+      currentUserId={user.id}
       assignableRoles={assignableRoles}
       initialRows={filtered.map((p) => ({
         id: p.id as string,
