@@ -23,9 +23,10 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
       is_mandatory,
       is_pinned,
       is_org_wide,
+      cover_image_url,
       departments (name),
       broadcast_channels (name),
-      dept_teams (name),
+      department_teams (name),
       sender:profiles!broadcasts_created_by_fkey (full_name)
     `
     )
@@ -34,17 +35,22 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
 
   if (error || !b) notFound();
 
+  const { data: maySetCover } = await supabase.rpc('broadcast_may_set_cover', {
+    p_broadcast_id: id,
+  });
+
   const first = <T,>(v: T | T[] | null | undefined): T | null =>
     v == null ? null : Array.isArray(v) ? (v[0] ?? null) : v;
 
   const dept = first(b.departments as { name: string } | { name: string }[] | null);
   const channel = first(b.broadcast_channels as { name: string } | { name: string }[] | null);
-  const team = first(b.dept_teams as { name: string } | { name: string }[] | null);
+  const team = first(b.department_teams as { name: string } | { name: string }[] | null);
   const sender = first(b.sender as { full_name: string } | { full_name: string }[] | null);
 
   return (
     <BroadcastDetailView
       userId={user.id}
+      canSetCover={maySetCover === true}
       initial={{
         id: b.id as string,
         org_id: b.org_id as string,
@@ -55,9 +61,10 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
         is_mandatory: Boolean(b.is_mandatory),
         is_pinned: Boolean(b.is_pinned),
         is_org_wide: Boolean(b.is_org_wide),
+        cover_image_url: (b.cover_image_url as string | null) ?? null,
         departments: dept,
         broadcast_channels: channel,
-        dept_teams: team,
+        department_teams: team,
         profiles: sender,
       }}
     />

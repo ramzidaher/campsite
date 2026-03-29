@@ -11,7 +11,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiKey = process.env.GOOGLE_AI_STUDIO_API_KEY?.trim();
+  // Prefer CampSite name; fall back to GEMINI_API_KEY (Google's docs / GenAI SDK default).
+  const apiKey =
+    process.env.GOOGLE_AI_STUDIO_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
       { error: 'not_configured', message: 'AI summary is not configured on this server.' },

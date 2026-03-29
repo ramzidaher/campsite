@@ -26,7 +26,7 @@ export default async function AdminBroadcastsPage() {
     .from('broadcasts')
     .select(
       `id, title, status, scheduled_at, sent_at, created_at, dept_id, channel_id, is_org_wide, team_id,
-       departments(name), broadcast_channels(name), dept_teams(name),
+       departments(name), broadcast_channels(name), department_teams(name),
        sender:profiles!broadcasts_created_by_fkey(full_name)`
     )
     .eq('org_id', profile.org_id)

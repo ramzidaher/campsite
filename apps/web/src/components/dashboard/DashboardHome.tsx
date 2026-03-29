@@ -296,7 +296,7 @@ export function DashboardHome({
               data.recentBroadcasts.map((b) => {
                 const deptName = b.departments?.name ?? 'General';
                 const channelName = b.broadcast_channels?.name ?? '';
-                const teamName = b.dept_teams?.name ?? '';
+                const teamName = b.department_teams?.name ?? '';
                 const unread = b.read === false;
                 return (
                   <Link

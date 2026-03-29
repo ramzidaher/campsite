@@ -1,11 +1,14 @@
 'use client';
 
+import { BroadcastBackdropPicker } from '@/components/broadcasts/BroadcastBackdropPicker';
+import { BroadcastDetailStyleRail } from '@/components/broadcasts/BroadcastDetailStyleRail';
 import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { enqueueBroadcastRead } from '@/lib/offline/broadcastReadQueue';
+import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
 import { createClient } from '@/lib/supabase/client';
 import * as chrono from 'chrono-node';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -20,14 +23,37 @@ type Row = {
   is_mandatory?: boolean;
   is_pinned?: boolean;
   is_org_wide?: boolean;
+  cover_image_url?: string | null;
   departments: { name: string } | null;
   broadcast_channels: { name: string } | null;
-  dept_teams?: { name: string } | null;
+  department_teams?: { name: string } | null;
   profiles: { full_name: string } | null;
 };
 
-export function BroadcastDetailView({ initial, userId }: { initial: Row; userId: string }) {
+export function BroadcastDetailView({
+  initial,
+  userId,
+  canSetCover,
+}: {
+  initial: Row;
+  userId: string;
+  canSetCover: boolean;
+}) {
   const supabase = useMemo(() => createClient(), []);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(initial.cover_image_url ?? null);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverErr, setCoverErr] = useState<string | null>(null);
+  const [backdropOpen, setBackdropOpen] = useState(false);
+  const [backdropBlur, setBackdropBlur] = useState(false);
+
+  useEffect(() => {
+    setCoverImageUrl(initial.cover_image_url ?? null);
+  }, [initial.id, initial.cover_image_url]);
+
+  useEffect(() => {
+    if (!coverImageUrl) setBackdropBlur(false);
+  }, [coverImageUrl]);
   const [marked, setMarked] = useState(false);
   const [calendarMsg, setCalendarMsg] = useState<string | null>(null);
   const [calendarBusy, setCalendarBusy] = useState(false);
@@ -136,16 +162,125 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
     }
   }
 
-  return (
-    <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
-      <Link
-        href="/broadcasts"
-        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:text-[#121212]"
-      >
-        <span aria-hidden>←</span> Back to broadcasts
-      </Link>
+  async function applyCoverFile(file: File) {
+    setCoverBusy(true);
+    setCoverErr(null);
+    const up = await uploadBroadcastCover(supabase, userId, initial.id, file);
+    if (!up.ok) {
+      setCoverErr(up.message);
+      setCoverBusy(false);
+      return;
+    }
+    const { error } = await supabase
+      .from('broadcasts')
+      .update({ cover_image_url: up.publicUrl })
+      .eq('id', initial.id);
+    if (error) {
+      setCoverErr(error.message);
+      setCoverBusy(false);
+      return;
+    }
+    setCoverImageUrl(up.publicUrl);
+    setCoverBusy(false);
+  }
 
-      <div className="mt-6 rounded-2xl border border-[#d8d8d8] bg-white p-6 shadow-[0_1px_3px_rgba(18,18,18,0.06)] sm:p-8">
+  async function applyCoverFromUrl(imageUrl: string, downloadLocation?: string | null) {
+    if (downloadLocation) {
+      void fetch('/api/unsplash/track-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ downloadLocation }),
+      });
+    }
+    setCoverBusy(true);
+    setCoverErr(null);
+    const { error } = await supabase
+      .from('broadcasts')
+      .update({ cover_image_url: imageUrl })
+      .eq('id', initial.id);
+    if (error) {
+      setCoverErr(error.message);
+      setCoverBusy(false);
+      return;
+    }
+    setCoverImageUrl(imageUrl);
+    setCoverBusy(false);
+  }
+
+  async function removeCover() {
+    setCoverBusy(true);
+    setCoverErr(null);
+    const { error } = await supabase
+      .from('broadcasts')
+      .update({ cover_image_url: null })
+      .eq('id', initial.id);
+    if (error) {
+      setCoverErr(error.message);
+      setCoverBusy(false);
+      return;
+    }
+    setCoverImageUrl(null);
+    setCoverBusy(false);
+  }
+
+  return (
+    <>
+      {coverImageUrl ? (
+        <div
+          className={[
+            'pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-[filter,transform] duration-300',
+            backdropBlur ? 'scale-[1.08] blur-lg' : '',
+          ].join(' ')}
+          style={{ backgroundImage: `url(${coverImageUrl})` }}
+          aria-hidden
+        />
+      ) : null}
+
+      <BroadcastBackdropPicker
+        open={backdropOpen}
+        onOpenChange={setBackdropOpen}
+        coverImageUrl={coverImageUrl}
+        canSetCover={canSetCover}
+        coverBusy={coverBusy}
+        backdropBlur={backdropBlur}
+        onBackdropBlurChange={setBackdropBlur}
+        onApplyImageUrl={(url, dl) => void applyCoverFromUrl(url, dl)}
+        onRemoveCover={() => void removeCover()}
+        onUploadClick={() => coverInputRef.current?.click()}
+      />
+
+      <BroadcastDetailStyleRail
+        canSetCover={canSetCover}
+        coverBusy={coverBusy}
+        onUploadClick={() => coverInputRef.current?.click()}
+        onOpenBackdropPanel={() => setBackdropOpen(true)}
+      />
+
+      <div className="relative z-10 mx-auto w-full max-w-4xl py-6 pl-4 pr-14 sm:py-8 sm:pl-6 sm:pr-20 lg:max-w-5xl">
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="sr-only"
+          aria-hidden
+          tabIndex={-1}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (f) void applyCoverFile(f);
+          }}
+        />
+
+        <Link
+          href="/broadcasts"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:text-[#121212]"
+        >
+          <span aria-hidden>←</span> Back to broadcasts
+        </Link>
+
+        <div className="group relative mt-6 overflow-hidden rounded-2xl border border-[#d8d8d8] bg-white shadow-[0_8px_40px_rgba(18,18,18,0.08)]">
+          <div className="p-6 sm:p-8">
         {initial.status === 'pending_approval' ? (
           <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
             <p className="font-semibold">Awaiting approval</p>
@@ -193,17 +328,20 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
               {initial.broadcast_channels.name}
             </span>
           ) : null}
-          {initial.dept_teams?.name ? (
+          {initial.department_teams?.name ? (
             <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-medium text-[#4338ca]">
-              {initial.dept_teams.name}
+              {initial.department_teams.name}
             </span>
           ) : null}
         </div>
 
-        <h1 className="mt-5 font-authSerif text-[1.65rem] font-normal leading-tight tracking-tight text-[#121212] sm:text-3xl">
+        <h1
+          id="broadcast-detail-title"
+          className="mt-5 font-authSerif text-[1.65rem] font-normal leading-tight tracking-tight text-[#121212] sm:text-3xl"
+        >
           {displayTitle}
         </h1>
-        <p className="mt-3 text-sm text-[#6b6b6b]">
+        <p id="broadcast-detail-meta" className="mt-3 text-sm text-[#6b6b6b]">
           <span className="font-medium text-[#121212]">
             {initial.profiles?.full_name ?? 'Unknown sender'}
           </span>
@@ -221,12 +359,12 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
         </p>
 
         {showAiSummary ? (
-          <div className="mt-8 rounded-xl border border-emerald-200/70 bg-gradient-to-b from-emerald-50/90 to-white px-4 py-4 shadow-[0_1px_2px_rgba(6,78,59,0.06)] sm:px-5">
+          <div className="mt-8 rounded-xl border border-[#e4e4e4] bg-[#fafaf9] px-4 py-4 sm:px-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-emerald-950">AI summary</p>
-                <p className="mt-0.5 text-xs text-emerald-900/65">
-                  Short recap via Google AI Studio (Gemini). For quick reading only — always check the full message
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-[#121212]">Quick summary</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#6b6b6b]">
+                  Generated automatically. Confirm dates, locations, and anything you need to act on in the full message
                   below.
                 </p>
               </div>
@@ -234,9 +372,9 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
                 type="button"
                 disabled={summaryBusy}
                 onClick={() => void requestSummary()}
-                className="shrink-0 rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:bg-emerald-800 disabled:opacity-60"
+                className="shrink-0 rounded-lg border border-[#cfcfcf] bg-white px-3.5 py-2 text-sm font-medium text-[#121212] shadow-sm transition-colors hover:bg-[#f0f0ef] disabled:opacity-60"
               >
-                {summaryBusy ? 'Summarising…' : summary ? 'Refresh' : 'Summarise'}
+                {summaryBusy ? 'Summarising…' : summary ? 'Regenerate' : 'Summarise'}
               </button>
             </div>
             {summaryErr ? (
@@ -245,11 +383,11 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
               </p>
             ) : null}
             {summary ? (
-              <div className="mt-3 border-t border-emerald-200/60 pt-3 text-sm leading-relaxed text-emerald-950/95 whitespace-pre-wrap">
+              <div className="mt-3 border-t border-[#e4e4e4] pt-3 text-sm leading-relaxed text-[#121212] whitespace-pre-wrap">
                 {summary}
               </div>
             ) : !summaryBusy && !summaryErr ? (
-              <p className="mt-3 text-sm text-emerald-900/75">Tap Summarise for a concise version of this post.</p>
+              <p className="mt-3 text-sm text-[#6b6b6b]">Summarise to pull out the main points from this broadcast.</p>
             ) : null}
           </div>
         ) : null}
@@ -285,7 +423,15 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
             {calendarMsg ? <p className="mt-2 text-xs text-amber-900/80">{calendarMsg}</p> : null}
           </div>
         ) : null}
+
+          {coverErr ? (
+            <p className="mt-4 text-sm text-red-800" role="alert">
+              {coverErr}
+            </p>
+          ) : null}
+        </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

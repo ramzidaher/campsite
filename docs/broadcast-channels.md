@@ -17,7 +17,7 @@ Visibility and notification fan-out use `public.user_should_receive_sent_broadca
 3. **Org-wide** → true for active org members.
 4. Creator → true.
 5. **Org admin / super admin** → true.
-6. If `team_id` is set, user must be in that team (`user_dept_teams`); otherwise false.
+6. If `team_id` is set, user must be in that team (`department_team_members`); otherwise false. Team membership does not require `user_departments` for the same department.
 7. Otherwise requires `channel_id` and a matching `user_subscriptions` row with `subscribed = true`.
 
 Feed visibility uses `broadcast_visible_to_reader`, which for sent rows delegates to `user_should_receive_sent_broadcast`.

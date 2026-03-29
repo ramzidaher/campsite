@@ -1,16 +1,9 @@
-import { AdminDepartmentsClient } from '@/components/admin/AdminDepartmentsClient';
+import { ManagerTeamsClient } from '@/components/manager/ManagerTeamsClient';
 import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-export default async function ManagerDepartmentsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ dept?: string }>;
-}) {
-  const sp = await searchParams;
-  const openDeptId = typeof sp.dept === 'string' && sp.dept.trim() ? sp.dept.trim() : null;
-
+export default async function ManagerTeamsPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,23 +24,14 @@ export default async function ManagerDepartmentsPage({
     .eq('user_id', user.id);
 
   const managedDeptIds = [...new Set((managedRows ?? []).map((r) => r.dept_id as string))];
-
   const bundle = await loadDepartmentsDirectory(supabase, profile.org_id as string, managedDeptIds);
 
   return (
-    <AdminDepartmentsClient
-      orgId={profile.org_id}
+    <ManagerTeamsClient
       currentUserId={user.id}
-      isOrgAdmin={false}
-      openDeptIdFromUrl={openDeptId}
-      initialDepartments={bundle.departments}
-      categoriesByDept={bundle.categoriesByDept}
+      departments={bundle.departments}
       teamsByDept={bundle.teamsByDept}
       teamMembersByTeamId={bundle.teamMembersByTeamId}
-      managersByDept={bundle.managersByDept}
-      memberCountByDept={bundle.memberCountByDept}
-      membersByDept={bundle.membersByDept}
-      broadcastPermsByDept={bundle.broadcastPermsByDept}
       staffOptions={bundle.staffOptions}
     />
   );

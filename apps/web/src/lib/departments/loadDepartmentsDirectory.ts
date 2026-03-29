@@ -13,9 +13,10 @@ export type DeptMemberRow = { user_id: string; full_name: string; role: string }
 export type DepartmentsDirectoryBundle = {
   departments: DeptRow[];
   categoriesByDept: Record<string, { id: string; name: string }[]>;
-  teamsByDept: Record<string, { id: string; name: string }[]>;
-  /** deptId -> userId -> teamId (sub-team within that department) */
-  memberTeamByDept: Record<string, Record<string, string | null>>;
+  /** Teams defined under each department (e.g. Morning shift). `lead_user_id` is the team owner. */
+  teamsByDept: Record<string, { id: string; name: string; lead_user_id: string | null }[]>;
+  /** teamId -> members (any org role; not required to be in user_departments for that dept). */
+  teamMembersByTeamId: Record<string, DeptMemberRow[]>;
   managersByDept: Record<string, { user_id: string; full_name: string }[]>;
   memberCountByDept: Record<string, number>;
   membersByDept: Record<string, DeptMemberRow[]>;
@@ -45,7 +46,7 @@ export async function loadDepartmentsDirectory(
         departments: [],
         categoriesByDept: {},
         teamsByDept: {},
-        memberTeamByDept: {},
+        teamMembersByTeamId: {},
         managersByDept: {},
         memberCountByDept: {},
         membersByDept: {},
@@ -60,8 +61,8 @@ export async function loadDepartmentsDirectory(
   const deptIds = (departments ?? []).map((d) => d.id as string);
 
   const catsByDept: Record<string, { id: string; name: string }[]> = {};
-  const teamsByDept: Record<string, { id: string; name: string }[]> = {};
-  const memberTeamByDept: Record<string, Record<string, string | null>> = {};
+  const teamsByDept: Record<string, { id: string; name: string; lead_user_id: string | null }[]> = {};
+  const teamMembersByTeamId: Record<string, DeptMemberRow[]> = {};
   const managersByDept: Record<string, { user_id: string; full_name: string }[]> = {};
   const memberCountByDept: Record<string, number> = {};
   const membersByDept: Record<string, DeptMemberRow[]> = {};
@@ -78,7 +79,7 @@ export async function loadDepartmentsDirectory(
       departments: (departments ?? []) as DeptRow[],
       categoriesByDept: catsByDept,
       teamsByDept,
-      memberTeamByDept,
+      teamMembersByTeamId,
       managersByDept,
       memberCountByDept,
       membersByDept,
@@ -89,7 +90,7 @@ export async function loadDepartmentsDirectory(
 
   const [catsRes, teamsRes, dmsRes, dbpRes, udRes, staffRes] = await Promise.all([
     supabase.from('broadcast_channels').select('id, name, dept_id').in('dept_id', deptIds),
-    supabase.from('dept_teams').select('id, name, dept_id').in('dept_id', deptIds).order('name'),
+    supabase.from('department_teams').select('id, name, dept_id, lead_user_id').in('dept_id', deptIds).order('name'),
     supabase.from('dept_managers').select('dept_id, user_id').in('dept_id', deptIds),
     supabase.from('dept_broadcast_permissions').select('dept_id, permission, min_role').in('dept_id', deptIds),
     supabase.from('user_departments').select('dept_id, user_id').in('dept_id', deptIds),
@@ -124,19 +125,36 @@ export async function loadDepartmentsDirectory(
     const tid = t.id as string;
     teamDeptById.set(tid, did);
     if (!teamsByDept[did]) teamsByDept[did] = [];
-    teamsByDept[did].push({ id: tid, name: t.name as string });
+    teamsByDept[did].push({
+      id: tid,
+      name: t.name as string,
+      lead_user_id: (t.lead_user_id as string | null) ?? null,
+    });
   }
 
   const allTeamIds = [...teamDeptById.keys()];
   if (allTeamIds.length) {
-    const { data: udtRows } = await supabase.from('user_dept_teams').select('user_id, team_id').in('team_id', allTeamIds);
-    for (const row of udtRows ?? []) {
+    const { data: dtmRows } = await supabase
+      .from('department_team_members')
+      .select('user_id, team_id')
+      .in('team_id', allTeamIds);
+    for (const row of dtmRows ?? []) {
       const uid = row.user_id as string;
       const tid = row.team_id as string;
-      const deptId = teamDeptById.get(tid);
-      if (!deptId) continue;
-      if (!memberTeamByDept[deptId]) memberTeamByDept[deptId] = {};
-      memberTeamByDept[deptId][uid] = tid;
+      const pr = profById.get(uid);
+      if (!pr) continue;
+      if (!teamMembersByTeamId[tid]) teamMembersByTeamId[tid] = [];
+      teamMembersByTeamId[tid].push({
+        user_id: uid,
+        full_name: (pr.full_name as string) ?? uid,
+        role: (pr.role as string) ?? '',
+      });
+    }
+    for (const tid of Object.keys(teamMembersByTeamId)) {
+      const list = teamMembersByTeamId[tid];
+      if (list?.length) {
+        list.sort((a, b) => a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' }));
+      }
     }
   }
 
@@ -180,7 +198,7 @@ export async function loadDepartmentsDirectory(
     departments: (departments ?? []) as DeptRow[],
     categoriesByDept: catsByDept,
     teamsByDept,
-    memberTeamByDept,
+    teamMembersByTeamId,
     managersByDept,
     memberCountByDept,
     membersByDept,

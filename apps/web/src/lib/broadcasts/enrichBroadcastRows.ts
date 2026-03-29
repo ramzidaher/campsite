@@ -29,7 +29,7 @@ export async function enrichBroadcastRows(
       ? client.from('broadcast_channels').select('id,name').in('id', channelIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     teamIds.length
-      ? client.from('dept_teams').select('id,name').in('id', teamIds)
+      ? client.from('department_teams').select('id,name').in('id', teamIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     client.from('profiles').select('id,full_name').in('id', userIds),
   ]);
@@ -54,7 +54,7 @@ export async function enrichBroadcastRows(
     departments: dm.has(r.dept_id) ? { name: dm.get(r.dept_id)! } : null,
     broadcast_channels:
       r.channel_id && cm.has(r.channel_id) ? { name: cm.get(r.channel_id)! } : null,
-    dept_teams: r.team_id && tm.has(r.team_id) ? { name: tm.get(r.team_id)! } : null,
+    department_teams: r.team_id && tm.has(r.team_id) ? { name: tm.get(r.team_id)! } : null,
     profiles: pm.has(r.created_by) ? { full_name: pm.get(r.created_by)! } : null,
     read: readSet.has(r.id),
   }));

@@ -291,7 +291,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
             const unread = b.read === false;
             const deptName = b.departments?.name ?? 'General';
             const channelName = b.broadcast_channels?.name ?? '';
-            const teamName = b.dept_teams?.name ?? '';
+            const teamName = b.department_teams?.name ?? '';
             return (
               <li key={b.id}>
                 <Link

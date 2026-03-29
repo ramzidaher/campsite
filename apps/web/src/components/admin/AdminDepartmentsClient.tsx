@@ -18,6 +18,8 @@ type Dept = {
 
 type FilterKey = 'all' | 'department' | 'society' | 'club';
 
+type DeptTeamRow = { id: string; name: string; lead_user_id: string | null };
+
 type BroadcastPermRow = { permission: string; min_role: string };
 
 type MinRoleOpt = 'manager' | 'coordinator' | 'coordinator_only';
@@ -109,7 +111,7 @@ export function AdminDepartmentsClient({
   initialDepartments,
   categoriesByDept,
   teamsByDept,
-  memberTeamByDept,
+  teamMembersByTeamId,
   managersByDept,
   memberCountByDept,
   membersByDept,
@@ -124,8 +126,8 @@ export function AdminDepartmentsClient({
   openDeptIdFromUrl?: string | null;
   initialDepartments: Dept[];
   categoriesByDept: Record<string, { id: string; name: string }[]>;
-  teamsByDept: Record<string, { id: string; name: string }[]>;
-  memberTeamByDept: Record<string, Record<string, string | null>>;
+  teamsByDept: Record<string, DeptTeamRow[]>;
+  teamMembersByTeamId: Record<string, DeptMemberRow[]>;
   managersByDept: Record<string, { user_id: string; full_name: string }[]>;
   memberCountByDept: Record<string, number>;
   membersByDept: Record<string, DeptMemberRow[]>;
@@ -296,38 +298,52 @@ export function AdminDepartmentsClient({
     else void refresh();
   }
 
-  async function addTeam(deptId: string, name: string) {
+  async function addTeam(deptId: string, name: string, leadUserId: string | null) {
     if (!name.trim()) return;
     setMsg(null);
-    const { error } = await supabase.from('dept_teams').insert({ dept_id: deptId, name: name.trim() });
+    const row: { dept_id: string; name: string; lead_user_id?: string | null } = {
+      dept_id: deptId,
+      name: name.trim(),
+    };
+    if (leadUserId) row.lead_user_id = leadUserId;
+    const { error } = await supabase.from('department_teams').insert(row);
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function updateTeam(
+    teamId: string,
+    patch: { name?: string; lead_user_id?: string | null }
+  ) {
+    setMsg(null);
+    const { error } = await supabase.from('department_teams').update(patch).eq('id', teamId);
     if (error) setMsg(error.message);
     else void refresh();
   }
 
   async function removeTeam(teamId: string) {
     setMsg(null);
-    const { error } = await supabase.from('dept_teams').delete().eq('id', teamId);
+    const { error } = await supabase.from('department_teams').delete().eq('id', teamId);
     if (error) setMsg(error.message);
     else void refresh();
   }
 
-  async function setMemberTeam(deptId: string, userId: string, teamId: string | null) {
+  async function addTeamMember(teamId: string, userId: string) {
     setMsg(null);
-    const teamIds = (teamsByDept[deptId] ?? []).map((t) => t.id);
-    if (teamIds.length) {
-      const { error: delErr } = await supabase.from('user_dept_teams').delete().eq('user_id', userId).in('team_id', teamIds);
-      if (delErr) {
-        setMsg(delErr.message);
-        return;
-      }
-    }
-    if (teamId) {
-      const { error } = await supabase.from('user_dept_teams').insert({ user_id: userId, team_id: teamId });
-      if (error) setMsg(error.message);
-      else void refresh();
-    } else {
-      void refresh();
-    }
+    const { error } = await supabase.from('department_team_members').insert({ user_id: userId, team_id: teamId });
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function removeTeamMember(teamId: string, userId: string) {
+    setMsg(null);
+    const { error } = await supabase
+      .from('department_team_members')
+      .delete()
+      .eq('team_id', teamId)
+      .eq('user_id', userId);
+    if (error) setMsg(error.message);
+    else void refresh();
   }
 
   return (
@@ -350,22 +366,22 @@ export function AdminDepartmentsClient({
           {isOrgAdmin ? (
             <p className="mt-2 text-[12px] text-[#9b9b9b]">
               <Link
-                href="/admin/sub-teams"
+                href="/admin/teams"
                 className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
               >
-                Sub-teams
+                Teams
               </Link>{' '}
-              — set up broadcast groups for every department in one place.
+              — create teams and rosters for every department in one place.
             </p>
           ) : (
             <p className="mt-2 text-[12px] text-[#9b9b9b]">
               <Link
-                href="/manager/sub-teams"
+                href="/manager/teams"
                 className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
               >
-                Sub-teams directory
+                Teams directory
               </Link>{' '}
-              — see which teams exist in your departments.
+              — see team rosters for your departments.
             </p>
           )}
         </div>
@@ -512,11 +528,13 @@ export function AdminDepartmentsClient({
         >
           <DeptDetailForm
             isOrgAdmin={isOrgAdmin}
+            isDeptManager={!isOrgAdmin}
+            currentUserId={currentUserId}
             dept={detailDept}
             members={membersByDept[detailDept.id] ?? []}
             categories={categoriesByDept[detailDept.id] ?? []}
             teams={teamsByDept[detailDept.id] ?? []}
-            memberTeamByUser={memberTeamByDept[detailDept.id] ?? {}}
+            teamMembersByTeamId={teamMembersByTeamId}
             managers={managersByDept[detailDept.id] ?? []}
             staffOptions={staffOptions}
             broadcastPerms={broadcastPermsByDept[detailDept.id] ?? []}
@@ -524,9 +542,11 @@ export function AdminDepartmentsClient({
             onSave={(x) => void saveDept(x)}
             onAddCat={(name) => void addCategory(detailDept.id, name)}
             onRemoveCat={(id) => void removeCategory(id)}
-            onAddTeam={(name) => void addTeam(detailDept.id, name)}
+            onAddTeam={(name, leadUserId) => void addTeam(detailDept.id, name, leadUserId)}
+            onUpdateTeam={(tid, patch) => void updateTeam(tid, patch)}
             onRemoveTeam={(tid) => void removeTeam(tid)}
-            onSetMemberTeam={(uid, tid) => void setMemberTeam(detailDept.id, uid, tid)}
+            onAddTeamMember={(tid, uid) => void addTeamMember(tid, uid)}
+            onRemoveTeamMember={(tid, uid) => void removeTeamMember(tid, uid)}
             onAddMgr={(uid) => void addManager(detailDept.id, uid)}
             onRemoveMgr={(uid) => void removeManager(detailDept.id, uid)}
             onUpsertBroadcastPerm={(perm, minRole) => void upsertBroadcastPerm(detailDept.id, perm, minRole)}
@@ -678,11 +698,13 @@ function ModalOverlay({
 
 function DeptDetailForm({
   isOrgAdmin,
+  isDeptManager,
+  currentUserId,
   dept,
   members,
   categories,
   teams,
-  memberTeamByUser,
+  teamMembersByTeamId,
   managers,
   staffOptions,
   broadcastPerms,
@@ -691,8 +713,10 @@ function DeptDetailForm({
   onAddCat,
   onRemoveCat,
   onAddTeam,
+  onUpdateTeam,
   onRemoveTeam,
-  onSetMemberTeam,
+  onAddTeamMember,
+  onRemoveTeamMember,
   onAddMgr,
   onRemoveMgr,
   onUpsertBroadcastPerm,
@@ -701,11 +725,14 @@ function DeptDetailForm({
   onRemoveMember,
 }: {
   isOrgAdmin: boolean;
+  /** True when opened from Manager → Departments (assigned dept manager, not org admin). */
+  isDeptManager: boolean;
+  currentUserId: string;
   dept: Dept;
   members: DeptMemberRow[];
   categories: { id: string; name: string }[];
-  teams: { id: string; name: string }[];
-  memberTeamByUser: Record<string, string | null>;
+  teams: DeptTeamRow[];
+  teamMembersByTeamId: Record<string, DeptMemberRow[]>;
   managers: { user_id: string; full_name: string }[];
   staffOptions: { id: string; full_name: string; role: string }[];
   broadcastPerms: BroadcastPermRow[];
@@ -713,9 +740,11 @@ function DeptDetailForm({
   onSave: (d: Dept) => void;
   onAddCat: (name: string) => void;
   onRemoveCat: (id: string) => void;
-  onAddTeam: (name: string) => void;
+  onAddTeam: (name: string, leadUserId: string | null) => void;
+  onUpdateTeam: (teamId: string, patch: { name?: string; lead_user_id?: string | null }) => void;
   onRemoveTeam: (teamId: string) => void;
-  onSetMemberTeam: (userId: string, teamId: string | null) => void;
+  onAddTeamMember: (teamId: string, userId: string) => void;
+  onRemoveTeamMember: (teamId: string, userId: string) => void;
   onAddMgr: (userId: string) => void;
   onRemoveMgr: (userId: string) => void;
   onUpsertBroadcastPerm: (permission: string, minRole: MinRoleOpt) => void;
@@ -726,19 +755,36 @@ function DeptDetailForm({
   const [edit, setEdit] = useState(dept);
   const [catName, setCatName] = useState('');
   const [teamName, setTeamName] = useState('');
+  const [newTeamOwnerId, setNewTeamOwnerId] = useState('');
   const [mgrPick, setMgrPick] = useState('');
   const [memberPick, setMemberPick] = useState('');
+  const [teamMemberPick, setTeamMemberPick] = useState<Record<string, string>>({});
+  const [teamNameDrafts, setTeamNameDrafts] = useState<Record<string, string>>({});
+
+  const canSetTeamOwner = isOrgAdmin || isDeptManager;
+  const canManageTeamRoster = useCallback(
+    (t: DeptTeamRow) => isOrgAdmin || isDeptManager || t.lead_user_id === currentUserId,
+    [isOrgAdmin, isDeptManager, currentUserId]
+  );
 
   useEffect(() => {
     setEdit(dept);
   }, [dept]);
 
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    teams.forEach((t) => {
+      next[t.id] = t.name;
+    });
+    setTeamNameDrafts(next);
+  }, [teams]);
+
   return (
     <>
       {!isOrgAdmin ? (
         <p className="mb-4 text-[12px] leading-snug text-[#6b6b6b]">
-          Name, broadcast channels, broadcast rules and department managers are managed by an org admin. You can add or remove
-          members for this department below.
+          Name, broadcast channels, broadcast rules and department managers are managed by an org admin. You can add or
+          remove department members and edit who is on each team below.
         </p>
       ) : null}
 
@@ -796,69 +842,202 @@ function DeptDetailForm({
       ) : null}
 
       <div className={`${isOrgAdmin ? 'mt-6' : ''} border-t border-[#d8d8d8] pt-4`}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Sub-teams</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Teams</p>
         <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
-          Optional groups for targeted broadcasts. Add teams here, then assign members in the list below.
+          Named groups for targeted broadcasts (e.g. morning shift, night shift). Assign a <span className="font-medium text-[#6b6b6b]">team owner</span> to let them manage the roster and rename the team. Org admins and department managers can manage every team; higher roles can broadcast to any team in the department without joining it.
         </p>
         {isOrgAdmin ? (
           <p className="mt-2 text-[11px] text-[#9b9b9b]">
-            All departments in one place:{' '}
+            All departments:{' '}
             <Link
-              href="/admin/sub-teams"
+              href="/admin/teams"
               className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
             >
-              Sub-teams overview
+              Teams overview
             </Link>
             .
           </p>
         ) : (
           <p className="mt-2 text-[11px] text-[#9b9b9b]">
             <Link
-              href="/manager/sub-teams"
+              href="/manager/teams"
               className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
             >
-              Sub-teams directory
+              Teams directory
             </Link>{' '}
             for your managed departments.
           </p>
         )}
         {teams.length === 0 ? (
-          <p className="mt-2 text-[13px] text-[#9b9b9b]">{isOrgAdmin ? 'No sub-teams yet.' : 'No sub-teams defined.'}</p>
+          <p className="mt-2 text-[13px] text-[#9b9b9b]">
+            {isOrgAdmin ? 'No teams yet — add one below.' : 'No teams yet. Ask an org admin to create teams.'}
+          </p>
         ) : (
-          <ul className="mt-2 space-y-1.5 text-[13px]">
-            {teams.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-2">
-                <span className="text-[#6b6b6b]">{t.name}</span>
-                {isOrgAdmin ? (
-                  <button
-                    type="button"
-                    className="text-[12px] text-[#b91c1c] hover:underline"
-                    onClick={() => onRemoveTeam(t.id)}
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 space-y-4">
+            {teams.map((t) => {
+              const roster = teamMembersByTeamId[t.id] ?? [];
+              const rosterIds = new Set(roster.map((r) => r.user_id));
+              const pick = teamMemberPick[t.id] ?? '';
+              const rosterOk = canManageTeamRoster(t);
+              const nameDraft = teamNameDrafts[t.id] ?? t.name;
+              const ownerLabel = t.lead_user_id
+                ? (staffOptions.find((s) => s.id === t.lead_user_id)?.full_name ?? 'Unknown')
+                : null;
+              return (
+                <div key={t.id} className="rounded-lg border border-[#eceae6] bg-[#faf9f6] p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      {rosterOk ? (
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <input
+                            className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[13px] font-medium text-[#121212]"
+                            value={nameDraft}
+                            onChange={(e) =>
+                              setTeamNameDrafts((prev) => ({ ...prev, [t.id]: e.target.value }))
+                            }
+                            aria-label={`Team name for ${t.name}`}
+                          />
+                          <button
+                            type="button"
+                            className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                            onClick={() => {
+                              const n = (teamNameDrafts[t.id] ?? t.name).trim();
+                              if (n && n !== t.name) onUpdateTeam(t.id, { name: n });
+                            }}
+                          >
+                            Save name
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[13px] font-medium text-[#121212]">{t.name}</span>
+                      )}
+                      <div className="text-[12px] text-[#6b6b6b]">
+                        <span className="font-medium text-[#121212]">Owner</span>
+                        {canSetTeamOwner ? (
+                          <select
+                            className="ml-2 mt-1 max-w-full rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] sm:ml-2 sm:mt-0 sm:inline-block sm:max-w-[280px]"
+                            value={t.lead_user_id ?? ''}
+                            onChange={(e) =>
+                              onUpdateTeam(t.id, {
+                                lead_user_id: e.target.value ? e.target.value : null,
+                              })
+                            }
+                            aria-label={`Owner for ${t.name}`}
+                          >
+                            <option value="">No owner</option>
+                            {staffOptions.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.full_name} ({s.role})
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="ml-1 text-[#9b9b9b]">{ownerLabel ?? '—'}</span>
+                        )}
+                      </div>
+                    </div>
+                    {isOrgAdmin ? (
+                      <button
+                        type="button"
+                        className="shrink-0 text-[12px] text-[#b91c1c] hover:underline"
+                        onClick={() => onRemoveTeam(t.id)}
+                      >
+                        Delete team
+                      </button>
+                    ) : null}
+                  </div>
+                  <ul className="mt-2 space-y-1 text-[12px] text-[#121212]">
+                    {roster.length === 0 ? (
+                      <li className="text-[#9b9b9b]">Nobody on this team yet.</li>
+                    ) : (
+                      roster.map((m) => (
+                        <li key={m.user_id} className="flex flex-wrap items-center justify-between gap-2">
+                          <span>
+                            <span className="font-medium">{m.full_name}</span>
+                            <span className="ml-2 text-[11px] text-[#9b9b9b]">{m.role}</span>
+                          </span>
+                          {rosterOk ? (
+                            <button
+                              type="button"
+                              className="shrink-0 text-[12px] text-[#b91c1c] hover:underline"
+                              onClick={() => onRemoveTeamMember(t.id, m.user_id)}
+                            >
+                              Remove
+                            </button>
+                          ) : null}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                  {rosterOk ? (
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <select
+                        className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px]"
+                        value={pick}
+                        onChange={(e) => setTeamMemberPick((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                        aria-label={`Add person to ${t.name}`}
+                      >
+                        <option value="">Add someone to this team…</option>
+                        {staffOptions
+                          .filter((s) => !rosterIds.has(s.id))
+                          .map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.full_name} ({s.role})
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                        onClick={() => {
+                          if (pick) {
+                            onAddTeamMember(t.id, pick);
+                            setTeamMemberPick((prev) => ({ ...prev, [t.id]: '' }));
+                          }
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         )}
         {isOrgAdmin ? (
-          <div className="mt-2 flex gap-2">
-            <input
-              className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
-              placeholder="New sub-team name"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-            />
+          <div className="mt-4 space-y-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                placeholder="New team name (e.g. Morning shift)"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+              />
+              <select
+                className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] sm:max-w-xs"
+                value={newTeamOwnerId}
+                onChange={(e) => setNewTeamOwnerId(e.target.value)}
+                aria-label="Optional team owner"
+              >
+                <option value="">Owner (optional)</option>
+                {staffOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name} ({s.role})
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
-              className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
               onClick={() => {
-                onAddTeam(teamName);
+                onAddTeam(teamName, newTeamOwnerId || null);
                 setTeamName('');
+                setNewTeamOwnerId('');
               }}
             >
-              Add
+              Add team
             </button>
           </div>
         ) : null}
@@ -881,23 +1060,6 @@ function DeptDetailForm({
                   <span className="ml-2 text-[11px] text-[#9b9b9b]">{m.role}</span>
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
-                  {isOrgAdmin && teams.length > 0 ? (
-                    <select
-                      className="max-w-[200px] rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] text-[#121212]"
-                      value={memberTeamByUser[m.user_id] ?? ''}
-                      onChange={(e) =>
-                        onSetMemberTeam(m.user_id, e.target.value ? e.target.value : null)
-                      }
-                      aria-label={`Sub-team for ${m.full_name}`}
-                    >
-                      <option value="">No sub-team</option>
-                      {teams.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : null}
                   <button
                     type="button"
                     className="shrink-0 text-[12px] text-[#b91c1c] hover:underline"

@@ -35,7 +35,7 @@ async function runFeedQuery(
 ) {
   const select =
     mode === 'plan02'
-      ? 'id,title,body,sent_at,is_mandatory,is_pinned,is_org_wide,departments(name),broadcast_channels(name),dept_teams(name)'
+      ? 'id,title,body,sent_at,is_mandatory,is_pinned,is_org_wide,departments(name),broadcast_channels(name),department_teams(name)'
       : 'id,title,body,sent_at';
   let q = supabase.from('broadcasts').select(select).eq('org_id', orgId).eq('status', 'sent');
   if (mode === 'plan02') {
@@ -58,7 +58,7 @@ function normalizeRow(r: Record<string, unknown>): MobileBroadcastRow {
     is_org_wide: isOrgWide,
     dept_name: relationName(r.departments),
     channel_name: relationName(r.broadcast_channels),
-    team_name: relationName(r.dept_teams),
+    team_name: relationName(r.department_teams),
   };
 }
 

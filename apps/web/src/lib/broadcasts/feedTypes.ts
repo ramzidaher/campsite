@@ -12,7 +12,7 @@ export type FeedRow = {
   is_org_wide?: boolean;
   departments: { name: string } | null;
   broadcast_channels: { name: string } | null;
-  dept_teams?: { name: string } | null;
+  department_teams?: { name: string } | null;
   profiles: { full_name: string } | null;
   read?: boolean;
 };

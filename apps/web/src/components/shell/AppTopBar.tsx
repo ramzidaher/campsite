@@ -12,7 +12,7 @@ const TITLES: { prefix: string; title: string }[] = [
   { prefix: '/admin/roles', title: 'Roles & permissions' },
   { prefix: '/admin/users', title: 'All members' },
   { prefix: '/admin/pending', title: 'Pending approval' },
-  { prefix: '/admin/sub-teams', title: 'Sub-teams' },
+  { prefix: '/admin/teams', title: 'Teams' },
   { prefix: '/admin/departments', title: 'Departments' },
   { prefix: '/admin/broadcasts', title: 'Broadcast management' },
   { prefix: '/admin/rota-import', title: 'Sheets import' },
@@ -27,7 +27,7 @@ const TITLES: { prefix: string; title: string }[] = [
   { prefix: '/discount', title: 'Discount Card' },
   { prefix: '/pending-approvals', title: 'Approvals' },
   { prefix: '/settings', title: 'Settings' },
-  { prefix: '/manager/sub-teams', title: 'Sub-teams' },
+  { prefix: '/manager/teams', title: 'Teams' },
   { prefix: '/manager/departments', title: 'Departments' },
   { prefix: '/manager', title: 'Manager' },
 ];

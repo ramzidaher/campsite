@@ -19,7 +19,7 @@ export type AdminBroadcastRow = {
   team_id?: string | null;
   departments: { name: string } | { name: string }[] | null;
   broadcast_channels: { name: string } | { name: string }[] | null;
-  dept_teams?: { name: string } | { name: string }[] | null;
+  department_teams?: { name: string } | { name: string }[] | null;
   sender: { full_name: string } | { full_name: string }[] | null;
 };
 
@@ -332,9 +332,9 @@ export function AdminBroadcastsClient({
                     >
                       {r.is_org_wide ? 'All channels' : firstName(r.broadcast_channels as never)}
                     </span>
-                    {firstName(r.dept_teams as never) !== '—' ? (
+                    {firstName(r.department_teams as never) !== '—' ? (
                       <span className="inline-flex items-center rounded-full border border-[#c7d2fe] bg-[#eef2ff] px-2 py-0.5 text-[11px] font-medium text-[#4338ca]">
-                        {firstName(r.dept_teams as never)}
+                        {firstName(r.department_teams as never)}
                       </span>
                     ) : null}
                     {statusBadge(st)}

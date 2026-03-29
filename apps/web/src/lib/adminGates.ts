@@ -54,7 +54,7 @@ export function getMainShellAdminNavItems(
     { href: '/admin/roles', label: 'Roles & permissions', icon: '🏅' },
     { href: '/admin/broadcasts', label: 'Broadcasts', icon: '📡', section: 'Content' },
     { href: '/admin/departments', label: 'Departments', icon: '🏢', section: 'Content' },
-    { href: '/admin/sub-teams', label: 'Sub-teams', icon: '🧩', section: 'Content' },
+    { href: '/admin/teams', label: 'Teams', icon: '🧩', section: 'Content' },
     { href: '/admin/categories', label: 'Categories', icon: '🏷', section: 'Content' },
     { href: '/admin/rota', label: 'Rota management', icon: '🗓', section: 'Operations' },
     { href: '/admin/discount', label: 'Discount rules', icon: '🎫', section: 'Operations' },

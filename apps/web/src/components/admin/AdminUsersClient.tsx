@@ -793,7 +793,7 @@ export function AdminUsersClient({
                 </legend>
                 <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3">
                   {activeDepts.length === 0 ? (
-                    <p className="text-[12.5px] text-[#9b9b9b]">No departments yet — add teams under Admin → Departments.</p>
+                    <p className="text-[12.5px] text-[#9b9b9b]">No departments yet — add them under Admin → Departments, then optional teams under Admin → Teams.</p>
                   ) : (
                     activeDepts.map((d) => (
                       <label key={d.id} className="flex cursor-pointer items-center gap-2 text-[13px] text-[#121212]">

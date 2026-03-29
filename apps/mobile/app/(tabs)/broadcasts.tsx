@@ -246,23 +246,27 @@ export default function BroadcastsScreen() {
               <View
                 style={[
                   styles.aiBox,
-                  { borderColor: tokens.border, backgroundColor: tokens.background },
+                  { borderColor: tokens.border, backgroundColor: tokens.surface },
                 ]}
               >
-                <Text style={[styles.aiTitle, { color: tokens.textPrimary }]}>AI summary</Text>
+                <Text style={[styles.aiTitle, { color: tokens.textPrimary }]}>Quick summary</Text>
                 <Text style={[styles.aiHint, { color: tokens.textSecondary }]}>
-                  Short recap (Google AI). Check the full message below for accuracy.
+                  Generated automatically. Confirm details in the full message below.
                 </Text>
                 <Pressable
                   onPress={() => void requestAiSummary()}
                   disabled={aiSummaryBusy}
                   style={({ pressed }) => [
                     styles.aiButton,
-                    { opacity: aiSummaryBusy ? 0.6 : pressed ? 0.85 : 1, backgroundColor: '#047857' },
+                    {
+                      opacity: aiSummaryBusy ? 0.6 : 1,
+                      backgroundColor: pressed && !aiSummaryBusy ? tokens.surface : tokens.background,
+                      borderColor: tokens.border,
+                    },
                   ]}
                 >
-                  <Text style={styles.aiButtonText}>
-                    {aiSummaryBusy ? 'Summarising…' : aiSummary ? 'Refresh' : 'Summarise'}
+                  <Text style={[styles.aiButtonText, { color: tokens.textPrimary }]}>
+                    {aiSummaryBusy ? 'Summarising…' : aiSummary ? 'Regenerate' : 'Summarise'}
                   </Text>
                 </Pressable>
                 {aiSummaryErr ? (
@@ -272,7 +276,7 @@ export default function BroadcastsScreen() {
                   <Text style={[styles.aiSummaryText, { color: tokens.textPrimary }]}>{aiSummary}</Text>
                 ) : !aiSummaryBusy && !aiSummaryErr ? (
                   <Text style={[styles.aiHint, { color: tokens.textMuted, marginTop: 8 }]}>
-                    Tap Summarise for a concise version.
+                    Summarise to see the main points.
                   </Text>
                 ) : null}
               </View>
@@ -340,8 +344,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
+    borderWidth: 1,
   },
-  aiButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  aiButtonText: { fontSize: 14, fontWeight: '600' },
   aiErr: { marginTop: 8, fontSize: 13, lineHeight: 18 },
   aiSummaryText: { marginTop: 10, fontSize: 14, lineHeight: 21 },
   modalBody: { maxHeight: 360, marginTop: 12 },

@@ -261,7 +261,7 @@ export function BroadcastComposer({
     }
     let cancelled = false;
     void supabase
-      .from('dept_teams')
+      .from('department_teams')
       .select('id,name')
       .eq('dept_id', displayDeptId)
       .order('name')
@@ -556,7 +556,7 @@ export function BroadcastComposer({
           <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
             <span className="font-medium text-[#121212]">Org-wide</span> goes to everyone (no department, channel, or
             team). <span className="font-medium text-[#121212]">Specific</span> picks a department and channel; if
-            that department has sub-teams, you can narrow to one team or leave &ldquo;all members&rdquo;.
+            that department has teams, you can narrow to one team or leave &ldquo;all members&rdquo;.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3 text-sm text-[#121212] sm:flex-1">
@@ -570,7 +570,7 @@ export function BroadcastComposer({
               <span>
                 <span className="font-medium">Specific</span>
                 <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
-                  Choose department, then channel; sub-team dropdown appears only when teams exist.
+                  Choose department, then channel; team filter appears only when teams exist for that department.
                 </span>
               </span>
             </label>
@@ -688,12 +688,16 @@ export function BroadcastComposer({
 
       {!draftOnly && deliveryMode === 'specific' && teamsForDept.length > 0 ? (
         <div>
-          <label className="mb-1 block text-sm font-medium text-[#121212]">Sub-team (optional)</label>
+          <label className="mb-1 block text-sm font-medium text-[#121212]">Team (optional)</label>
           <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
-            Only members assigned to this team (org admins set this under{' '}
-            <span className="font-medium text-[#121212]">Admin → Sub-teams</span> or{' '}
-            <span className="font-medium text-[#121212]">Departments</span>) see the post. Leave &ldquo;All members in
-            this department&rdquo; to use the channel only (no sub-team filter).
+            Only people on the selected team get the post (mixed roles are fine).{' '}
+            <span className="font-medium text-[#121212]">Org admins</span> and{' '}
+            <span className="font-medium text-[#121212]">department managers</span> can target any team here without
+            being on it. If you are only a <span className="font-medium text-[#121212]">team owner</span> and not a
+            department member or manager, you must pick one of your teams. Manage teams under{' '}
+            <span className="font-medium text-[#121212]">Admin → Teams</span> or{' '}
+            <span className="font-medium text-[#121212]">Departments</span>. Leave &ldquo;All members in this
+            department&rdquo; for channel-wide delivery (no team filter).
           </p>
           <SelectWithChevron value={teamId} onChange={(e) => setTeamId(e.target.value)}>
             <option value="">All members in this department</option>
