@@ -31,7 +31,7 @@ This document is the single source of truth for **what we are building**, **how 
 | **What it is** | One-way broadcasts, rota, calendar, staff discount verification, org admin—no org chat at MVP. |
 | **Who uses it** | Staff and leaders within an organisation; Common Ground operates a **platform admin** for all orgs. |
 | **Isolation** | Per-org data; default approach is **one Supabase project with RLS** on `organisation_id` unless a client requires full project isolation. |
-| **Access** | `{org-slug}.campsite.app` (subdomain routing; no custom domains at MVP). |
+| **Access** | `{org-slug}.camp-site.co.uk` (subdomain routing; no custom domains at MVP). |
 
 ---
 
@@ -84,7 +84,7 @@ Use a **monorepo** (e.g. **Turborepo**) with shared packages:
 
 - Each organisation is logically isolated (`organisation_id` on all tenant data).
 - **RLS** on every table scoped to `org_id` is the default.
-- **Super Platform Admin** (Common Ground) uses **`admin.campsite.app`** to manage organisations—not org content.
+- **Super Platform Admin** (Common Ground) uses **`admin.camp-site.co.uk`** to manage organisations—not org content.
 
 ### Onboarding (provider → customer)
 
@@ -98,7 +98,7 @@ Use a **monorepo** (e.g. **Turborepo**) with shared packages:
 
 ### White-label (per org)
 
-- Subdomain: `{slug}.campsite.app`
+- Subdomain: `{slug}.camp-site.co.uk`
 - Logo upload by Super Admin
 - Subdomain-based routing only at MVP
 

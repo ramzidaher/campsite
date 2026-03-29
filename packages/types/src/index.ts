@@ -26,7 +26,9 @@ export {
 } from './broadcasts';
 
 export {
+  canViewDashboardSentBroadcastKpi,
   canViewDashboardStatTiles,
+  canViewDashboardUnreadBroadcastKpi,
   canViewOrgWideDashboardStats,
   dashboardAggregateScope,
   type DashboardAggregateScope,

@@ -1,8 +1,8 @@
 import { resolveHostRequestContext } from '@/lib/middleware/resolveHostRequestContext';
 
 describe('resolveHostRequestContext', () => {
-  it('treats admin.campsite.app as platform admin with no org slug', () => {
-    expect(resolveHostRequestContext('admin.campsite.app', 'my-org')).toEqual({
+  it('treats admin.camp-site.co.uk as platform admin with no org slug', () => {
+    expect(resolveHostRequestContext('admin.camp-site.co.uk', 'my-org')).toEqual({
       orgSlug: null,
       isPlatformAdmin: true,
     });
@@ -16,7 +16,7 @@ describe('resolveHostRequestContext', () => {
   });
 
   it('derives org slug from production tenant subdomain', () => {
-    expect(resolveHostRequestContext('oxford.campsite.app', null)).toEqual({
+    expect(resolveHostRequestContext('oxford.camp-site.co.uk', null)).toEqual({
       orgSlug: 'oxford',
       isPlatformAdmin: false,
     });

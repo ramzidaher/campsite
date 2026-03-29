@@ -11,7 +11,21 @@ export type MobileBroadcastRow = {
   is_mandatory: boolean;
   is_pinned: boolean;
   is_org_wide: boolean;
+  /** Sending department (authority dept for org-wide). */
+  dept_name?: string | null;
+  cat_name?: string | null;
+  team_name?: string | null;
 };
+
+function relationName(v: unknown): string | null {
+  if (v == null) return null;
+  if (Array.isArray(v)) return relationName(v[0]);
+  if (typeof v === 'object' && v !== null && 'name' in v) {
+    const n = (v as { name: unknown }).name;
+    return typeof n === 'string' && n.trim() ? n : null;
+  }
+  return null;
+}
 
 async function runFeedQuery(
   supabase: SupabaseClient,
@@ -21,7 +35,7 @@ async function runFeedQuery(
 ) {
   const select =
     mode === 'plan02'
-      ? 'id,title,body,sent_at,is_mandatory,is_pinned,is_org_wide'
+      ? 'id,title,body,sent_at,is_mandatory,is_pinned,is_org_wide,departments(name),dept_categories(name),dept_teams(name)'
       : 'id,title,body,sent_at';
   let q = supabase.from('broadcasts').select(select).eq('org_id', orgId).eq('status', 'sent');
   if (mode === 'plan02') {
@@ -33,6 +47,7 @@ async function runFeedQuery(
 }
 
 function normalizeRow(r: Record<string, unknown>): MobileBroadcastRow {
+  const isOrgWide = Boolean(r.is_org_wide);
   return {
     id: String(r.id),
     title: String(r.title ?? ''),
@@ -40,7 +55,10 @@ function normalizeRow(r: Record<string, unknown>): MobileBroadcastRow {
     sent_at: (r.sent_at as string | null) ?? null,
     is_mandatory: Boolean(r.is_mandatory),
     is_pinned: Boolean(r.is_pinned),
-    is_org_wide: Boolean(r.is_org_wide),
+    is_org_wide: isOrgWide,
+    dept_name: relationName(r.departments),
+    cat_name: relationName(r.dept_categories),
+    team_name: relationName(r.dept_teams),
   };
 }
 

@@ -49,6 +49,7 @@ export function DashboardHome({
   const isAdmin = variant === 'admin';
   const composeHref = canCompose ? '/broadcasts?tab=compose' : '/broadcasts';
   const pendingHref = isAdmin ? '/admin/pending' : '/pending-approvals';
+  const showUnreadBroadcastKpi = data.showBroadcastUnreadCount !== false;
   const showBroadcastTotal = data.broadcastTotal !== undefined;
   const showMemberTotal = data.memberActiveTotal !== undefined;
   const statTileCount = 2 + (showBroadcastTotal ? 1 : 0) + (showMemberTotal ? 1 : 0);
@@ -170,7 +171,7 @@ export function DashboardHome({
               <StatBar pct={statFillPct(data.pendingCount, 12)} danger={data.pendingCount > 0} />
             ) : null}
           </Link>
-        ) : (
+        ) : showUnreadBroadcastKpi ? (
           <Link
             href="/broadcasts"
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
@@ -182,6 +183,17 @@ export function DashboardHome({
               {data.unreadCount}
             </div>
             <div className="mt-2 text-xs text-[#9b9b9b]">Broadcasts you haven&apos;t opened</div>
+          </Link>
+        ) : (
+          <Link
+            href="/broadcasts"
+            className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
+          >
+            <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+              <span>📬</span> Broadcasts
+            </div>
+            <div className="mt-2 text-[13px] font-medium leading-snug text-[#121212]">View feed</div>
+            <div className="mt-2 text-xs text-[#9b9b9b]">Updates from your organisation</div>
           </Link>
         )}
 
@@ -283,6 +295,7 @@ export function DashboardHome({
               data.recentBroadcasts.map((b) => {
                 const deptName = b.departments?.name ?? 'General';
                 const catName = b.dept_categories?.name ?? '';
+                const teamName = b.dept_teams?.name ?? '';
                 const unread = b.read === false;
                 return (
                   <Link
@@ -310,6 +323,21 @@ export function DashboardHome({
                       {stripPreview(b.body)}
                     </p>
                     <div className="mt-2.5 flex flex-wrap gap-2">
+                      {b.is_pinned ? (
+                        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
+                          Pinned
+                        </span>
+                      ) : null}
+                      {b.is_mandatory ? (
+                        <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-medium text-red-900">
+                          Mandatory
+                        </span>
+                      ) : null}
+                      {b.is_org_wide ? (
+                        <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-900">
+                          Org-wide
+                        </span>
+                      ) : null}
                       <span
                         className={[
                           'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium',
@@ -321,6 +349,15 @@ export function DashboardHome({
                       {catName ? (
                         <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
                           {catName}
+                        </span>
+                      ) : b.is_org_wide ? (
+                        <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
+                          All channels
+                        </span>
+                      ) : null}
+                      {teamName ? (
+                        <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-medium text-[#4338ca]">
+                          {teamName}
                         </span>
                       ) : null}
                     </div>

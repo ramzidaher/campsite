@@ -44,7 +44,7 @@ export default async function DashboardPage() {
   });
 
   const hour = new Date().getHours();
-  const greetingLine = `${greeting(hour, data.userName.split(/\s+/)[0] ?? 'there')} 👋`;
+  const greetingLine = `${greeting(hour, data.userName)} 👋`;
 
   const canViewOrgDirectory = isOrgAdminRole(role);
   const canCompose = canComposeBroadcast(role);

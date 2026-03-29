@@ -2,7 +2,7 @@ import 'server-only';
 
 import { fetchDashboardStatCounts } from '@campsite/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isApproverRole } from '@campsite/types';
+import { canViewDashboardUnreadBroadcastKpi, isApproverRole } from '@campsite/types';
 
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
@@ -42,6 +42,8 @@ export type DashboardHomeModel = {
   calendarEventDays: number[];
   calendarYear: number;
   calendarMonth: number;
+  /** When false, stat row uses a neutral broadcasts link instead of unread count (society_leader). */
+  showBroadcastUnreadCount?: boolean;
 };
 
 /** Monday-start week in local timezone */
@@ -101,6 +103,10 @@ export async function loadDashboardHome(
   const w0 = startOfLocalWeek(now);
   const w1 = endOfLocalWeek(now);
 
+  const unreadRpcPromise = canViewDashboardUnreadBroadcastKpi(profile.role)
+    ? supabase.rpc('broadcast_unread_count')
+    : Promise.resolve({ data: 0, error: null });
+
   const [
     statCounts,
     { count: shiftsThisWeek },
@@ -125,7 +131,9 @@ export async function loadDashboardHome(
       .limit(1),
     supabase
       .from('broadcasts')
-      .select('id,title,body,sent_at,dept_id,cat_id,created_by')
+      .select(
+        'id,title,body,sent_at,dept_id,cat_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
+      )
       .eq('org_id', orgId)
       .eq('status', 'sent')
       .order('sent_at', { ascending: false })
@@ -137,7 +145,7 @@ export async function loadDashboardHome(
       .gte('start_time', now.toISOString())
       .order('start_time', { ascending: true })
       .limit(5),
-    supabase.rpc('broadcast_unread_count'),
+    unreadRpcPromise,
   ]);
 
   const recentBroadcasts = await enrichBroadcastRows(
@@ -194,13 +202,14 @@ export async function loadDashboardHome(
     profileRole: profile.role,
     ...(statCounts
       ? {
-          broadcastTotal: statCounts.broadcastTotal,
+          ...(statCounts.broadcastTotal !== undefined ? { broadcastTotal: statCounts.broadcastTotal } : {}),
           memberActiveTotal: statCounts.memberActiveTotal,
           dashboardStatScope: statCounts.statScope,
         }
       : {}),
     pendingCount,
     unreadCount,
+    showBroadcastUnreadCount: canViewDashboardUnreadBroadcastKpi(profile.role),
     shiftsThisWeek: shiftsThisWeek ?? 0,
     nextShiftSummary,
     recentBroadcasts,

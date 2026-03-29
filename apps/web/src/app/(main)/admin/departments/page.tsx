@@ -29,6 +29,8 @@ export default async function AdminDepartmentsPage() {
       isOrgAdmin
       initialDepartments={bundle.departments}
       categoriesByDept={bundle.categoriesByDept}
+      teamsByDept={bundle.teamsByDept}
+      memberTeamByDept={bundle.memberTeamByDept}
       managersByDept={bundle.managersByDept}
       memberCountByDept={bundle.memberCountByDept}
       membersByDept={bundle.membersByDept}

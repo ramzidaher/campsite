@@ -105,7 +105,7 @@
 - [x] User without metadata sees clear error, not infinite spinner. _(`/pending` + `completeRegistrationProfileIfNeeded` error UI.)_
 - [x] Middleware does not strip cookies on `NextResponse.next` clone bugs. _`middleware.ts` rebuilds `NextResponse.next` in `setAll` (Supabase SSR pattern). No automated cookie e2e here — rely on that pattern + manual login smoke._
 - [x] `/pending` shows email verification hint when `email_confirmed_at` missing. _(Amber callout; copy distinguishes org approval vs email.)_
-- [x] Platform admin host behaves per `middleware.ts` (no accidental org slug). _`resolveHostRequestContext` ignores `?org=` when the host is `admin.campsite.app` or `admin.localhost`. Jest: `middlewareHostContext.test.ts`._
+- [x] Platform admin host behaves per `middleware.ts` (no accidental org slug). _`resolveHostRequestContext` ignores `?org=` when the host is `admin.camp-site.co.uk` or `admin.localhost`. Jest: `middlewareHostContext.test.ts`._
 
 ### Automated tests (`npm run test --workspace=@campsite/web`)
 

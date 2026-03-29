@@ -1,42 +1,10 @@
 import { canManageOrgUsers } from '@/lib/adminGates';
 import { sendOrgMemberAccessEmail } from '@/lib/admin/sendOrgMemberAccessEmail';
+import { inviteCallbackUrl } from '@/lib/auth/inviteCallbackBaseUrl';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
 import { NextRequest, NextResponse } from 'next/server';
-
-const LOCALHOST_SITE_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
-
-function trimBaseUrl(raw: string | undefined): string | null {
-  const t = raw?.trim().replace(/\/$/, '');
-  return t?.length ? t : null;
-}
-
-function inviteCallbackBaseUrl(req: NextRequest): string | null {
-  const siteUrl = trimBaseUrl(process.env.SITE_URL);
-  const nextPublic = trimBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
-  const onVercel = process.env.VERCEL === '1';
-  const vercelHost = trimBaseUrl(process.env.VERCEL_URL);
-
-  if (siteUrl) return siteUrl;
-  if (nextPublic) {
-    const isLocal = LOCALHOST_SITE_RE.test(nextPublic);
-    if (!(isLocal && onVercel)) return nextPublic;
-  }
-  if (vercelHost) return `https://${vercelHost}`;
-  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
-  if (!host) return null;
-  return `${proto}://${host}`;
-}
-
-function inviteCallbackUrl(req: NextRequest): string | null {
-  const base = inviteCallbackBaseUrl(req);
-  const next = encodeURIComponent('/dashboard');
-  const path = `/auth/callback?next=${next}`;
-  if (!base) return null;
-  return `${base}${path}`;
-}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

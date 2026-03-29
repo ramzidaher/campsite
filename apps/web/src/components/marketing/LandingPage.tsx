@@ -13,7 +13,7 @@ function ProductPreview() {
           <span className="h-2.5 w-2.5 rounded-full bg-[#e8e6e3]" aria-hidden />
           <span className="h-2.5 w-2.5 rounded-full bg-[#e8e6e3]" aria-hidden />
           <span className="ml-2 flex-1 rounded-md bg-[#f3f1ed] py-1 text-center text-[10px] text-[#9b9b9b]">
-            union.campsite.app
+            union.camp-site.co.uk
           </span>
         </div>
         <div className="mt-1 flex h-[min(320px,52vw)] min-h-[240px] overflow-hidden rounded-xl bg-[#f6f5f2] sm:h-[340px] sm:min-h-[280px]">
@@ -142,7 +142,7 @@ export function LandingPage() {
               <p className="mx-auto mt-8 max-w-sm text-xs leading-relaxed text-[#9b9b9b] lg:mx-0">
                 If your union already uses Campsite, open your{' '}
                 <span className="font-medium text-[#6b6b6b]">subdomain</span> (e.g.{' '}
-                <span className="font-mono text-[11px] text-[#6b6b6b]">yoursu.campsite.app</span>) to
+                <span className="font-mono text-[11px] text-[#6b6b6b]">yoursu.camp-site.co.uk</span>) to
                 sign in.
               </p>
             </div>

@@ -15,7 +15,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
   const h = await headers();
   const slug = h.get('x-campsite-org-slug');
   const hostRaw = h.get('x-forwarded-host') ?? h.get('host') ?? '';
-  const hostLabel = hostRaw.split(':')[0] || 'campsite.app';
+  const hostLabel = hostRaw.split(':')[0] || 'camp-site.co.uk';
 
   let orgName: string | null = null;
   if (slug) {

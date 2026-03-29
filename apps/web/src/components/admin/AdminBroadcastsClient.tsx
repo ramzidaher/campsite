@@ -13,9 +13,12 @@ export type AdminBroadcastRow = {
   sent_at: string | null;
   created_at: string;
   dept_id: string;
-  cat_id: string;
+  cat_id: string | null;
+  is_org_wide?: boolean | null;
+  team_id?: string | null;
   departments: { name: string } | { name: string }[] | null;
   dept_categories: { name: string } | { name: string }[] | null;
+  dept_teams?: { name: string } | { name: string }[] | null;
   sender: { full_name: string } | { full_name: string }[] | null;
 };
 
@@ -140,7 +143,9 @@ export function AdminBroadcastsClient({
         if (r.status !== mainTab) return false;
       }
       if (filterDept !== 'all' && r.dept_id !== filterDept) return false;
-      if (filterCat !== 'all' && r.cat_id !== filterCat) return false;
+      if (filterCat === '__org_wide__') {
+        if (!r.is_org_wide) return false;
+      } else if (filterCat !== 'all' && r.cat_id !== filterCat) return false;
       if (qn && !r.title.toLowerCase().includes(qn)) return false;
       return true;
     });
@@ -274,6 +279,7 @@ export function AdminBroadcastsClient({
           aria-label="Category"
         >
           <option value="all">All categories</option>
+          <option value="__org_wide__">Org-wide only (no category)</option>
           {catsInDept.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -305,9 +311,19 @@ export function AdminBroadcastsClient({
                     <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
                       {firstName(r.departments as never)}
                     </span>
+                    {r.is_org_wide ? (
+                      <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-900">
+                        Org-wide
+                      </span>
+                    ) : null}
                     <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
-                      {firstName(r.dept_categories as never)}
+                      {r.is_org_wide ? 'All channels' : firstName(r.dept_categories as never)}
                     </span>
+                    {firstName(r.dept_teams as never) !== '—' ? (
+                      <span className="inline-flex items-center rounded-full border border-[#c7d2fe] bg-[#eef2ff] px-2 py-0.5 text-[11px] font-medium text-[#4338ca]">
+                        {firstName(r.dept_teams as never)}
+                      </span>
+                    ) : null}
                     {statusBadge(st)}
                   </div>
                 </div>

@@ -13,6 +13,9 @@ export type DeptMemberRow = { user_id: string; full_name: string; role: string }
 export type DepartmentsDirectoryBundle = {
   departments: DeptRow[];
   categoriesByDept: Record<string, { id: string; name: string }[]>;
+  teamsByDept: Record<string, { id: string; name: string }[]>;
+  /** deptId -> userId -> teamId (sub-team within that department) */
+  memberTeamByDept: Record<string, Record<string, string | null>>;
   managersByDept: Record<string, { user_id: string; full_name: string }[]>;
   memberCountByDept: Record<string, number>;
   membersByDept: Record<string, DeptMemberRow[]>;
@@ -41,6 +44,8 @@ export async function loadDepartmentsDirectory(
       return {
         departments: [],
         categoriesByDept: {},
+        teamsByDept: {},
+        memberTeamByDept: {},
         managersByDept: {},
         memberCountByDept: {},
         membersByDept: {},
@@ -55,6 +60,8 @@ export async function loadDepartmentsDirectory(
   const deptIds = (departments ?? []).map((d) => d.id as string);
 
   const catsByDept: Record<string, { id: string; name: string }[]> = {};
+  const teamsByDept: Record<string, { id: string; name: string }[]> = {};
+  const memberTeamByDept: Record<string, Record<string, string | null>> = {};
   const managersByDept: Record<string, { user_id: string; full_name: string }[]> = {};
   const memberCountByDept: Record<string, number> = {};
   const membersByDept: Record<string, DeptMemberRow[]> = {};
@@ -70,6 +77,8 @@ export async function loadDepartmentsDirectory(
     return {
       departments: (departments ?? []) as DeptRow[],
       categoriesByDept: catsByDept,
+      teamsByDept,
+      memberTeamByDept,
       managersByDept,
       memberCountByDept,
       membersByDept,
@@ -78,8 +87,9 @@ export async function loadDepartmentsDirectory(
     };
   }
 
-  const [catsRes, dmsRes, dbpRes, udRes, staffRes] = await Promise.all([
+  const [catsRes, teamsRes, dmsRes, dbpRes, udRes, staffRes] = await Promise.all([
     supabase.from('dept_categories').select('id, name, dept_id').in('dept_id', deptIds),
+    supabase.from('dept_teams').select('id, name, dept_id').in('dept_id', deptIds).order('name'),
     supabase.from('dept_managers').select('dept_id, user_id').in('dept_id', deptIds),
     supabase.from('dept_broadcast_permissions').select('dept_id, permission, min_role').in('dept_id', deptIds),
     supabase.from('user_departments').select('dept_id, user_id').in('dept_id', deptIds),
@@ -106,6 +116,28 @@ export async function loadDepartmentsDirectory(
     const did = c.dept_id as string;
     if (!catsByDept[did]) catsByDept[did] = [];
     catsByDept[did].push({ id: c.id as string, name: c.name as string });
+  }
+
+  const teamDeptById = new Map<string, string>();
+  for (const t of teamsRes.data ?? []) {
+    const did = t.dept_id as string;
+    const tid = t.id as string;
+    teamDeptById.set(tid, did);
+    if (!teamsByDept[did]) teamsByDept[did] = [];
+    teamsByDept[did].push({ id: tid, name: t.name as string });
+  }
+
+  const allTeamIds = [...teamDeptById.keys()];
+  if (allTeamIds.length) {
+    const { data: udtRows } = await supabase.from('user_dept_teams').select('user_id, team_id').in('team_id', allTeamIds);
+    for (const row of udtRows ?? []) {
+      const uid = row.user_id as string;
+      const tid = row.team_id as string;
+      const deptId = teamDeptById.get(tid);
+      if (!deptId) continue;
+      if (!memberTeamByDept[deptId]) memberTeamByDept[deptId] = {};
+      memberTeamByDept[deptId][uid] = tid;
+    }
   }
 
   for (const m of dmsRes.data ?? []) {
@@ -147,6 +179,8 @@ export async function loadDepartmentsDirectory(
   return {
     departments: (departments ?? []) as DeptRow[],
     categoriesByDept: catsByDept,
+    teamsByDept,
+    memberTeamByDept,
     managersByDept,
     memberCountByDept,
     membersByDept,

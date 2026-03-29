@@ -30,7 +30,7 @@ const DEPT_BROADCAST_PERM_DEFS: {
   {
     permission: 'send_org_wide',
     label: 'Send org-wide',
-    hint: 'Target the whole organisation from this department (subject to subscriptions unless mandatory).',
+    hint: 'Authorise org-wide broadcasts that reach every active member (no category pick).',
     minRoleOptions: ['manager', 'coordinator'],
   },
   {
@@ -105,6 +105,8 @@ export function AdminDepartmentsClient({
   isOrgAdmin,
   initialDepartments,
   categoriesByDept,
+  teamsByDept,
+  memberTeamByDept,
   managersByDept,
   memberCountByDept,
   membersByDept,
@@ -117,6 +119,8 @@ export function AdminDepartmentsClient({
   isOrgAdmin: boolean;
   initialDepartments: Dept[];
   categoriesByDept: Record<string, { id: string; name: string }[]>;
+  teamsByDept: Record<string, { id: string; name: string }[]>;
+  memberTeamByDept: Record<string, Record<string, string | null>>;
   managersByDept: Record<string, { user_id: string; full_name: string }[]>;
   memberCountByDept: Record<string, number>;
   membersByDept: Record<string, DeptMemberRow[]>;
@@ -275,6 +279,40 @@ export function AdminDepartmentsClient({
     const { error } = await supabase.from('user_departments').delete().eq('dept_id', deptId).eq('user_id', userId);
     if (error) setMsg(error.message);
     else void refresh();
+  }
+
+  async function addTeam(deptId: string, name: string) {
+    if (!name.trim()) return;
+    setMsg(null);
+    const { error } = await supabase.from('dept_teams').insert({ dept_id: deptId, name: name.trim() });
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function removeTeam(teamId: string) {
+    setMsg(null);
+    const { error } = await supabase.from('dept_teams').delete().eq('id', teamId);
+    if (error) setMsg(error.message);
+    else void refresh();
+  }
+
+  async function setMemberTeam(deptId: string, userId: string, teamId: string | null) {
+    setMsg(null);
+    const teamIds = (teamsByDept[deptId] ?? []).map((t) => t.id);
+    if (teamIds.length) {
+      const { error: delErr } = await supabase.from('user_dept_teams').delete().eq('user_id', userId).in('team_id', teamIds);
+      if (delErr) {
+        setMsg(delErr.message);
+        return;
+      }
+    }
+    if (teamId) {
+      const { error } = await supabase.from('user_dept_teams').insert({ user_id: userId, team_id: teamId });
+      if (error) setMsg(error.message);
+      else void refresh();
+    } else {
+      void refresh();
+    }
   }
 
   return (
@@ -436,6 +474,8 @@ export function AdminDepartmentsClient({
             dept={detailDept}
             members={membersByDept[detailDept.id] ?? []}
             categories={categoriesByDept[detailDept.id] ?? []}
+            teams={teamsByDept[detailDept.id] ?? []}
+            memberTeamByUser={memberTeamByDept[detailDept.id] ?? {}}
             managers={managersByDept[detailDept.id] ?? []}
             staffOptions={staffOptions}
             broadcastPerms={broadcastPermsByDept[detailDept.id] ?? []}
@@ -443,6 +483,9 @@ export function AdminDepartmentsClient({
             onSave={(x) => void saveDept(x)}
             onAddCat={(name) => void addCategory(detailDept.id, name)}
             onRemoveCat={(id) => void removeCategory(id)}
+            onAddTeam={(name) => void addTeam(detailDept.id, name)}
+            onRemoveTeam={(tid) => void removeTeam(tid)}
+            onSetMemberTeam={(uid, tid) => void setMemberTeam(detailDept.id, uid, tid)}
             onAddMgr={(uid) => void addManager(detailDept.id, uid)}
             onRemoveMgr={(uid) => void removeManager(detailDept.id, uid)}
             onUpsertBroadcastPerm={(perm, minRole) => void upsertBroadcastPerm(detailDept.id, perm, minRole)}
@@ -597,6 +640,8 @@ function DeptDetailForm({
   dept,
   members,
   categories,
+  teams,
+  memberTeamByUser,
   managers,
   staffOptions,
   broadcastPerms,
@@ -604,6 +649,9 @@ function DeptDetailForm({
   onSave,
   onAddCat,
   onRemoveCat,
+  onAddTeam,
+  onRemoveTeam,
+  onSetMemberTeam,
   onAddMgr,
   onRemoveMgr,
   onUpsertBroadcastPerm,
@@ -615,6 +663,8 @@ function DeptDetailForm({
   dept: Dept;
   members: DeptMemberRow[];
   categories: { id: string; name: string }[];
+  teams: { id: string; name: string }[];
+  memberTeamByUser: Record<string, string | null>;
   managers: { user_id: string; full_name: string }[];
   staffOptions: { id: string; full_name: string; role: string }[];
   broadcastPerms: BroadcastPermRow[];
@@ -622,6 +672,9 @@ function DeptDetailForm({
   onSave: (d: Dept) => void;
   onAddCat: (name: string) => void;
   onRemoveCat: (id: string) => void;
+  onAddTeam: (name: string) => void;
+  onRemoveTeam: (teamId: string) => void;
+  onSetMemberTeam: (userId: string, teamId: string | null) => void;
   onAddMgr: (userId: string) => void;
   onRemoveMgr: (userId: string) => void;
   onUpsertBroadcastPerm: (permission: string, minRole: MinRoleOpt) => void;
@@ -631,6 +684,7 @@ function DeptDetailForm({
 }) {
   const [edit, setEdit] = useState(dept);
   const [catName, setCatName] = useState('');
+  const [teamName, setTeamName] = useState('');
   const [mgrPick, setMgrPick] = useState('');
   const [memberPick, setMemberPick] = useState('');
 
@@ -701,6 +755,53 @@ function DeptDetailForm({
       ) : null}
 
       <div className={`${isOrgAdmin ? 'mt-6' : ''} border-t border-[#d8d8d8] pt-4`}>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Sub-teams</p>
+        <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
+          Optional groups for targeted broadcasts. Add teams here, then assign members in the list below.
+        </p>
+        {teams.length === 0 ? (
+          <p className="mt-2 text-[13px] text-[#9b9b9b]">{isOrgAdmin ? 'No sub-teams yet.' : 'No sub-teams defined.'}</p>
+        ) : (
+          <ul className="mt-2 space-y-1.5 text-[13px]">
+            {teams.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-2">
+                <span className="text-[#6b6b6b]">{t.name}</span>
+                {isOrgAdmin ? (
+                  <button
+                    type="button"
+                    className="text-[12px] text-[#b91c1c] hover:underline"
+                    onClick={() => onRemoveTeam(t.id)}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+        {isOrgAdmin ? (
+          <div className="mt-2 flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+              placeholder="New sub-team name"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+            />
+            <button
+              type="button"
+              className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              onClick={() => {
+                onAddTeam(teamName);
+                setTeamName('');
+              }}
+            >
+              Add
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-6 border-t border-[#d8d8d8] pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Members</p>
         <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
           People linked to this department for broadcasts, rota and approvals. Removing them here does not deactivate
@@ -711,18 +812,37 @@ function DeptDetailForm({
             <li className="text-[#9b9b9b]">No members yet.</li>
           ) : (
             members.map((m) => (
-              <li key={m.user_id} className="flex items-center justify-between gap-2 rounded-md py-0.5">
+              <li key={m.user_id} className="flex flex-col gap-1.5 rounded-md py-1 sm:flex-row sm:items-center sm:justify-between">
                 <span className="min-w-0 text-[#121212]">
                   <span className="font-medium">{m.full_name}</span>
                   <span className="ml-2 text-[11px] text-[#9b9b9b]">{m.role}</span>
                 </span>
-                <button
-                  type="button"
-                  className="shrink-0 text-[12px] text-[#b91c1c] hover:underline"
-                  onClick={() => onRemoveMember(m.user_id)}
-                >
-                  Remove
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isOrgAdmin && teams.length > 0 ? (
+                    <select
+                      className="max-w-[200px] rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] text-[#121212]"
+                      value={memberTeamByUser[m.user_id] ?? ''}
+                      onChange={(e) =>
+                        onSetMemberTeam(m.user_id, e.target.value ? e.target.value : null)
+                      }
+                      aria-label={`Sub-team for ${m.full_name}`}
+                    >
+                      <option value="">No sub-team</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="shrink-0 text-[12px] text-[#b91c1c] hover:underline"
+                    onClick={() => onRemoveMember(m.user_id)}
+                  >
+                    Remove
+                  </button>
+                </div>
               </li>
             ))
           )}

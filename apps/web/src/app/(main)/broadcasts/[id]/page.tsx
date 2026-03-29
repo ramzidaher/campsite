@@ -25,6 +25,7 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
       is_org_wide,
       departments (name),
       dept_categories (name),
+      dept_teams (name),
       sender:profiles!broadcasts_created_by_fkey (full_name)
     `
     )
@@ -38,6 +39,7 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
 
   const dept = first(b.departments as { name: string } | { name: string }[] | null);
   const cat = first(b.dept_categories as { name: string } | { name: string }[] | null);
+  const team = first(b.dept_teams as { name: string } | { name: string }[] | null);
   const sender = first(b.sender as { full_name: string } | { full_name: string }[] | null);
 
   return (
@@ -55,6 +57,7 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
         is_org_wide: Boolean(b.is_org_wide),
         departments: dept,
         dept_categories: cat,
+        dept_teams: team,
         profiles: sender,
       }}
     />

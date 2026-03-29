@@ -146,8 +146,8 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
       const run = async (mode: 'plan02' | 'legacy') => {
         const select =
           mode === 'plan02'
-            ? 'id,title,body,sent_at,dept_id,cat_id,created_by,is_mandatory,is_pinned,is_org_wide'
-            : 'id,title,body,sent_at,dept_id,cat_id,created_by';
+            ? 'id,title,body,sent_at,dept_id,cat_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
+            : 'id,title,body,sent_at,dept_id,cat_id,team_id,created_by';
         let q = supabase
           .from('broadcasts')
           .select(select)
@@ -290,6 +290,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
             const unread = b.read === false;
             const deptName = b.departments?.name ?? 'General';
             const catName = b.dept_categories?.name ?? '';
+            const teamName = b.dept_teams?.name ?? '';
             return (
               <li key={b.id}>
                 <Link
@@ -342,9 +343,18 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
                     >
                       {deptName}
                     </span>
-                    {catName ? (
+                    {b.is_org_wide ? (
+                      <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
+                        All channels
+                      </span>
+                    ) : catName ? (
                       <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
                         {catName}
+                      </span>
+                    ) : null}
+                    {teamName ? (
+                      <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-medium text-[#4338ca]">
+                        {teamName}
                       </span>
                     ) : null}
                   </div>

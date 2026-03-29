@@ -299,7 +299,7 @@ export function OrgSettingsClient({
                     className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 py-2.5 font-mono text-[13px] text-[#121212]"
                     value={initial.slug}
                   />
-                  <span className="shrink-0 text-[13px] text-[#9b9b9b]">.campsite.app</span>
+                  <span className="shrink-0 text-[13px] text-[#9b9b9b]">.camp-site.co.uk</span>
                 </div>
                 <span className="mt-1 block text-[11.5px] text-[#9b9b9b]">
                   Slug is set when the organisation is created; contact support to change invite links.

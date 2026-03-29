@@ -1,8 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { dashboardAggregateScope } from '@campsite/types';
+import { canViewDashboardSentBroadcastKpi, dashboardAggregateScope } from '@campsite/types';
 
 export type DashboardStatCounts = {
-  broadcastTotal: number;
+  /** Omitted when the role must not see sent-broadcast aggregates (e.g. society_leader). */
+  broadcastTotal?: number;
   memberActiveTotal: number;
   /** Labels: org-wide vs department-scoped KPIs */
   statScope: 'org' | 'dept';
@@ -73,23 +74,31 @@ export async function fetchDashboardStatCounts(
   }
 
   const deptIds = await deptIdsForDashboardStats(supabase, userId, orgId, args.role);
+  const showSentBroadcastKpi = canViewDashboardSentBroadcastKpi(args.role);
+
   if (deptIds.length === 0) {
-    return { broadcastTotal: 0, memberActiveTotal: 0, statScope: 'dept' };
+    return showSentBroadcastKpi
+      ? { broadcastTotal: 0, memberActiveTotal: 0, statScope: 'dept' }
+      : { memberActiveTotal: 0, statScope: 'dept' };
   }
 
-  const { count: broadcastTotal } = await supabase
-    .from('broadcasts')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', orgId)
-    .eq('status', 'sent')
-    .in('dept_id', deptIds);
+  let broadcastTotal: number | undefined;
+  if (showSentBroadcastKpi) {
+    const { count } = await supabase
+      .from('broadcasts')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgId)
+      .eq('status', 'sent')
+      .in('dept_id', deptIds);
+    broadcastTotal = count ?? 0;
+  }
 
   const { data: memberRows } = await supabase.from('user_departments').select('user_id').in('dept_id', deptIds);
 
   const memberUserIds = [...new Set((memberRows ?? []).map((row) => row.user_id as string))];
   if (memberUserIds.length === 0) {
     return {
-      broadcastTotal: broadcastTotal ?? 0,
+      ...(showSentBroadcastKpi ? { broadcastTotal: broadcastTotal ?? 0 } : {}),
       memberActiveTotal: 0,
       statScope: 'dept',
     };
@@ -103,7 +112,7 @@ export async function fetchDashboardStatCounts(
     .in('id', memberUserIds);
 
   return {
-    broadcastTotal: broadcastTotal ?? 0,
+    ...(showSentBroadcastKpi ? { broadcastTotal: broadcastTotal ?? 0 } : {}),
     memberActiveTotal: memberActiveTotal ?? 0,
     statScope: 'dept',
   };

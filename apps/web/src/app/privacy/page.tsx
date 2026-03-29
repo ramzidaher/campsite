@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           Campsite processes account, organisational, and usage data to provide internal
           communications, rota, and staff discount verification.
         </li>
-        <li>Contact: privacy@campsite.app (update before launch).</li>
+        <li>Contact: privacy@camp-site.co.uk</li>
       </ul>
       <p className="mt-8 text-[13px]">
         <Link href="/" className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">

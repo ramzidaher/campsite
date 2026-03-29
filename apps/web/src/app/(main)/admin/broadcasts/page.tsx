@@ -25,8 +25,8 @@ export default async function AdminBroadcastsPage() {
   const { data: rows } = await supabase
     .from('broadcasts')
     .select(
-      `id, title, status, scheduled_at, sent_at, created_at, dept_id, cat_id,
-       departments(name), dept_categories(name),
+      `id, title, status, scheduled_at, sent_at, created_at, dept_id, cat_id, is_org_wide, team_id,
+       departments(name), dept_categories(name), dept_teams(name),
        sender:profiles!broadcasts_created_by_fkey(full_name)`
     )
     .eq('org_id', profile.org_id)

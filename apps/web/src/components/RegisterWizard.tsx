@@ -629,7 +629,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
                 <p className="rounded-xl border border-[#e8e6e3] bg-white px-4 py-3 text-[13px] leading-relaxed text-[#525252]">
                   <span className="font-medium text-[#121212]">Your team will use:</span>{' '}
                   <span className="whitespace-nowrap font-medium text-[#121212]">
-                    {workspaceSlugNormalized}.campsite.app
+                    {workspaceSlugNormalized}.camp-site.co.uk
                   </span>
                   <span className="text-[#6b6b6b]"> to open your workspace and invitation links.</span>
                 </p>
@@ -914,7 +914,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
               <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
                 <span className="text-[#6b6b6b]">Where your team signs in</span>
                 <span className="break-all text-right font-medium text-[#121212] sm:max-w-[min(100%,14rem)]">
-                  {workspaceSlugNormalized ? `${workspaceSlugNormalized}.campsite.app` : '—'}
+                  {workspaceSlugNormalized ? `${workspaceSlugNormalized}.camp-site.co.uk` : '—'}
                 </span>
               </div>
             </div>

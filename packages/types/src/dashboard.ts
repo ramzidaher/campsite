@@ -20,6 +20,19 @@ export function canViewDashboardStatTiles(role: string | null | undefined): bool
   return dashboardAggregateScope(role) !== 'none';
 }
 
+/**
+ * "Total broadcasts sent" KPI on home dashboard. Society leaders keep member totals but must not
+ * see aggregate sent-broadcast counts.
+ */
+export function canViewDashboardSentBroadcastKpi(role: string | null | undefined): boolean {
+  return canViewDashboardStatTiles(role) && role?.trim() !== 'society_leader';
+}
+
+/** Unread-broadcast count tile on home dashboard (non-approver layout). Hidden for society leaders. */
+export function canViewDashboardUnreadBroadcastKpi(role: string | null | undefined): boolean {
+  return role?.trim() !== 'society_leader';
+}
+
 /** @deprecated Use dashboardAggregateScope(role) === 'org' — managers/coordinators use dept scope. */
 export function canViewOrgWideDashboardStats(role: string | null | undefined): boolean {
   return dashboardAggregateScope(role) === 'org';

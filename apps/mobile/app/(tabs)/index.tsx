@@ -85,13 +85,15 @@ export default function DashboardScreen() {
           <Text style={[styles.muted, { color: tokens.textSecondary }]}>Loading…</Text>
         ) : stats ? (
           <View style={styles.kpiRow}>
-            <Card style={[styles.kpiCard, { borderColor: tokens.border }]}>
-              <Text style={[styles.kpiLabel, { color: tokens.textSecondary }]}>Broadcasts sent</Text>
-              <Text style={[styles.kpiValue, { color: tokens.textPrimary }]}>{stats.broadcastTotal}</Text>
-              <Text style={[styles.kpiHint, { color: tokens.textMuted }]}>
-                {stats.statScope === 'dept' ? 'Your department(s)' : 'Whole organisation'}
-              </Text>
-            </Card>
+            {stats.broadcastTotal !== undefined ? (
+              <Card style={[styles.kpiCard, { borderColor: tokens.border }]}>
+                <Text style={[styles.kpiLabel, { color: tokens.textSecondary }]}>Broadcasts sent</Text>
+                <Text style={[styles.kpiValue, { color: tokens.textPrimary }]}>{stats.broadcastTotal}</Text>
+                <Text style={[styles.kpiHint, { color: tokens.textMuted }]}>
+                  {stats.statScope === 'dept' ? 'Your department(s)' : 'Whole organisation'}
+                </Text>
+              </Card>
+            ) : null}
             <Card style={[styles.kpiCard, { borderColor: tokens.border }]}>
               <Text style={[styles.kpiLabel, { color: tokens.textSecondary }]}>Active members</Text>
               <Text style={[styles.kpiValue, { color: tokens.textPrimary }]}>{stats.memberActiveTotal}</Text>

@@ -1,5 +1,5 @@
-const PLATFORM_ADMIN_HOST = 'admin.campsite.app';
-const ROOT_DOMAIN = 'campsite.app';
+const PLATFORM_ADMIN_HOST = 'admin.camp-site.co.uk';
+const ROOT_DOMAIN = 'camp-site.co.uk';
 
 export type HostRequestContext = {
   orgSlug: string | null;

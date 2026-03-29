@@ -6,8 +6,8 @@ Campsite is a monorepo: **Next.js** (`apps/web`) for the primary web app, **Expo
 
 ## Multi-tenancy
 
-- **Subdomains:** `{org-slug}.campsite.app` (and `*.localhost` in dev). Middleware sets `x-campsite-org-slug`.
-- **Platform admin:** `admin.campsite.app` → `/platform/*`, separate auth via `platform_admins`.
+- **Subdomains:** `{org-slug}.camp-site.co.uk` (and `*.localhost` in dev). Middleware sets `x-campsite-org-slug`.
+- **Platform admin:** `admin.camp-site.co.uk` → `/platform/*`, separate auth via `platform_admins`.
 - **Data isolation:** Row Level Security on all tenant tables; `current_org_id()` derived from the signed-in user’s `profiles.org_id`.
 
 ## Data flow (high level)

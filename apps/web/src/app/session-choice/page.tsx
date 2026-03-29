@@ -81,7 +81,7 @@ export default async function SessionChoicePage() {
         {orgSlug ? (
           <p className="mt-6 text-center text-[12px] text-[#9b9b9b]">
             Your team normally signs in at{' '}
-            <span className="font-mono text-[#6b6b6b]">{orgSlug}.campsite.app</span>
+            <span className="font-mono text-[#6b6b6b]">{orgSlug}.camp-site.co.uk</span>
           </p>
         ) : null}
       </div>

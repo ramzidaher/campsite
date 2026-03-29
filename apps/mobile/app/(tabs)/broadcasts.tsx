@@ -107,8 +107,8 @@ export default function BroadcastsScreen() {
     <TabSafeScreen>
       <View style={[styles.screen, { backgroundColor: tokens.background }]}>
         <Text style={[styles.lead, { color: tokens.textSecondary }]}>
-          Organisation broadcasts — same visibility rules as the web app (subscriptions, mandatory bypass,
-          org admins).
+          Organisation broadcasts — org-wide posts reach everyone; specific posts use department, category, and
+          optional team, same rules as the web app.
         </Text>
 
         {query.isLoading ? (
@@ -154,6 +154,13 @@ export default function BroadcastsScreen() {
                 <Text style={[styles.preview, { color: tokens.textSecondary }]} numberOfLines={2}>
                   {item.body.replace(/\s+/g, ' ').trim()}
                 </Text>
+                {item.dept_name || item.cat_name || item.team_name || item.is_org_wide ? (
+                  <Text style={[styles.metaLine, { color: tokens.textMuted }]} numberOfLines={1}>
+                    {[item.dept_name, item.is_org_wide ? 'All channels' : item.cat_name, item.team_name]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                ) : null}
                 <BroadcastBadges row={item} />
               </Pressable>
             )}
@@ -203,6 +210,7 @@ const styles = StyleSheet.create({
   itemTitle: { flex: 1, fontSize: 16, fontWeight: '600' },
   itemTime: { fontSize: 12, marginTop: 2 },
   preview: { marginTop: 8, fontSize: 14, lineHeight: 20 },
+  metaLine: { marginTop: 6, fontSize: 12, lineHeight: 16 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   badgeUrgent: { backgroundColor: '#fef2f2', borderColor: '#fecaca' },

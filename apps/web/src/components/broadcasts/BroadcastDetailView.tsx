@@ -21,6 +21,7 @@ type Row = {
   is_org_wide?: boolean;
   departments: { name: string } | null;
   dept_categories: { name: string } | null;
+  dept_teams?: { name: string } | null;
   profiles: { full_name: string } | null;
 };
 
@@ -136,9 +137,18 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
               {initial.departments.name}
             </span>
           ) : null}
-          {initial.dept_categories?.name ? (
+          {initial.is_org_wide ? (
+            <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
+              All channels
+            </span>
+          ) : initial.dept_categories?.name ? (
             <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
               {initial.dept_categories.name}
+            </span>
+          ) : null}
+          {initial.dept_teams?.name ? (
+            <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-medium text-[#4338ca]">
+              {initial.dept_teams.name}
             </span>
           ) : null}
         </div>

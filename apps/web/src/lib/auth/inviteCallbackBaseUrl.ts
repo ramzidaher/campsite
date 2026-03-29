@@ -1,0 +1,48 @@
+import type { NextRequest } from 'next/server';
+
+const LOCALHOST_SITE_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
+function trimBaseUrl(raw: string | undefined): string | null {
+  const t = raw?.trim().replace(/\/$/, '');
+  return t?.length ? t : null;
+}
+
+function isLocalHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+}
+
+/**
+ * Base URL for Supabase invite / magic-link `redirectTo` and `emailRedirectTo`.
+ * No VERCEL_URL fallback: production should set SITE_URL / NEXT_PUBLIC_SITE_URL, or rely on the request host.
+ */
+export function inviteCallbackBaseUrl(req: NextRequest): string | null {
+  const siteUrl = trimBaseUrl(process.env.SITE_URL);
+  const nextPublic = trimBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
+
+  if (siteUrl) return siteUrl;
+
+  const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host');
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
+  const hostnameOnly = hostHeader?.split(':')[0] ?? '';
+  const forwardedBase =
+    hostHeader && hostnameOnly && !isLocalHostname(hostnameOnly) ? `${proto}://${hostHeader}` : null;
+
+  if (nextPublic) {
+    const isLocal = LOCALHOST_SITE_RE.test(nextPublic);
+    if (!isLocal) return nextPublic;
+    if (forwardedBase) return forwardedBase;
+    return nextPublic;
+  }
+
+  if (forwardedBase) return forwardedBase;
+  return null;
+}
+
+export function inviteCallbackUrl(req: NextRequest, nextPath = '/dashboard'): string | null {
+  const base = inviteCallbackBaseUrl(req);
+  const next = encodeURIComponent(nextPath);
+  const path = `/auth/callback?next=${next}`;
+  if (!base) return null;
+  return `${base}${path}`;
+}
