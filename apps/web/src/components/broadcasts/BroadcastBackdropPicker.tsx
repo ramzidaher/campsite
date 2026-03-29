@@ -6,16 +6,16 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 type BackdropMode = 'none' | 'image';
 
 function SegmentBtn({
-  active,
+  active = false,
   disabled,
   label,
   onClick,
   children,
 }: {
-  active: boolean;
+  active?: boolean;
   disabled?: boolean;
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
   children: ReactNode;
 }) {
   return (
@@ -25,7 +25,7 @@ function SegmentBtn({
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       className={[
         'flex h-10 flex-1 items-center justify-center rounded-xl text-[#121212] transition-all',
         disabled ? 'cursor-not-allowed opacity-35' : '',

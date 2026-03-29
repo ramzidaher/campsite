@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import * as React from 'react';
 import { AuthOrgCard, type AuthOrgDisplay } from '@/components/auth/AuthOrgCard';
 import { createClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
@@ -11,7 +11,7 @@ function titleCaseSlug(s: string) {
     .join(' ');
 }
 
-export default async function AuthLayout({ children }: { children: ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const h = await headers();
   const slug = h.get('x-campsite-org-slug');
   const hostRaw = h.get('x-forwarded-host') ?? h.get('host') ?? '';
