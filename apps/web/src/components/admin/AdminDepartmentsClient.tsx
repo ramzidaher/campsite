@@ -3,7 +3,8 @@
 import { adminDepartmentsChannelsHeading, adminDepartmentsChannelsHint } from '@/lib/broadcasts/channelCopy';
 import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -104,6 +105,7 @@ export function AdminDepartmentsClient({
   orgId,
   currentUserId,
   isOrgAdmin,
+  openDeptIdFromUrl = null,
   initialDepartments,
   categoriesByDept,
   teamsByDept,
@@ -118,6 +120,8 @@ export function AdminDepartmentsClient({
   currentUserId: string;
   /** Org admins get full department settings; managers get member management for assigned departments only. */
   isOrgAdmin: boolean;
+  /** When set (e.g. `?dept=uuid`), opens that department’s detail panel on load. */
+  openDeptIdFromUrl?: string | null;
   initialDepartments: Dept[];
   categoriesByDept: Record<string, { id: string; name: string }[]>;
   teamsByDept: Record<string, { id: string; name: string }[]>;
@@ -130,6 +134,7 @@ export function AdminDepartmentsClient({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const pathname = usePathname() ?? '';
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -142,6 +147,15 @@ export function AdminDepartmentsClient({
   const [nDesc, setNDesc] = useState('');
 
   const [detailDept, setDetailDept] = useState<Dept | null>(null);
+
+  useEffect(() => {
+    if (!openDeptIdFromUrl) return;
+    const found = initialDepartments.find((d) => d.id === openDeptIdFromUrl);
+    if (found) {
+      setMsg(null);
+      setDetailDept(found);
+    }
+  }, [openDeptIdFromUrl, initialDepartments]);
 
   const counts = useMemo(() => {
     const list = initialDepartments;
@@ -333,6 +347,27 @@ export function AdminDepartmentsClient({
             {counts.society} societ{counts.society === 1 ? 'y' : 'ies'} · {counts.club} club
             {counts.club === 1 ? '' : 's'}
           </p>
+          {isOrgAdmin ? (
+            <p className="mt-2 text-[12px] text-[#9b9b9b]">
+              <Link
+                href="/admin/sub-teams"
+                className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              >
+                Sub-teams
+              </Link>{' '}
+              — set up broadcast groups for every department in one place.
+            </p>
+          ) : (
+            <p className="mt-2 text-[12px] text-[#9b9b9b]">
+              <Link
+                href="/manager/sub-teams"
+                className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              >
+                Sub-teams directory
+              </Link>{' '}
+              — see which teams exist in your departments.
+            </p>
+          )}
         </div>
         {isOrgAdmin ? (
           <button
@@ -468,7 +503,12 @@ export function AdminDepartmentsClient({
           wide
           title={detailDept.name}
           subtitle={`${typeLabel(detailDept.type)} · ${memberCountByDept[detailDept.id] ?? 0} members`}
-          onClose={() => setDetailDept(null)}
+          onClose={() => {
+            setDetailDept(null);
+            if (openDeptIdFromUrl) {
+              router.replace(pathname);
+            }
+          }}
         >
           <DeptDetailForm
             isOrgAdmin={isOrgAdmin}
@@ -760,6 +800,28 @@ function DeptDetailForm({
         <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
           Optional groups for targeted broadcasts. Add teams here, then assign members in the list below.
         </p>
+        {isOrgAdmin ? (
+          <p className="mt-2 text-[11px] text-[#9b9b9b]">
+            All departments in one place:{' '}
+            <Link
+              href="/admin/sub-teams"
+              className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+            >
+              Sub-teams overview
+            </Link>
+            .
+          </p>
+        ) : (
+          <p className="mt-2 text-[11px] text-[#9b9b9b]">
+            <Link
+              href="/manager/sub-teams"
+              className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+            >
+              Sub-teams directory
+            </Link>{' '}
+            for your managed departments.
+          </p>
+        )}
         {teams.length === 0 ? (
           <p className="mt-2 text-[13px] text-[#9b9b9b]">{isOrgAdmin ? 'No sub-teams yet.' : 'No sub-teams defined.'}</p>
         ) : (

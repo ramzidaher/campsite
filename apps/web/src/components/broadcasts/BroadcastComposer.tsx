@@ -690,9 +690,10 @@ export function BroadcastComposer({
         <div>
           <label className="mb-1 block text-sm font-medium text-[#121212]">Sub-team (optional)</label>
           <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
-            Only members assigned to this team in{' '}
-            <span className="font-medium text-[#121212]">Admin → Departments</span> see the post. Leave &ldquo;All
-            members in this department&rdquo; to use the channel only (no sub-team filter).
+            Only members assigned to this team (org admins set this under{' '}
+            <span className="font-medium text-[#121212]">Admin → Sub-teams</span> or{' '}
+            <span className="font-medium text-[#121212]">Departments</span>) see the post. Leave &ldquo;All members in
+            this department&rdquo; to use the channel only (no sub-team filter).
           </p>
           <SelectWithChevron value={teamId} onChange={(e) => setTeamId(e.target.value)}>
             <option value="">All members in this department</option>

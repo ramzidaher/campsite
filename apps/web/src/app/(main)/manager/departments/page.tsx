@@ -3,7 +3,14 @@ import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirec
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-export default async function ManagerDepartmentsPage() {
+export default async function ManagerDepartmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dept?: string }>;
+}) {
+  const sp = await searchParams;
+  const openDeptId = typeof sp.dept === 'string' && sp.dept.trim() ? sp.dept.trim() : null;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -32,6 +39,7 @@ export default async function ManagerDepartmentsPage() {
       orgId={profile.org_id}
       currentUserId={user.id}
       isOrgAdmin={false}
+      openDeptIdFromUrl={openDeptId}
       initialDepartments={bundle.departments}
       categoriesByDept={bundle.categoriesByDept}
       teamsByDept={bundle.teamsByDept}
