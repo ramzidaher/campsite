@@ -191,14 +191,15 @@ export function useAuthGate() {
   const pathname = usePathname() ?? '';
   const segments = useSegments();
   const { session, profile, profileLoading, loading, configured } = useAuth();
-  const inactiveHandled = useRef(false);
+  /** Prevents duplicate sign-out while inactive handling runs; reset if sign-out fails so we can retry. */
+  const signingOutInactiveRef = useRef(false);
 
   useEffect(() => {
-    if (profile?.status !== 'inactive') inactiveHandled.current = false;
+    if (profile?.status !== 'inactive') signingOutInactiveRef.current = false;
   }, [profile?.status]);
 
   useEffect(() => {
-    if (!session) inactiveHandled.current = false;
+    if (!session) signingOutInactiveRef.current = false;
   }, [session]);
 
   useEffect(() => {
@@ -229,13 +230,16 @@ export function useAuthGate() {
     }
 
     if (profile.status === 'inactive') {
-      if (inactiveHandled.current) return;
-      inactiveHandled.current = true;
+      if (signingOutInactiveRef.current) return;
+      signingOutInactiveRef.current = true;
       void getSupabase()
         .auth.signOut()
         .then(() =>
           router.replace({ pathname: '/(auth)/login', params: { error: 'inactive' } })
-        );
+        )
+        .catch(() => {
+          signingOutInactiveRef.current = false;
+        });
       return;
     }
 

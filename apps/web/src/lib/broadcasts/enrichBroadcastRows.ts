@@ -17,14 +17,16 @@ export async function enrichBroadcastRows(
   const readSet = new Set((reads ?? []).map((r) => r.broadcast_id as string));
 
   const deptIds = [...new Set(raw.map((r) => r.dept_id))];
-  const catIds = [...new Set(raw.map((r) => r.cat_id).filter((id): id is string => Boolean(id)))];
+  const channelIds = [
+    ...new Set(raw.map((r) => r.channel_id).filter((id): id is string => Boolean(id))),
+  ];
   const teamIds = [...new Set(raw.map((r) => r.team_id).filter((id): id is string => Boolean(id)))];
   const userIds = [...new Set(raw.map((r) => r.created_by))];
 
-  const [{ data: deps }, { data: cats }, { data: teams }, { data: profs }] = await Promise.all([
+  const [{ data: deps }, { data: chans }, { data: teams }, { data: profs }] = await Promise.all([
     client.from('departments').select('id,name').in('id', deptIds),
-    catIds.length
-      ? client.from('dept_categories').select('id,name').in('id', catIds)
+    channelIds.length
+      ? client.from('broadcast_channels').select('id,name').in('id', channelIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     teamIds.length
       ? client.from('dept_teams').select('id,name').in('id', teamIds)
@@ -33,7 +35,7 @@ export async function enrichBroadcastRows(
   ]);
 
   const dm = new Map((deps ?? []).map((d) => [d.id as string, d.name as string]));
-  const cm = new Map((cats ?? []).map((c) => [c.id as string, c.name as string]));
+  const cm = new Map((chans ?? []).map((c) => [c.id as string, c.name as string]));
   const tm = new Map((teams ?? []).map((t) => [t.id as string, t.name as string]));
   const pm = new Map((profs ?? []).map((p) => [p.id as string, p.full_name as string]));
 
@@ -43,14 +45,15 @@ export async function enrichBroadcastRows(
     body: r.body,
     sent_at: r.sent_at,
     dept_id: r.dept_id,
-    cat_id: r.cat_id,
+    channel_id: r.channel_id,
     team_id: r.team_id ?? null,
     created_by: r.created_by,
     is_mandatory: r.is_mandatory ?? false,
     is_pinned: r.is_pinned ?? false,
     is_org_wide: r.is_org_wide ?? false,
     departments: dm.has(r.dept_id) ? { name: dm.get(r.dept_id)! } : null,
-    dept_categories: r.cat_id && cm.has(r.cat_id) ? { name: cm.get(r.cat_id)! } : null,
+    broadcast_channels:
+      r.channel_id && cm.has(r.channel_id) ? { name: cm.get(r.channel_id)! } : null,
     dept_teams: r.team_id && tm.has(r.team_id) ? { name: tm.get(r.team_id)! } : null,
     profiles: pm.has(r.created_by) ? { full_name: pm.get(r.created_by)! } : null,
     read: readSet.has(r.id),

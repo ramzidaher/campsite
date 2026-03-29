@@ -1,5 +1,6 @@
 'use client';
 
+import { adminDepartmentsChannelsHeading, adminDepartmentsChannelsHint } from '@/lib/broadcasts/channelCopy';
 import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -30,7 +31,7 @@ const DEPT_BROADCAST_PERM_DEFS: {
   {
     permission: 'send_org_wide',
     label: 'Send org-wide',
-    hint: 'Authorise org-wide broadcasts that reach every active member (no category pick).',
+    hint: 'Authorise org-wide broadcasts that reach every active member (no channel pick).',
     minRoleOptions: ['manager', 'coordinator'],
   },
   {
@@ -66,7 +67,7 @@ const DEPT_BROADCAST_PERM_DEFS: {
   {
     permission: 'mandatory_broadcast',
     label: 'Mandatory broadcasts',
-    hint: 'Mark sends as mandatory so they bypass category subscription filters.',
+    hint: 'Mark sends as mandatory so they bypass channel subscription filters.',
     minRoleOptions: ['manager'],
   },
 ];
@@ -214,13 +215,13 @@ export function AdminDepartmentsClient({
 
   async function addCategory(deptId: string, name: string) {
     if (!name.trim()) return;
-    const { error } = await supabase.from('dept_categories').insert({ dept_id: deptId, name: name.trim() });
+    const { error } = await supabase.from('broadcast_channels').insert({ dept_id: deptId, name: name.trim() });
     if (error) setMsg(error.message);
     else void refresh();
   }
 
   async function removeCategory(catId: string) {
-    const { error } = await supabase.from('dept_categories').delete().eq('id', catId);
+    const { error } = await supabase.from('broadcast_channels').delete().eq('id', catId);
     if (error) setMsg(error.message);
     else void refresh();
   }
@@ -696,7 +697,7 @@ function DeptDetailForm({
     <>
       {!isOrgAdmin ? (
         <p className="mb-4 text-[12px] leading-snug text-[#6b6b6b]">
-          Name, categories, broadcast rules and department managers are managed by an org admin. You can add or remove
+          Name, broadcast channels, broadcast rules and department managers are managed by an org admin. You can add or remove
           members for this department below.
         </p>
       ) : null}
@@ -942,7 +943,10 @@ function DeptDetailForm({
       </div>
 
       <div className="mt-6 border-t border-[#d8d8d8] pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast categories</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+          {adminDepartmentsChannelsHeading}
+        </p>
+        <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">{adminDepartmentsChannelsHint}</p>
         <ul className="mt-2 space-y-1.5 text-[13px]">
           {categories.map((c) => (
             <li key={c.id} className="flex items-center justify-between gap-2">
@@ -960,7 +964,7 @@ function DeptDetailForm({
         <div className="mt-2 flex gap-2">
           <input
             className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
-            placeholder="New category"
+            placeholder="New channel"
             value={catName}
             onChange={(e) => setCatName(e.target.value)}
           />

@@ -7,6 +7,11 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { uploadUserAvatar } from '@/lib/storage/uploadUserAvatar';
 import {
+  registrationChannelsBody,
+  registrationChannelsTitle,
+  registrationWizardChannelsStep,
+} from '@/lib/broadcasts/channelCopy';
+import {
   isValidWorkspaceSlug,
   normalizeWorkspaceSlugInput,
   suggestSlugFromOrganisationName,
@@ -21,10 +26,10 @@ const JOIN_STEP_LABELS = [
   'Organisation',
   'Profile (optional)',
   'Teams',
-  'Subscriptions',
+  registrationWizardChannelsStep,
   'Review',
 ] as const;
-const CREATE_ORG_STEP_LABELS = ['Account', 'Organisation', 'Profile (optional)', 'Review'] as const;
+const CREATE_ORG_STEP_LABELS = ['Account', 'Organisation', 'Profile (optional)'] as const;
 
 function passwordStrengthScore(pw: string): { score: number; label: string; color: string; width: string } {
   let score = 0;
@@ -182,7 +187,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
     const deptIds = (data ?? []).map((d) => d.id);
     if (deptIds.length) {
       const { data: catRows, error: ce } = await supabase
-        .from('dept_categories')
+        .from('broadcast_channels')
         .select('id,dept_id,name')
         .in('dept_id', deptIds);
       if (ce) {
@@ -316,7 +321,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       const registerSubscriptions = cats
         .filter((c) => selectedDeptIds.has(c.dept_id))
         .map((c) => ({
-          cat_id: c.id,
+          channel_id: c.id,
           subscribed: subscribed[c.id] ?? true,
         }));
       const joinMeta: Record<string, string> = {
@@ -795,13 +800,29 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
             </button>
             <button
               type="button"
+              disabled={createOrgFlow && loading}
               className="auth-btn-primary flex-[2]"
               onClick={() => {
                 setError(null);
-                setStep(4);
+                if (inviteFlow) {
+                  setStep(4);
+                  return;
+                }
+                void submit();
               }}
             >
-              {optionalAvatarFile ? 'Continue →' : 'Skip →'}
+              {createOrgFlow ? (
+                <>
+                  {loading ? (
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  ) : null}
+                  Create your workspace
+                </>
+              ) : optionalAvatarFile ? (
+                'Continue →'
+              ) : (
+                'Skip →'
+              )}
             </button>
           </div>
         </div>
@@ -811,8 +832,8 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         <div>
           <h2 className="auth-title">Select teams</h2>
           <p className="auth-sub mb-6">
-            Choose every department, society, or club you belong to. You&apos;ll pick broadcast
-            categories next.
+            Choose every department, society, or club you belong to. You&apos;ll pick broadcast channels
+            next.
           </p>
           {(['department', 'society', 'club'] as const).map((t) =>
             groupedDepts[t].length ? (
@@ -874,81 +895,10 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         </div>
       ) : null}
 
-      {step === 4 && createOrgFlow ? (
-        <div>
-          <h2 className="auth-title">Review & submit</h2>
-          <p className="auth-sub mb-6">
-            Check everything looks right, then create your workspace
-          </p>
-          <div className="mb-4 rounded-xl bg-[#f5f4f1] p-4">
-            <p className="mb-3 text-[13px] font-medium text-[#9b9b9b]">Account</p>
-            <div className="flex flex-col gap-2 text-[13px]">
-              <div className="flex justify-between gap-4">
-                <span className="text-[#6b6b6b]">Name</span>
-                <span className="font-medium text-[#121212]">{fullName || '—'}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-[#6b6b6b]">Email</span>
-                <span className="break-all text-right font-medium text-[#121212]">{email || '—'}</span>
-              </div>
-              {optionalAvatarFile ? (
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-[#6b6b6b]">Photo</span>
-                  <span className="text-right text-[12px] font-medium text-[#121212]">Added</span>
-                </div>
-              ) : (
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-[#6b6b6b]">Photo</span>
-                  <span className="text-right text-[12px] text-[#9b9b9b]">Skipped (add later in Settings)</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="mb-6 rounded-xl bg-[#f5f4f1] p-4">
-            <p className="mb-3 text-[13px] font-medium text-[#9b9b9b]">Organisation</p>
-            <div className="flex flex-col gap-2 text-[13px]">
-              <div className="flex justify-between gap-4">
-                <span className="text-[#6b6b6b]">Name</span>
-                <span className="text-right font-medium text-[#121212]">{newOrgName.trim() || '—'}</span>
-              </div>
-              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
-                <span className="text-[#6b6b6b]">Where your team signs in</span>
-                <span className="break-all text-right font-medium text-[#121212] sm:max-w-[min(100%,14rem)]">
-                  {workspaceSlugNormalized ? `${workspaceSlugNormalized}.camp-site.co.uk` : '—'}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="mb-6 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] p-4 text-[13px] leading-relaxed text-[#6b6b6b]">
-            <strong className="mb-1 block text-[#121212]">What happens next?</strong>
-            We create your workspace and sign you in. You can then invite colleagues and set things up from
-            the Admin section.
-          </div>
-          <div className="flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(3)}>
-              ← Back
-            </button>
-            <button
-              type="button"
-              disabled={loading}
-              className="auth-btn-primary flex-[2]"
-              onClick={() => void submit()}
-            >
-              {loading ? (
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              ) : null}
-              Create your workspace
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {step === 5 && inviteFlow ? (
         <div>
-          <h2 className="auth-title">Subscriptions</h2>
-          <p className="auth-sub mb-6">
-            Choose broadcast categories you want to receive. You can change these later in Settings.
-          </p>
+          <h2 className="auth-title">{registrationChannelsTitle}</h2>
+          <p className="auth-sub mb-6">{registrationChannelsBody}</p>
           {Array.from(
             new Set(cats.filter((c) => selectedDeptIds.has(c.dept_id)).map((c) => c.dept_id))
           ).map((deptId) => {

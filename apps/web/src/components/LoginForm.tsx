@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
+import { LoginOrgChoiceModal } from '@/components/auth/LoginOrgChoiceModal';
 import { createClient } from '@/lib/supabase/client';
 
 type Props = {
@@ -20,9 +22,17 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
   const [showPw, setShowPw] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [orgChoiceOpen, setOrgChoiceOpen] = useState(false);
+  const [orgChoiceOrgs, setOrgChoiceOrgs] = useState<LoginOrgOption[]>([]);
   const [message, setMessage] = useState<string | null>(
     errorParam === 'inactive' ? 'Your account is inactive.' : null
   );
+
+  useEffect(() => {
+    if (errorParam !== 'inactive') return;
+    const supabase = createClient();
+    void supabase.auth.signOut();
+  }, [errorParam]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,13 +40,66 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
     setMessage(null);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setMessage(error.message);
       return;
     }
-    router.replace(next);
-    router.refresh();
+
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    if (!uid) {
+      setLoading(false);
+      router.replace(next);
+      router.refresh();
+      return;
+    }
+
+    const { data: memRows, error: memErr } = await supabase
+      .from('user_org_memberships')
+      .select('org_id, organisations(name, slug)');
+
+    if (memErr || !memRows?.length) {
+      setLoading(false);
+      router.replace(next);
+      router.refresh();
+      return;
+    }
+
+    const orgs: LoginOrgOption[] = memRows
+      .map((r) => {
+        const o = r.organisations as { name?: string; slug?: string } | null;
+        return {
+          org_id: r.org_id as string,
+          name: o?.name?.trim() || 'Organisation',
+          slug: o?.slug?.trim() || '',
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (orgs.length === 1) {
+      const { data: prof } = await supabase.from('profiles').select('org_id').eq('id', uid).maybeSingle();
+      if (!prof?.org_id || prof.org_id !== orgs[0]!.org_id) {
+        await supabase.rpc('set_my_active_org', { p_org_id: orgs[0]!.org_id });
+      }
+      setLoading(false);
+      router.replace(next);
+      router.refresh();
+      return;
+    }
+
+    const { data: prof } = await supabase.from('profiles').select('org_id').eq('id', uid).maybeSingle();
+    const activeOk = Boolean(prof?.org_id && orgs.some((o) => o.org_id === prof.org_id));
+    if (activeOk) {
+      setLoading(false);
+      router.replace(next);
+      router.refresh();
+      return;
+    }
+
+    setOrgChoiceOrgs(orgs);
+    setOrgChoiceOpen(true);
+    setLoading(false);
   }
 
   return (
@@ -126,6 +189,13 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
           Create one
         </Link>
       </p>
+
+      <LoginOrgChoiceModal
+        open={orgChoiceOpen}
+        orgs={orgChoiceOrgs}
+        nextPath={next}
+        onClose={() => setOrgChoiceOpen(false)}
+      />
     </div>
   );
 }

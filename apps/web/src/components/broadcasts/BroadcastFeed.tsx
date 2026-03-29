@@ -1,6 +1,7 @@
 'use client';
 
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
+import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import { relTime } from '@/lib/format/relTime';
@@ -146,8 +147,8 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
       const run = async (mode: 'plan02' | 'legacy') => {
         const select =
           mode === 'plan02'
-            ? 'id,title,body,sent_at,dept_id,cat_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
-            : 'id,title,body,sent_at,dept_id,cat_id,team_id,created_by';
+            ? 'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
+            : 'id,title,body,sent_at,dept_id,channel_id,team_id,created_by';
         let q = supabase
           .from('broadcasts')
           .select(select)
@@ -159,7 +160,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
           q = q.order('sent_at', { ascending: false });
         }
         if (deptFilter.size) q = q.in('dept_id', [...deptFilter]);
-        if (catFilter.size) q = q.in('cat_id', [...catFilter]);
+        if (catFilter.size) q = q.in('channel_id', [...catFilter]);
         return q.range(from, to);
       };
 
@@ -289,7 +290,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
           {displayRows.map((b) => {
             const unread = b.read === false;
             const deptName = b.departments?.name ?? 'General';
-            const catName = b.dept_categories?.name ?? '';
+            const channelName = b.broadcast_channels?.name ?? '';
             const teamName = b.dept_teams?.name ?? '';
             return (
               <li key={b.id}>
@@ -347,9 +348,13 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
                       <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
                         All channels
                       </span>
-                    ) : catName ? (
-                      <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
-                        {catName}
+                    ) : channelName ? (
+                      <span
+                        className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
+                        title={channelPillAccessibleName(channelName)}
+                        aria-label={channelPillAccessibleName(channelName)}
+                      >
+                        {channelName}
                       </span>
                     ) : null}
                     {teamName ? (

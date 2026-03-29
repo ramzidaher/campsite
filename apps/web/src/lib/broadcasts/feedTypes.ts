@@ -4,14 +4,14 @@ export type FeedRow = {
   body: string;
   sent_at: string | null;
   dept_id: string;
-  cat_id: string | null;
+  channel_id: string | null;
   team_id?: string | null;
   created_by: string;
   is_mandatory?: boolean;
   is_pinned?: boolean;
   is_org_wide?: boolean;
   departments: { name: string } | null;
-  dept_categories: { name: string } | null;
+  broadcast_channels: { name: string } | null;
   dept_teams?: { name: string } | null;
   profiles: { full_name: string } | null;
   read?: boolean;
@@ -23,7 +23,7 @@ export type RawBroadcast = {
   body: string;
   sent_at: string | null;
   dept_id: string;
-  cat_id: string | null;
+  channel_id: string | null;
   team_id?: string | null;
   created_by: string;
   is_mandatory?: boolean | null;

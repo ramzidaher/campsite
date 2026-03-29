@@ -155,7 +155,7 @@ export function BroadcastsClient({
       return;
     }
     const { data: cats } = await supabase
-      .from('dept_categories')
+      .from('broadcast_channels')
       .select('id,name,dept_id')
       .in('dept_id', dids);
     setCategories(

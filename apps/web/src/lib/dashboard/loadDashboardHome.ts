@@ -132,7 +132,7 @@ export async function loadDashboardHome(
     supabase
       .from('broadcasts')
       .select(
-        'id,title,body,sent_at,dept_id,cat_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
+        'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
       )
       .eq('org_id', orgId)
       .eq('status', 'sent')

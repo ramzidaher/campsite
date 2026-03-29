@@ -93,6 +93,12 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && pathname === '/login') {
+    // Inactive members are sent here from `/` with `?error=inactive`. Sending them back to `/`
+    // would loop forever (home redirects to login again).
+    const loginError = request.nextUrl.searchParams.get('error');
+    if (loginError === 'inactive') {
+      return response;
+    }
     const dest = request.nextUrl.clone();
     dest.pathname = isPlatformAdmin ? '/dashboard' : '/';
     dest.search = '';

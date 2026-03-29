@@ -1,5 +1,5 @@
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -26,6 +26,12 @@ export function LoginForm() {
     params.error === 'inactive' ? 'Your account is inactive.' : null
   );
 
+  useEffect(() => {
+    if (params.error !== 'inactive' || !configured) return;
+    const supabase = getSupabase();
+    void supabase.auth.signOut();
+  }, [params.error, configured]);
+
   async function onSubmit() {
     if (!configured) return;
     setLoading(true);
@@ -40,7 +46,7 @@ export function LoginForm() {
       if (!keepSignedIn) {
         /* session still persisted by Supabase; checkbox is UX parity with web */
       }
-      router.replace('/(tabs)');
+      router.replace('/');
     } finally {
       setLoading(false);
     }

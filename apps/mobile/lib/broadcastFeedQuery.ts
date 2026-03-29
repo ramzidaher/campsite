@@ -13,7 +13,7 @@ export type MobileBroadcastRow = {
   is_org_wide: boolean;
   /** Sending department (authority dept for org-wide). */
   dept_name?: string | null;
-  cat_name?: string | null;
+  channel_name?: string | null;
   team_name?: string | null;
 };
 
@@ -35,7 +35,7 @@ async function runFeedQuery(
 ) {
   const select =
     mode === 'plan02'
-      ? 'id,title,body,sent_at,is_mandatory,is_pinned,is_org_wide,departments(name),dept_categories(name),dept_teams(name)'
+      ? 'id,title,body,sent_at,is_mandatory,is_pinned,is_org_wide,departments(name),broadcast_channels(name),dept_teams(name)'
       : 'id,title,body,sent_at';
   let q = supabase.from('broadcasts').select(select).eq('org_id', orgId).eq('status', 'sent');
   if (mode === 'plan02') {
@@ -57,7 +57,7 @@ function normalizeRow(r: Record<string, unknown>): MobileBroadcastRow {
     is_pinned: Boolean(r.is_pinned),
     is_org_wide: isOrgWide,
     dept_name: relationName(r.departments),
-    cat_name: relationName(r.dept_categories),
+    channel_name: relationName(r.broadcast_channels),
     team_name: relationName(r.dept_teams),
   };
 }

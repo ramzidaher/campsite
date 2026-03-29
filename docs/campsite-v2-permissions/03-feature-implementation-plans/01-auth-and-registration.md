@@ -86,12 +86,14 @@
 
 ### 3.3.1 Multi-organisation login (current scope)
 
-- **Today:** `profiles.id` references `auth.users` with a **single** `org_id` per user — at most **one tenant profile** per Supabase account. There is no membership table for “same user, org A and org B.”
-- **Product choice until redesigned:** Treat **one email / one Supabase user = one organisation** in the product. If someone needs two orgs, they use **separate accounts** (or we later add `profile_org_memberships`, active-org selection, RLS, and login UX — a larger change than a UI tweak).
+- **`user_org_memberships`** (`supabase/migrations/20260430280000_user_org_memberships.sql`): one row per `(auth user, organisation)` with org-scoped `role`, `status`, `full_name`, `email`, and review fields. **`profiles`** still holds the **active** tenant row (`org_id`, `role`, `status`, …); **`current_org_id()`** continues to read `profiles.org_id`, so existing RLS is unchanged.
+- **Sync:** Trigger `trg_profiles_sync_org_membership` upserts the membership row for the active `profiles.org_id` whenever org-scoped columns change; removing a member deletes that org’s membership and may **fall back** `profiles` to another membership (`org_admin_remove_member`).
+- **Second org via admin invite:** `admin_provision_invited_member` inserts/updates a row in `user_org_memberships` for the new org **without** changing `profiles` if the user already has another active org (user switches in **Settings** or at login).
+- **Login:** `LoginForm` loads memberships after `signInWithPassword`. If **more than one** membership exists and `profiles.org_id` is **missing or not** one of those orgs, **`LoginOrgChoiceModal`** asks which workspace to open, then calls **`set_my_active_org`**. If `profiles.org_id` already matches a membership, no modal (user can switch under **Settings → Workspaces**).
 
 ### 3.4 Layout interactions
 
-- **`(main)/layout.tsx`** wraps **`/pending`** and the rest of the signed-in app. It loads `profiles.role` for the shell (`unassigned` shows as “Pending role” until an approver assigns a role). **`RegisterWizard`** (`apps/web/src/components/RegisterWizard.tsx`): default `/register` is **create organisation** only; **join existing org** (dropdown + teams) appears when the URL has **`?org={slug}`** (invite link). The org list is not fetched without that param.
+- **`(main)/layout.tsx`** wraps **`/pending`** and the rest of the signed-in app. It loads `profiles.role` for the shell (`unassigned` shows as “Pending role” until an approver assigns a role). **`RegisterWizard`** (`apps/web/src/components/RegisterWizard.tsx`): default `/register` is **create organisation** only (Account → Organisation → optional profile photo, then **Create your workspace** — no separate review step); **join existing org** (dropdown + teams + subscriptions + **Review & submit**) appears when the URL has **`?org={slug}`** (invite link). The org list is not fetched without that param.
 
 ## 4. Shared types
 

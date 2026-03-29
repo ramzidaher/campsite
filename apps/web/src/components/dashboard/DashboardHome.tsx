@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { DashboardCalendarWidget } from '@/components/dashboard/DashboardCalendarWidget';
+import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
 import type { DashboardHomeModel } from '@/lib/dashboard/loadDashboardHome';
 import { relTime } from '@/lib/format/relTime';
@@ -294,7 +295,7 @@ export function DashboardHome({
             ) : (
               data.recentBroadcasts.map((b) => {
                 const deptName = b.departments?.name ?? 'General';
-                const catName = b.dept_categories?.name ?? '';
+                const channelName = b.broadcast_channels?.name ?? '';
                 const teamName = b.dept_teams?.name ?? '';
                 const unread = b.read === false;
                 return (
@@ -346,9 +347,13 @@ export function DashboardHome({
                       >
                         {deptName}
                       </span>
-                      {catName ? (
-                        <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
-                          {catName}
+                      {channelName ? (
+                        <span
+                          className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
+                          title={channelPillAccessibleName(channelName)}
+                          aria-label={channelPillAccessibleName(channelName)}
+                        >
+                          {channelName}
                         </span>
                       ) : b.is_org_wide ? (
                         <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">

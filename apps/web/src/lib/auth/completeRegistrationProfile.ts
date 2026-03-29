@@ -53,16 +53,22 @@ async function profileRowExists(
 
 function parseSubscriptions(
   raw: string | undefined
-): { cat_id: string; subscribed: boolean }[] {
+): { channel_id: string; subscribed: boolean }[] {
   if (!raw || typeof raw !== 'string') return [];
   try {
     const arr = JSON.parse(raw) as unknown;
     if (!Array.isArray(arr)) return [];
     return arr
-      .filter((x): x is { cat_id: string; subscribed?: boolean } => {
-        return typeof x === 'object' && x !== null && typeof (x as { cat_id?: unknown }).cat_id === 'string';
+      .filter((x): x is { channel_id?: unknown; cat_id?: unknown; subscribed?: boolean } => {
+        if (typeof x !== 'object' || x === null) return false;
+        const o = x as { channel_id?: unknown; cat_id?: unknown };
+        return typeof o.channel_id === 'string' || typeof o.cat_id === 'string';
       })
-      .map((x) => ({ cat_id: x.cat_id, subscribed: x.subscribed !== false }));
+      .map((x) => {
+        const o = x as { channel_id?: string; cat_id?: string; subscribed?: boolean };
+        const channel_id = (o.channel_id ?? o.cat_id) as string;
+        return { channel_id, subscribed: o.subscribed !== false };
+      });
   } catch {
     return [];
   }
@@ -129,7 +135,7 @@ async function insertProfileFromJwtMetadata(
 
   const subRows = parseSubscriptions(meta.register_subscriptions).map((s) => ({
     user_id: user.id,
-    cat_id: s.cat_id,
+    channel_id: s.channel_id,
     subscribed: s.subscribed,
   }));
   if (subRows.length) {

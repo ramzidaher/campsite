@@ -1,6 +1,6 @@
 import { Card, EmptyState, useCampsiteTheme } from '@campsite/ui';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -17,6 +17,7 @@ import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
 import { useAuth } from '@/lib/AuthContext';
 import { type MobileBroadcastRow, fetchMobileBroadcastFeed } from '@/lib/broadcastFeedQuery';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import Constants from 'expo-constants';
 
 function formatSentAt(iso: string | null): string {
   if (!iso) return '';
@@ -52,11 +53,68 @@ function BroadcastBadges({ row }: { row: MobileBroadcastRow }) {
   );
 }
 
+const AI_SUMMARY_MIN_CHARS = 480;
+
 export default function BroadcastsScreen() {
   const { tokens } = useCampsiteTheme();
-  const { profile, configured } = useAuth();
+  const { profile, configured, session } = useAuth();
   const orgId = profile?.org_id ?? null;
   const [detail, setDetail] = useState<MobileBroadcastRow | null>(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiSummaryErr, setAiSummaryErr] = useState<string | null>(null);
+  const [aiSummaryBusy, setAiSummaryBusy] = useState(false);
+
+  const siteUrl = useMemo(() => {
+    const raw = (Constants.expoConfig?.extra as { siteUrl?: string } | undefined)?.siteUrl?.trim() ?? '';
+    return raw.replace(/\/$/, '');
+  }, []);
+
+  useEffect(() => {
+    setAiSummary(null);
+    setAiSummaryErr(null);
+    setAiSummaryBusy(false);
+  }, [detail?.id]);
+
+  const requestAiSummary = async () => {
+    if (!detail || !siteUrl || !session?.access_token) return;
+    setAiSummaryBusy(true);
+    setAiSummaryErr(null);
+    try {
+      const res = await fetch(`${siteUrl}/api/broadcasts/summarize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ title: detail.title, body: detail.body }),
+      });
+      let data: { summary?: string; error?: string; message?: string } = {};
+      try {
+        data = (await res.json()) as typeof data;
+      } catch {
+        /* ignore */
+      }
+      if (!res.ok) {
+        const msg =
+          data.error === 'not_configured' && typeof data.message === 'string'
+            ? data.message
+            : typeof data.error === 'string'
+              ? data.error
+              : 'Could not summarise.';
+        setAiSummaryErr(msg);
+        return;
+      }
+      if (typeof data.summary === 'string' && data.summary.trim()) {
+        setAiSummary(data.summary.trim());
+      } else {
+        setAiSummaryErr('No summary returned.');
+      }
+    } catch {
+      setAiSummaryErr('Network error.');
+    } finally {
+      setAiSummaryBusy(false);
+    }
+  };
 
   const query = useQuery({
     queryKey: ['mobile-broadcast-feed', orgId],
@@ -107,7 +165,7 @@ export default function BroadcastsScreen() {
     <TabSafeScreen>
       <View style={[styles.screen, { backgroundColor: tokens.background }]}>
         <Text style={[styles.lead, { color: tokens.textSecondary }]}>
-          Organisation broadcasts — org-wide posts reach everyone; specific posts use department, category, and
+          Organisation broadcasts — org-wide posts reach everyone; specific posts use department, channel, and
           optional team, same rules as the web app.
         </Text>
 
@@ -154,9 +212,9 @@ export default function BroadcastsScreen() {
                 <Text style={[styles.preview, { color: tokens.textSecondary }]} numberOfLines={2}>
                   {item.body.replace(/\s+/g, ' ').trim()}
                 </Text>
-                {item.dept_name || item.cat_name || item.team_name || item.is_org_wide ? (
+                {item.dept_name || item.channel_name || item.team_name || item.is_org_wide ? (
                   <Text style={[styles.metaLine, { color: tokens.textMuted }]} numberOfLines={1}>
-                    {[item.dept_name, item.is_org_wide ? 'All channels' : item.cat_name, item.team_name]
+                    {[item.dept_name, item.is_org_wide ? 'All channels' : item.channel_name, item.team_name]
                       .filter(Boolean)
                       .join(' · ')}
                   </Text>
@@ -181,6 +239,44 @@ export default function BroadcastsScreen() {
               {detail ? formatSentAt(detail.sent_at) : ''}
             </Text>
             {detail ? <BroadcastBadges row={detail} /> : null}
+            {detail &&
+            (detail.body?.trim().length ?? 0) >= AI_SUMMARY_MIN_CHARS &&
+            siteUrl &&
+            session?.access_token ? (
+              <View
+                style={[
+                  styles.aiBox,
+                  { borderColor: tokens.border, backgroundColor: tokens.background },
+                ]}
+              >
+                <Text style={[styles.aiTitle, { color: tokens.textPrimary }]}>AI summary</Text>
+                <Text style={[styles.aiHint, { color: tokens.textSecondary }]}>
+                  Short recap (Google AI). Check the full message below for accuracy.
+                </Text>
+                <Pressable
+                  onPress={() => void requestAiSummary()}
+                  disabled={aiSummaryBusy}
+                  style={({ pressed }) => [
+                    styles.aiButton,
+                    { opacity: aiSummaryBusy ? 0.6 : pressed ? 0.85 : 1, backgroundColor: '#047857' },
+                  ]}
+                >
+                  <Text style={styles.aiButtonText}>
+                    {aiSummaryBusy ? 'Summarising…' : aiSummary ? 'Refresh' : 'Summarise'}
+                  </Text>
+                </Pressable>
+                {aiSummaryErr ? (
+                  <Text style={[styles.aiErr, { color: '#b91c1c' }]}>{aiSummaryErr}</Text>
+                ) : null}
+                {aiSummary ? (
+                  <Text style={[styles.aiSummaryText, { color: tokens.textPrimary }]}>{aiSummary}</Text>
+                ) : !aiSummaryBusy && !aiSummaryErr ? (
+                  <Text style={[styles.aiHint, { color: tokens.textMuted, marginTop: 8 }]}>
+                    Tap Summarise for a concise version.
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
             <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
               <Text style={[styles.modalText, { color: tokens.textPrimary }]}>{detail?.body}</Text>
             </ScrollView>
@@ -230,6 +326,24 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 20, fontWeight: '700' },
   modalMeta: { fontSize: 13, marginTop: 6 },
+  aiBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  aiTitle: { fontSize: 15, fontWeight: '700' },
+  aiHint: { fontSize: 12, lineHeight: 17, marginTop: 4 },
+  aiButton: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  aiButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  aiErr: { marginTop: 8, fontSize: 13, lineHeight: 18 },
+  aiSummaryText: { marginTop: 10, fontSize: 14, lineHeight: 21 },
   modalBody: { maxHeight: 360, marginTop: 12 },
   modalText: { fontSize: 15, lineHeight: 22 },
   modalClose: { marginTop: 16, alignItems: 'center', paddingVertical: 12 },

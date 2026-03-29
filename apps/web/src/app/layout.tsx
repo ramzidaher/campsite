@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 import { SentryInit } from '@/components/SentryInit';
 import { DM_Serif_Display, Inter } from 'next/font/google';
@@ -28,6 +29,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${dmSerif.variable} min-h-screen font-sans antialiased`}>
         <SentryInit />
+        <Analytics />
         {children}
       </body>
     </html>

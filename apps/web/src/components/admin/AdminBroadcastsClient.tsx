@@ -1,5 +1,6 @@
 'use client';
 
+import { adminBroadcastsFilterChannelAria, channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,11 +14,11 @@ export type AdminBroadcastRow = {
   sent_at: string | null;
   created_at: string;
   dept_id: string;
-  cat_id: string | null;
+  channel_id: string | null;
   is_org_wide?: boolean | null;
   team_id?: string | null;
   departments: { name: string } | { name: string }[] | null;
-  dept_categories: { name: string } | { name: string }[] | null;
+  broadcast_channels: { name: string } | { name: string }[] | null;
   dept_teams?: { name: string } | { name: string }[] | null;
   sender: { full_name: string } | { full_name: string }[] | null;
 };
@@ -145,7 +146,7 @@ export function AdminBroadcastsClient({
       if (filterDept !== 'all' && r.dept_id !== filterDept) return false;
       if (filterCat === '__org_wide__') {
         if (!r.is_org_wide) return false;
-      } else if (filterCat !== 'all' && r.cat_id !== filterCat) return false;
+      } else if (filterCat !== 'all' && r.channel_id !== filterCat) return false;
       if (qn && !r.title.toLowerCase().includes(qn)) return false;
       return true;
     });
@@ -276,10 +277,10 @@ export function AdminBroadcastsClient({
           className="h-9 min-w-[140px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
           value={filterCat}
           onChange={(e) => setFilterCat(e.target.value)}
-          aria-label="Category"
+          aria-label={adminBroadcastsFilterChannelAria}
         >
-          <option value="all">All categories</option>
-          <option value="__org_wide__">Org-wide only (no category)</option>
+          <option value="all">All channels</option>
+          <option value="__org_wide__">Org-wide only (no channel)</option>
           {catsInDept.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -316,8 +317,20 @@ export function AdminBroadcastsClient({
                         Org-wide
                       </span>
                     ) : null}
-                    <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
-                      {r.is_org_wide ? 'All channels' : firstName(r.dept_categories as never)}
+                    <span
+                      className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
+                      title={
+                        r.is_org_wide
+                          ? undefined
+                          : channelPillAccessibleName(firstName(r.broadcast_channels as never))
+                      }
+                      aria-label={
+                        r.is_org_wide
+                          ? 'All channels'
+                          : channelPillAccessibleName(firstName(r.broadcast_channels as never))
+                      }
+                    >
+                      {r.is_org_wide ? 'All channels' : firstName(r.broadcast_channels as never)}
                     </span>
                     {firstName(r.dept_teams as never) !== '—' ? (
                       <span className="inline-flex items-center rounded-full border border-[#c7d2fe] bg-[#eef2ff] px-2 py-0.5 text-[11px] font-medium text-[#4338ca]">

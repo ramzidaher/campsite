@@ -218,7 +218,7 @@ Conceptual tables (all subject to RLS by `org_id`):
 | `organisations` | Org identity, slug, logo, etc. |
 | `users` | User, org, role, status (pending/active/inactive) |
 | `departments` | Dept, org, type, description |
-| `dept_categories` | Categories per department |
+| `broadcast_channels` | Broadcast channels (audience lists) per department — was `dept_categories` before migration `20260430270000` |
 | `user_departments` | User ↔ department M:N |
 | `user_subscriptions` | User ↔ category subscription flags |
 | `broadcasts` | Messages, scheduling, status |

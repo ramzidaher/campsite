@@ -1,5 +1,6 @@
 'use client';
 
+import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { enqueueBroadcastRead } from '@/lib/offline/broadcastReadQueue';
 import { createClient } from '@/lib/supabase/client';
 import * as chrono from 'chrono-node';
@@ -20,7 +21,7 @@ type Row = {
   is_pinned?: boolean;
   is_org_wide?: boolean;
   departments: { name: string } | null;
-  dept_categories: { name: string } | null;
+  broadcast_channels: { name: string } | null;
   dept_teams?: { name: string } | null;
   profiles: { full_name: string } | null;
 };
@@ -69,6 +70,10 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
 
   const displayTitle = initial.title?.trim() ? initial.title.trim() : 'Untitled broadcast';
   const bodyTrimmed = initial.body?.trim() ?? '';
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryErr, setSummaryErr] = useState<string | null>(null);
+  const [summaryBusy, setSummaryBusy] = useState(false);
+  const showAiSummary = bodyTrimmed.length >= 480;
 
   async function addToCalendar() {
     if (!parsedRange) return;
@@ -91,6 +96,44 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
       return;
     }
     setCalendarMsg('Added to your organisation calendar.');
+  }
+
+  async function requestSummary() {
+    setSummaryBusy(true);
+    setSummaryErr(null);
+    try {
+      const res = await fetch('/api/broadcasts/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: displayTitle, body: initial.body ?? '' }),
+      });
+      let data: { summary?: string; error?: string; message?: string } = {};
+      try {
+        data = (await res.json()) as typeof data;
+      } catch {
+        /* ignore */
+      }
+      if (!res.ok) {
+        const msg =
+          data.error === 'not_configured' && typeof data.message === 'string'
+            ? data.message
+            : typeof data.error === 'string'
+              ? data.error
+              : 'Could not summarise this broadcast.';
+        setSummaryErr(msg);
+        return;
+      }
+      if (typeof data.summary === 'string' && data.summary.trim()) {
+        setSummary(data.summary.trim());
+      } else {
+        setSummaryErr('No summary was returned. Try again.');
+      }
+    } catch {
+      setSummaryErr('Network error. Check your connection and try again.');
+    } finally {
+      setSummaryBusy(false);
+    }
   }
 
   return (
@@ -141,9 +184,13 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
             <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
               All channels
             </span>
-          ) : initial.dept_categories?.name ? (
-            <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
-              {initial.dept_categories.name}
+          ) : initial.broadcast_channels?.name ? (
+            <span
+              className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
+              title={channelPillAccessibleName(initial.broadcast_channels.name)}
+              aria-label={channelPillAccessibleName(initial.broadcast_channels.name)}
+            >
+              {initial.broadcast_channels.name}
             </span>
           ) : null}
           {initial.dept_teams?.name ? (
@@ -172,6 +219,40 @@ export function BroadcastDetailView({ initial, userId }: { initial: Row; userId:
             </>
           ) : null}
         </p>
+
+        {showAiSummary ? (
+          <div className="mt-8 rounded-xl border border-emerald-200/70 bg-gradient-to-b from-emerald-50/90 to-white px-4 py-4 shadow-[0_1px_2px_rgba(6,78,59,0.06)] sm:px-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-emerald-950">AI summary</p>
+                <p className="mt-0.5 text-xs text-emerald-900/65">
+                  Short recap via Google AI Studio (Gemini). For quick reading only — always check the full message
+                  below.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={summaryBusy}
+                onClick={() => void requestSummary()}
+                className="shrink-0 rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:bg-emerald-800 disabled:opacity-60"
+              >
+                {summaryBusy ? 'Summarising…' : summary ? 'Refresh' : 'Summarise'}
+              </button>
+            </div>
+            {summaryErr ? (
+              <p className="mt-3 text-sm text-red-800" role="alert">
+                {summaryErr}
+              </p>
+            ) : null}
+            {summary ? (
+              <div className="mt-3 border-t border-emerald-200/60 pt-3 text-sm leading-relaxed text-emerald-950/95 whitespace-pre-wrap">
+                {summary}
+              </div>
+            ) : !summaryBusy && !summaryErr ? (
+              <p className="mt-3 text-sm text-emerald-900/75">Tap Summarise for a concise version of this post.</p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-8 border-t border-[#d8d8d8] pt-8">
           <article className="max-w-none text-[15px] leading-[1.65] text-[#121212] [&_a]:font-medium [&_a]:text-emerald-700 [&_a]:underline [&_a]:decoration-emerald-700/30 [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:border-[#d8d8d8] [&_blockquote]:pl-4 [&_blockquote]:text-[#6b6b6b] [&_code]:rounded [&_code]:bg-[#f5f4f1] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-semibold [&_li]:my-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-3 [&_p:first-child]:mt-0 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[#d8d8d8] [&_pre]:bg-[#f5f4f1] [&_pre]:p-3 [&_pre]:text-[13px] [&_strong]:font-semibold [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5">

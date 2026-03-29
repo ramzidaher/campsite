@@ -20,7 +20,7 @@ type Org = { id: string; name: string; slug: string; logo_url: string | null };
 type Dept = { id: string; name: string; type: 'department' | 'society' | 'club' };
 type Cat = { id: string; dept_id: string; name: string };
 
-const STEP_LABELS = ['Account', 'Organisation', 'Teams', 'Subscriptions', 'Review'] as const;
+const STEP_LABELS = ['Account', 'Organisation', 'Teams', 'Channels', 'Review'] as const;
 
 function passwordStrength(pw: string): 'weak' | 'ok' | 'strong' {
   if (pw.length < 8) return 'weak';
@@ -144,7 +144,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
     const deptIds = (data ?? []).map((d) => d.id);
     if (deptIds.length) {
       const { data: catRows, error: ce } = await supabase
-        .from('dept_categories')
+        .from('broadcast_channels')
         .select('id,dept_id,name')
         .in('dept_id', deptIds);
       if (ce) {
@@ -254,7 +254,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       .filter((c) => selectedDeptIds.has(c.dept_id))
       .map((c) => ({
         user_id: userId,
-        cat_id: c.id,
+        channel_id: c.id,
         subscribed: subscribed[c.id] ?? true,
       }));
     if (subRows.length) {
@@ -440,7 +440,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         <ScrollView style={styles.stepScroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>Select teams</Text>
           <Text style={styles.sub}>
-            Choose every department, society, or club you belong to. You&apos;ll pick broadcast categories
+            Choose every department, society, or club you belong to. You&apos;ll pick broadcast channels
             next.
           </Text>
           {(['department', 'society', 'club'] as const).map((t) =>
@@ -487,9 +487,10 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
 
       {step === 4 ? (
         <ScrollView style={styles.stepScroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Subscriptions</Text>
+          <Text style={styles.title}>Broadcast channels</Text>
           <Text style={styles.sub}>
-            Choose broadcast categories you want to receive. You can change these later in Settings.
+            Choose channels you want to follow under each team or department. You can change these later in
+            Settings.
           </Text>
           {Array.from(new Set(cats.filter((c) => selectedDeptIds.has(c.dept_id)).map((c) => c.dept_id))).map(
             (deptId) => {

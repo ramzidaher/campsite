@@ -88,7 +88,7 @@ export async function loadDepartmentsDirectory(
   }
 
   const [catsRes, teamsRes, dmsRes, dbpRes, udRes, staffRes] = await Promise.all([
-    supabase.from('dept_categories').select('id, name, dept_id').in('dept_id', deptIds),
+    supabase.from('broadcast_channels').select('id, name, dept_id').in('dept_id', deptIds),
     supabase.from('dept_teams').select('id, name, dept_id').in('dept_id', deptIds).order('name'),
     supabase.from('dept_managers').select('dept_id, user_id').in('dept_id', deptIds),
     supabase.from('dept_broadcast_permissions').select('dept_id, permission, min_role').in('dept_id', deptIds),

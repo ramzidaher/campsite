@@ -35,7 +35,7 @@ export function AdminCategoriesClient({
     if (!name) return;
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.from('dept_categories').insert({ dept_id: deptId, name });
+    const { error } = await supabase.from('broadcast_channels').insert({ dept_id: deptId, name });
     setBusy(false);
     if (error) {
       setMsg(error.message);
@@ -48,7 +48,7 @@ export function AdminCategoriesClient({
   async function removeCategory(catId: string) {
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.from('dept_categories').delete().eq('id', catId);
+    const { error } = await supabase.from('broadcast_channels').delete().eq('id', catId);
     setBusy(false);
     if (error) setMsg(error.message);
     else void refresh();

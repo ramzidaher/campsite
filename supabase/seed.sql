@@ -28,7 +28,7 @@ where o.slug = 'demo'
     select 1 from public.departments d where d.org_id = o.id and d.name = 'Photography Society'
   );
 
-insert into public.dept_categories (dept_id, name)
+insert into public.broadcast_channels (dept_id, name)
 select d.id, v.name
 from public.departments d
 join public.organisations o on o.id = d.org_id and o.slug = 'demo'
@@ -36,7 +36,7 @@ cross join (values ('Announcements'), ('Recruitment'), ('Lost Property')) as v(n
 where d.name = 'Human Resources'
 on conflict (dept_id, name) do nothing;
 
-insert into public.dept_categories (dept_id, name)
+insert into public.broadcast_channels (dept_id, name)
 select d.id, v.name
 from public.departments d
 join public.organisations o on o.id = d.org_id and o.slug = 'demo'

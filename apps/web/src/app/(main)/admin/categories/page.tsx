@@ -30,7 +30,7 @@ export default async function AdminCategoriesPage() {
   const catsByDept: Record<string, { id: string; name: string }[]> = {};
 
   if (deptIds.length) {
-    const { data: cats } = await supabase.from('dept_categories').select('id, name, dept_id').in('dept_id', deptIds);
+    const { data: cats } = await supabase.from('broadcast_channels').select('id, name, dept_id').in('dept_id', deptIds);
     for (const c of cats ?? []) {
       const did = c.dept_id as string;
       if (!catsByDept[did]) catsByDept[did] = [];

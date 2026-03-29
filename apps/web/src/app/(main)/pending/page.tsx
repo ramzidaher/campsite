@@ -98,6 +98,10 @@ export default async function PendingPage({
     profileRow = after;
   }
 
+  if (profileRow.status === 'inactive') {
+    redirect('/login?error=inactive');
+  }
+
   if (profileRow.status === 'active') {
     if (founder) {
       const { data: activeProf } = await supabase

@@ -7,9 +7,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import {
+  composeChannelExplainer,
+  composeChannelLabel,
+  composeManageChannelsInSettings,
+  composeNoChannelsHint,
+} from '@/lib/broadcasts/channelCopy';
 import type { DeptRow } from './dept-scope';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import Link from 'next/link';
 
 type CatRow = { id: string; name: string; dept_id: string };
 
@@ -294,7 +301,7 @@ export function BroadcastComposer({
     if (!draftOnly && !isOrgWideActive) {
       const catRow = cats.find((c) => c.id === displayCatId);
       if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
-        setError('This category does not belong to the selected department. Refresh the page or pick the category again.');
+        setError('This channel does not belong to the selected department. Refresh the page or pick the channel again.');
         return false;
       }
     }
@@ -305,7 +312,7 @@ export function BroadcastComposer({
       const row = {
         org_id: orgId,
         dept_id: draftOnly || !isOrgWideActive ? displayDeptId : displayAuthorityDeptId,
-        cat_id: isOrgWideActive ? null : displayCatId,
+        channel_id: isOrgWideActive ? null : displayCatId,
         team_id: draftOnly || isOrgWideActive || !teamId ? null : teamId,
         title: title.trim().slice(0, TITLE_MAX),
         body: body ?? '',
@@ -377,12 +384,12 @@ export function BroadcastComposer({
   const submit = async (mode: 'draft' | 'pending' | 'send' | 'schedule') => {
     if (draftOnly) {
       if (!displayDeptId || !displayCatId || !title.trim()) {
-        setError('Title, department, and category are required.');
+        setError('Title, department, and channel are required.');
         return;
       }
       const catRow = cats.find((c) => c.id === displayCatId);
       if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
-        setError('This category does not belong to the selected department. Refresh the page or pick the category again.');
+        setError('This channel does not belong to the selected department. Refresh the page or pick the channel again.');
         return;
       }
     } else if (isOrgWideActive) {
@@ -392,12 +399,12 @@ export function BroadcastComposer({
       }
     } else {
       if (!displayDeptId || !displayCatId || !title.trim()) {
-        setError('Title, department, and category are required.');
+        setError('Title, department, and channel are required.');
         return;
       }
       const catRow = cats.find((c) => c.id === displayCatId);
       if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
-        setError('This category does not belong to the selected department. Refresh the page or pick the category again.');
+        setError('This channel does not belong to the selected department. Refresh the page or pick the channel again.');
         return;
       }
     }
@@ -415,7 +422,7 @@ export function BroadcastComposer({
         const row = {
           org_id: orgId,
           dept_id: displayDeptId,
-          cat_id: displayCatId,
+          channel_id: displayCatId,
           title: title.trim().slice(0, TITLE_MAX),
           body: body ?? '',
           status: 'pending_approval' as const,
@@ -457,7 +464,7 @@ export function BroadcastComposer({
         const row = {
           org_id: orgId,
           dept_id: baseDept,
-          cat_id: baseCat,
+          channel_id: baseCat,
           title: title.trim().slice(0, TITLE_MAX),
           body: body ?? '',
           status: 'scheduled' as const,
@@ -482,7 +489,7 @@ export function BroadcastComposer({
       const row = {
         org_id: orgId,
         dept_id: baseDept,
-        cat_id: baseCat,
+        channel_id: baseCat,
         title: title.trim().slice(0, TITLE_MAX),
         body: body ?? '',
         status: 'sent' as const,
@@ -547,8 +554,8 @@ export function BroadcastComposer({
         <div className="rounded-lg border border-[#d8d8d8] bg-white p-3">
           <p className="text-sm font-medium text-[#121212]">Audience</p>
           <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
-            <span className="font-medium text-[#121212]">Org-wide</span> goes to everyone (no department, category, or
-            team). <span className="font-medium text-[#121212]">Specific</span> picks a department and category; if
+            <span className="font-medium text-[#121212]">Org-wide</span> goes to everyone (no department, channel, or
+            team). <span className="font-medium text-[#121212]">Specific</span> picks a department and channel; if
             that department has sub-teams, you can narrow to one team or leave &ldquo;all members&rdquo;.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -563,7 +570,7 @@ export function BroadcastComposer({
               <span>
                 <span className="font-medium">Specific</span>
                 <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
-                  Choose department, then category; sub-team dropdown appears only when teams exist.
+                  Choose department, then channel; sub-team dropdown appears only when teams exist.
                 </span>
               </span>
             </label>
@@ -643,10 +650,16 @@ export function BroadcastComposer({
             </SelectWithChevron>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-[#121212]">Category</label>
-            <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
-              Who gets it follows each member&apos;s subscription to this category in that department.
-            </p>
+            <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+              <label className="block text-sm font-medium text-[#121212]">{composeChannelLabel}</label>
+              <Link
+                href="/settings"
+                className="text-[12px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              >
+                {composeManageChannelsInSettings}
+              </Link>
+            </div>
+            <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">{composeChannelExplainer}</p>
             <SelectWithChevron
               value={displayCatId}
               onChange={(e) => setCatId(e.target.value)}
@@ -654,7 +667,7 @@ export function BroadcastComposer({
               aria-describedby={!cats.length ? 'compose-category-hint' : undefined}
             >
               {!cats.length ? (
-                <option value="">No categories for this department</option>
+                <option value="">No channels for this department</option>
               ) : null}
               {cats.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -664,10 +677,9 @@ export function BroadcastComposer({
             </SelectWithChevron>
             {!cats.length ? (
               <p id="compose-category-hint" className="mt-1.5 text-[12px] leading-snug text-[#6b6b6b]">
-                Add broadcast categories in{' '}
-                <span className="font-medium text-[#121212]">Admin → Departments</span> for &ldquo;
-                {departments.find((d) => d.id === displayDeptId)?.name ?? 'this department'}
-                &rdquo;, then refresh this page.
+                {composeNoChannelsHint(
+                  departments.find((d) => d.id === displayDeptId)?.name ?? 'this department'
+                )}
               </p>
             ) : null}
           </div>
@@ -680,7 +692,7 @@ export function BroadcastComposer({
           <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
             Only members assigned to this team in{' '}
             <span className="font-medium text-[#121212]">Admin → Departments</span> see the post. Leave &ldquo;All
-            members in this department&rdquo; to use the category only.
+            members in this department&rdquo; to use the channel only (no sub-team filter).
           </p>
           <SelectWithChevron value={teamId} onChange={(e) => setTeamId(e.target.value)}>
             <option value="">All members in this department</option>
@@ -699,7 +711,7 @@ export function BroadcastComposer({
           <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
             {isOrgWideActive
               ? 'Org-wide posts reach all active members. You can still pin when allowed.'
-              : 'Optional reach and ordering for this category channel.'}
+              : 'Optional reach and ordering for this channel.'}
           </p>
           {capsLoading ? (
             <p className="mt-2 text-xs text-[#6b6b6b]">Loading options…</p>
@@ -716,7 +728,7 @@ export function BroadcastComposer({
                   <span>
                     <span className="font-medium">Mandatory</span>
                     <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
-                      Deliver to everyone in the target audience regardless of category subscription.
+                      Deliver to everyone in the target audience regardless of channel subscription.
                     </span>
                   </span>
                 </label>

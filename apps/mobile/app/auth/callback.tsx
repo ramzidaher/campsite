@@ -14,7 +14,7 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     if (loading) return;
     if (session) {
-      router.replace('/(tabs)');
+      router.replace('/');
       return;
     }
     const t = setTimeout(() => router.replace('/(auth)/login'), 1200);
