@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'campsite',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  icon: './assets/images/AppLogo.png',
   userInterfaceStyle: 'automatic',
   splash: {
     image: './assets/images/splash-icon.png',
@@ -34,10 +34,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './assets/images/android-icon-foreground.png',
+      foregroundImage: './assets/images/AppLogoAndriod.png',
       backgroundColor: '#faf9f6',
-      backgroundImage: './assets/images/android-icon-background.png',
-      monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     package: 'com.commongroundstudios.campsite',
   },
@@ -49,10 +47,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     [
+      'expo-image-picker',
+      {
+        photosPermission: 'Allow Campsite to access your photos to set a broadcast cover image.',
+      },
+    ],
+    '@react-native-community/datetimepicker',
+    [
       'expo-notifications',
       {
-        icon: './assets/images/icon.png',
-        color: '#1D4ED8',
+        icon: './assets/images/AppLogoAndriod.png',
+        color: '#121212',
         sounds: [],
       },
     ],

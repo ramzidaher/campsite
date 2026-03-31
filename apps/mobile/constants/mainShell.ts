@@ -12,6 +12,25 @@ export const mainShell = {
   accentDot: '#E11D48',
 } as const;
 
+/** True when the main tab home screen is active (used for personalised header title). */
+export function isHomeTabPathname(pathname: string): boolean {
+  const p = pathname.toLowerCase();
+  return (
+    p === '/' ||
+    p === '/index' ||
+    p.endsWith('/(tabs)') ||
+    p.endsWith('/(tabs)/') ||
+    p.includes('/(tabs)/index')
+  );
+}
+
+/** Header title on Home tab: "Hi {first name}" (matches web tone, no comma). */
+export function homeHeaderTitle(fullName: string | null | undefined): string {
+  const first = fullName?.trim().split(/\s+/).filter(Boolean)[0];
+  if (first) return `Hi ${first}`;
+  return 'Hi there';
+}
+
 /** Map pathname segments to the same titles as web `AppTopBar` `TITLES`. */
 export function mainScreenTitle(pathname: string): string {
   const p = pathname.toLowerCase();
@@ -22,11 +41,10 @@ export function mainScreenTitle(pathname: string): string {
     ['rota', 'Rota'],
     ['discount', 'Discount Card'],
     ['settings', 'Settings'],
-    ['index', 'Dashboard'],
   ];
   for (const [key, title] of rules) {
     if (p.includes(key)) return title;
   }
-  if (p.endsWith('/(tabs)') || p === '/' || p.endsWith('/')) return 'Dashboard';
+  if (isHomeTabPathname(pathname)) return 'Home';
   return 'Campsite';
 }

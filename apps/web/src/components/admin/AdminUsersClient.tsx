@@ -36,7 +36,7 @@ function rolePillClass(role: string): string {
     manager: 'bg-[#14532d] text-[#86efac]',
     coordinator: 'bg-[#3b0764] text-[#d8b4fe]',
     administrator: 'bg-[#431407] text-[#fdba74]',
-    duty_manager: 'bg-[#0c4a6e] text-[#bae6fd]',
+    duty_manager: 'bg-[#292524] text-[#e7e5e4]',
     csa: 'border border-[#d8d8d8] bg-[#f5f4f1] text-[#6b6b6b]',
     society_leader: 'bg-[#fef3c7] text-[#92400e]',
   };

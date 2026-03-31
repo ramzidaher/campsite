@@ -1,51 +1,83 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useCampsiteTheme } from '@campsite/ui';
 import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppMobileHeader } from '@/components/shell/AppMobileHeader';
-
-const androidAccent = '#1D4ED8';
-const androidBarBg = '#ffffff';
-const androidBorder = 'rgba(15, 23, 42, 0.08)';
+import { mainShell } from '@/constants/mainShell';
 
 type TabIconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-function TabBarIcon({ name, focused }: { name: TabIconName; focused: boolean }) {
+function TabBarIcon({
+  name,
+  focused,
+  activeColor,
+  inactiveColor,
+}: {
+  name: TabIconName;
+  focused: boolean;
+  activeColor: string;
+  inactiveColor: string;
+}) {
   return (
     <MaterialCommunityIcons
       name={name}
       size={22}
-      color={focused ? androidAccent : '#64748b'}
+      color={focused ? activeColor : inactiveColor}
     />
   );
 }
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = 56 + Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 6);
+  const { tokens, scheme } = useCampsiteTheme();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 6);
+  const tabBarHeight = 48 + bottomInset;
+
+  const active = scheme === 'dark' ? tokens.textPrimary : mainShell.pageText;
+  const inactive = tokens.textSecondary;
+  const barBg = scheme === 'dark' ? tokens.surface : mainShell.topBarBg;
+  const borderTop = scheme === 'dark' ? tokens.border : mainShell.border;
+
+  const icon = (name: TabIconName, outline: TabIconName) => ({
+    focused,
+  }: {
+    focused: boolean;
+  }) => (
+    <TabBarIcon
+      name={focused ? name : outline}
+      focused={focused}
+      activeColor={active}
+      inactiveColor={inactive}
+    />
+  );
 
   return (
     <Tabs
       screenOptions={{
         headerShown: true,
         header: () => <AppMobileHeader />,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: androidBarBg,
+          backgroundColor: barBg,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: androidBorder,
+          borderTopColor: borderTop,
           height: tabBarHeight,
-          paddingBottom: Math.max(insets.bottom, 8),
-          paddingTop: 6,
-          elevation: 8,
-          shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 6,
+          paddingBottom: bottomInset,
+          paddingTop: 2,
+          ...(Platform.OS === 'android'
+            ? { elevation: 4 }
+            : {
+                shadowColor: '#121212',
+                shadowOffset: { width: 0, height: -2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
+              }),
         },
-        tabBarActiveTintColor: androidAccent,
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: active,
+        tabBarInactiveTintColor: inactive,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
       }}
@@ -54,35 +86,32 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarLabel: 'Dashboard',
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'view-dashboard' : 'view-dashboard-outline'} focused={focused} />
-          ),
+          tabBarLabel: 'Home',
+          tabBarIcon: icon('home', 'home-outline'),
         }}
       />
       <Tabs.Screen
         name="broadcasts"
         options={{
           title: 'Broadcasts',
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'bullhorn' : 'bullhorn-outline'} focused={focused} />
-          ),
+          tabBarLabel: 'Broadcasts',
+          tabBarIcon: icon('bullhorn', 'bullhorn-outline'),
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} />
-          ),
+          title: 'Calendar',
+          tabBarLabel: 'Calendar',
+          tabBarIcon: icon('calendar-month', 'calendar-month-outline'),
         }}
       />
       <Tabs.Screen
         name="rota"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'calendar-clock' : 'calendar-clock-outline'} focused={focused} />
-          ),
+          title: 'Rota',
+          tabBarLabel: 'Rota',
+          tabBarIcon: icon('calendar-clock', 'calendar-clock-outline'),
         }}
       />
       <Tabs.Screen
@@ -90,9 +119,7 @@ export default function TabLayout() {
         options={{
           title: 'Discount',
           tabBarLabel: 'Discount',
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'ticket-percent' : 'ticket-percent-outline'} focused={focused} />
-          ),
+          tabBarIcon: icon('ticket-percent', 'ticket-percent-outline'),
         }}
       />
     </Tabs>
@@ -101,11 +128,13 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabLabel: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 0,
+    letterSpacing: 0.12,
   },
   tabItem: {
-    paddingTop: 2,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
 });

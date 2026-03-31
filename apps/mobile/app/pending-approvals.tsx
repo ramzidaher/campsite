@@ -205,7 +205,14 @@ export default function PendingApprovalsScreen() {
       <ScrollView
         style={[styles.screen, { backgroundColor: mainShell.pageBg }]}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void onRefresh()}
+            tintColor={mainShell.pageText}
+            colors={[mainShell.pageText]}
+          />
+        }
       >
         <Text style={styles.title}>Pending members</Text>
         <Text style={styles.sub}>Approve or reject new registrations in your organisation.</Text>
@@ -225,7 +232,7 @@ export default function PendingApprovalsScreen() {
         </ScrollView>
 
         {loading ? (
-          <ActivityIndicator style={styles.spinner} color="#1D4ED8" />
+          <ActivityIndicator style={styles.spinner} color="#121212" />
         ) : rows.length === 0 ? (
           <Text style={styles.muted}>No pending registrations.</Text>
         ) : (

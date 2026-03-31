@@ -5,7 +5,7 @@ describe('getThemeTokens', () => {
   it('returns light theme with ocean accent', () => {
     const t = getThemeTokens('light', 'ocean');
     expect(t.background).toBe('#faf9f6');
-    expect(t.accent).toBe('#1D4ED8');
+    expect(t.accent).toBe('#44403c');
   });
 
   it('returns dark theme with midnight accent', () => {

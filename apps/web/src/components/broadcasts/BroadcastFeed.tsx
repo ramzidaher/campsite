@@ -332,7 +332,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
                       </span>
                     ) : null}
                     {b.is_org_wide ? (
-                      <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-900">
+                      <span className="inline-flex items-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] px-2.5 py-0.5 text-[11px] font-medium text-[#44403c]">
                         Org-wide
                       </span>
                     ) : null}
@@ -358,7 +358,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
                       </span>
                     ) : null}
                     {teamName ? (
-                      <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-medium text-[#4338ca]">
+                      <span className="inline-flex items-center rounded-full border border-[#e9d5ff] bg-[#faf5ff] px-2.5 py-0.5 text-[11px] font-medium text-[#6b21a8]">
                         {teamName}
                       </span>
                     ) : null}

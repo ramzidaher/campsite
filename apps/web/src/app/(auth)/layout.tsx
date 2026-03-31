@@ -69,7 +69,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             organised.
           </h1>
           <p className="mt-4 max-w-[280px] text-sm leading-relaxed text-white/50">
-            The internal communications platform built for student unions and their staff.
+            The internal communications platform for teams and organisations.
           </p>
           <ul className="mt-10 flex flex-col gap-3 text-[13px] text-white/[0.65]">
             {[

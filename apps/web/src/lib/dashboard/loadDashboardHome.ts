@@ -178,7 +178,7 @@ export async function loadDashboardHome(
         ? unreadRaw
         : Number(unreadRaw);
 
-  const eventColors = ['#1D4ED8', '#059669', '#7C3AED', '#C2410C', '#E11D48'];
+  const eventColors = ['#44403c', '#059669', '#7C3AED', '#C2410C', '#E11D48'];
   const upcomingEvents: UpcomingEventRow[] = (eventsRaw ?? []).map((e, i) => ({
     id: e.id as string,
     title: e.title as string,

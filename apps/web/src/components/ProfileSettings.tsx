@@ -314,7 +314,7 @@ export function ProfileSettings({
                   <div className="min-w-0">
                     <p className="text-[13px] font-medium text-[#121212]">{o.name}</p>
                     <p className="truncate font-mono text-[11px] text-[#9b9b9b]">
-                      {o.slug ? `${o.slug}.camp-site.co.uk` : '-'}
+                      {o.slug ?? '-'}
                     </p>
                   </div>
                   {isCurrent ? (

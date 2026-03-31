@@ -1,31 +1,33 @@
-# Demo org logins (Demo Access Lab)
+# [Demo org logins (Demo Access Lab)](mailto:demo.manager-ops-programs.5pmmv8@example.com)
 
-**Org slug:** `demo-access-lab`  
-**Shared password (all accounts):** `DemoAccess2026!`
+**[Org slug:](mailto:demo.manager-ops-programs.5pmmv8@example.com)** `demo-access-lab`  
+**[Shared password (all accounts):](mailto:demo.manager-ops-programs.5pmmv8@example.com)** `DemoAccess2026!`
 
-> If you run `npm run seed-demo-org` again, emails get a **new random tag**. Replace this file from the script output, or run `npm run seed-demo-org -- --plan` to preview emails without writing to the DB.
+> [If you run](mailto:demo.manager-ops-programs.5pmmv8@example.com) `npm run seed-demo-org` [again, emails get a **new random tag**. Replace this file from the script output, or run](mailto:demo.manager-ops-programs.5pmmv8@example.com) `npm run seed-demo-org -- --plan` [to preview emails without writing to the DB.](mailto:demo.manager-ops-programs.5pmmv8@example.com)
 
-| Role | Label (seed) | Email | Password |
-|------|----------------|-------|----------|
-| org_admin | Org Admin (primary) | demo.org-admin-primary.5pmmv8@example.com | DemoAccess2026! |
-| org_admin | Org Admin (secondary) | demo.org-admin-secondary.5pmmv8@example.com | DemoAccess2026! |
-| manager | Manager — Ops | demo.manager-ops.5pmmv8@example.com | DemoAccess2026! |
-| manager | Manager — Programs | demo.manager-programs.5pmmv8@example.com | DemoAccess2026! |
-| manager | Manager — Guest | demo.manager-guest.5pmmv8@example.com | DemoAccess2026! |
-| manager | Manager — Ops + Programs | demo.manager-ops-programs.5pmmv8@example.com | DemoAccess2026! |
-| coordinator | Coordinator — Ops | demo.coordinator-ops.5pmmv8@example.com | DemoAccess2026! |
-| coordinator | Coordinator — Programs | demo.coordinator-programs.5pmmv8@example.com | DemoAccess2026! |
-| coordinator | Coordinator — Ops (overlap) | demo.coordinator-ops-overlap.5pmmv8@example.com | DemoAccess2026! |
-| duty_manager | Duty manager — Guest | demo.duty-manager-guest.5pmmv8@example.com | DemoAccess2026! |
-| duty_manager | Duty manager — Programs | demo.duty-manager-programs.5pmmv8@example.com | DemoAccess2026! |
-| administrator | Administrator — Ops | demo.administrator-ops.5pmmv8@example.com | DemoAccess2026! |
-| administrator | Administrator — Programs | demo.administrator-programs.5pmmv8@example.com | DemoAccess2026! |
-| csa | CSA — Ops A | demo.csa-ops-a.5pmmv8@example.com | DemoAccess2026! |
-| csa | CSA — Ops B | demo.csa-ops-b.5pmmv8@example.com | DemoAccess2026! |
-| csa | CSA — Programs | demo.csa-programs.5pmmv8@example.com | DemoAccess2026! |
-| csa | CSA — Guest | demo.csa-guest.5pmmv8@example.com | DemoAccess2026! |
-| society_leader | Society leader | demo.society-leader.5pmmv8@example.com | DemoAccess2026! |
 
-**Login URL:** `/login` on your web app.
+| [Role](mailto:demo.manager-ops-programs.5pmmv8@example.com)           | [Label (seed)](mailto:demo.manager-ops-programs.5pmmv8@example.com)                | [Email](mailto:demo.manager-ops-programs.5pmmv8@example.com)                                           | [Password](mailto:demo.manager-ops-programs.5pmmv8@example.com)        |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| [org_admin](mailto:demo.manager-ops-programs.5pmmv8@example.com)      | [Org Admin (primary)](mailto:demo.manager-ops-programs.5pmmv8@example.com)         | [demo.org-admin-primary.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)       | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [org_admin](mailto:demo.manager-ops-programs.5pmmv8@example.com)      | [Org Admin (secondary)](mailto:demo.manager-ops-programs.5pmmv8@example.com)       | [demo.org-admin-secondary.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)     | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [manager](mailto:demo.manager-ops-programs.5pmmv8@example.com)        | [Manager — Ops](mailto:demo.manager-ops-programs.5pmmv8@example.com)               | [demo.manager-ops.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)             | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [manager](mailto:demo.manager-ops-programs.5pmmv8@example.com)        | [Manager — Programs](mailto:demo.manager-ops-programs.5pmmv8@example.com)          | [demo.manager-programs.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)        | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [manager](mailto:demo.manager-ops-programs.5pmmv8@example.com)        | [Manager — Guest](mailto:demo.manager-ops-programs.5pmmv8@example.com)             | [demo.manager-guest.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)           | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [manager](mailto:demo.manager-ops-programs.5pmmv8@example.com)        | [Manager — Ops + Programs](mailto:demo.manager-ops-programs.5pmmv8@example.com)    | [demo.manager-ops-programs.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)    | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [coordinator](mailto:demo.manager-ops-programs.5pmmv8@example.com)    | [Coordinator — Ops](mailto:demo.manager-ops-programs.5pmmv8@example.com)           | [demo.coordinator-ops.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)         | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [coordinator](mailto:demo.manager-ops-programs.5pmmv8@example.com)    | [Coordinator — Programs](mailto:demo.manager-ops-programs.5pmmv8@example.com)      | [demo.coordinator-programs.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)    | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [coordinator](mailto:demo.manager-ops-programs.5pmmv8@example.com)    | [Coordinator — Ops (overlap)](mailto:demo.manager-ops-programs.5pmmv8@example.com) | [demo.coordinator-ops-overlap.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com) | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [duty_manager](mailto:demo.manager-ops-programs.5pmmv8@example.com)   | [Duty manager — Guest](mailto:demo.manager-ops-programs.5pmmv8@example.com)        | [demo.duty-manager-guest.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)      | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [duty_manager](mailto:demo.manager-ops-programs.5pmmv8@example.com)   | [Duty manager — Programs](mailto:demo.manager-ops-programs.5pmmv8@example.com)     | [demo.duty-manager-programs.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)   | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [administrator](mailto:demo.manager-ops-programs.5pmmv8@example.com)  | [Administrator — Ops](mailto:demo.manager-ops-programs.5pmmv8@example.com)         | [demo.administrator-ops.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)       | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [administrator](mailto:demo.manager-ops-programs.5pmmv8@example.com)  | [Administrator — Programs](mailto:demo.manager-ops-programs.5pmmv8@example.com)    | [demo.administrator-programs.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)  | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [csa](mailto:demo.manager-ops-programs.5pmmv8@example.com)            | [CSA — Ops A](mailto:demo.manager-ops-programs.5pmmv8@example.com)                 | [demo.csa-ops-a.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)               | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [csa](mailto:demo.manager-ops-programs.5pmmv8@example.com)            | [CSA — Ops B](mailto:demo.manager-ops-programs.5pmmv8@example.com)                 | [demo.csa-ops-b.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)               | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [csa](mailto:demo.manager-ops-programs.5pmmv8@example.com)            | [CSA — Programs](mailto:demo.manager-ops-programs.5pmmv8@example.com)              | [demo.csa-programs.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)            | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [csa](mailto:demo.manager-ops-programs.5pmmv8@example.com)            | [CSA — Guest](mailto:demo.manager-ops-programs.5pmmv8@example.com)                 | [demo.csa-guest.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)               | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
+| [society_leader](mailto:demo.manager-ops-programs.5pmmv8@example.com) | [Society leader](mailto:demo.manager-ops-programs.5pmmv8@example.com)              | [demo.society-leader.5pmmv8@example.com](mailto:demo.manager-ops-programs.5pmmv8@example.com)          | [DemoAccess2026!](mailto:demo.manager-ops-programs.5pmmv8@example.com) |
 
-Override password next seed: set `CAMPSITE_DEMO_PASSWORD` before `npm run seed-demo-org`.
+
+**[Login URL:](mailto:demo.manager-ops-programs.5pmmv8@example.com)** `/login` [on your web app.](mailto:demo.manager-ops-programs.5pmmv8@example.com)
+
+[Override password next seed: set](mailto:demo.manager-ops-programs.5pmmv8@example.com) `CAMPSITE_DEMO_PASSWORD` [before](mailto:demo.manager-ops-programs.5pmmv8@example.com) `npm run seed-demo-org`[.](mailto:demo.manager-ops-programs.5pmmv8@example.com)

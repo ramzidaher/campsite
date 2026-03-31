@@ -46,7 +46,7 @@ export function LoginForm() {
       if (!keepSignedIn) {
         /* session still persisted by Supabase; checkbox is UX parity with web */
       }
-      router.replace('/');
+      // Let useAuthGate navigate after profile loads (avoids / → register flash).
     } finally {
       setLoading(false);
     }

@@ -15,7 +15,7 @@ export function ThemeRoot({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ThemeProvider scheme={scheme} accent="ocean">
+    <ThemeProvider scheme={scheme} accent="midnight">
       <ToastProvider>{children}</ToastProvider>
     </ThemeProvider>
   );

@@ -12,7 +12,7 @@ export const authColors = {
   marketingText: '#faf9f6',
   error: '#b91c1c',
   success: '#15803d',
-  skyTint: '#e0f2fe',
+  skyTint: '#f4f4f5',
 } as const;
 
 export const authRadii = {

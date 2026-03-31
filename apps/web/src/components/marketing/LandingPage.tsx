@@ -13,7 +13,7 @@ function ProductPreview() {
           <span className="h-2.5 w-2.5 rounded-full bg-[#e8e6e3]" aria-hidden />
           <span className="h-2.5 w-2.5 rounded-full bg-[#e8e6e3]" aria-hidden />
           <span className="ml-2 flex-1 rounded-md bg-[#f3f1ed] py-1 text-center text-[10px] text-[#9b9b9b]">
-            union.camp-site.co.uk
+            camp-site.co.uk
           </span>
         </div>
         <div className="mt-1 flex h-[min(320px,52vw)] min-h-[240px] overflow-hidden rounded-xl bg-[#f6f5f2] sm:h-[340px] sm:min-h-[280px]">
@@ -115,15 +115,15 @@ export function LandingPage() {
                 Common Ground Studios
               </p>
               <h1 className="font-authSerif text-[2.5rem] leading-[1.08] tracking-[-0.02em] sm:text-5xl sm:leading-[1.06] lg:text-[3.5rem] lg:leading-[1.05]">
-                Your union,
+                Your team,
                 <br className="hidden sm:block" />{' '}
                 <span className="text-[#3d3d3d]">
                   <em className="italic text-[#525252]">connected</em> and organised.
                 </span>
               </h1>
               <p className="mx-auto mt-6 max-w-md text-[1.05rem] leading-relaxed text-[#5c5c5c] lg:mx-0 lg:max-w-lg lg:text-lg">
-                A calm, focused workspace for staff comms and day-to-day operations - built for student
-                unions who expect better than a group chat and a spreadsheet.
+                A calm, focused workspace for internal comms and day-to-day operations - for organisations
+                that want more than a group chat and a spreadsheet.
               </p>
               <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center lg:justify-start">
                 <Link
@@ -140,10 +140,8 @@ export function LandingPage() {
                 </Link>
               </div>
               <p className="mx-auto mt-8 max-w-sm text-xs leading-relaxed text-[#9b9b9b] lg:mx-0">
-                If your union already uses Campsite, open your{' '}
-                <span className="font-medium text-[#6b6b6b]">subdomain</span> (e.g.{' '}
-                <span className="font-mono text-[11px] text-[#6b6b6b]">yoursu.camp-site.co.uk</span>) to
-                sign in.
+                Already with Campsite? Sign in with your work email, or use the link your organisation sent
+                you.
               </p>
             </div>
 
@@ -189,7 +187,7 @@ export function LandingPage() {
               <span className="font-authSerif text-lg tracking-tight">Campsite</span>
             </div>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#7a7a7a]">
-              Internal communications for student unions - from Common Ground Studios Ltd.
+              Internal communications for teams and organisations - from Common Ground Studios Ltd.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium text-[#5c5c5c] sm:justify-end">

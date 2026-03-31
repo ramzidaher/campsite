@@ -59,9 +59,9 @@ type RotaRow = { id: string; title: string; kind: string; dept_id: string | null
 
 const SHIFT_VARIANTS = [
   {
-    bg: 'bg-[#dbeafe]',
-    border: 'border-[#bfdbfe]',
-    text: 'text-[#1e40af]',
+    bg: 'bg-[#e7e5e4]',
+    border: 'border-[#d6d3d1]',
+    text: 'text-[#44403c]',
   },
   {
     bg: 'bg-[#dcfce7]',

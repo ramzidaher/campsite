@@ -606,7 +606,7 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
       <p className="mb-2 text-[12px] leading-relaxed text-[#6b6b6b]">
         {canEdit ? (
           <>
-            <strong className="font-medium text-[#121212]">Drag</strong> on an empty slot to select a time range (blue
+            <strong className="font-medium text-[#121212]">Drag</strong> on an empty slot to select a time range (highlight
             preview), then release to add a shift; a short click still defaults to one hour.{' '}
             <strong className="font-medium text-[#121212]">Drag</strong> an existing block to move it - a dashed
             outline shows where it will land (duration unchanged).{' '}
@@ -704,7 +704,7 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
                   className={[
                     'pointer-events-none absolute box-border overflow-hidden rounded-md px-1 py-0.5 text-[10px] shadow-sm',
                     isSlotPrev
-                      ? 'z-[15] border border-dashed border-[#60a5fa] bg-[#dbeafe]/70 text-[#1e40af] ring-1 ring-[#93c5fd]/60'
+                      ? 'z-[15] border border-dashed border-[#78716c] bg-[#e7e5e4]/70 text-[#44403c] ring-1 ring-[#d6d3d1]/60'
                       : isShiftDrop && dropV
                         ? [
                             'z-[36] border-2 border-dashed opacity-85 ring-2 ring-[#121212]/10',
@@ -712,7 +712,7 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
                             dropV.border,
                             dropV.text,
                           ].join(' ')
-                        : 'z-[15] border border-[#93c5fd] bg-[#dbeafe]/90 text-[#1e40af] ring-1 ring-[#bfdbfe]/80',
+                        : 'z-[15] border border-[#a8a29e] bg-[#e7e5e4]/90 text-[#44403c] ring-1 ring-[#d6d3d1]/80',
                   ].join(' ')}
                   style={{
                     top: topPx,

@@ -1,6 +1,7 @@
 export const accentPresets = {
   midnight: '#121212',
-  ocean: '#1D4ED8',
+  /** Neutral slate (legacy name “ocean”; avoid blue accents). */
+  ocean: '#44403c',
   emerald: '#059669',
   sunset: '#F97316',
   orchid: '#7C3AED',

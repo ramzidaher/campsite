@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { mainShell, mainScreenTitle } from '@/constants/mainShell';
+import { homeHeaderTitle, isHomeTabPathname, mainShell, mainScreenTitle } from '@/constants/mainShell';
 import { useAuth } from '@/lib/AuthContext';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -51,7 +51,13 @@ export function AppMobileHeader() {
     }, [user])
   );
 
-  const title = useMemo(() => mainScreenTitle(pathname ?? ''), [pathname]);
+  const title = useMemo(() => {
+    const p = pathname ?? '';
+    if (isHomeTabPathname(p)) {
+      return homeHeaderTitle(profile?.full_name);
+    }
+    return mainScreenTitle(p);
+  }, [pathname, profile?.full_name]);
 
   const isStackAuxScreen =
     pathname === '/settings' ||

@@ -34,14 +34,14 @@ export function LandingScreen() {
             <Text style={styles.eyebrowText}>COMMON GROUND STUDIOS</Text>
           </View>
           <Text style={styles.h1}>
-            Your union,{'\n'}
+            Your team,{'\n'}
             <Text style={styles.h1Muted}>
               <Text style={styles.h1Em}>connected</Text> and organised.
             </Text>
           </Text>
           <Text style={styles.lead}>
-            A calm, focused workspace for staff comms and day-to-day operations - built for student
-            unions who expect better than a group chat and a spreadsheet.
+            A calm, focused workspace for internal comms and day-to-day operations - for organisations that
+            want more than a group chat and a spreadsheet.
           </Text>
           <View style={styles.heroCtas}>
             <Pressable

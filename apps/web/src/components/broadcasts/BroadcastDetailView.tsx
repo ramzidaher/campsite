@@ -3,6 +3,7 @@
 import { BroadcastBackdropPicker } from '@/components/broadcasts/BroadcastBackdropPicker';
 import { BroadcastDetailStyleRail } from '@/components/broadcasts/BroadcastDetailStyleRail';
 import { cssBackgroundImageUrl } from '@/lib/broadcasts/cssBackgroundImageUrl';
+import { DEFAULT_BROADCAST_BACKDROP_PATH } from '@/lib/broadcasts/defaultBroadcastBackdrop';
 import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { enqueueBroadcastRead } from '@/lib/offline/broadcastReadQueue';
 import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
@@ -52,9 +53,6 @@ export function BroadcastDetailView({
     setCoverImageUrl(initial.cover_image_url ?? null);
   }, [initial.id, initial.cover_image_url]);
 
-  useEffect(() => {
-    if (!coverImageUrl) setBackdropBlur(false);
-  }, [coverImageUrl]);
   const [marked, setMarked] = useState(false);
   const [calendarMsg, setCalendarMsg] = useState<string | null>(null);
   const [calendarBusy, setCalendarBusy] = useState(false);
@@ -227,16 +225,18 @@ export function BroadcastDetailView({
 
   return (
     <>
-      {coverImageUrl ? (
-        <div
-          className={[
-            'pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-[filter,transform] duration-300',
-            backdropBlur ? 'scale-[1.08] blur-lg' : '',
-          ].join(' ')}
-          style={{ backgroundImage: cssBackgroundImageUrl(coverImageUrl) }}
-          aria-hidden
-        />
-      ) : null}
+      <div
+        className={[
+          'pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-[filter,transform] duration-300',
+          backdropBlur ? 'scale-[1.08] blur-lg' : '',
+        ].join(' ')}
+        style={{
+          backgroundImage: cssBackgroundImageUrl(
+            coverImageUrl?.trim() ? coverImageUrl : DEFAULT_BROADCAST_BACKDROP_PATH,
+          ),
+        }}
+        aria-hidden
+      />
 
       <BroadcastBackdropPicker
         open={backdropOpen}
@@ -276,10 +276,10 @@ export function BroadcastDetailView({
         <Link
           href="/broadcasts"
           className={[
-            'inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors',
-            coverImageUrl
-              ? 'rounded-lg bg-white/92 px-3 py-2 text-[#121212] shadow-[0_2px_16px_rgba(0,0,0,0.14)] ring-1 ring-black/[0.08] backdrop-blur-sm hover:bg-white hover:text-black'
-              : 'text-[#6b6b6b] hover:text-[#121212]',
+            // Opaque chip + dark rim: readable on any cover (translucent fills pick up backdrop hue).
+            'inline-flex items-center gap-1.5 rounded-lg border-2 border-[#121212] bg-white px-3 py-2 text-[13px] font-semibold text-[#121212]',
+            'shadow-[0_4px_24px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.65)] transition-colors hover:bg-[#f4f4f4]',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]',
           ].join(' ')}
         >
           <span aria-hidden>←</span> Back to broadcasts
@@ -312,7 +312,7 @@ export function BroadcastDetailView({
             </span>
           ) : null}
           {initial.is_org_wide ? (
-            <span className="inline-flex items-center rounded-full border border-sky-200/80 bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-950">
+            <span className="inline-flex items-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#44403c]">
               Org-wide
             </span>
           ) : null}
@@ -335,7 +335,7 @@ export function BroadcastDetailView({
             </span>
           ) : null}
           {initial.department_teams?.name ? (
-            <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-medium text-[#4338ca]">
+            <span className="inline-flex items-center rounded-full border border-[#e9d5ff] bg-[#faf5ff] px-2.5 py-0.5 text-[11px] font-medium text-[#6b21a8]">
               {initial.department_teams.name}
             </span>
           ) : null}

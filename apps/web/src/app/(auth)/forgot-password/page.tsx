@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <div className="py-2 text-center">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-[28px]">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#f5f4f1] text-[28px]">
           📬
         </div>
         <h2 className="auth-title">Check your email</h2>

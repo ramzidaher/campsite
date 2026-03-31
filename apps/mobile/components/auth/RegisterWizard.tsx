@@ -41,7 +41,7 @@ function passwordStrengthScore(pw: string): { label: string; color: string; widt
     0: [0, '#d8d8d8', 'Enter a password'],
     1: [25, '#b91c1c', 'Weak'],
     2: [50, '#d97706', 'Fair'],
-    3: [75, '#2563eb', 'Good'],
+    3: [75, '#ca8a04', 'Good'],
     4: [100, '#15803d', 'Strong'],
   };
   const [widthPct, color, label] = map[score] ?? map[0]!;

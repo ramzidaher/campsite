@@ -1,19 +1,28 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
+import { DiscountCardScreen } from '@/components/discount/DiscountCardScreen';
 import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
-import { mainShell } from '@/constants/mainShell';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function DiscountScreen() {
-  return (
-    <TabSafeScreen>
-      <View style={[styles.screen, { backgroundColor: mainShell.pageBg }]}>
-        <Text style={styles.sub}>Staff discount QR - Phase 4 (parity with web Discount Card).</Text>
-      </View>
-    </TabSafeScreen>
-  );
+  const { profile, profileLoading } = useAuth();
+  if (profileLoading && !profile) {
+    return (
+      <TabSafeScreen>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator />
+        </View>
+      </TabSafeScreen>
+    );
+  }
+  if (!profile) {
+    return (
+      <TabSafeScreen>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <ActivityIndicator />
+        </View>
+      </TabSafeScreen>
+    );
+  }
+  return <DiscountCardScreen profile={profile} />;
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 20 },
-  sub: { fontSize: 14, lineHeight: 21, color: mainShell.textSecondary },
-});

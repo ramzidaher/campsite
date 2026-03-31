@@ -123,7 +123,7 @@ export function DashboardMiniCalendar({
                   <span
                     className={[
                       'absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full',
-                      isToday ? 'bg-[#faf9f6]' : 'bg-[#1D4ED8]',
+                      isToday ? 'bg-[#faf9f6]' : 'bg-[#44403c]',
                     ].join(' ')}
                     aria-hidden
                   />

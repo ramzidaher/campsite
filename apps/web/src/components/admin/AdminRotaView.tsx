@@ -93,7 +93,7 @@ export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
         <StatCard label="🔄 Last sync" value={syncTitle} sub={syncSub} valueClass="text-[20px]" />
       </div>
 
-      <div className="mb-6 flex gap-3 rounded-lg border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] text-[#1e40af]">
+      <div className="mb-6 flex gap-3 rounded-lg border border-[#d6d3d1] bg-[#f5f5f4] px-4 py-3 text-[13px] text-[#44403c]">
         <span className="shrink-0" aria-hidden>
           🔗
         </span>

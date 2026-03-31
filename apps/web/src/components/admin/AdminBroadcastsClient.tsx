@@ -313,7 +313,7 @@ export function AdminBroadcastsClient({
                       {firstName(r.departments as never)}
                     </span>
                     {r.is_org_wide ? (
-                      <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-900">
+                      <span className="inline-flex items-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] px-2 py-0.5 text-[11px] font-medium text-[#44403c]">
                         Org-wide
                       </span>
                     ) : null}
@@ -333,7 +333,7 @@ export function AdminBroadcastsClient({
                       {r.is_org_wide ? 'All channels' : firstName(r.broadcast_channels as never)}
                     </span>
                     {firstName(r.department_teams as never) !== '-' ? (
-                      <span className="inline-flex items-center rounded-full border border-[#c7d2fe] bg-[#eef2ff] px-2 py-0.5 text-[11px] font-medium text-[#4338ca]">
+                      <span className="inline-flex items-center rounded-full border border-[#e9d5ff] bg-[#faf5ff] px-2 py-0.5 text-[11px] font-medium text-[#6b21a8]">
                         {firstName(r.department_teams as never)}
                       </span>
                     ) : null}

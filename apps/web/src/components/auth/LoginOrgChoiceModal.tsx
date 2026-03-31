@@ -70,7 +70,7 @@ export function LoginOrgChoiceModal({ open, orgs, nextPath, onClose }: Props) {
                 className="flex w-full flex-col items-start rounded-xl border border-[#d8d8d8] bg-white px-4 py-3.5 text-left transition hover:border-[#121212] disabled:opacity-50"
               >
                 <span className="text-[14px] font-medium text-[#121212]">{o.name}</span>
-                <span className="mt-0.5 font-mono text-[12px] text-[#9b9b9b]">{o.slug}.camp-site.co.uk</span>
+                <span className="mt-0.5 font-mono text-[12px] text-[#9b9b9b]">{o.slug}</span>
                 {loadingId === o.org_id ? (
                   <span className="mt-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#121212]/25 border-t-[#121212]" />
                 ) : null}

@@ -7,7 +7,7 @@ import { DynamicColorIOS } from 'react-native';
  */
 export default function TabLayout() {
   const labelColor = DynamicColorIOS({ light: '#3a3a3c', dark: '#ebebf5' });
-  const tint = DynamicColorIOS({ light: '#0f172a', dark: '#f8fafc' });
+  const tint = DynamicColorIOS({ light: '#121212', dark: '#faf9f6' });
 
   return (
     <NativeTabs
@@ -17,10 +17,8 @@ export default function TabLayout() {
       labelStyle={{ color: labelColor }}
     >
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Dashboard</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }}
-        />
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="broadcasts">
         <NativeTabs.Trigger.Label>Broadcasts</NativeTabs.Trigger.Label>

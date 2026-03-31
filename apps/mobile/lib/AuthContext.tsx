@@ -57,9 +57,10 @@ function parseAuthUrl(url: string) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
   const configured = isSupabaseConfigured();
+  /** Start true when Supabase is on so we never paint "needs register" before the first profile fetch for a restored session. */
+  const [profileLoading, setProfileLoading] = useState(() => configured);
+  const [loading, setLoading] = useState(true);
   const profileLoadId = useRef(0);
 
   const refreshProfile = useCallback(async () => {
@@ -107,17 +108,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [configured]);
 
+  // Only react to user identity changes — not every new session object from token refresh —
+  // so we don't briefly clear profile / toggle profileLoading and flash register.
+  const sessionUserId = session?.user?.id ?? null;
+
   useLayoutEffect(() => {
-    if (!session?.user || !configured) {
+    if (!configured) {
       setProfileLoading(false);
       return;
     }
+    if (!sessionUserId) {
+      // Only clear after getSession finished; otherwise keep true so the gate never sends a
+      // restored session to register during the bootstrap window.
+      if (!loading) setProfileLoading(false);
+      return;
+    }
     setProfileLoading(true);
-  }, [session?.user?.id, configured]);
+  }, [sessionUserId, configured, loading]);
 
   useEffect(() => {
-    if (!session?.user) {
+    if (!sessionUserId) {
       setProfile(null);
+      if (!loading) setProfileLoading(false);
       return;
     }
     if (!configured) {
@@ -131,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [session, session?.user?.id, refreshProfile, configured]);
+  }, [sessionUserId, refreshProfile, configured]);
 
   useEffect(() => {
     if (!configured) return;
@@ -224,7 +236,7 @@ export function useAuthGate() {
     }
 
     if (!profile) {
-      if (onRegister) return;
+      if (onRegister || onAuthCallback) return;
       router.replace('/(auth)/register');
       return;
     }
@@ -249,7 +261,7 @@ export function useAuthGate() {
       return;
     }
 
-    if (onPendingScreen || inAuth || isLandingPathname(pathname)) {
+    if (onPendingScreen || inAuth || onAuthCallback || isLandingPathname(pathname)) {
       router.replace('/(tabs)');
     }
   }, [configured, loading, profileLoading, session, profile, segments, pathname, router]);

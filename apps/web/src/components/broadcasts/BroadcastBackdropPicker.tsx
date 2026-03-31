@@ -208,7 +208,7 @@ export function BroadcastBackdropPicker({
                       onClick={() => onApplyImageUrl(p.urls.regular, p.downloadLocation)}
                       className={[
                         'aspect-[4/3] overflow-hidden rounded-xl bg-[#ecebe8] ring-2 ring-offset-2 ring-offset-white transition',
-                        selected ? 'ring-sky-500' : 'ring-transparent hover:ring-[#d0d0d0]',
+                        selected ? 'ring-[#121212]' : 'ring-transparent hover:ring-[#d0d0d0]',
                         !canSetCover || coverBusy ? 'opacity-50' : '',
                       ].join(' ')}
                     >
@@ -287,7 +287,7 @@ export function BroadcastBackdropPicker({
                 onClick={() => onBackdropBlurChange(!backdropBlur)}
                 className={[
                   'relative h-[26px] w-[44px] shrink-0 rounded-full border-0 transition-colors',
-                  backdropBlur ? 'bg-sky-600' : 'bg-[#d8d8d8]',
+                  backdropBlur ? 'bg-[#121212]' : 'bg-[#d8d8d8]',
                   !coverImageUrl ? 'cursor-not-allowed opacity-40' : '',
                 ].join(' ')}
               >

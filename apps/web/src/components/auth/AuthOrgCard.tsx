@@ -18,7 +18,7 @@ function orgInitials(name: string): string {
 
 export function AuthOrgCard({ org }: { org: AuthOrgDisplay }) {
   const pathname = usePathname() ?? '';
-  /** Plain sign-in / recovery: branding is enough; org context matters on register (`?org=` / subdomain). */
+  /** Plain sign-in / recovery: branding is enough; org context matters on register (`?org=` / host). */
   if (pathname === '/login' || pathname.startsWith('/forgot-password')) {
     return null;
   }

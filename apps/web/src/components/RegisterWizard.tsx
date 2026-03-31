@@ -41,7 +41,7 @@ function passwordStrengthScore(pw: string): { score: number; label: string; colo
     0: ['0%', '#d8d8d8', 'Enter a password'],
     1: ['25%', '#b91c1c', 'Weak'],
     2: ['50%', '#d97706', 'Fair'],
-    3: ['75%', '#2563eb', 'Good'],
+    3: ['75%', '#ca8a04', 'Good'],
     4: ['100%', '#15803d', 'Strong'],
   };
   const [width, color, label] = map[score] ?? map[0]!;
@@ -587,7 +587,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
           <p className="auth-sub mb-8">
             {inviteFlow
               ? 'We matched your workspace from the invite link. You can change the organisation below if needed.'
-              : 'Tell us your union or society name. We’ll suggest a simple web address your team can use to join, change it only if you want to.'}
+              : 'Tell us your organisation name. We’ll suggest a short identifier for shared links and invites — change it only if you want to.'}
           </p>
 
           {inviteFlow ? (
@@ -625,18 +625,18 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
                   className="auth-input"
                   value={newOrgName}
                   onChange={(e) => setNewOrgName(e.target.value)}
-                  placeholder="e.g. Riverside Students' Union"
+                  placeholder="e.g. Riverside Community Trust"
                   maxLength={120}
                   required
                 />
               </div>
               {isValidWorkspaceSlug(workspaceSlugNormalized) ? (
                 <p className="rounded-xl border border-[#e8e6e3] bg-white px-4 py-3 text-[13px] leading-relaxed text-[#525252]">
-                  <span className="font-medium text-[#121212]">Your team will use:</span>{' '}
-                  <span className="whitespace-nowrap font-medium text-[#121212]">
-                    {workspaceSlugNormalized}.camp-site.co.uk
+                  <span className="font-medium text-[#121212]">Invites and shared links</span>{' '}
+                  <span className="text-[#6b6b6b]">
+                    will include your short name (<span className="font-mono text-[12px] text-[#121212]">{workspaceSlugNormalized}</span>)
+                    so people join the right workspace.
                   </span>
-                  <span className="text-[#6b6b6b]"> to open your workspace and invitation links.</span>
                 </p>
               ) : newOrgName.trim().length > 0 ? (
                 <p className="text-[12px] leading-relaxed text-[#9b9b9b]">

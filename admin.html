@@ -1,1 +1,1982 @@
-npm run dev --workspace=@campsite/web	
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campsite — Admin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg:#faf9f6; --surface:#f5f4f1; --text:#121212; --text2:#6B6B6B; --text3:#9B9B9B;
+  --border:#D8D8D8; --accent:#121212; --success:#15803D; --warning:#B91C1C;
+  --card:#ffffff; --shadow:0 1px 3px rgba(0,0,0,.07),0 4px 12px rgba(0,0,0,.04);
+  --shadow-lg:0 2px 8px rgba(0,0,0,.08),0 16px 40px rgba(0,0,0,.08);
+  --font:'DM Sans',sans-serif; --serif:'DM Serif Display',serif;
+  --sidebar-w:256px; --topbar-h:60px; --radius:12px; --transition:0.18s ease;
+}
+
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);height:100vh;background:var(--accent);display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100;overflow-y:auto;overflow-x:hidden}
+.sidebar::-webkit-scrollbar{width:0}
+.sidebar::before{content:'';position:absolute;top:-100px;right:-100px;width:320px;height:320px;border-radius:50%;border:1px solid rgba(255,255,255,.04);pointer-events:none}
+
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
+.sidebar-icon{width:32px;height:32px;background:rgba(255,255,255,.12);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.sidebar-brand-text{font-family:var(--serif);font-size:19px;color:#faf9f6;letter-spacing:-.2px}
+
+.sidebar-org{padding:12px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
+.org-badge{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,.07);border-radius:8px;cursor:pointer;transition:background var(--transition)}
+.org-badge:hover{background:rgba(255,255,255,.11)}
+.org-logo{width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;flex-shrink:0}
+.org-name{font-size:12px;color:rgba(255,255,255,.8);font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* role switcher */
+.role-switcher{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
+.role-switcher-label{font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:5px;padding:0 2px}
+.role-select{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:7px;color:rgba(255,255,255,.85);font-family:var(--font);font-size:12.5px;padding:7px 10px;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none}
+.role-select option{background:#1a1a1a;color:#faf9f6}
+
+.nav-section{padding:0 10px;margin-top:6px}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.08em;color:rgba(255,255,255,.28);text-transform:uppercase;padding:8px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.55);font-size:13px;font-weight:400;transition:background var(--transition),color var(--transition);position:relative;user-select:none;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
+.nav-item.active{background:rgba(255,255,255,.12);color:#faf9f6;font-weight:500}
+.nav-icon{width:18px;text-align:center;font-size:14px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:#E11D48;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:999px;min-width:18px;text-align:center}
+.nav-badge.muted{background:rgba(255,255,255,.15);color:rgba(255,255,255,.65)}
+.nav-badge.amber{background:#D97706;color:#fff}
+
+.nav-sub{overflow:hidden;max-height:0;transition:max-height .3s ease}
+.nav-sub.open{max-height:500px}
+.nav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 36px;border-radius:7px;cursor:pointer;color:rgba(255,255,255,.42);font-size:12px;transition:background var(--transition),color var(--transition);margin-bottom:1px}
+.nav-sub-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.75)}
+.nav-sub-item.active{color:rgba(255,255,255,.88);background:rgba(255,255,255,.09);font-weight:500}
+
+.sidebar-spacer{flex:1}
+.sidebar-user{padding:12px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background var(--transition);flex-shrink:0}
+.sidebar-user:hover{background:rgba(255,255,255,.05)}
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;color:#faf9f6;flex-shrink:0;font-size:13px;background:rgba(255,255,255,.18)}
+.av32{width:32px;height:32px;font-size:12px}
+.av36{width:36px;height:36px;font-size:13px}
+.av40{width:40px;height:40px;font-size:15px}
+.av48{width:48px;height:48px;font-size:17px}
+.user-name{font-size:12.5px;font-weight:500;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role-label{font-size:10.5px;color:rgba(255,255,255,.35);margin-top:1px}
+
+/* ── TOPBAR ── */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;overflow-y:auto;overflow-x:hidden}
+.topbar{height:var(--topbar-h);display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:50;gap:14px}
+.topbar-breadcrumb{display:flex;align-items:center;gap:6px;flex:1}
+.breadcrumb-home{font-size:13px;color:var(--text2);cursor:pointer;transition:color var(--transition)}
+.breadcrumb-home:hover{color:var(--text)}
+.breadcrumb-sep{color:var(--text3);font-size:13px}
+.breadcrumb-current{font-size:13px;font-weight:500;color:var(--text)}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--text2);transition:background var(--transition);position:relative}
+.icon-btn:hover{background:var(--surface)}
+.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;background:#E11D48;border-radius:50%;border:1.5px solid var(--bg)}
+.topbar-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#faf9f6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;cursor:pointer;border:2px solid transparent;transition:border-color var(--transition)}
+.topbar-avatar:hover{border-color:var(--accent)}
+
+/* ── PAGE SYSTEM ── */
+.page{display:none;flex-direction:column;min-height:calc(100vh - var(--topbar-h))}
+.page.active{display:flex}
+.page-inner{padding:26px 28px;flex:1}
+
+/* ── TYPOGRAPHY ── */
+.page-title{font-family:var(--serif);font-size:26px;letter-spacing:-.3px;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.section-title{font-family:var(--serif);font-size:17px;letter-spacing:-.2px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-pad{padding:20px}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:box-shadow var(--transition),transform var(--transition)}
+.stat-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.stat-value{font-family:var(--serif);font-size:32px;letter-spacing:-.5px;line-height:1}
+.stat-sub{font-size:12px;color:var(--text3);margin-top:6px}
+.stat-sub .up{color:var(--success)}
+.stat-sub .dn{color:var(--warning)}
+.stat-bar{margin-top:10px;height:3px;background:var(--border);border-radius:99px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:99px;background:var(--accent)}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{border-bottom:1px solid var(--border)}
+thead th{text-align:left;padding:10px 14px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background var(--transition)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface)}
+tbody td{padding:11px 14px;vertical-align:middle}
+.td-name{display:flex;align-items:center;gap:10px}
+.td-avatar{width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2);flex-shrink:0}
+
+/* ── ROLE BADGES ── */
+.role-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.rb-super-admin{background:#1a1a1a;color:#faf9f6}
+.rb-senior-manager{background:#1e3a5f;color:#93c5fd}
+.rb-manager{background:#14532d;color:#86efac}
+.rb-coordinator{background:#3b0764;color:#d8b4fe}
+.rb-assistant{background:#431407;color:#fdba74}
+.rb-weekly-paid{background:#f5f4f1;color:#6b6b6b;border:1px solid #d8d8d8}
+.rb-society-leader{background:#fef3c7;color:#92400e}
+.rb-pending{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+
+/* ── STATUS BADGES ── */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500}
+.sb-active{background:#dcfce7;color:#166534}
+.sb-pending{background:#fff7ed;color:#c2410c}
+.sb-inactive{background:#f5f4f1;color:#9b9b9b}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:var(--font);transition:background var(--transition),transform var(--transition),box-shadow var(--transition);white-space:nowrap}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:none}
+.btn-primary{background:var(--accent);color:#faf9f6}
+.btn-primary:hover{background:#2a2a2a}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{background:var(--surface);color:var(--text)}
+.btn-danger{background:#fef2f2;color:var(--warning);border:1px solid #fecaca}
+.btn-danger:hover{background:#fee2e2}
+.btn-success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.btn-success:hover{background:#bbf7d0}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
+.btn-xs{padding:3px 9px;font-size:11.5px;border-radius:6px}
+
+/* ── FORM ── */
+.field{margin-bottom:16px}
+.field label,.field-label{display:block;font-size:12.5px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:9px 13px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13.5px;outline:none;transition:border-color var(--transition),box-shadow var(--transition);appearance:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(18,18,18,.07)}
+.field textarea{resize:vertical;padding-top:10px;height:90px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.field-hint{font-size:11.5px;color:var(--text3);margin-top:4px}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(3px)}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--card);border-radius:16px;width:560px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:translateY(14px) scale(.98);transition:transform .22s ease}
+.overlay.open .modal{transform:none}
+.modal.modal-lg{width:720px}
+.modal.modal-sm{width:420px}
+.modal-header{padding:22px 24px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1}
+.modal-title{font-family:var(--serif);font-size:20px}
+.modal-close{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:none;cursor:pointer;font-size:14px;color:var(--text2);display:flex;align-items:center;justify-content:center;transition:background var(--transition)}
+.modal-close:hover{background:var(--surface)}
+.modal-body{padding:22px 24px}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:10px;background:var(--card);position:sticky;bottom:0}
+
+/* ── ACCESS DENIED ── */
+.access-denied{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 32px;text-align:center;flex:1}
+.access-icon{font-size:48px;margin-bottom:16px;opacity:.5}
+.access-title{font-family:var(--serif);font-size:22px;margin-bottom:8px;color:var(--text2)}
+.access-sub{font-size:14px;color:var(--text3);max-width:340px;line-height:1.7}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:24px}
+.tab{padding:10px 16px;font-size:13px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--transition),border-color var(--transition);font-weight:400}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);font-weight:500;border-bottom-color:var(--accent)}
+
+/* ── TOGGLE ── */
+.toggle{width:38px;height:21px;background:var(--border);border-radius:999px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;width:15px;height:15px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(17px)}
+
+/* ── SEARCH BAR ── */
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 12px;height:36px;transition:border-color var(--transition),box-shadow var(--transition)}
+.search-bar:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(18,18,18,.07)}
+.search-bar input{border:none;background:none;font-family:var(--font);font-size:13px;color:var(--text);outline:none;width:100%}
+.search-bar input::placeholder{color:var(--text3)}
+
+/* ── FILTER ROW ── */
+.filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.filter-pill{padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);font-size:12.5px;color:var(--text2);cursor:pointer;transition:background var(--transition),color var(--transition),border-color var(--transition);font-family:var(--font)}
+.filter-pill:hover{background:var(--surface);color:var(--text)}
+.filter-pill.active{background:var(--accent);color:#faf9f6;border-color:var(--accent)}
+
+/* ── DEPT CARD ── */
+.dept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.dept-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:box-shadow var(--transition),transform var(--transition)}
+.dept-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.dept-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.dept-icon-wrap{width:38px;height:38px;border-radius:9px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px}
+.dept-member-count{font-family:var(--serif);font-size:22px;margin-bottom:2px}
+.dept-name-big{font-size:14px;font-weight:500;margin-bottom:4px}
+.dept-cats{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.dept-cat-pill{padding:2px 8px;background:var(--surface);border:1px solid var(--border);border-radius:999px;font-size:10.5px;color:var(--text3)}
+
+/* ── SETTINGS ROW ── */
+.setting-row{display:flex;align-items:flex-start;justify-content:space-between;padding:15px 0;border-bottom:1px solid var(--border);gap:20px}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:13.5px;font-weight:500}
+.setting-sub{font-size:12px;color:var(--text3);margin-top:2px}
+
+/* ── INLINE ALERT ── */
+.alert{padding:12px 16px;border-radius:9px;font-size:13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:16px}
+.alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.alert-warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}
+.alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+.alert-danger{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+
+/* ── PERMISSION MATRIX ── */
+.perm-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.perm-table th{padding:8px 12px;text-align:left;background:var(--surface);border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.perm-table td{padding:9px 12px;border:1px solid var(--border);vertical-align:middle}
+.perm-table tbody tr:nth-child(even){background:var(--surface)}
+.perm-check{color:var(--success);font-size:15px}
+.perm-cross{color:var(--text3);font-size:15px}
+.perm-partial{color:#D97706;font-size:13px}
+
+/* ── ACTIVITY FEED ── */
+.activity-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.activity-icon{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.activity-text{flex:1;font-size:13px;line-height:1.5;color:var(--text2)}
+.activity-text strong{color:var(--text);font-weight:500}
+.activity-time{font-size:11px;color:var(--text3);white-space:nowrap;margin-top:2px}
+
+/* ── TAG ── */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+.tag-green{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.tag-blue{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}
+.tag-orange{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+.tag-purple{background:#f3e8ff;color:#7c3aed;border-color:#e9d5ff}
+
+/* ── RESTRICTED INDICATOR ── */
+.restricted-nav{opacity:.35;pointer-events:none}
+
+/* ── SPINNER ── */
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:#1a1a1a;color:#faf9f6;padding:10px 20px;border-radius:10px;font-size:13.5px;font-weight:500;pointer-events:none;opacity:0;transition:opacity .2s,transform .2s;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.25);white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:52px 24px}
+.empty-icon{font-size:38px;margin-bottom:12px}
+.empty-title{font-size:15px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:13px;color:var(--text3)}
+
+/* ── ANIM ── */
+.page-inner>*{animation:fadeUp .2s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-inner>*:nth-child(1){animation-delay:0ms}
+.page-inner>*:nth-child(2){animation-delay:35ms}
+.page-inner>*:nth-child(3){animation-delay:70ms}
+.page-inner>*:nth-child(4){animation-delay:105ms}
+.page-inner>*:nth-child(5){animation-delay:140ms}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-icon">⛺</div>
+    <span class="sidebar-brand-text">Campsite</span>
+  </div>
+
+  <div class="sidebar-org">
+    <div class="org-badge">
+      <div class="org-logo">SU</div>
+      <span class="org-name">Sussex Students' Union</span>
+      <span style="font-size:10px;color:rgba(255,255,255,.35)">⌄</span>
+    </div>
+  </div>
+
+  <!-- Role Switcher (dev tool) -->
+  <div class="role-switcher">
+    <div class="role-switcher-label">Viewing as role</div>
+    <select class="role-select" id="roleSelect" onchange="setRole(this.value)">
+      <option value="super_admin">Super Admin</option>
+      <option value="senior_manager">Senior Manager</option>
+      <option value="manager">Manager</option>
+      <option value="coordinator">Coordinator</option>
+      <option value="assistant">Assistant</option>
+      <option value="weekly_paid">Weekly Paid Staff</option>
+    </select>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" onclick="navTo('admin-overview',this)" data-min-role="manager">
+      <span class="nav-icon">◼</span> Admin Overview
+    </div>
+  </div>
+
+  <div class="nav-section" id="nav-people">
+    <div class="nav-label">People</div>
+    <div class="nav-item" onclick="navTo('users',this)" data-min-role="manager">
+      <span class="nav-icon">👥</span> All Members
+      <span class="nav-badge muted" id="nav-member-count">348</span>
+    </div>
+    <div class="nav-item" onclick="navTo('pending',this)" data-min-role="manager">
+      <span class="nav-icon">⏳</span> Pending Approval
+      <span class="nav-badge" id="nav-pending-badge">5</span>
+    </div>
+    <div class="nav-item" onclick="navTo('roles',this)" data-min-role="senior_manager">
+      <span class="nav-icon">🎖</span> Roles & Permissions
+    </div>
+  </div>
+
+  <div class="nav-section" id="nav-content">
+    <div class="nav-label">Content</div>
+    <div class="nav-item" onclick="navTo('broadcasts-admin',this)" data-min-role="coordinator">
+      <span class="nav-icon">📡</span> Broadcasts
+      <span class="nav-badge amber" id="nav-draft-badge">2</span>
+    </div>
+    <div class="nav-item" onclick="navTo('departments',this)" data-min-role="senior_manager">
+      <span class="nav-icon">🏢</span> Departments
+    </div>
+    <div class="nav-item" onclick="navTo('categories',this)" data-min-role="super_admin">
+      <span class="nav-icon">🏷</span> Categories
+    </div>
+  </div>
+
+  <div class="nav-section" id="nav-ops">
+    <div class="nav-label">Operations</div>
+    <div class="nav-item" onclick="navTo('rota-admin',this)" data-min-role="manager">
+      <span class="nav-icon">🗓</span> Rota Management
+    </div>
+    <div class="nav-item" onclick="navTo('discount-admin',this)" data-min-role="super_admin">
+      <span class="nav-icon">🎫</span> Discount Rules
+    </div>
+    <div class="nav-item" onclick="navTo('audit',this)" data-min-role="senior_manager">
+      <span class="nav-icon">📋</span> Activity Log
+    </div>
+  </div>
+
+  <div class="nav-section" id="nav-config">
+    <div class="nav-label">Configuration</div>
+    <div class="nav-item" onclick="navTo('org-settings',this)" data-min-role="super_admin">
+      <span class="nav-icon">⚙️</span> Org Settings
+    </div>
+    <div class="nav-item" onclick="navTo('notifications-config',this)" data-min-role="super_admin">
+      <span class="nav-icon">🔔</span> Notification Defaults
+    </div>
+    <div class="nav-item" onclick="navTo('integrations',this)" data-min-role="super_admin">
+      <span class="nav-icon">🔗</span> Integrations
+    </div>
+  </div>
+
+  <div class="sidebar-spacer"></div>
+
+  <div class="sidebar-user">
+    <div class="avatar av32" id="sidebar-avatar">SA</div>
+    <div style="flex:1;overflow:hidden">
+      <div class="user-name" id="sidebar-username">Sarah Al-Amin</div>
+      <div class="user-role-label" id="sidebar-userrole">Super Admin</div>
+    </div>
+    <span style="font-size:12px;color:rgba(255,255,255,.3)">⚙</span>
+  </div>
+</aside>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-breadcrumb">
+      <span class="breadcrumb-home" onclick="navTo('admin-overview',null)">Admin</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current" id="breadcrumb-current">Overview</span>
+    </div>
+    <div style="flex:1"></div>
+    <div class="topbar-actions">
+      <button class="icon-btn" title="Notifications">🔔<div class="notif-dot"></div></button>
+      <div class="topbar-avatar" id="topbar-avatar">SA</div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════
+       PAGE: ADMIN OVERVIEW
+  ════════════════════════════════════ -->
+  <div class="page active" id="page-admin-overview">
+    <div class="page-inner">
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap">
+        <div>
+          <div class="page-title">Admin Overview</div>
+          <div class="page-sub" id="overview-sub">Full control of Sussex Students' Union · Super Admin</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="navTo('audit',null)">📋 Activity Log</button>
+          <button class="btn btn-primary" onclick="openModal('modal-invite')">+ Invite Member</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="overview-stats">
+        <div class="stat-card" onclick="navTo('users',null)">
+          <div class="stat-label">👥 Total Members</div>
+          <div class="stat-value">348</div>
+          <div class="stat-sub"><span class="up">↑ 8</span> this week</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:68%"></div></div>
+        </div>
+        <div class="stat-card" onclick="navTo('pending',null)">
+          <div class="stat-label">⏳ Pending Approval</div>
+          <div class="stat-value" style="color:#B91C1C">5</div>
+          <div class="stat-sub"><span class="dn">Action required</span></div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:100%;background:#B91C1C;opacity:.35"></div></div>
+        </div>
+        <div class="stat-card" onclick="navTo('broadcasts-admin',null)">
+          <div class="stat-label">📡 Broadcasts (30d)</div>
+          <div class="stat-value">47</div>
+          <div class="stat-sub"><span class="up">↑ 14%</span> vs last month</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:60%"></div></div>
+        </div>
+        <div class="stat-card" onclick="navTo('departments',null)">
+          <div class="stat-label">🏢 Departments</div>
+          <div class="stat-value">7</div>
+          <div class="stat-sub">2 societies, 5 depts</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:44%"></div></div>
+        </div>
+      </div>
+
+      <!-- Two col -->
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
+
+        <!-- Recent activity -->
+        <div>
+          <div class="section-head">
+            <div class="section-title">Recent Activity</div>
+            <span style="font-size:12.5px;color:var(--text2);cursor:pointer;text-decoration:underline;text-underline-offset:2px" onclick="navTo('audit',null)">View full log →</span>
+          </div>
+          <div class="card">
+            <div style="padding:4px 6px">
+              <div class="activity-item" style="padding:13px 14px">
+                <div class="activity-icon">✅</div>
+                <div>
+                  <div class="activity-text"><strong>Jamie Clarke</strong> was approved by you for Events & Activities</div>
+                  <div class="activity-time">2 minutes ago</div>
+                </div>
+              </div>
+              <div class="activity-item" style="padding:13px 14px">
+                <div class="activity-icon">📡</div>
+                <div>
+                  <div class="activity-text"><strong>Priya Mehta</strong> sent a broadcast to Welfare & Support · Support Resources</div>
+                  <div class="activity-time">34 minutes ago</div>
+                </div>
+              </div>
+              <div class="activity-item" style="padding:13px 14px">
+                <div class="activity-icon">👤</div>
+                <div>
+                  <div class="activity-text"><strong>Raj Lakhani</strong> registered and selected Events & Activities (Coordinator)</div>
+                  <div class="activity-time">1 hour ago</div>
+                </div>
+              </div>
+              <div class="activity-item" style="padding:13px 14px">
+                <div class="activity-icon">🏢</div>
+                <div>
+                  <div class="activity-text">Department <strong>Finance</strong> was updated — 2 new categories added</div>
+                  <div class="activity-time">3 hours ago</div>
+                </div>
+              </div>
+              <div class="activity-item" style="padding:13px 14px">
+                <div class="activity-icon">🎖</div>
+                <div>
+                  <div class="activity-text"><strong>Tom Okafor</strong> was promoted from Assistant to Coordinator by you</div>
+                  <div class="activity-time">Yesterday at 4:12 PM</div>
+                </div>
+              </div>
+              <div class="activity-item" style="padding:13px 14px">
+                <div class="activity-icon">🔗</div>
+                <div>
+                  <div class="activity-text">Google Sheets rota sync completed — 28 shifts updated</div>
+                  <div class="activity-time">Yesterday at 11:00 AM</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: quick actions + breakdown -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <div>
+            <div class="section-head"><div class="section-title">Quick Actions</div></div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-ghost" style="justify-content:flex-start;width:100%" onclick="navTo('pending',null)">⏳ &nbsp;Review 5 pending approvals</button>
+              <button class="btn btn-ghost" style="justify-content:flex-start;width:100%" onclick="openModal('modal-invite')">✉️ &nbsp;Invite a new member</button>
+              <button class="btn btn-ghost" style="justify-content:flex-start;width:100%" onclick="navTo('departments',null)">🏢 &nbsp;Manage departments</button>
+              <button class="btn btn-ghost" style="justify-content:flex-start;width:100%" onclick="navTo('broadcasts-admin',null)">📡 &nbsp;Review 2 draft broadcasts</button>
+              <button class="btn btn-ghost" style="justify-content:flex-start;width:100%" onclick="navTo('org-settings',null)">⚙️ &nbsp;Organisation settings</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-head"><div class="section-title">Members by Role</div></div>
+            <div class="card card-pad" style="padding:16px">
+              <div id="role-breakdown"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: ALL MEMBERS (USERS)
+  ════════════════════════════════════ -->
+  <div class="page" id="page-users">
+    <div class="page-inner">
+      <div class="section-head" style="margin-bottom:20px">
+        <div>
+          <div class="page-title">All Members</div>
+          <div class="page-sub">348 members across Sussex Students' Union</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-invite')">+ Invite Member</button>
+      </div>
+
+      <div class="filter-row">
+        <div class="search-bar" style="width:240px">
+          <span style="color:var(--text3);font-size:13px">🔍</span>
+          <input type="text" placeholder="Search name or email…" oninput="filterUsers(this.value)">
+        </div>
+        <select class="field" style="margin:0;height:36px;padding:0 10px;width:auto;font-size:13px;border-radius:8px" onchange="filterByRole(this.value)" id="role-filter-select">
+          <option value="">All roles</option>
+          <option value="super_admin">Super Admin</option>
+          <option value="senior_manager">Senior Manager</option>
+          <option value="manager">Manager</option>
+          <option value="coordinator">Coordinator</option>
+          <option value="assistant">Assistant</option>
+          <option value="weekly_paid">Weekly Paid Staff</option>
+          <option value="society_leader">Society Leader</option>
+        </select>
+        <select class="field" style="margin:0;height:36px;padding:0 10px;width:auto;font-size:13px;border-radius:8px">
+          <option>All departments</option>
+          <option>Events & Activities</option>
+          <option>Human Resources</option>
+          <option>Marketing & Comms</option>
+          <option>Welfare & Support</option>
+          <option>Finance</option>
+        </select>
+        <button class="filter-pill active" onclick="filterStatus('all',this)">All</button>
+        <button class="filter-pill" onclick="filterStatus('active',this)">Active</button>
+        <button class="filter-pill" onclick="filterStatus('pending',this)">Pending</button>
+        <button class="filter-pill" onclick="filterStatus('inactive',this)">Inactive</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table id="users-table">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Role</th>
+                <th>Department(s)</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: PENDING APPROVAL
+  ════════════════════════════════════ -->
+  <div class="page" id="page-pending">
+    <div class="page-inner">
+      <div class="section-head" style="margin-bottom:20px">
+        <div>
+          <div class="page-title">Pending Approval</div>
+          <div class="page-sub" id="pending-sub">5 members awaiting verification</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="approveAll()">✓ Approve All</button>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <span>ℹ️</span>
+        <span>These members have registered and selected their departments. Approve them to grant access, or reject with an optional note.</span>
+      </div>
+
+      <div id="pending-list" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: ROLES & PERMISSIONS
+  ════════════════════════════════════ -->
+  <div class="page" id="page-roles">
+    <div class="page-inner">
+      <div class="page-title">Roles & Permissions</div>
+      <div class="page-sub">Overview of what each role can do within your organisation.</div>
+
+      <!-- Role cards -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px">
+        <div class="card card-pad" style="border-left:3px solid #121212">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span class="role-badge rb-super-admin">Super Admin</span>
+            <span style="font-size:12px;color:var(--text3)">1 member</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.6">Full platform access. Manages org settings, all departments, roles, branding, discount rules and user management.</div>
+        </div>
+        <div class="card card-pad" style="border-left:3px solid #1e3a5f">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span class="role-badge rb-senior-manager">Senior Manager</span>
+            <span style="font-size:12px;color:var(--text3)">4 members</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.6">All broadcast types, all departments, rota management, discount management and user approval.</div>
+        </div>
+        <div class="card card-pad" style="border-left:3px solid #14532d">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span class="role-badge rb-manager">Manager</span>
+            <span style="font-size:12px;color:var(--text3)">12 members</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.6">Broadcast to assigned departments, view rota, approve users in their departments.</div>
+        </div>
+        <div class="card card-pad" style="border-left:3px solid #3b0764">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span class="role-badge rb-coordinator">Coordinator</span>
+            <span style="font-size:12px;color:var(--text3)">28 members</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.6">Broadcast to their own department only. View rota. Cannot approve users.</div>
+        </div>
+        <div class="card card-pad" style="border-left:3px solid #431407">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span class="role-badge rb-assistant">Assistant</span>
+            <span style="font-size:12px;color:var(--text3)">47 members</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.6">Can create broadcast drafts — a Manager+ must approve before sending. View rota.</div>
+        </div>
+        <div class="card card-pad" style="border-left:3px solid #d8d8d8">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span class="role-badge rb-weekly-paid">Weekly Paid</span>
+            <span style="font-size:12px;color:var(--text3)">256 members</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.6">Receive broadcasts, view own rota and calendar. Manage their own notification subscriptions.</div>
+        </div>
+      </div>
+
+      <!-- Permission matrix -->
+      <div class="section-head" style="margin-bottom:14px"><div class="section-title">Permission Matrix</div></div>
+      <div class="card" style="overflow:auto">
+        <table class="perm-table">
+          <thead>
+            <tr>
+              <th style="min-width:180px">Feature</th>
+              <th>Super Admin</th>
+              <th>Sr. Manager</th>
+              <th>Manager</th>
+              <th>Coordinator</th>
+              <th>Assistant</th>
+              <th>Weekly Paid</th>
+            </tr>
+          </thead>
+          <tbody id="perm-matrix-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: BROADCASTS ADMIN
+  ════════════════════════════════════ -->
+  <div class="page" id="page-broadcasts-admin">
+    <div class="page-inner">
+      <div class="section-head" style="margin-bottom:20px">
+        <div>
+          <div class="page-title">Broadcast Management</div>
+          <div class="page-sub">All broadcasts across your organisation</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-compose')">✏ New Broadcast</button>
+      </div>
+
+      <div class="tab-bar" id="broadcast-tabs">
+        <div class="tab active" onclick="switchBroadcastTab('all',this)">All <span style="font-size:11px;color:var(--text3)">47</span></div>
+        <div class="tab" onclick="switchBroadcastTab('draft',this)">Drafts <span style="font-size:11px;color:#D97706">2</span></div>
+        <div class="tab" onclick="switchBroadcastTab('scheduled',this)">Scheduled <span style="font-size:11px;color:var(--text3)">3</span></div>
+        <div class="tab" onclick="switchBroadcastTab('sent',this)">Sent <span style="font-size:11px;color:var(--text3)">42</span></div>
+      </div>
+
+      <div id="broadcasts-admin-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: DEPARTMENTS
+  ════════════════════════════════════ -->
+  <div class="page" id="page-departments">
+    <div class="page-inner">
+      <div class="section-head" style="margin-bottom:20px">
+        <div>
+          <div class="page-title">Departments</div>
+          <div class="page-sub">Manage all departments, societies and clubs in your organisation</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-dept')">+ New Department</button>
+      </div>
+
+      <div class="filter-row">
+        <button class="filter-pill active" onclick="filterDept('all',this)">All (7)</button>
+        <button class="filter-pill" onclick="filterDept('department',this)">Departments</button>
+        <button class="filter-pill" onclick="filterDept('society',this)">Societies</button>
+        <button class="filter-pill" onclick="filterDept('club',this)">Clubs</button>
+      </div>
+
+      <div class="dept-grid" id="dept-grid"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: CATEGORIES
+  ════════════════════════════════════ -->
+  <div class="page" id="page-categories">
+    <div class="page-inner">
+      <div class="page-title">Broadcast Categories</div>
+      <div class="page-sub">Define broadcast categories per department. Members subscribe to individual categories.</div>
+
+      <div id="categories-list" style="display:flex;flex-direction:column;gap:16px"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: ROTA ADMIN
+  ════════════════════════════════════ -->
+  <div class="page" id="page-rota-admin">
+    <div class="page-inner">
+      <div class="section-head" style="margin-bottom:20px">
+        <div>
+          <div class="page-title">Rota Management</div>
+          <div class="page-sub">Import, edit and manage working schedules for all departments</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="openModal('modal-import-sheets')">📥 Import Google Sheets</button>
+          <button class="btn btn-primary" onclick="openModal('modal-add-shift')">+ Add Shift</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:24px">
+        <div class="card card-pad">
+          <div class="stat-label">📊 Shifts This Week</div>
+          <div style="font-family:var(--serif);font-size:28px;margin-top:6px">24</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Across 5 departments</div>
+        </div>
+        <div class="card card-pad">
+          <div class="stat-label">✅ Coverage Rate</div>
+          <div style="font-family:var(--serif);font-size:28px;margin-top:6px;color:var(--success)">94%</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">2 unfilled slots</div>
+        </div>
+        <div class="card card-pad">
+          <div class="stat-label">🔄 Last Sync</div>
+          <div style="font-family:var(--serif);font-size:20px;margin-top:6px">Today 11am</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">From Google Sheets</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <span>🔗</span>
+        <div>Google Sheets is connected. Syncing every 6 hours. <span style="text-decoration:underline;cursor:pointer" onclick="navTo('integrations',null)">Manage integration →</span></div>
+      </div>
+
+      <div class="section-head" style="margin-top:20px"><div class="section-title">Upcoming Shifts — This Week</div></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Staff Member</th><th>Department</th><th>Date</th><th>Time</th><th>Role</th><th>Actions</th></tr></thead>
+            <tbody id="rota-admin-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: DISCOUNT RULES
+  ════════════════════════════════════ -->
+  <div class="page" id="page-discount-admin">
+    <div class="page-inner">
+      <div class="section-head" style="margin-bottom:20px">
+        <div>
+          <div class="page-title">Discount Rules</div>
+          <div class="page-sub">Configure staff discount tiers by role. Changes apply immediately to all discount cards.</div>
+        </div>
+        <button class="btn btn-primary" onclick="saveDiscountRules()">Save Changes</button>
+      </div>
+
+      <div class="alert alert-info">
+        <span>ℹ️</span>
+        <span>Discount values are informational only — no payment processing. Staff show their QR code to cashiers who verify via the app.</span>
+      </div>
+
+      <div class="card" style="max-width:560px;margin-top:16px">
+        <div style="padding:20px" id="discount-rules-form"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: ACTIVITY LOG
+  ════════════════════════════════════ -->
+  <div class="page" id="page-audit">
+    <div class="page-inner">
+      <div class="page-title">Activity Log</div>
+      <div class="page-sub">Full audit trail of actions across your organisation</div>
+
+      <div class="filter-row" style="margin-bottom:16px">
+        <div class="search-bar" style="width:240px">
+          <span style="color:var(--text3);font-size:13px">🔍</span>
+          <input type="text" placeholder="Search actions…">
+        </div>
+        <select class="field" style="margin:0;height:36px;padding:0 10px;width:auto;font-size:13px;border-radius:8px">
+          <option>All actions</option>
+          <option>User approved / rejected</option>
+          <option>Role changed</option>
+          <option>Broadcast sent</option>
+          <option>Department changed</option>
+          <option>Settings updated</option>
+        </select>
+        <select class="field" style="margin:0;height:36px;padding:0 10px;width:auto;font-size:13px;border-radius:8px">
+          <option>Last 7 days</option>
+          <option>Last 30 days</option>
+          <option>Last 3 months</option>
+          <option>All time</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div id="audit-log-list" style="padding:6px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: ORG SETTINGS
+  ════════════════════════════════════ -->
+  <div class="page" id="page-org-settings">
+    <div class="page-inner">
+      <div class="page-title">Organisation Settings</div>
+      <div class="page-sub">Configure your organisation's branding and general settings</div>
+
+      <div style="display:grid;grid-template-columns:200px 1fr;gap:24px;max-width:860px">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="filter-pill active" style="border-radius:8px;padding:8px 12px" onclick="orgTab('branding',this)">🎨 Branding</div>
+          <div class="filter-pill" style="border-radius:8px;padding:8px 12px" onclick="orgTab('general',this)">⚙️ General</div>
+          <div class="filter-pill" style="border-radius:8px;padding:8px 12px" onclick="orgTab('danger',this)">⚠️ Danger Zone</div>
+        </div>
+
+        <div>
+          <!-- Branding -->
+          <div id="org-tab-branding" class="card card-pad">
+            <div style="font-family:var(--serif);font-size:17px;margin-bottom:4px">Branding</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Customise how your organisation appears in Campsite.</div>
+
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+              <div style="width:64px;height:64px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#faf9f6;font-family:var(--serif);font-size:22px">SU</div>
+              <div>
+                <div style="font-weight:500;margin-bottom:4px;font-size:13.5px">Organisation Logo</div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-ghost btn-sm" onclick="showToast('Upload logo coming soon')">Upload new</button>
+                  <button class="btn btn-ghost btn-sm" onclick="showToast('Logo removed')">Remove</button>
+                </div>
+                <div style="font-size:11.5px;color:var(--text3);margin-top:5px">PNG or SVG recommended · Max 2MB</div>
+              </div>
+            </div>
+
+            <div class="field"><label>Organisation Name</label><input type="text" value="Sussex Students' Union"></div>
+            <div class="field"><label>Subdomain</label>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="text" value="sussex-su" style="flex:1">
+                <span style="font-size:13px;color:var(--text3);white-space:nowrap">.campsite.app</span>
+              </div>
+              <div class="field-hint">Changing this will update all member links</div>
+            </div>
+
+            <button class="btn btn-primary" onclick="showToast('Branding saved ✓')">Save branding</button>
+          </div>
+
+          <!-- General -->
+          <div id="org-tab-general" class="card card-pad" style="display:none">
+            <div style="font-family:var(--serif);font-size:17px;margin-bottom:4px">General Settings</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:20px">System-wide defaults for your organisation.</div>
+
+            <div class="setting-row">
+              <div><div class="setting-label">Require manager approval for new members</div><div class="setting-sub">New registrations are held pending until a Manager+ verifies them</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Allow self-service role changes</div><div class="setting-sub">Members can request a role change — still requires admin approval</div></div>
+              <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Broadcast drafts require approval</div><div class="setting-sub">Broadcasts created by Assistants need Manager+ approval before send</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Show member count on departments</div><div class="setting-sub">Visible to all members in department listings</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+
+            <div style="margin-top:16px"><button class="btn btn-primary" onclick="showToast('Settings saved ✓')">Save settings</button></div>
+          </div>
+
+          <!-- Danger -->
+          <div id="org-tab-danger" class="card card-pad" style="display:none">
+            <div style="font-family:var(--serif);font-size:17px;margin-bottom:4px;color:var(--warning)">Danger Zone</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:20px">These actions are irreversible. Proceed with caution.</div>
+
+            <div class="setting-row">
+              <div><div class="setting-label">Export all member data</div><div class="setting-sub">Download a CSV of all members and their details</div></div>
+              <button class="btn btn-ghost btn-sm" onclick="showToast('Preparing export…')">Export CSV</button>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Archive organisation</div><div class="setting-sub">Freezes all activity. Members lose access. Reversible by Common Ground Studios.</div></div>
+              <button class="btn btn-danger btn-sm" onclick="showToast('Please contact Common Ground Studios to archive')">Archive Org</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: NOTIFICATION DEFAULTS
+  ════════════════════════════════════ -->
+  <div class="page" id="page-notifications-config">
+    <div class="page-inner">
+      <div class="page-title">Notification Defaults</div>
+      <div class="page-sub">Set the default notification behaviour for all new members. Members can override these in their own settings.</div>
+
+      <div class="card" style="max-width:600px">
+        <div style="padding:20px">
+          <div class="setting-row" style="padding-top:0">
+            <div><div class="setting-label">Push notifications for new broadcasts</div><div class="setting-sub">Default ON for all new members</div></div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Shift reminder notifications</div><div class="setting-sub">Send push notification X hours before shift</div></div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="field" style="margin:14px 0 0">
+            <label>Default shift reminder lead time</label>
+            <select><option>30 minutes before</option><option>1 hour before</option><option selected>2 hours before</option><option>4 hours before</option><option>Day before</option></select>
+          </div>
+          <div class="setting-row" style="margin-top:8px">
+            <div><div class="setting-label">Email on account approval</div><div class="setting-sub">New members receive email when their account is approved</div></div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Default Do Not Disturb hours</div><div class="setting-sub">Quiet hours: 10pm – 8am</div></div>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-primary" onclick="showToast('Notification defaults saved ✓')">Save defaults</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: INTEGRATIONS
+  ════════════════════════════════════ -->
+  <div class="page" id="page-integrations">
+    <div class="page-inner">
+      <div class="page-title">Integrations</div>
+      <div class="page-sub">Connect external services to Campsite</div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:640px">
+
+        <div class="card card-pad" style="display:flex;align-items:center;gap:16px">
+          <div style="width:46px;height:46px;border-radius:10px;background:#e8f0fe;border:1px solid #c5d8fe;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📋</div>
+          <div style="flex:1">
+            <div style="font-weight:500;font-size:14px;margin-bottom:3px">Google Sheets</div>
+            <div style="font-size:12.5px;color:var(--text2)">Import rota data from a connected spreadsheet</div>
+            <div style="margin-top:5px;display:flex;align-items:center;gap:6px"><span class="status-badge sb-active"><span class="sb-dot"></span>Connected</span><span style="font-size:11.5px;color:var(--text3)">synced today 11:00 AM</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="showToast('Opening Sheets config…')">Configure</button>
+            <button class="btn btn-danger btn-sm" onclick="showToast('Disconnected Google Sheets')">Disconnect</button>
+          </div>
+        </div>
+
+        <div class="card card-pad" style="display:flex;align-items:center;gap:16px">
+          <div style="width:46px;height:46px;border-radius:10px;background:#e8f0fe;border:1px solid #c5d8fe;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📅</div>
+          <div style="flex:1">
+            <div style="font-weight:500;font-size:14px;margin-bottom:3px">Google Calendar</div>
+            <div style="font-size:12.5px;color:var(--text2)">Push events and shifts to members' Google Calendars</div>
+            <div style="margin-top:5px"><span class="status-badge sb-inactive">Not connected</span></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showToast('Connecting Google Calendar…')">Connect</button>
+        </div>
+
+        <div class="card card-pad" style="display:flex;align-items:center;gap:16px">
+          <div style="width:46px;height:46px;border-radius:10px;background:#fef3c7;border:1px solid #fde68a;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">✉️</div>
+          <div style="flex:1">
+            <div style="font-weight:500;font-size:14px;margin-bottom:3px">Resend (Email)</div>
+            <div style="font-size:12.5px;color:var(--text2)">Transactional email for account notifications</div>
+            <div style="margin-top:5px"><span class="status-badge sb-active"><span class="sb-dot"></span>Connected</span></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showToast('Opening Resend config…')">Configure</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE: ACCESS DENIED
+  ════════════════════════════════════ -->
+  <div class="page" id="page-access-denied">
+    <div class="access-denied">
+      <div class="access-icon">🔒</div>
+      <div class="access-title">Access Restricted</div>
+      <div class="access-sub">You don't have permission to view this section. Contact your Super Admin to request access.</div>
+      <button class="btn btn-ghost" style="margin-top:20px" onclick="navTo('admin-overview',null)">← Back to Overview</button>
+    </div>
+  </div>
+
+</div>
+<!-- /main -->
+
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- INVITE MEMBER -->
+<div class="overlay" id="modal-invite" onclick="handleOverlay(event,'modal-invite')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Invite Member</div>
+      <button class="modal-close" onclick="closeModal('modal-invite')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">An invite link will be emailed to the address below. The recipient completes registration themselves.</div>
+      <div class="field"><label>Email address</label><input type="email" id="invite-email" placeholder="name@sussex.ac.uk"></div>
+      <div class="field"><label>Assign role</label>
+        <select id="invite-role">
+          <option value="weekly_paid">Weekly Paid Staff</option>
+          <option value="assistant">Assistant</option>
+          <option value="coordinator">Coordinator</option>
+          <option value="manager">Manager</option>
+          <option value="senior_manager">Senior Manager</option>
+        </select>
+      </div>
+      <div class="field"><label>Department</label>
+        <select>
+          <option>Events & Activities</option>
+          <option>Human Resources</option>
+          <option>Marketing & Comms</option>
+          <option>Welfare & Support</option>
+          <option>Finance</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invite')">Cancel</button>
+      <button class="btn btn-primary" onclick="sendInvite()">Send invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPOSE BROADCAST -->
+<div class="overlay" id="modal-compose" onclick="handleOverlay(event,'modal-compose')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Broadcast</div>
+      <button class="modal-close" onclick="closeModal('modal-compose')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:6px;margin-bottom:16px">
+        <button class="filter-pill active" onclick="composeMode('send',this)" id="cm-send">Send now</button>
+        <button class="filter-pill" onclick="composeMode('schedule',this)" id="cm-sched">Schedule</button>
+        <button class="filter-pill" onclick="composeMode('draft',this)" id="cm-draft">Save draft</button>
+      </div>
+      <div class="field"><label>Title</label><input type="text" id="bc-title" placeholder="What's this broadcast about?"></div>
+      <div class="field-row" style="margin-bottom:16px">
+        <div class="field" style="margin:0"><label>Department</label><select><option>Events & Activities</option><option>Human Resources</option><option>Marketing & Comms</option><option>Welfare & Support</option><option>Finance</option></select></div>
+        <div class="field" style="margin:0"><label>Category</label><select><option>Announcements</option><option>Events</option><option>Recruitment</option><option>Policy Updates</option><option>Shifts</option></select></div>
+      </div>
+      <div class="field"><label>Message</label><textarea id="bc-body" placeholder="Write your broadcast…"></textarea></div>
+      <div class="field" id="schedule-time-field" style="display:none"><label>Send at</label><input type="datetime-local"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-compose')">Cancel</button>
+      <button class="btn btn-primary" id="compose-send-btn" onclick="submitBroadcast()">Send broadcast</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD DEPARTMENT -->
+<div class="overlay" id="modal-add-dept" onclick="handleOverlay(event,'modal-add-dept')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Department</div>
+      <button class="modal-close" onclick="closeModal('modal-add-dept')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Department name</label><input type="text" placeholder="e.g. Events & Activities"></div>
+      <div class="field"><label>Description (optional)</label><textarea placeholder="Brief description for members"></textarea></div>
+      <div class="field"><label>Type</label>
+        <select>
+          <option value="department">Department</option>
+          <option value="society">Society</option>
+          <option value="club">Club</option>
+        </select>
+      </div>
+      <div class="field"><label>Assign managers</label><input type="text" placeholder="Search for a manager…"><div class="field-hint">Manager+ roles will be able to manage this department</div></div>
+      <div class="field"><label>Default broadcast categories</label>
+        <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:4px" id="cat-chip-container">
+          <div class="tag tag-green" style="cursor:pointer" onclick="removeCatChip(this)">Announcements ✕</div>
+          <div class="tag tag-green" style="cursor:pointer" onclick="removeCatChip(this)">Events ✕</div>
+          <button class="btn btn-ghost btn-xs" onclick="showToast('Add category field')">+ Add category</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-dept')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDept()">Create department</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD SHIFT -->
+<div class="overlay" id="modal-add-shift" onclick="handleOverlay(event,'modal-add-shift')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Add Shift</div>
+      <button class="modal-close" onclick="closeModal('modal-add-shift')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Staff member</label><input type="text" placeholder="Search name…"></div>
+      <div class="field"><label>Department</label><select><option>Events & Activities</option><option>Human Resources</option><option>Marketing & Comms</option></select></div>
+      <div class="field"><label>Role / position label</label><input type="text" placeholder="e.g. Events Desk, Supervisor"></div>
+      <div class="field-row">
+        <div class="field" style="margin:0"><label>Date</label><input type="date"></div>
+        <div class="field" style="margin:0"><label>Start time</label><input type="time"></div>
+      </div>
+      <div class="field" style="margin-top:13px"><label>End time</label><input type="time"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-shift')">Cancel</button>
+      <button class="btn btn-primary" onclick="showToast('Shift added ✓');closeModal('modal-add-shift')">Add shift</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT SHEETS -->
+<div class="overlay" id="modal-import-sheets" onclick="handleOverlay(event,'modal-import-sheets')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Import from Google Sheets</div>
+      <button class="modal-close" onclick="closeModal('modal-import-sheets')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-success">Google Sheets is connected as sarah@sussex.ac.uk</div>
+      <div class="field"><label>Spreadsheet URL or ID</label><input type="text" value="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" placeholder="Paste Google Sheets URL or ID"></div>
+      <div class="field"><label>Sheet / Tab name</label><input type="text" value="Rota March 2026" placeholder="Sheet1"></div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:12px">Column mapping</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field" style="margin:0"><label>Staff name column</label><input type="text" value="A" placeholder="e.g. A or 'Name'"></div>
+        <div class="field" style="margin:0"><label>Date column</label><input type="text" value="B"></div>
+        <div class="field" style="margin:0;margin-top:10px"><label>Start time column</label><input type="text" value="C"></div>
+        <div class="field" style="margin:0;margin-top:10px"><label>End time column</label><input type="text" value="D"></div>
+        <div class="field" style="margin:0;margin-top:10px"><label>Department column</label><input type="text" value="E"></div>
+        <div class="field" style="margin:0;margin-top:10px"><label>Role label column</label><input type="text" value="F"></div>
+      </div>
+      <div class="field" style="margin-top:13px"><label>Sync frequency</label>
+        <select><option>Every 6 hours</option><option>Every 12 hours</option><option>Daily at midnight</option><option>Manual only</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-import-sheets')">Cancel</button>
+      <button class="btn btn-primary" onclick="triggerImport()">Import now</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="overlay" id="modal-edit-user" onclick="handleOverlay(event,'modal-edit-user')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Edit Member</div>
+      <button class="modal-close" onclick="closeModal('modal-edit-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px;background:var(--surface);border-radius:9px">
+        <div class="av40" style="background:var(--accent);color:#faf9f6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;width:40px;height:40px" id="edit-user-avatar">JC</div>
+        <div>
+          <div style="font-weight:500;font-size:14px" id="edit-user-name">Jamie Clarke</div>
+          <div style="font-size:12px;color:var(--text3)" id="edit-user-email">jamie.clarke@sussex.ac.uk</div>
+        </div>
+      </div>
+      <div class="field"><label>Role</label>
+        <select id="edit-user-role-select">
+          <option value="weekly_paid">Weekly Paid Staff</option>
+          <option value="assistant">Assistant</option>
+          <option value="coordinator">Coordinator</option>
+          <option value="manager">Manager</option>
+          <option value="senior_manager">Senior Manager</option>
+          <option value="super_admin">Super Admin</option>
+        </select>
+      </div>
+      <div class="field"><label>Department(s)</label>
+        <select multiple style="height:90px">
+          <option selected>Events & Activities</option>
+          <option>Human Resources</option>
+          <option>Marketing & Comms</option>
+          <option>Welfare & Support</option>
+          <option>Finance</option>
+        </select>
+        <div class="field-hint">Hold Ctrl / Cmd to select multiple</div>
+      </div>
+      <div class="field"><label>Account status</label>
+        <select>
+          <option>Active</option>
+          <option>Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="showToast('Member deactivated');closeModal('modal-edit-user')">Deactivate</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-user')">Cancel</button>
+      <button class="btn btn-primary" onclick="showToast('Member updated ✓');closeModal('modal-edit-user')">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="overlay" id="modal-reject" onclick="handleOverlay(event,'modal-reject')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Reject Member</div>
+      <button class="modal-close" onclick="closeModal('modal-reject')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn">The member will be notified by email. You can add an optional note explaining why.</div>
+      <div class="field"><label>Reason (optional)</label><textarea placeholder="e.g. Could not verify employment status. Please re-apply with correct department." id="reject-reason"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reject')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmReject()">Confirm rejection</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════
+   DATA
+══════════════════════════════════════════ */
+const ROLE_ORDER = ['super_admin','senior_manager','manager','coordinator','assistant','weekly_paid'];
+
+const ROLE_META = {
+  super_admin:     { label:'Super Admin',     cls:'rb-super-admin',     level:6 },
+  senior_manager:  { label:'Senior Manager',  cls:'rb-senior-manager',  level:5 },
+  manager:         { label:'Manager',         cls:'rb-manager',         level:4 },
+  coordinator:     { label:'Coordinator',     cls:'rb-coordinator',     level:3 },
+  assistant:       { label:'Assistant',       cls:'rb-assistant',       level:2 },
+  weekly_paid:     { label:'Weekly Paid',     cls:'rb-weekly-paid',     level:1 },
+  society_leader:  { label:'Society Leader',  cls:'rb-society-leader',  level:2 },
+};
+
+const PAGE_MIN_ROLE = {
+  'admin-overview':        'manager',
+  'users':                 'manager',
+  'pending':               'manager',
+  'roles':                 'senior_manager',
+  'broadcasts-admin':      'coordinator',
+  'departments':           'senior_manager',
+  'categories':            'super_admin',
+  'rota-admin':            'manager',
+  'discount-admin':        'super_admin',
+  'audit':                 'senior_manager',
+  'org-settings':          'super_admin',
+  'notifications-config':  'super_admin',
+  'integrations':          'super_admin',
+};
+
+let currentRole = 'super_admin';
+let pendingRejectId = null;
+let composeSendMode = 'send';
+
+const MEMBERS = [
+  { id:1,  initials:'SA', name:'Sarah Al-Amin',  email:'sarah@sussex.ac.uk',     role:'super_admin',    dept:'All Departments',      status:'active',   joined:'Jan 2024' },
+  { id:2,  initials:'TW', name:'Tom Wilson',     email:'t.wilson@sussex.ac.uk',  role:'senior_manager', dept:'Events & Activities',  status:'active',   joined:'Feb 2024' },
+  { id:3,  initials:'AJ', name:'Alex Johnson',   email:'a.johnson@sussex.ac.uk', role:'manager',        dept:'Events & Activities',  status:'active',   joined:'Mar 2024' },
+  { id:4,  initials:'PM', name:'Priya Mehta',    email:'p.mehta@sussex.ac.uk',   role:'manager',        dept:'Welfare & Support',    status:'active',   joined:'Mar 2024' },
+  { id:5,  initials:'TO', name:'Tom Okafor',     email:'t.okafor@sussex.ac.uk',  role:'coordinator',    dept:'Events & Activities',  status:'active',   joined:'Apr 2024' },
+  { id:6,  initials:'LK', name:'Lena Kim',       email:'l.kim@sussex.ac.uk',     role:'coordinator',    dept:'Marketing & Comms',    status:'active',   joined:'Apr 2024' },
+  { id:7,  initials:'SP', name:'Sophie Park',    email:'s.park@sussex.ac.uk',    role:'assistant',      dept:'Marketing & Comms',    status:'active',   joined:'Jun 2024' },
+  { id:8,  initials:'MW', name:'Marcus Webb',    email:'m.webb@sussex.ac.uk',    role:'weekly_paid',    dept:'Events & Activities',  status:'active',   joined:'Sep 2024' },
+  { id:9,  initials:'CJ', name:'Chloe Jensen',   email:'c.jensen@sussex.ac.uk',  role:'weekly_paid',    dept:'Human Resources',      status:'inactive', joined:'Sep 2024' },
+  { id:10, initials:'RN', name:'Ravi Nair',      email:'r.nair@sussex.ac.uk',    role:'weekly_paid',    dept:'Welfare & Support',    status:'active',   joined:'Oct 2024' },
+];
+
+const PENDING_MEMBERS = [
+  { id:'p1', initials:'JC', name:'Jamie Clarke',   email:'j.clarke@sussex.ac.uk',   role:'weekly_paid', dept:'Events & Activities', date:'Today, 09:12' },
+  { id:'p2', initials:'RL', name:'Raj Lakhani',    email:'r.lakhani@sussex.ac.uk',  role:'coordinator', dept:'Events & Activities', date:'Today, 08:44' },
+  { id:'p3', initials:'FO', name:'Fatima Osei',    email:'f.osei@sussex.ac.uk',     role:'assistant',   dept:'Marketing & Comms',   date:'Yesterday, 16:30' },
+  { id:'p4', initials:'BT', name:'Ben Thompson',   email:'b.thompson@sussex.ac.uk', role:'weekly_paid', dept:'Human Resources',     date:'Yesterday, 14:10' },
+  { id:'p5', initials:'MM', name:'Mia Moreau',     email:'m.moreau@sussex.ac.uk',   role:'weekly_paid', dept:'Welfare & Support',   date:'25 Mar, 11:00' },
+];
+
+const DEPARTMENTS = [
+  { id:1, name:'Events & Activities', icon:'🎉', type:'department', members:112, cats:['Announcements','Events','Recruitment','Volunteer Opportunities','Shifts'], managers:['Alex Johnson'] },
+  { id:2, name:'Human Resources',    icon:'🧑‍💼', type:'department', members:45,  cats:['Announcements','Recruitment','Policy Updates','Lost Property'],           managers:['Tom Wilson'] },
+  { id:3, name:'Marketing & Comms',  icon:'📣', type:'department', members:38,  cats:['Announcements','Campaigns','Content Requests','Design Assets'],            managers:['Lena Kim'] },
+  { id:4, name:'Welfare & Support',  icon:'💙', type:'department', members:67,  cats:['Announcements','Support Resources','Events','Training'],                   managers:['Priya Mehta'] },
+  { id:5, name:'Finance',            icon:'💷', type:'department', members:22,  cats:['Announcements','Budget Updates','Expenses','Audit Notices'],               managers:['Tom Wilson'] },
+  { id:6, name:'Tennis Society',     icon:'🎾', type:'society',    members:48,  cats:['Announcements','Fixtures','Social Events'],                               managers:[] },
+  { id:7, name:'Photography Club',   icon:'📷', type:'club',       members:16,  cats:['Announcements','Events','Kit Requests'],                                  managers:[] },
+];
+
+const BROADCASTS_DATA = [
+  { id:1, status:'sent',      title:'📢 End of Year Ball — Volunteer Sign-ups', dept:'Events & Activities', cat:'Volunteer Opportunities', sentBy:'Alex Johnson',  time:'Today 09:30',     recipients:112 },
+  { id:2, status:'sent',      title:'🧑‍💼 HR Policy Update — Holiday Booking',   dept:'Human Resources',    cat:'Policy Updates',          sentBy:'Tom Wilson',    time:'Yesterday',        recipients:45  },
+  { id:3, status:'draft',     title:'📣 Spring Campaign Launch Brief',           dept:'Marketing & Comms',  cat:'Campaigns',               sentBy:'Lena Kim',      time:'Draft saved 2h',  recipients:0   },
+  { id:4, status:'scheduled', title:'💙 Wellbeing Session — Friday 11am',        dept:'Welfare & Support',  cat:'Events',                  sentBy:'Priya Mehta',   time:'Fri 11:00 AM',    recipients:67  },
+  { id:5, status:'sent',      title:'💷 Q1 Budget Report Published',             dept:'Finance',            cat:'Budget Updates',          sentBy:'Tom Wilson',    time:'25 Mar',           recipients:22  },
+  { id:6, status:'draft',     title:'🎾 Tennis Fixtures — April',               dept:'Tennis Society',     cat:'Fixtures',                sentBy:'Raj Lakhani',   time:'Draft saved 4h',  recipients:0   },
+  { id:7, status:'scheduled', title:'🎉 Society Fair Reminder',                  dept:'Events & Activities',cat:'Events',                  sentBy:'Alex Johnson',  time:'27 Mar 10:00 AM', recipients:112 },
+  { id:8, status:'scheduled', title:'📢 Easter Break Notice',                   dept:'Human Resources',    cat:'Announcements',           sentBy:'Tom Wilson',    time:'28 Mar 08:00 AM', recipients:45  },
+];
+
+const ROTA_SHIFTS = [
+  { name:'Alex Johnson',  dept:'Events & Activities', date:'Mon 24 Mar', time:'09:00 – 13:00', role:'Events Desk' },
+  { name:'Marcus Webb',   dept:'Events & Activities', date:'Mon 24 Mar', time:'14:00 – 18:00', role:'Events Desk' },
+  { name:'Tom Okafor',    dept:'Events & Activities', date:'Tue 25 Mar', time:'10:00 – 14:00', role:'Events Desk' },
+  { name:'Lena Kim',      dept:'Marketing & Comms',   date:'Wed 26 Mar', time:'09:00 – 17:00', role:'Campaign Lead' },
+  { name:'Alex Johnson',  dept:'Events & Activities', date:'Wed 26 Mar', time:'15:00 – 19:00', role:'Events Desk ★' },
+  { name:'Priya Mehta',   dept:'Welfare & Support',   date:'Thu 27 Mar', time:'10:00 – 16:00', role:'Drop-in Coordinator' },
+  { name:'Marcus Webb',   dept:'Events & Activities', date:'Fri 28 Mar', time:'14:00 – 18:00', role:'Events Desk' },
+  { name:'Sophie Park',   dept:'Marketing & Comms',   date:'Fri 28 Mar', time:'09:00 – 13:00', role:'Design Lead' },
+];
+
+const PERM_MATRIX = [
+  { feat:'Send broadcast (any dept)',           sa:true,  sm:true,  m:false, co:false, as:false, wp:false },
+  { feat:'Send broadcast (own dept)',           sa:true,  sm:true,  m:true,  co:true,  as:'draft',wp:false },
+  { feat:'Create broadcast draft',             sa:true,  sm:true,  m:true,  co:true,  as:true,  wp:false },
+  { feat:'Approve broadcast drafts',           sa:true,  sm:true,  m:true,  co:false, as:false, wp:false },
+  { feat:'Approve / reject members',           sa:true,  sm:true,  m:true,  co:false, as:false, wp:false },
+  { feat:'Invite members',                     sa:true,  sm:true,  m:false, co:false, as:false, wp:false },
+  { feat:'Edit member roles',                  sa:true,  sm:true,  m:false, co:false, as:false, wp:false },
+  { feat:'Deactivate members',                 sa:true,  sm:true,  m:false, co:false, as:false, wp:false },
+  { feat:'Manage departments & categories',    sa:true,  sm:true,  m:false, co:false, as:false, wp:false },
+  { feat:'View rota (own shifts)',             sa:true,  sm:true,  m:true,  co:true,  as:true,  wp:true  },
+  { feat:'View rota (dept)',                   sa:true,  sm:true,  m:true,  co:false, as:false, wp:false },
+  { feat:'Edit rota / add shifts',             sa:true,  sm:true,  m:true,  co:false, as:false, wp:false },
+  { feat:'Import Google Sheets rota',          sa:true,  sm:true,  m:false, co:false, as:false, wp:false },
+  { feat:'Configure discount rules',           sa:true,  sm:false, m:false, co:false, as:false, wp:false },
+  { feat:'Scan discount QR codes',             sa:true,  sm:true,  m:true,  co:false, as:false, wp:false },
+  { feat:'View org settings',                  sa:true,  sm:false, m:false, co:false, as:false, wp:false },
+  { feat:'Activity log / audit trail',         sa:true,  sm:true,  m:false, co:false, as:false, wp:false },
+  { feat:'Manage integrations',                sa:true,  sm:false, m:false, co:false, as:false, wp:false },
+];
+
+const DISCOUNT_RULES = [
+  { role:'super_admin',    label:'Super Admin',    value:20 },
+  { role:'senior_manager', label:'Senior Manager', value:18 },
+  { role:'manager',        label:'Manager',        value:15 },
+  { role:'coordinator',    label:'Coordinator',    value:12 },
+  { role:'assistant',      label:'Assistant',      value:10 },
+  { role:'weekly_paid',    label:'Weekly Paid',    value:10 },
+  { role:'society_leader', label:'Society Leader', value:8  },
+];
+
+const AUDIT_LOG = [
+  { icon:'✅', text:'<strong>You</strong> approved <strong>Jamie Clarke</strong> for Events & Activities', time:'2 min ago' },
+  { icon:'📡', text:'<strong>Priya Mehta</strong> sent broadcast "Wellbeing Session" to Welfare & Support', time:'34 min ago' },
+  { icon:'👤', text:'<strong>Raj Lakhani</strong> registered — pending verification', time:'1 hour ago' },
+  { icon:'🎖', text:'<strong>You</strong> changed Tom Okafor\'s role from Assistant → Coordinator', time:'3 hours ago' },
+  { icon:'🏢', text:'<strong>You</strong> added categories "Shifts" and "Overtime" to Finance dept', time:'3 hours ago' },
+  { icon:'🔗', text:'Google Sheets rota sync completed — 28 shifts updated', time:'Yesterday 11:00 AM' },
+  { icon:'📡', text:'<strong>Alex Johnson</strong> sent broadcast "Spring Volunteer Drive" to Events & Activities', time:'Yesterday 09:15' },
+  { icon:'✅', text:'<strong>Tom Wilson</strong> approved <strong>Ravi Nair</strong> for Welfare & Support', time:'25 Mar, 14:30' },
+  { icon:'🔒', text:'<strong>Chloe Jensen</strong>\'s account was deactivated by <strong>Tom Wilson</strong>', time:'24 Mar, 10:00' },
+  { icon:'⚙️', text:'Organisation branding updated by <strong>You</strong> — logo changed', time:'22 Mar, 16:44' },
+];
+
+/* ══════════════════════════════════════════
+   ROLE SYSTEM
+══════════════════════════════════════════ */
+const SIDEBAR_USERS = {
+  super_admin:    { initials:'SA', name:'Sarah Al-Amin',  roleLabel:'Super Admin' },
+  senior_manager: { initials:'TW', name:'Tom Wilson',     roleLabel:'Senior Manager' },
+  manager:        { initials:'AJ', name:'Alex Johnson',   roleLabel:'Manager' },
+  coordinator:    { initials:'LK', name:'Lena Kim',       roleLabel:'Coordinator' },
+  assistant:      { initials:'SP', name:'Sophie Park',    roleLabel:'Assistant' },
+  weekly_paid:    { initials:'MW', name:'Marcus Webb',    roleLabel:'Weekly Paid Staff' },
+};
+
+function setRole(role) {
+  currentRole = role;
+  const u = SIDEBAR_USERS[role];
+  document.getElementById('sidebar-avatar').textContent = u.initials;
+  document.getElementById('sidebar-username').textContent = u.name;
+  document.getElementById('sidebar-userrole').textContent = u.roleLabel;
+  document.getElementById('topbar-avatar').textContent = u.initials;
+
+  // update overview sub
+  document.getElementById('overview-sub').textContent =
+    `${hasAccess('super_admin') ? 'Full control' : 'Limited access'} · Sussex Students' Union · ${u.roleLabel}`;
+
+  // lock nav items
+  document.querySelectorAll('.nav-item[data-min-role], .nav-sub-item[data-min-role]').forEach(el => {
+    const minRole = el.getAttribute('data-min-role');
+    const allowed = canAccess(role, minRole);
+    el.classList.toggle('restricted-nav', !allowed);
+  });
+
+  // show/hide stats based on role
+  updateStatsForRole();
+
+  showToast(`Viewing as: ${u.roleLabel}`);
+  navTo('admin-overview', document.querySelector('.nav-item'));
+}
+
+function canAccess(userRole, minRole) {
+  return ROLE_META[userRole]?.level >= ROLE_META[minRole]?.level;
+}
+
+function hasAccess(minRole) {
+  return canAccess(currentRole, minRole);
+}
+
+function updateStatsForRole() {
+  const stats = document.getElementById('overview-stats');
+  // Senior managers and above see all 4 stats; managers see 3; coordinators see 1
+  const cards = stats.querySelectorAll('.stat-card');
+  cards[0].style.display = ''; // members — manager+
+  cards[1].style.display = hasAccess('manager') ? '' : 'none';  // pending
+  cards[2].style.display = hasAccess('coordinator') ? '' : 'none'; // broadcasts
+  cards[3].style.display = hasAccess('senior_manager') ? '' : 'none'; // departments
+}
+
+/* ══════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════ */
+function navTo(page, clickedEl) {
+  if (PAGE_MIN_ROLE[page] && !hasAccess(PAGE_MIN_ROLE[page])) {
+    // show access denied
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-access-denied').classList.add('active');
+    document.getElementById('breadcrumb-current').textContent = 'Access Denied';
+    if (clickedEl) { document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n=>n.classList.remove('active')); clickedEl.classList.add('active'); }
+    return;
+  }
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+
+  if (clickedEl) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    clickedEl.classList.add('active');
+  }
+
+  const labels = {
+    'admin-overview':'Overview','users':'All Members','pending':'Pending Approval',
+    'roles':'Roles & Permissions','broadcasts-admin':'Broadcasts','departments':'Departments',
+    'categories':'Categories','rota-admin':'Rota Management','discount-admin':'Discount Rules',
+    'audit':'Activity Log','org-settings':'Org Settings','notifications-config':'Notification Defaults',
+    'integrations':'Integrations',
+  };
+  document.getElementById('breadcrumb-current').textContent = labels[page] || page;
+
+  // lazy render
+  if (page === 'users') renderUsersTable(MEMBERS);
+  if (page === 'pending') renderPending();
+  if (page === 'roles') renderPermMatrix();
+  if (page === 'broadcasts-admin') renderBroadcasts('all');
+  if (page === 'departments') renderDepts('all');
+  if (page === 'categories') renderCategories();
+  if (page === 'rota-admin') renderRotaAdmin();
+  if (page === 'discount-admin') renderDiscountForm();
+  if (page === 'audit') renderAuditLog();
+}
+
+/* ══════════════════════════════════════════
+   RENDER: OVERVIEW
+══════════════════════════════════════════ */
+function renderRoleBreakdown() {
+  const counts = { super_admin:1, senior_manager:4, manager:12, coordinator:28, assistant:47, weekly_paid:256 };
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  const html = Object.entries(counts).map(([role, count]) => {
+    const meta = ROLE_META[role];
+    const pct = Math.round(count/total*100);
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span class="role-badge ${meta.cls}" style="min-width:110px;justify-content:center">${meta.label}</span>
+      <div style="flex:1;height:5px;background:var(--border);border-radius:99px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:99px;opacity:.7"></div>
+      </div>
+      <span style="font-size:12px;color:var(--text3);min-width:28px;text-align:right">${count}</span>
+    </div>`;
+  }).join('');
+  const el = document.getElementById('role-breakdown');
+  if (el) el.innerHTML = html;
+}
+
+/* ══════════════════════════════════════════
+   RENDER: USERS TABLE
+══════════════════════════════════════════ */
+function renderUsersTable(data) {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = data.map(m => {
+    const meta = ROLE_META[m.role] || ROLE_META.weekly_paid;
+    const canEdit = hasAccess('senior_manager') || (hasAccess('manager') && m.role === 'weekly_paid');
+    return `<tr>
+      <td><div class="td-name">
+        <div class="td-avatar">${m.initials}</div>
+        <div><div style="font-weight:500;font-size:13px">${m.name}</div><div style="font-size:11.5px;color:var(--text3)">${m.email}</div></div>
+      </div></td>
+      <td><span class="role-badge ${meta.cls}">${meta.label}</span></td>
+      <td style="font-size:13px;color:var(--text2)">${m.dept}</td>
+      <td><span class="status-badge ${m.status==='active'?'sb-active':m.status==='pending'?'sb-pending':'sb-inactive'}"><span class="sb-dot"></span>${m.status.charAt(0).toUpperCase()+m.status.slice(1)}</span></td>
+      <td style="font-size:12.5px;color:var(--text3)">${m.joined}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="openEditUser('${m.initials}','${m.name}','${m.email}','${m.role}')">Edit</button>` : '<span style="font-size:11.5px;color:var(--text3)">View only</span>'}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterUsers(q) {
+  const filtered = MEMBERS.filter(m =>
+    m.name.toLowerCase().includes(q.toLowerCase()) ||
+    m.email.toLowerCase().includes(q.toLowerCase())
+  );
+  renderUsersTable(filtered);
+}
+
+function filterByRole(role) {
+  const filtered = role ? MEMBERS.filter(m => m.role === role) : MEMBERS;
+  renderUsersTable(filtered);
+}
+
+function filterStatus(status, btn) {
+  document.querySelectorAll('#page-users .filter-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = status === 'all' ? MEMBERS : MEMBERS.filter(m => m.status === status);
+  renderUsersTable(filtered);
+}
+
+function openEditUser(init, name, email, role) {
+  document.getElementById('edit-user-avatar').textContent = init;
+  document.getElementById('edit-user-name').textContent = name;
+  document.getElementById('edit-user-email').textContent = email;
+  document.getElementById('edit-user-role-select').value = role;
+  openModal('modal-edit-user');
+}
+
+/* ══════════════════════════════════════════
+   RENDER: PENDING
+══════════════════════════════════════════ */
+let pendingData = [...PENDING_MEMBERS];
+
+function renderPending() {
+  const container = document.getElementById('pending-list');
+  if (!container) return;
+
+  const sub = document.getElementById('pending-sub');
+  if (sub) sub.textContent = `${pendingData.length} member${pendingData.length!==1?'s':''} awaiting verification`;
+
+  if (!pendingData.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">🎉</div><div class="empty-title">All caught up!</div><div class="empty-sub">No members are awaiting approval right now.</div></div>`;
+    return;
+  }
+
+  container.innerHTML = pendingData.map(p => {
+    const meta = ROLE_META[p.role];
+    return `<div class="card card-pad" id="pcard-${p.id}" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div class="av40" style="background:var(--accent);color:#faf9f6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;width:40px;height:40px;flex-shrink:0">${p.initials}</div>
+      <div style="flex:1;min-width:160px">
+        <div style="font-weight:600;font-size:14px;margin-bottom:3px">${p.name}</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:5px">${p.email}</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <span class="role-badge ${meta.cls}">${meta.label}</span>
+          <span class="tag">${p.dept}</span>
+          <span style="font-size:11.5px;color:var(--text3)">${p.date}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-success btn-sm" onclick="approvePending('${p.id}','${p.name}')">✓ Approve</button>
+        <button class="btn btn-danger btn-sm" onclick="openReject('${p.id}')">✕ Reject</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('nav-pending-badge').textContent = pendingData.length;
+}
+
+function approvePending(id, name) {
+  const el = document.getElementById('pcard-' + id);
+  if (el) { el.style.transition='opacity .3s,transform .3s'; el.style.opacity='0'; el.style.transform='translateX(12px)'; setTimeout(()=>el.remove(),300); }
+  pendingData = pendingData.filter(p => p.id !== id);
+  showToast(`✓ ${name} approved and notified`);
+  setTimeout(() => { document.getElementById('nav-pending-badge').textContent = pendingData.length; }, 310);
+}
+
+function openReject(id) {
+  pendingRejectId = id;
+  document.getElementById('reject-reason').value = '';
+  openModal('modal-reject');
+}
+
+function confirmReject() {
+  const id = pendingRejectId;
+  const person = pendingData.find(p=>p.id===id);
+  closeModal('modal-reject');
+  if (person) {
+    const el = document.getElementById('pcard-' + id);
+    if (el) { el.style.transition='opacity .3s,transform .3s'; el.style.opacity='0'; el.style.transform='translateX(-12px)'; setTimeout(()=>el.remove(),300); }
+    pendingData = pendingData.filter(p=>p.id!==id);
+    showToast(`${person.name} rejected and notified`);
+    setTimeout(() => { document.getElementById('nav-pending-badge').textContent = pendingData.length; },310);
+  }
+}
+
+function approveAll() {
+  const all = [...pendingData];
+  pendingData = [];
+  all.forEach(p => {
+    const el = document.getElementById('pcard-' + p.id);
+    if (el) { el.style.transition='opacity .35s,transform .35s'; el.style.opacity='0'; el.style.transform='translateX(10px)'; setTimeout(()=>el.remove(),350); }
+  });
+  showToast(`✓ All ${all.length} members approved`);
+  document.getElementById('nav-pending-badge').textContent = '0';
+  setTimeout(renderPending, 400);
+}
+
+/* ══════════════════════════════════════════
+   RENDER: PERMISSION MATRIX
+══════════════════════════════════════════ */
+function renderPermMatrix() {
+  const tbody = document.getElementById('perm-matrix-tbody');
+  if (!tbody) return;
+
+  function cell(v) {
+    if (v === true) return `<td style="text-align:center"><span class="perm-check">✓</span></td>`;
+    if (v === false) return `<td style="text-align:center"><span class="perm-cross">—</span></td>`;
+    return `<td style="text-align:center"><span class="perm-partial" title="Draft only">◐</span></td>`;
+  }
+
+  tbody.innerHTML = PERM_MATRIX.map(row =>
+    `<tr><td style="font-size:12.5px;padding:9px 12px">${row.feat}</td>${cell(row.sa)}${cell(row.sm)}${cell(row.m)}${cell(row.co)}${cell(row.as)}${cell(row.wp)}</tr>`
+  ).join('');
+}
+
+/* ══════════════════════════════════════════
+   RENDER: BROADCASTS
+══════════════════════════════════════════ */
+function renderBroadcasts(filter) {
+  const container = document.getElementById('broadcasts-admin-list');
+  if (!container) return;
+
+  let data = filter === 'all' ? BROADCASTS_DATA : BROADCASTS_DATA.filter(b=>b.status===filter);
+
+  if (!hasAccess('senior_manager')) {
+    data = data.filter(b => b.dept === 'Events & Activities' || b.dept === 'Marketing & Comms');
+  }
+
+  container.innerHTML = data.map(b => {
+    const statusMap = { sent:'sb-active', draft:'sb-pending', scheduled:'sb-inactive' };
+    const statusLabel = { sent:'Sent', draft:'Draft — needs approval', scheduled:'Scheduled' };
+    const canApprove = b.status === 'draft' && hasAccess('manager');
+    return `<div class="card card-pad" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:500;font-size:13.5px;margin-bottom:5px">${b.title}</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+          <span class="tag">${b.dept}</span>
+          <span class="tag">${b.cat}</span>
+          <span class="status-badge ${statusMap[b.status]}"><span class="sb-dot"></span>${statusLabel[b.status]}</span>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:12.5px;color:var(--text2);margin-bottom:2px">by ${b.sentBy}</div>
+        <div style="font-size:11.5px;color:var(--text3)">${b.time}</div>
+        ${b.recipients>0?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${b.recipients} recipients</div>`:''}
+      </div>
+      <div style="display:flex;gap:7px;flex-shrink:0">
+        ${canApprove?`<button class="btn btn-success btn-sm" onclick="showToast('Broadcast approved and sent ✓')">Approve & send</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Opening broadcast…')">View</button>
+        ${hasAccess('manager')?`<button class="btn btn-danger btn-sm" onclick="showToast('Broadcast deleted')">Delete</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function switchBroadcastTab(filter, btn) {
+  document.querySelectorAll('#broadcast-tabs .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderBroadcasts(filter);
+}
+
+/* ══════════════════════════════════════════
+   RENDER: DEPARTMENTS
+══════════════════════════════════════════ */
+function renderDepts(filter) {
+  const grid = document.getElementById('dept-grid');
+  if (!grid) return;
+
+  const data = filter === 'all' ? DEPARTMENTS : DEPARTMENTS.filter(d=>d.type===filter);
+
+  grid.innerHTML = data.map(d => `
+    <div class="dept-card" onclick="openDeptDetail(${d.id})">
+      <div class="dept-card-header">
+        <div class="dept-icon-wrap">${d.icon}</div>
+        <div style="display:flex;gap:6px">
+          <span class="tag">${d.type}</span>
+          ${hasAccess('super_admin')?`<button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();showToast('Edit ${d.name}')">Edit</button>`:''}
+        </div>
+      </div>
+      <div class="dept-member-count">${d.members}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">members</div>
+      <div class="dept-name-big">${d.name}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px">
+        ${d.managers.length ? 'Managed by ' + d.managers.join(', ') : 'No assigned manager'}
+      </div>
+      <div class="dept-cats">
+        ${d.cats.slice(0,3).map(c=>`<div class="dept-cat-pill">${c}</div>`).join('')}
+        ${d.cats.length>3?`<div class="dept-cat-pill">+${d.cats.length-3} more</div>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterDept(filter, btn) {
+  document.querySelectorAll('#page-departments .filter-pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  renderDepts(filter);
+}
+
+function openDeptDetail(id) {
+  const d = DEPARTMENTS.find(x=>x.id===id);
+  showToast(`Opening ${d.name} detail…`);
+}
+
+/* ══════════════════════════════════════════
+   RENDER: CATEGORIES
+══════════════════════════════════════════ */
+function renderCategories() {
+  const container = document.getElementById('categories-list');
+  if (!container) return;
+  container.innerHTML = DEPARTMENTS.map(d => `
+    <div class="card">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="dept-icon-wrap" style="width:32px;height:32px;font-size:15px">${d.icon}</div>
+          <div style="font-weight:500;font-size:14px">${d.name}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Add category to ${d.name}')">+ Add category</button>
+      </div>
+      <div style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:8px">
+        ${d.cats.map(c=>`
+          <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;font-size:12.5px">
+            ${c}
+            <span style="cursor:pointer;color:var(--text3);font-size:10px" onclick="showToast('Removed category: ${c}')">✕</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════
+   RENDER: ROTA ADMIN
+══════════════════════════════════════════ */
+function renderRotaAdmin() {
+  const tbody = document.getElementById('rota-admin-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = ROTA_SHIFTS.map(s=>`<tr>
+    <td><div class="td-name"><div class="td-avatar">${s.name.split(' ').map(w=>w[0]).join('')}</div><span style="font-size:13px;font-weight:500">${s.name}</span></div></td>
+    <td><span class="tag">${s.dept}</span></td>
+    <td style="font-size:13px;color:var(--text2)">${s.date}</td>
+    <td style="font-size:13px;font-weight:500">${s.time}</td>
+    <td style="font-size:12.5px;color:var(--text2)">${s.role}</td>
+    <td><div style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-xs" onclick="showToast('Edit shift')">Edit</button>
+      <button class="btn btn-danger btn-xs" onclick="showToast('Shift removed')">Remove</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+/* ══════════════════════════════════════════
+   RENDER: DISCOUNT FORM
+══════════════════════════════════════════ */
+function renderDiscountForm() {
+  const el = document.getElementById('discount-rules-form');
+  if (!el) return;
+  el.innerHTML = DISCOUNT_RULES.map((r,i) => {
+    const meta = ROLE_META[r.role] || { label: r.label, cls: 'rb-weekly-paid' };
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:${i<DISCOUNT_RULES.length-1?'1px solid var(--border)':'none'}">
+      <span class="role-badge ${meta.cls}" style="min-width:130px;justify-content:center">${meta.label}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" value="${r.value}" min="0" max="100" style="width:60px;padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-family:var(--font);font-size:13.5px;text-align:center" onchange="r.value=this.value">
+        <span style="font-size:13px;color:var(--text2)">% off</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveDiscountRules() {
+  showToast('Discount rules saved ✓');
+}
+
+/* ══════════════════════════════════════════
+   RENDER: AUDIT LOG
+══════════════════════════════════════════ */
+function renderAuditLog() {
+  const container = document.getElementById('audit-log-list');
+  if (!container) return;
+  container.innerHTML = AUDIT_LOG.map(a=>`
+    <div class="activity-item" style="padding:12px 18px">
+      <div class="activity-icon">${a.icon}</div>
+      <div>
+        <div class="activity-text">${a.text}</div>
+        <div class="activity-time">${a.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════
+   COMPOSE MODAL
+══════════════════════════════════════════ */
+function composeMode(mode, btn) {
+  composeSendMode = mode;
+  document.querySelectorAll('#modal-compose .filter-pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const sendBtn = document.getElementById('compose-send-btn');
+  const schedField = document.getElementById('schedule-time-field');
+  if (mode==='send')     { sendBtn.textContent='Send broadcast';     schedField.style.display='none'; }
+  if (mode==='schedule') { sendBtn.textContent='Schedule broadcast'; schedField.style.display='block'; }
+  if (mode==='draft')    { sendBtn.textContent='Save as draft';      schedField.style.display='none'; }
+}
+
+function submitBroadcast() {
+  const title = document.getElementById('bc-title').value.trim();
+  const body = document.getElementById('bc-body').value.trim();
+  if (!title) { showToast('Please add a title'); return; }
+  if (!body)  { showToast('Please write a message'); return; }
+  const btn = document.getElementById('compose-send-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>';
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = 'Send broadcast';
+    closeModal('modal-compose');
+    const msg = composeSendMode==='draft'?'✓ Draft saved':composeSendMode==='schedule'?'✓ Broadcast scheduled':'✓ Broadcast sent!';
+    showToast(msg);
+    document.getElementById('bc-title').value='';
+    document.getElementById('bc-body').value='';
+  }, 1400);
+}
+
+/* ══════════════════════════════════════════
+   ORG SETTINGS TABS
+══════════════════════════════════════════ */
+function orgTab(tab, el) {
+  ['branding','general','danger'].forEach(t => {
+    document.getElementById('org-tab-'+t).style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('#page-org-settings .filter-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ══════════════════════════════════════════
+   INVITE
+══════════════════════════════════════════ */
+function sendInvite() {
+  const email = document.getElementById('invite-email').value.trim();
+  if (!email) { showToast('Please enter an email address'); return; }
+  closeModal('modal-invite');
+  showToast(`✓ Invite sent to ${email}`);
+  document.getElementById('invite-email').value = '';
+}
+
+/* ══════════════════════════════════════════
+   IMPORT SHEETS
+══════════════════════════════════════════ */
+function triggerImport() {
+  const btn = document.querySelector('#modal-import-sheets .btn-primary');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Importing…';
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = 'Import now';
+    closeModal('modal-import-sheets');
+    showToast('✓ Imported 28 shifts from Google Sheets');
+  }, 2200);
+}
+
+/* ══════════════════════════════════════════
+   MODAL HELPERS
+══════════════════════════════════════════ */
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function handleOverlay(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
+
+function removeCatChip(el) { el.remove(); }
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2700);
+}
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  renderRoleBreakdown();
+  renderUsersTable(MEMBERS);
+  renderPending();
+  renderPermMatrix();
+  renderBroadcasts('all');
+  renderDepts('all');
+  renderRotaAdmin();
+  renderDiscountForm();
+  renderAuditLog();
+  updateStatsForRole();
+});
+</script>
+</body>
+</html>

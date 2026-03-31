@@ -38,7 +38,7 @@ type CalItem = {
   broadcastId: string | null;
 };
 
-/** Mock-aligned source colors: rota/shift green, broadcast blue, manual purple */
+/** Mock-aligned source colors: rota/shift green, broadcast stone, manual purple */
 function sourceChipClass(source: CalItem['source'], todayCell: boolean): string {
   if (todayCell) {
     return 'bg-white/15 text-[rgba(250,249,246,0.92)]';
@@ -47,14 +47,14 @@ function sourceChipClass(source: CalItem['source'], todayCell: boolean): string 
     return 'bg-[#059669]/18 text-[#047857]';
   }
   if (source === 'broadcast') {
-    return 'bg-[#1D4ED8]/18 text-[#1D4ED8]';
+    return 'bg-[#44403c]/18 text-[#44403c]';
   }
   return 'bg-[#7C3AED]/18 text-[#6d28d9]';
 }
 
 function sourceLegendDotClass(source: CalItem['source']): string {
   if (source === 'rota') return 'bg-[#059669]';
-  if (source === 'broadcast') return 'bg-[#1D4ED8]';
+  if (source === 'broadcast') return 'bg-[#44403c]';
   return 'bg-[#7C3AED]';
 }
 
