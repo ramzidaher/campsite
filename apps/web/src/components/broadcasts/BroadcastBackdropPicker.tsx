@@ -191,7 +191,7 @@ export function BroadcastBackdropPicker({
         {mode === 'image' ? (
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
             {photosLoading ? (
-              <p className="py-8 text-center text-sm text-[#6b6b6b]">Loading images…</p>
+              <p className="py-8 text-center text-sm text-[#6b6b6b]">Loading images...</p>
             ) : photosErr ? (
               <p className="py-4 text-center text-sm text-red-800" role="alert">
                 {photosErr}

@@ -6,7 +6,7 @@ function fmtShiftTime(startIso: string, endIso: string) {
   const s = new Date(startIso);
   const e = new Date(endIso);
   const opt: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
-  return `${s.toLocaleTimeString(undefined, opt)}–${e.toLocaleTimeString(undefined, opt)}`;
+  return `${s.toLocaleTimeString(undefined, opt)}-${e.toLocaleTimeString(undefined, opt)}`;
 }
 
 function fmtShiftDate(iso: string) {
@@ -35,10 +35,10 @@ function StatCard({
   );
 }
 
-/** Rota management under `/admin/rota` — only org admins reach this view (`admin/layout.tsx`). */
+/** Rota management under `/admin/rota` - only org admins reach this view (`admin/layout.tsx`). */
 export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
   const coverage =
-    data.coveragePct != null ? `${data.coveragePct}%` : '—';
+    data.coveragePct != null ? `${data.coveragePct}%` : '-';
   const coverageSub =
     data.shiftsThisWeek > 0
       ? `${data.unfilledThisWeek} unfilled slot${data.unfilledThisWeek === 1 ? '' : 's'}`
@@ -104,7 +104,7 @@ export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
               import wizard.
             </span>
           ) : (
-            <span>No Sheets column mapping yet — connect a spreadsheet and map columns in the import wizard.</span>
+            <span>No Sheets column mapping yet - connect a spreadsheet and map columns in the import wizard.</span>
           )}{' '}
           <Link href="/admin/rota-import" className="font-medium underline underline-offset-2 hover:text-[#1e3a8a]">
             Manage import →
@@ -113,7 +113,7 @@ export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
       </div>
 
       <div className="mb-3.5">
-        <h2 className="font-authSerif text-[17px] tracking-tight text-[#121212]">Upcoming shifts — this week</h2>
+        <h2 className="font-authSerif text-[17px] tracking-tight text-[#121212]">Upcoming shifts - this week</h2>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
@@ -143,7 +143,7 @@ export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
                     <td className="px-4 py-3 text-[#6b6b6b]">{row.departmentName}</td>
                     <td className="px-4 py-3 text-[#6b6b6b]">{fmtShiftDate(row.start_time)}</td>
                     <td className="px-4 py-3 text-[#6b6b6b]">{fmtShiftTime(row.start_time, row.end_time)}</td>
-                    <td className="px-4 py-3 text-[#6b6b6b]">{row.role_label ?? '—'}</td>
+                    <td className="px-4 py-3 text-[#6b6b6b]">{row.role_label ?? '-'}</td>
                     <td className="px-4 py-3">
                       <Link
                         href="/rota"

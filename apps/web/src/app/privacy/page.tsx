@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Privacy · Campsite',
-  description: 'Privacy information for the Campsite app — Common Ground Studios Ltd',
+  description: 'Privacy information for the Campsite app - Common Ground Studios Ltd',
 };
 
 export default function PrivacyPage() {

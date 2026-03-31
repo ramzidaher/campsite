@@ -8,7 +8,7 @@ export type HostRequestContext = {
 
 /**
  * Tenant subdomain / local dev org slug vs platform-admin host. Pure helper for `middleware.ts` and tests.
- * Platform-admin hostnames never receive an org slug — even `?org=` is ignored so shells do not pick up a tenant by accident.
+ * Platform-admin hostnames never receive an org slug - even `?org=` is ignored so shells do not pick up a tenant by accident.
  */
 export function resolveHostRequestContext(
   hostHeader: string | null,

@@ -377,7 +377,7 @@ export function BroadcastsClient({
               </span>
               <input
                 type="search"
-                placeholder="Search broadcasts…"
+                placeholder="Search broadcasts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
@@ -439,7 +439,7 @@ export function BroadcastsClient({
         <div className="space-y-4 px-5 py-6 sm:px-[28px]">
           <p className="max-w-xl text-sm leading-relaxed text-[#6b6b6b]">
             These messages are waiting for an approver in your organisation. You’ll see them on the feed once
-            they’re approved. If one is rejected, it won’t be sent — check with your manager if you’re unsure.
+            they’re approved. If one is rejected, it won’t be sent - check with your manager if you’re unsure.
           </p>
           <MySubmissionsPendingList supabase={supabase} userId={profile.id} />
         </div>
@@ -518,7 +518,7 @@ function MySubmissionsPendingList({
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   })
-                : '—'}
+                : '-'}
             </p>
           </div>
           <Link
@@ -586,7 +586,7 @@ function DraftsScheduledList({
           <span className="font-medium text-[#121212]">{r.title}</span>
           {mode === 'scheduled' ? (
             <span className="text-xs text-[#6b6b6b]">
-              {r.scheduled_at ? new Date(r.scheduled_at).toLocaleString() : '—'}
+              {r.scheduled_at ? new Date(r.scheduled_at).toLocaleString() : '-'}
             </span>
           ) : null}
           {mode === 'scheduled' ? (

@@ -232,10 +232,10 @@ export default function PendingApprovalsScreen() {
           rows.map((p) => (
             <View key={p.id} style={styles.card}>
               <Text style={styles.name}>{p.full_name}</Text>
-              <Text style={styles.meta}>{p.email ?? '—'}</Text>
+              <Text style={styles.meta}>{p.email ?? '-'}</Text>
               <Text style={styles.small}>Requested {new Date(p.created_at).toLocaleString()}</Text>
               <Text style={styles.deptLine}>
-                Departments: {p.departments.length ? p.departments.join(', ') : '—'}
+                Departments: {p.departments.length ? p.departments.join(', ') : '-'}
               </Text>
               <Text style={styles.noteLabel}>Rejection note (optional)</Text>
               <TextInput

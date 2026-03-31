@@ -123,7 +123,7 @@ function StepProgress({ step, labels }: { step: number; labels: readonly string[
 
 export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | null }) {
   const router = useRouter();
-  /** Invite link (`/register?org=slug`) — only then can users join an existing org from this wizard. */
+  /** Invite link (`/register?org=slug`) - only then can users join an existing org from this wizard. */
   const inviteFlow = Boolean(initialOrgSlug);
   /** Create a new tenant; user becomes org_admin (not the same as platform founders). */
   const createOrgFlow = !inviteFlow;
@@ -587,7 +587,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
           <p className="auth-sub mb-8">
             {inviteFlow
               ? 'We matched your workspace from the invite link. You can change the organisation below if needed.'
-              : 'Tell us your union or society name. We’ll suggest a simple web address your team can use to join—change it only if you want to.'}
+              : 'Tell us your union or society name. We’ll suggest a simple web address your team can use to join, change it only if you want to.'}
           </p>
 
           {inviteFlow ? (
@@ -606,7 +606,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
                 }}
                 required
               >
-                <option value="">Select…</option>
+                <option value="">Select...</option>
                 {orgs.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.name}
@@ -640,7 +640,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
                 </p>
               ) : newOrgName.trim().length > 0 ? (
                 <p className="text-[12px] leading-relaxed text-[#9b9b9b]">
-                  Keep typing your organisation name—we&apos;ll build a simple address from it. You can
+                  Keep typing your organisation name, we&apos;ll build a simple address from it. You can
                   adjust it in the next box if needed.
                 </p>
               ) : null}
@@ -649,7 +649,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
                   Short name for invitations
                 </label>
                 <p className="mb-1.5 text-[11.5px] text-[#9b9b9b]">
-                  We suggest this from your organisation name—change it only if you want something different.
+                  We suggest this from your organisation name, change it only if you want something different.
                 </p>
                 <input
                   id="reg-org-slug"
@@ -666,7 +666,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
                 />
                 <p id="reg-org-slug-hint" className="mt-1.5 text-[11.5px] leading-relaxed text-[#9b9b9b]">
                   Letters and numbers are fine; we add hyphens for you. This stays the same after
-                  signup—contact support if you need to change it later.
+                  signup, contact support if you need to change it later.
                 </p>
               </div>
               <p className="rounded-xl bg-[#f5f4f1] p-3 text-[12px] leading-relaxed text-[#6b6b6b]">
@@ -723,7 +723,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         <div>
           <h2 className="auth-title">Profile photo (optional)</h2>
           <p className="auth-sub mb-6">
-            Add a picture for your profile if you like—you can skip this and add or change it later in
+            Add a picture for your profile if you like, you can skip this and add or change it later in
             Settings.
           </p>
           <input
@@ -953,15 +953,15 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
             <div className="flex flex-col gap-2 text-[13px]">
               <div className="flex justify-between gap-4">
                 <span className="text-[#6b6b6b]">Name</span>
-                <span className="font-medium text-[#121212]">{fullName || '—'}</span>
+                <span className="font-medium text-[#121212]">{fullName || '-'}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-[#6b6b6b]">Email</span>
-                <span className="break-all text-right font-medium text-[#121212]">{email || '—'}</span>
+                <span className="break-all text-right font-medium text-[#121212]">{email || '-'}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-[#6b6b6b]">Organisation</span>
-                <span className="text-right font-medium text-[#121212]">{orgName ?? '—'}</span>
+                <span className="text-right font-medium text-[#121212]">{orgName ?? '-'}</span>
               </div>
               {optionalAvatarFile ? (
                 <div className="flex items-start justify-between gap-4">

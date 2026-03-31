@@ -29,7 +29,7 @@ const CAP_ROWS: { area: string; roles: string[] }[] = [
   { area: 'Rota management & Sheets import', roles: ['org_admin'] },
   { area: 'Discount rules & scan activity', roles: ['org_admin'] },
   { area: 'Org settings & integrations', roles: ['org_admin'] },
-  { area: 'Pending approvals (non–org-admin)', roles: ['org_admin', 'manager', 'coordinator'] },
+  { area: 'Pending approvals (non-org-admin)', roles: ['org_admin', 'manager', 'coordinator'] },
 ];
 
 function roleHasCapability(role: string, row: { roles: string[] }) {
@@ -100,7 +100,7 @@ export function AdminRolesAndPermissionsView() {
                 <td className="px-3 py-2.5 text-[#121212]">{row.area}</td>
                 {matrixRoles.map((r) => (
                   <td key={r} className="px-2 py-2.5 text-center text-[#121212]">
-                    {roleHasCapability(r, row) ? '✓' : '—'}
+                    {roleHasCapability(r, row) ? '✓' : '-'}
                   </td>
                 ))}
               </tr>

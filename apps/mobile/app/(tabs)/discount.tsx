@@ -7,7 +7,7 @@ export default function DiscountScreen() {
   return (
     <TabSafeScreen>
       <View style={[styles.screen, { backgroundColor: mainShell.pageBg }]}>
-        <Text style={styles.sub}>Staff discount QR — Phase 4 (parity with web Discount Card).</Text>
+        <Text style={styles.sub}>Staff discount QR - Phase 4 (parity with web Discount Card).</Text>
       </View>
     </TabSafeScreen>
   );

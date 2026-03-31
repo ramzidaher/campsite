@@ -61,6 +61,7 @@ export function OrgSettingsClient({
     logo_url: string | null;
     default_notifications_enabled: boolean;
     deactivation_requested_at: string | null;
+    timezone: string | null;
   };
 }) {
   const router = useRouter();
@@ -69,6 +70,7 @@ export function OrgSettingsClient({
   const [name, setName] = useState(initial.name);
   const [logoUrl, setLogoUrl] = useState(initial.logo_url ?? '');
   const [notif, setNotif] = useState(initial.default_notifications_enabled);
+  const [timezone, setTimezone] = useState(initial.timezone ?? '');
   const [msg, setMsg] = useState<string | null>(null);
   const [msgTone, setMsgTone] = useState<'ok' | 'err'>('ok');
   const [loading, setLoading] = useState(false);
@@ -86,6 +88,7 @@ export function OrgSettingsClient({
     setName(initial.name);
     setLogoUrl(initial.logo_url ?? '');
     setNotif(initial.default_notifications_enabled);
+    setTimezone(initial.timezone ?? '');
   }, [initial]);
 
   function flash(message: string, tone: 'ok' | 'err') {
@@ -123,9 +126,13 @@ export function OrgSettingsClient({
   async function saveGeneral() {
     setLoading(true);
     setMsg(null);
+    const tz = timezone.trim();
     const { error } = await supabase
       .from('organisations')
-      .update({ default_notifications_enabled: notif })
+      .update({
+        default_notifications_enabled: notif,
+        timezone: tz.length > 0 ? tz : null,
+      })
       .eq('id', initial.id);
     setLoading(false);
     if (error) {
@@ -249,12 +256,12 @@ export function OrgSettingsClient({
                   <div className="text-[13.5px] font-medium text-[#121212]">Organisation logo</div>
                   <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
                     Use a <strong className="font-medium text-[#6b6b6b]">direct image URL</strong> (PNG, SVG, JPG, or
-                    WebP) — not a website homepage. The link should usually end in{' '}
+                    WebP) - not a website homepage. The link should usually end in{' '}
                     <span className="font-mono">.png</span>, <span className="font-mono">.svg</span>, etc.
                   </p>
                   {trimmedLogoUrl && logoPreviewFailed ? (
                     <p className="mt-2 text-[11.5px] font-medium text-[#b45309]">
-                      We couldn&apos;t load an image from this URL. Try opening it in a new tab — if you see a page
+                      We couldn&apos;t load an image from this URL. Try opening it in a new tab - if you see a page
                       instead of a picture, paste the image file&apos;s address instead.
                     </p>
                   ) : null}
@@ -263,7 +270,7 @@ export function OrgSettingsClient({
                       type="button"
                       className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
                       onClick={() => {
-                        const url = window.prompt('Logo image URL (https://…)');
+                        const url = window.prompt('Logo image URL (https://...)');
                         if (url === null) return;
                         setLogoUrl(url.trim());
                       }}
@@ -337,6 +344,20 @@ export function OrgSettingsClient({
               <p className="mt-1 text-[13px] text-[#6b6b6b]">System-wide defaults for your organisation.</p>
 
               <div className="mt-2 border-t border-[#d8d8d8]">
+                <label className="block border-b border-[#d8d8d8] py-4">
+                  <span className="text-[13.5px] font-medium text-[#121212]">Default timezone (rota &amp; calendar)</span>
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-[#9b9b9b]">
+                    IANA name (e.g. <span className="font-mono">Europe/London</span>). Leave empty to use each
+                    viewer&apos;s device time. Used when displaying shift times on web and mobile.
+                  </p>
+                  <input
+                    className="mt-2 w-full max-w-md rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    placeholder="Europe/London"
+                    autoComplete="off"
+                  />
+                </label>
                 <div className="flex items-start justify-between gap-5 border-b border-[#d8d8d8] py-4">
                   <div className="min-w-0">
                     <div className="text-[13.5px] font-medium text-[#121212]">Default in-app notifications</div>
@@ -350,7 +371,7 @@ export function OrgSettingsClient({
               </div>
 
               <p className="mt-4 text-[12px] leading-relaxed text-[#9b9b9b]">
-                Member approvals, broadcast approval queues, and role capabilities are enforced by permissions today —
+                Member approvals, broadcast approval queues, and role capabilities are enforced by permissions today  - 
                 additional organisation policy toggles may appear here later.
               </p>
 
@@ -386,7 +407,7 @@ export function OrgSettingsClient({
                     onClick={() => void exportMemberCsv()}
                     className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1] disabled:opacity-50"
                   >
-                    {exporting ? 'Preparing…' : 'Export CSV'}
+                    {exporting ? 'Preparing...' : 'Export CSV'}
                   </button>
                 </div>
 

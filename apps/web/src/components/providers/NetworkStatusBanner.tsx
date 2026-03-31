@@ -28,7 +28,7 @@ export function NetworkStatusBanner() {
       aria-live="polite"
       className="border-b border-amber-500/50 bg-amber-500/15 px-4 py-2 text-center text-sm text-amber-100"
     >
-      You&apos;re offline — showing cached data where available. Actions will sync when you reconnect.
+      You&apos;re offline - showing cached data where available. Actions will sync when you reconnect.
     </div>
   );
 }

@@ -98,7 +98,7 @@ export function InviteSetPasswordForm({ nextPath, fromInvite = false }: Props) {
         <p className="mb-8 rounded-lg border border-[#e5e5e5] bg-[#faf9f6] px-3.5 py-3 text-[13px] leading-relaxed text-[#454545]">
           <span className="font-medium text-[#121212]">Your login email</span> is{' '}
           <span className="font-mono text-[12.5px] text-[#121212]">{loginEmail}</span>
-          . Use this same address when you sign in with email and password later — it matches the invite we sent.
+          . Use this same address when you sign in with email and password later - it matches the invite we sent.
         </p>
       ) : (
         <p className="auth-sub mb-8">

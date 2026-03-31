@@ -89,7 +89,7 @@ export async function loadAdminRotaDashboard(
       lastSyncSub = `${logRow.rows_imported as number} rows · ${logRow.source as string}`;
     } else if (st) {
       lastSyncLabel = new Date(st).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-      lastSyncSub = err ? 'Last run reported errors' : fin ? '—' : 'In progress';
+      lastSyncSub = err ? 'Last run reported errors' : fin ? '-' : 'In progress';
     }
   }
 
@@ -102,7 +102,7 @@ export async function loadAdminRotaDashboard(
       start_time: r.start_time as string,
       end_time: r.end_time as string,
       staffName: person?.full_name ?? 'Unassigned',
-      departmentName: dept?.name ?? '—',
+      departmentName: dept?.name ?? '-',
     };
   });
 

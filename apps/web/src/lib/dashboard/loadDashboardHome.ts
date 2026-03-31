@@ -2,7 +2,11 @@ import 'server-only';
 
 import { fetchDashboardStatCounts } from '@campsite/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { canViewDashboardUnreadBroadcastKpi, isApproverRole } from '@campsite/types';
+import {
+  canFinalApproveRotaRequests,
+  canViewDashboardUnreadBroadcastKpi,
+  isApproverRole,
+} from '@campsite/types';
 
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
@@ -30,7 +34,7 @@ export type DashboardHomeModel = {
   broadcastTotal?: number;
   /** Active members count (org- or dept-scoped); omitted when the viewer must not see KPI tiles. */
   memberActiveTotal?: number;
-  /** How KPI counts were computed — drives dashboard copy. */
+  /** How KPI counts were computed - drives dashboard copy. */
   dashboardStatScope?: 'org' | 'dept';
   pendingCount: number | null;
   unreadCount: number;
@@ -74,7 +78,7 @@ export async function loadPendingApprovalsPreview(
     id: p.id,
     full_name: p.full_name,
     email: p.email,
-    deptLine: p.departments.length ? p.departments.join(', ') : '—',
+    deptLine: p.departments.length ? p.departments.join(', ') : '-',
   }));
 }
 
@@ -158,8 +162,12 @@ export async function loadDashboardHome(
   let pendingCount: number | null = null;
   if (isApproverRole(profile.role)) {
     const full = await loadPendingApprovalsPreview(supabase, userId, orgId, profile.role);
-    pendingCount = full.length;
     pendingPreview = full.slice(0, 3);
+  }
+  if (isApproverRole(profile.role) || canFinalApproveRotaRequests(profile.role)) {
+    const { data: navN } = await supabase.rpc('pending_approvals_nav_count');
+    pendingCount =
+      navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
   }
 
   const unreadRaw = unreadRpc.data;

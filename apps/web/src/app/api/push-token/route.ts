@@ -2,7 +2,7 @@ import { parsePushTokenBody } from '@/lib/push/parsePushTokenBody';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-/** Register Expo / web push token (Phase 2 scaffold — wire to Expo push in production). */
+/** Register Expo / web push token (Phase 2 scaffold - wire to Expo push in production). */
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {

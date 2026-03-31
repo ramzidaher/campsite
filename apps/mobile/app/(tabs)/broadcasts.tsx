@@ -165,7 +165,7 @@ export default function BroadcastsScreen() {
     <TabSafeScreen>
       <View style={[styles.screen, { backgroundColor: tokens.background }]}>
         <Text style={[styles.lead, { color: tokens.textSecondary }]}>
-          Organisation broadcasts — org-wide posts reach everyone; specific posts use department, channel, and
+          Organisation broadcasts - org-wide posts reach everyone; specific posts use department, channel, and
           optional team, same rules as the web app.
         </Text>
 
@@ -266,7 +266,7 @@ export default function BroadcastsScreen() {
                   ]}
                 >
                   <Text style={[styles.aiButtonText, { color: tokens.textPrimary }]}>
-                    {aiSummaryBusy ? 'Summarising…' : aiSummary ? 'Regenerate' : 'Summarise'}
+                    {aiSummaryBusy ? 'Summarising...' : aiSummary ? 'Regenerate' : 'Summarise'}
                   </Text>
                 </Pressable>
                 {aiSummaryErr ? (

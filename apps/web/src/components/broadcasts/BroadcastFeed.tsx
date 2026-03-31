@@ -250,7 +250,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     <div className="flex flex-col gap-2.5">
       {fetching && rows.length > 0 ? (
         <p className="text-xs text-[#9b9b9b]" aria-live="polite">
-          Updating…
+          Updating...
         </p>
       ) : null}
 
@@ -262,7 +262,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
       ) : null}
 
       {loading && !rows.length ? (
-        <p className="text-sm text-[#6b6b6b]">Loading…</p>
+        <p className="text-sm text-[#6b6b6b]">Loading...</p>
       ) : trulyEmpty ? (
         <div className="py-12 text-center text-[#9b9b9b]">
           <div className="mb-3 text-4xl" aria-hidden>
@@ -380,7 +380,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
         </button>
       ) : null}
       {!searchActive && feedInfinite.isFetchingNextPage ? (
-        <p className="text-sm text-[#6b6b6b]">Loading more…</p>
+        <p className="text-sm text-[#6b6b6b]">Loading more...</p>
       ) : null}
     </div>
   );

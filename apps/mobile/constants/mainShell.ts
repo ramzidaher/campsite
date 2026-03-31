@@ -1,4 +1,4 @@
-/** Main app chrome — aligned with web `AppShell` / `AppTopBar`. */
+/** Main app chrome - aligned with web `AppShell` / `AppTopBar`. */
 export const mainShell = {
   pageBg: '#faf9f6',
   pageText: '#121212',

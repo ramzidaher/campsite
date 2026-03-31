@@ -21,7 +21,7 @@ export default async function OrgAdminSettingsPage() {
 
   const { data: org } = await supabase
     .from('organisations')
-    .select('id, name, slug, logo_url, default_notifications_enabled, deactivation_requested_at')
+    .select('id, name, slug, logo_url, default_notifications_enabled, deactivation_requested_at, timezone')
     .eq('id', profile.org_id)
     .single();
 
@@ -36,6 +36,7 @@ export default async function OrgAdminSettingsPage() {
         logo_url: (org.logo_url as string | null) ?? null,
         default_notifications_enabled: org.default_notifications_enabled as boolean,
         deactivation_requested_at: (org.deactivation_requested_at as string | null) ?? null,
+        timezone: (org.timezone as string | null) ?? null,
       }}
     />
   );

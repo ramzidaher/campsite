@@ -25,7 +25,7 @@ export default function AuthCallbackScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.center}>
         <ActivityIndicator size="large" color={authColors.marketingBg} />
-        <Text style={styles.text}>Signing you in…</Text>
+        <Text style={styles.text}>Signing you in...</Text>
       </View>
     </SafeAreaView>
   );

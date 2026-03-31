@@ -34,7 +34,7 @@ export async function summarizeBroadcastWithGemini(opts: {
   const title = opts.title.trim() || 'Untitled';
 
   const prompt = `You help staff read internal organisation broadcasts (camps, schools, teams).
-Summarize the message in 2–4 short bullet points or one tight paragraph (max ~120 words).
+Summarize the message in 2-4 short bullet points or one tight paragraph (max ~120 words).
 Keep dates, times, locations, deadlines, and action items accurate. Do not invent details.
 
 Title: ${title}

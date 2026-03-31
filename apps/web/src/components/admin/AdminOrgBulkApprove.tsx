@@ -88,7 +88,7 @@ export function AdminOrgBulkApprove({
             onClick={() => void approveAllPending()}
             className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
-            {busy ? 'Working…' : 'Approve all pending'}
+            {busy ? 'Working...' : 'Approve all pending'}
           </button>
         </div>
       </div>
@@ -97,7 +97,7 @@ export function AdminOrgBulkApprove({
           {pendingPreview.map((p) => (
             <li key={p.id}>
               {p.full_name ?? 'Member'}
-              {p.deptLine ? ` · ${p.deptLine}` : ''} · {p.email ?? '—'}
+              {p.deptLine ? ` · ${p.deptLine}` : ''} · {p.email ?? '-'}
             </li>
           ))}
         </ul>

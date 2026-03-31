@@ -181,7 +181,7 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
           </button>
         </div>
         {loading ? (
-          <p className="text-[13px] text-[#6b6b6b]">Loading…</p>
+          <p className="text-[13px] text-[#6b6b6b]">Loading...</p>
         ) : rows.length === 0 ? (
           <p className="text-[13px] text-[#6b6b6b]">No tiers yet.</p>
         ) : (
@@ -195,7 +195,7 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
                   <span className="font-medium capitalize text-[#121212]">
                     {t.role.replace(/_/g, ' ')}
                   </span>
-                  <span className="text-[#6b6b6b]"> — {t.label}</span>
+                  <span className="text-[#6b6b6b]"> - {t.label}</span>
                 </div>
                 <div className="flex gap-2">
                   <button

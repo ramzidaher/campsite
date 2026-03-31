@@ -8,7 +8,7 @@ import { relTime } from '@/lib/format/relTime';
 
 function stripPreview(raw: string, max = 140) {
   const t = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  return t.length > max ? `${t.slice(0, max)}…` : t;
+  return t.length > max ? `${t.slice(0, max)}...` : t;
 }
 
 function statFillPct(value: number, cap: number) {
@@ -87,6 +87,7 @@ export function DashboardHome({
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-[28px]">
+      {variant === 'dashboard' ? <h1 className="sr-only">Dashboard</h1> : null}
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="font-authSerif text-[28px] leading-tight tracking-tight text-[#121212]">

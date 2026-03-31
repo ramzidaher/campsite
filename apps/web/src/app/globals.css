@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Campsite tokens — light (default) */
+/* Campsite tokens - light (default) */
 :root {
   color-scheme: light dark;
   --campsite-bg: #faf9f6;
@@ -60,7 +60,7 @@ body {
   }
 }
 
-/* Auth marketing + forms — fixed light right panel (matches design mock) */
+/* Auth marketing + forms - fixed light right panel (matches design mock) */
 .auth-shell {
   color-scheme: light;
 }

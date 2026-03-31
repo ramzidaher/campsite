@@ -1,4 +1,4 @@
-# 12 — Push tokens and broadcast notification jobs
+O# 12 — Push tokens and broadcast notification jobs
 
 **Scope:** This plan covers **database + Edge delivery** and **web-adjacent UX** (e.g. unread indicators). It does **not** document native app clients; token registration UIs live outside these web-only runbooks.
 
@@ -74,3 +74,23 @@
 1. SQL: job schema + trigger changes.
 2. Edge: processor logic + secrets (provider tokens, etc.).
 3. Update [04-broadcasts.md](./04-broadcasts.md) cross-reference if visibility rules change.
+
+## 7. Rota notification jobs (parallel to broadcasts)
+
+**Queue + triggers:** `supabase/migrations/20260430332000_rota_notification_jobs.sql` — `rota_notification_jobs`; triggers on `rota_shifts` and `rota_change_requests` enqueue rows (`authenticated` cannot read/update jobs; **service role** in the worker).
+
+**Recipient RPC (service role only):** `supabase/migrations/20260430340000_rota_notification_recipient_user_ids.sql` — **`public.rota_notification_recipient_user_ids(p_job_id uuid)`** — same pattern as **`broadcast_notification_recipient_user_ids`**: Edge calls with service-role client only; not for browser sessions.
+
+**Edge Function:** `supabase/functions/process-rota-notifications/index.ts`
+
+- **Auth:** `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>`; **`[functions.process-rota-notifications]`** has `verify_jwt = false` in `supabase/config.toml`.
+- **Behaviour:** pending jobs → RPC → **`push_tokens`** → Expo **`POST https://exp.host/--/api/v2/push/send`** in chunks; optional **`EXPO_ACCESS_TOKEN`** env on the function for Expo account rate limits.
+- **Semantics:** increment **`attempts`** / **`last_error`** on send failure; set **`processed_at`** on success or when there is nothing to send (no recipients or no tokens); cap retries (e.g. 5 attempts) then stop so rows can be inspected.
+
+**Deploy:** root script **`npm run supabase:functions:deploy:rota-notify`**.
+
+**Scheduling:** not defined in-repo — run the function on a short interval (e.g. 1–5 minutes) via Supabase **scheduled Edge Functions**, **Dashboard cron**, or external cron hitting the invoke URL with the service-role Bearer. Product runbook: [06-rota.md](./06-rota.md) §2.4.
+
+**When changing recipient rules:** extend the SQL function and keep behaviour aligned with [docs/rota-feature-spec.md](../../rota-feature-spec.md) and rota RLS (who should be notified for shifts vs requests).
+
+**Shift reminders (Phase 3):** `event_type` **`shift_reminder`** — enqueued by **`public.enqueue_rota_shift_reminders()`** (deduped via **`rota_shift_reminder_sent`**). Assignees with **`profiles.shift_reminder_before_minutes`** set (see web profile settings) receive a push when the shift enters the reminder window. The Edge worker calls **`enqueue_rota_shift_reminders`** at the start of each run, so scheduling **`process-rota-notifications`** on a short interval (e.g. every 15–20 minutes) covers both reminder enqueue and delivery.

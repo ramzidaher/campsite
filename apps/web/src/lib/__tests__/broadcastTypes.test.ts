@@ -6,7 +6,7 @@ import {
 
 /**
  * Contract tests for `packages/types/src/broadcasts.ts`.
- * DB enforces `broadcast_form_allowed` / RLS — these gates must stay aligned for tab UX and composer entry.
+ * DB enforces `broadcast_form_allowed` / RLS - these gates must stay aligned for tab UX and composer entry.
  */
 describe('broadcast role helpers', () => {
   describe('canComposeBroadcast', () => {

@@ -181,7 +181,7 @@ export function PendingApprovalsClient({
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search name, email, or department…"
+          placeholder="Search name, email, or department..."
           className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
           aria-label="Search pending members"
         />
@@ -222,7 +222,7 @@ export function PendingApprovalsClient({
                       <div className="text-[14px] font-medium text-[#121212]">{p.full_name}</div>
                       <div className="text-[12.5px] text-[#6b6b6b]">{metaLine(p)}</div>
                       <div className="mt-0.5 text-[11px] text-[#9b9b9b]">
-                        {p.email ?? '—'} · Requested {new Date(p.created_at).toLocaleString()}
+                        {p.email ?? '-'} · Requested {new Date(p.created_at).toLocaleString()}
                       </div>
                     </div>
                   </div>

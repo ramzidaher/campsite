@@ -135,7 +135,7 @@ export function AdminTeamsClient({
           >
             Departments
           </Link>{' '}
-          — department membership (rota and channels) is separate from teams.
+          - department membership (rota and channels) is separate from teams.
         </p>
       </div>
 
@@ -172,7 +172,7 @@ export function AdminTeamsClient({
                     href={`/admin/departments?dept=${encodeURIComponent(d.id)}`}
                     className="shrink-0 text-[12px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                   >
-                    Open department…
+                    Open department...
                   </Link>
                 </div>
 
@@ -271,7 +271,7 @@ export function AdminTeamsClient({
                               onChange={(e) => setPickByTeam((p) => ({ ...p, [t.id]: e.target.value }))}
                               aria-label={`Add person to ${t.name}`}
                             >
-                              <option value="">Add someone to this team…</option>
+                              <option value="">Add someone to this team...</option>
                               {staffOptions
                                 .filter((s) => !rosterIds.has(s.id))
                                 .map((s) => (

@@ -278,7 +278,7 @@ export function ProfileSettings({
   if (!profile) {
     return (
       <div className={sectionCard}>
-        <p className="text-[13px] text-[#6b6b6b]">Loading profile…</p>
+        <p className="text-[13px] text-[#6b6b6b]">Loading profile...</p>
       </div>
     );
   }
@@ -314,7 +314,7 @@ export function ProfileSettings({
                   <div className="min-w-0">
                     <p className="text-[13px] font-medium text-[#121212]">{o.name}</p>
                     <p className="truncate font-mono text-[11px] text-[#9b9b9b]">
-                      {o.slug ? `${o.slug}.camp-site.co.uk` : '—'}
+                      {o.slug ? `${o.slug}.camp-site.co.uk` : '-'}
                     </p>
                   </div>
                   {isCurrent ? (
@@ -328,7 +328,7 @@ export function ProfileSettings({
                       onClick={() => void switchTenant(o.org_id)}
                       className={btnSecondary}
                     >
-                      {tenantSwitching === o.org_id ? 'Switching…' : 'Switch'}
+                      {tenantSwitching === o.org_id ? 'Switching...' : 'Switch'}
                     </button>
                   )}
                 </li>
@@ -373,7 +373,7 @@ export function ProfileSettings({
                 className={inputClass}
                 value={avatarUrl}
                 onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://…"
+                placeholder="https://..."
               />
             </label>
             <p className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[12.5px] leading-relaxed text-[#6b6b6b]">

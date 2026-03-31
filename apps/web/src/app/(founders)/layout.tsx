@@ -15,7 +15,7 @@ const fhSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: 'Campsite — Founder HQ',
+  title: 'Campsite - Founder HQ',
   description: 'Platform founder console',
 };
 

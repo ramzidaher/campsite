@@ -7,7 +7,7 @@ export default function CalendarScreen() {
   return (
     <TabSafeScreen>
       <View style={[styles.screen, { backgroundColor: mainShell.pageBg }]}>
-        <Text style={styles.sub}>Shifts, events, and Google sync — Phase 3 (parity with web Calendar).</Text>
+        <Text style={styles.sub}>Shifts, events, and Google sync - Phase 3 (parity with web Calendar).</Text>
       </View>
     </TabSafeScreen>
   );

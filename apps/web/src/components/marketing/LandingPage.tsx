@@ -122,7 +122,7 @@ export function LandingPage() {
                 </span>
               </h1>
               <p className="mx-auto mt-6 max-w-md text-[1.05rem] leading-relaxed text-[#5c5c5c] lg:mx-0 lg:max-w-lg lg:text-lg">
-                A calm, focused workspace for staff comms and day-to-day operations — built for student
+                A calm, focused workspace for staff comms and day-to-day operations - built for student
                 unions who expect better than a group chat and a spreadsheet.
               </p>
               <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center lg:justify-start">
@@ -189,7 +189,7 @@ export function LandingPage() {
               <span className="font-authSerif text-lg tracking-tight">Campsite</span>
             </div>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#7a7a7a]">
-              Internal communications for student unions — from Common Ground Studios Ltd.
+              Internal communications for student unions - from Common Ground Studios Ltd.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium text-[#5c5c5c] sm:justify-end">

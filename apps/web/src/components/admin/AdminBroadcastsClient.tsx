@@ -26,8 +26,8 @@ export type AdminBroadcastRow = {
 function firstName(
   v: { name: string } | { name: string }[] | null | undefined
 ): string {
-  if (!v) return '—';
-  if (Array.isArray(v)) return v[0]?.name ?? '—';
+  if (!v) return '-';
+  if (Array.isArray(v)) return v[0]?.name ?? '-';
   return v.name;
 }
 
@@ -252,7 +252,7 @@ export function AdminBroadcastsClient({
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search title…"
+            placeholder="Search title..."
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
             aria-label="Search broadcasts"
           />
@@ -332,7 +332,7 @@ export function AdminBroadcastsClient({
                     >
                       {r.is_org_wide ? 'All channels' : firstName(r.broadcast_channels as never)}
                     </span>
-                    {firstName(r.department_teams as never) !== '—' ? (
+                    {firstName(r.department_teams as never) !== '-' ? (
                       <span className="inline-flex items-center rounded-full border border-[#c7d2fe] bg-[#eef2ff] px-2 py-0.5 text-[11px] font-medium text-[#4338ca]">
                         {firstName(r.department_teams as never)}
                       </span>

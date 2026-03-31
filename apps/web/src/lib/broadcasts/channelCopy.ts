@@ -21,7 +21,7 @@ export const composeNoChannelsHint = (deptLabel: string) =>
 export const adminDepartmentsChannelsHeading = 'Broadcast channels';
 
 export const adminDepartmentsChannelsHint =
-  'Channels define who can receive targeted posts—not just labels on the feed.';
+  'Channels define who can receive targeted posts, not just labels on the feed.';
 
 export const registrationWizardChannelsStep = 'Channels';
 

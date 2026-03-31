@@ -3,7 +3,7 @@ import { getSupabasePublicEnv } from './env';
 
 let browserClient: SupabaseClient | undefined;
 
-/** Browser / RN singleton — call once per runtime. */
+/** Browser / RN singleton - call once per runtime. */
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (!browserClient) {
     const { url, anonKey } = getSupabasePublicEnv();
@@ -12,7 +12,7 @@ export function getSupabaseBrowserClient(): SupabaseClient {
   return browserClient;
 }
 
-/** Server-side or scripts — new client per call. */
+/** Server-side or scripts - new client per call. */
 export function createSupabaseClient(url: string, anonKey: string): SupabaseClient {
   return createClient(url, anonKey);
 }

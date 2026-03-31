@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-/** Browser-only Sentry init — avoids pulling @sentry/nextjs server bundle into the client graph. */
+/** Browser-only Sentry init - avoids pulling @sentry/nextjs server bundle into the client graph. */
 export function SentryInit() {
   useEffect(() => {
     const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;

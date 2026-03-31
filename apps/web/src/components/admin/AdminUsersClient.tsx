@@ -454,7 +454,7 @@ export function AdminUsersClient({
             type="search"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
-            placeholder="Search name or email…"
+            placeholder="Search name or email..."
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
             aria-label="Search members"
           />
@@ -612,7 +612,7 @@ export function AdminUsersClient({
                       </div>
                       <div className="min-w-0">
                         <div className="font-medium text-[#121212]">{r.full_name}</div>
-                        <div className="text-[11.5px] text-[#9b9b9b]">{r.email ?? '—'}</div>
+                        <div className="text-[11.5px] text-[#9b9b9b]">{r.email ?? '-'}</div>
                       </div>
                     </div>
                   </td>
@@ -627,7 +627,7 @@ export function AdminUsersClient({
                     </span>
                   </td>
                   <td className="max-w-[200px] px-3 py-3 align-middle text-[13px] text-[#6b6b6b]">
-                    {r.departments.length ? r.departments.join(', ') : '—'}
+                    {r.departments.length ? r.departments.join(', ') : '-'}
                   </td>
                   <td className="px-3 py-3 align-middle">{statusBadge(r.status)}</td>
                   <td className="px-3 py-3 align-middle text-[13px] text-[#6b6b6b]">
@@ -654,7 +654,7 @@ export function AdminUsersClient({
                           disabled={busy !== null}
                           title="Resend invite or magic link to their email"
                         >
-                          {busy === `resend:${r.id}` ? 'Sending…' : 'Resend access email'}
+                          {busy === `resend:${r.id}` ? 'Sending...' : 'Resend access email'}
                         </button>
                       ) : null}
                       {r.status === 'active' ? (
@@ -793,7 +793,7 @@ export function AdminUsersClient({
                 </legend>
                 <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3">
                   {activeDepts.length === 0 ? (
-                    <p className="text-[12.5px] text-[#9b9b9b]">No departments yet — add them under Admin → Departments, then optional teams under Admin → Teams.</p>
+                    <p className="text-[12.5px] text-[#9b9b9b]">No departments yet - add them under Admin → Departments, then optional teams under Admin → Teams.</p>
                   ) : (
                     activeDepts.map((d) => (
                       <label key={d.id} className="flex cursor-pointer items-center gap-2 text-[13px] text-[#121212]">
@@ -831,7 +831,7 @@ export function AdminUsersClient({
                 className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50 sm:order-2"
                 onClick={() => void submitInvite()}
               >
-                {busy === 'invite' ? 'Sending…' : 'Send invite email'}
+                {busy === 'invite' ? 'Sending...' : 'Send invite email'}
               </button>
             </div>
           </div>
@@ -870,7 +870,7 @@ export function AdminUsersClient({
                 </div>
                 <div className="min-w-0">
                   <div className="font-medium text-[#121212]">{edit.full_name}</div>
-                  <div className="text-[12px] text-[#9b9b9b]">{edit.email ?? '—'}</div>
+                  <div className="text-[12px] text-[#9b9b9b]">{edit.email ?? '-'}</div>
                 </div>
               </div>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">

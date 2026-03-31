@@ -29,7 +29,7 @@ function isEmailLinkType(t: string): t is EmailOtpType {
 }
 
 /**
- * Email links (invite, magic link, etc.) often land here with tokens in the **hash** (#access_token=…).
+ * Email links (invite, magic link, etc.) often land here with tokens in the **hash** (#access_token=...).
  * Browsers never send the hash to the server, so this must run in the client.
  * Query-style returns (?token_hash= / ?code=) are also supported.
  */
@@ -122,7 +122,7 @@ export function AuthCallbackClient() {
         className="inline-block h-9 w-9 animate-spin rounded-full border-2 border-[#d8d8d8] border-t-[#121212]"
         aria-hidden
       />
-      <p className="text-sm text-[#6b6b6b]">Completing sign-in…</p>
+      <p className="text-sm text-[#6b6b6b]">Completing sign-in...</p>
     </div>
   );
 }

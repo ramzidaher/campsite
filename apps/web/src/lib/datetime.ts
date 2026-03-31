@@ -44,7 +44,7 @@ export function addMonths(d: Date, n: number): Date {
   return x;
 }
 
-/** Month grid (Mon–Sun rows) covering all days in `anchorMonth`’s calendar month. */
+/** Month grid (Mon-Sun rows) covering all days in `anchorMonth`’s calendar month. */
 export function monthCalendarWeeks(anchorMonth: Date): Date[][] {
   const lastDay = new Date(anchorMonth.getFullYear(), anchorMonth.getMonth() + 1, 0);
   let weekStart = startOfWeekMonday(startOfMonth(anchorMonth));
@@ -60,4 +60,28 @@ export function monthCalendarWeeks(anchorMonth: Date): Date[][] {
     weekStart.setDate(weekStart.getDate() + 7);
   }
   return weeks;
+}
+
+/** Valid IANA zone for `Intl`, or omit (browser local). */
+export function safeTimeZoneOptions(iana: string | null | undefined): { timeZone?: string } {
+  const z = iana?.trim();
+  if (!z) return {};
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: z });
+    return { timeZone: z };
+  } catch {
+    return {};
+  }
+}
+
+export function formatShiftTimeRange(startIso: string, endIso: string, iana?: string | null): string {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const o = safeTimeZoneOptions(iana);
+  return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', ...o })}-${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', ...o })}`;
+}
+
+export function formatDateTimeRangeLocal(start: Date, end: Date, iana?: string | null): string {
+  const o = safeTimeZoneOptions(iana);
+  return `${start.toLocaleString(undefined, { ...o })} - ${end.toLocaleString(undefined, { ...o })}`;
 }

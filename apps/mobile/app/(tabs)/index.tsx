@@ -69,7 +69,7 @@ export default function DashboardScreen() {
     );
   }
 
-  const orgName = dashboardQuery.data?.orgName ?? '…';
+  const orgName = dashboardQuery.data?.orgName ?? '...';
   const stats = dashboardQuery.data?.stats;
 
   return (
@@ -78,11 +78,11 @@ export default function DashboardScreen() {
         <Text style={[styles.title, { color: tokens.textPrimary }]}>Dashboard</Text>
         <Text style={[styles.sub, { color: tokens.textSecondary }]}>
           {orgName}
-          {dashboardQuery.isFetching ? ' · updating…' : ''}
+          {dashboardQuery.isFetching ? ' · updating...' : ''}
         </Text>
 
         {dashboardQuery.isLoading ? (
-          <Text style={[styles.muted, { color: tokens.textSecondary }]}>Loading…</Text>
+          <Text style={[styles.muted, { color: tokens.textSecondary }]}>Loading...</Text>
         ) : stats ? (
           <View style={styles.kpiRow}>
             {stats.broadcastTotal !== undefined ? (
@@ -107,7 +107,7 @@ export default function DashboardScreen() {
             <Text style={[styles.hintTitle, { color: tokens.textPrimary }]}>Your feed</Text>
             <Text style={[styles.hintBody, { color: tokens.textSecondary }]}>
               Open Broadcasts for updates. KPI totals are available to managers, coordinators, and org
-              admins on this device too — if you don't see numbers, your role uses a simplified home
+              admins on this device too - if you don't see numbers, your role uses a simplified home
               view.
             </Text>
           </Card>
@@ -129,7 +129,7 @@ export default function DashboardScreen() {
             </Text>
           ) : canCompose ? (
             <Text style={[styles.composeHint, { color: tokens.textSecondary }]}>
-              Submit drafts for approval on web — same account.
+              Submit drafts for approval on web - same account.
             </Text>
           ) : null}
         </View>

@@ -1,4 +1,4 @@
-/** Branded ID types — extend in later phases. */
+/** Branded ID types - extend in later phases. */
 export type OrganisationId = string & { readonly __brand: 'OrganisationId' };
 export type UserId = string & { readonly __brand: 'UserId' };
 
@@ -37,7 +37,10 @@ export {
 export { canManageCalendarManualEvents } from './calendar';
 
 export {
+  canCreateRota,
   canEditRotaShifts,
+  canFinalApproveRotaRequests,
+  canTransferRotaOwnership,
   canViewRotaDepartmentScope,
   canViewRotaFullOrgGrid,
 } from './rota';

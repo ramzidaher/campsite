@@ -161,7 +161,7 @@ export function AdminDiscountRulesClient({
           onClick={() => void saveAll()}
           className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? 'Saving…' : 'Save changes'}
+          {busy ? 'Saving...' : 'Save changes'}
         </button>
       </div>
 
@@ -170,7 +170,7 @@ export function AdminDiscountRulesClient({
           ℹ️
         </span>
         <span>
-          Discount values are informational only — no payment processing. Staff show their QR code to cashiers who
+          Discount values are informational only - no payment processing. Staff show their QR code to cashiers who
           verify via the app.
         </span>
       </div>

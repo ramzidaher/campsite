@@ -1,6 +1,6 @@
 # Rota feature — product spec & discovery
 
-**Last updated:** 2026-03-29  
+**Last updated:** 2026-03-29 (Phase 3: draft/publish, org TZ, Sheets target rota, reminders)  
 **Technical reference:** [06-rota.md](./campsite-v2-permissions/03-feature-implementation-plans/06-rota.md) (tables, RLS, routes, files)
 
 This file is the **product story** for rota: who it serves, what they do, and what rules we enforce. Implementation details stay in **06-rota.md** unless we deliberately change behaviour.
@@ -74,10 +74,10 @@ _From the current app/docs — will need to evolve for configurable rota types, 
 | **Swap / change requests** | **Swaps:** **(1)** peer **accepts**, **(2)** **final approval** by **any** org member with role **`manager`** or **`duty_manager`** (**org-wide** — not limited to the rota’s department). One approver suffices. **Non-swap** requests (e.g. “can’t work Tuesday”): **same pool and rule**, no peer step unless product adds one later. |
 | **Creator vs org admin** | **Org admin** may **transfer** rota ownership to another user and **revoke** / reassign creator rights. |
 | **Leave / 9-day fortnight** | **Lean separate** from core rota for v1 (dedicated leave / pattern flows or tables), rather than one overloaded entity — exact split decided at implementation time. |
-| Overlapping assignments | _TBD_ (warn vs allow) |
-| Past vs future edits | _TBD_ |
-| Draft vs published | _TBD_ (may matter for notifications) |
-| Time zones / camp day | _TBD_ |
+| Overlapping assignments | **Allow** with **warning** in web UI: list and week grid show an **Overlap** indicator when the same assignee has shifts whose intervals intersect (open shifts excluded from the check). |
+| Past vs future edits | **Managers**, **coordinators**, **org_admin**, and **rota owner** may **edit/delete** rota-scoped shifts at any time (including past). **Assignees** do not get blanket edit rights over others’ assignments; they use **swap / change requests** for their own coverage changes. |
+| Draft vs published | **`rotas.status`:** `draft` \| `published` (default `published`). **Draft** rotas and their shifts are visible only to users who **`can_manage_rota_assignments`** (org_admin, coordinator, rota owner, scoped managers). **Shift push notifications** are **not** enqueued while the rota is draft. |
+| Time zones / camp day | **`organisations.timezone`** (optional IANA). Web rota + calendar shift display and mobile rota use org TZ when set; otherwise **device/browser local**. **Camp day** boundaries remain a follow-up (§7). |
 
 ---
 
@@ -90,7 +90,10 @@ _From the current app/docs — will need to evolve for configurable rota types, 
 
 ## 7. Follow-ups (still to decide)
 
-_None at the moment — add new items here as they come up._
+- **Camp day** cutover rules and org-level “day” boundaries (not implemented; display uses org TZ or local only).
+- **Sheets importer:** **`POST /api/admin/rota-sheets-import`** reads **`sheets_mappings.target_rota_id`** and sets **`rota_shifts.rota_id`**; upserts by **`sheets_import_key`**; wizard links **`google_connections`** and column mapping.
+
+Resolved in §5: **draft vs published**, **org timezone display**, **Sheets mapping → target rota** (stored on `sheets_mappings` / sync log for the worker), **shift reminders** (profile `shift_reminder_before_minutes` + queue; see **06-rota.md** / **12-push** doc).
 
 ---
 

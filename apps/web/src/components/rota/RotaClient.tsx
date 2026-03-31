@@ -1,20 +1,45 @@
 'use client';
 
 import {
+  canCreateRota,
   canEditRotaShifts,
+  canTransferRotaOwnership,
   canViewRotaDepartmentScope,
   canViewRotaFullOrgGrid,
   type ProfileRole,
 } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
-import { addWeeks, endOfWeekExclusive, startOfWeekMonday } from '@/lib/datetime';
+import {
+  addWeeks,
+  endOfWeekExclusive,
+  formatShiftTimeRange,
+  startOfWeekMonday,
+} from '@/lib/datetime';
+import { friendlyDbError } from '@/lib/rota/friendlyDbError';
+import { GRID_END_HOUR, localYmd } from '@/lib/rota/weekGridLayout';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-type Profile = { id: string; org_id: string; role: ProfileRole; full_name: string };
+import { RotaHowItWorksPanel, RotaHowItWorksSubtitle } from '@/components/rota/RotaHowItWorks';
+import { RotaMembersPanel } from '@/components/rota/RotaMembersPanel';
+import { RotaRequestsPanel, type RequestShiftRef } from '@/components/rota/RotaRequestsPanel';
+import { RotaQuickAddShiftPopover } from '@/components/rota/RotaQuickAddShiftPopover';
+import { RotaWeekTimeGrid } from '@/components/rota/RotaWeekTimeGrid';
+
+type Profile = {
+  id: string;
+  org_id: string;
+  role: ProfileRole;
+  full_name: string;
+  org_timezone?: string | null;
+};
+
+type RotaBrief = { id: string; title: string; kind: string } | null;
 
 type ShiftRow = {
   id: string;
   dept_id: string | null;
+  rota_id: string | null;
   user_id: string | null;
   role_label: string | null;
   start_time: string;
@@ -23,24 +48,14 @@ type ShiftRow = {
   source: string;
   departments: { name: string } | null;
   assignee: { full_name: string } | null;
+  rotas: RotaBrief;
 };
 
 type ViewMode = 'my' | 'team' | 'full';
 
-const TIME_LABELS = [
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '13:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '18:00',
-  '19:00',
-];
+type RotaPageSection = 'schedule' | 'requests' | 'setup';
+
+type RotaRow = { id: string; title: string; kind: string; dept_id: string | null; status: string };
 
 const SHIFT_VARIANTS = [
   {
@@ -83,22 +98,69 @@ function formatWeekRange(weekStart: Date): string {
   const d2 = end.getDate();
   if (m1 === m2 && y1 === y2) {
     const month = weekStart.toLocaleString(undefined, { month: 'long' });
-    return `${d1}–${d2} ${month} ${y1}`;
+    return `${d1}-${d2} ${month} ${y1}`;
   }
-  return `${weekStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
-}
-
-function isToday(d: Date): boolean {
-  const t = new Date();
-  return (
-    d.getFullYear() === t.getFullYear() &&
-    d.getMonth() === t.getMonth() &&
-    d.getDate() === t.getDate()
-  );
+  return `${weekStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 
 const NAV_BTN =
-  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white text-sm text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]';
+  'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#d4d2cc] bg-white text-sm text-[#5c5c5c] shadow-sm transition-colors hover:bg-[#f3f2ee]';
+
+/** Primary actions - filled */
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#121212] px-4 py-2.5 text-[13px] font-semibold text-[#faf9f6] shadow-sm transition hover:bg-[#2d2d2d] active:scale-[0.99]';
+
+/** Secondary - outline */
+const BTN_SECONDARY =
+  'inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#d4d2cc] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#121212] shadow-sm transition hover:bg-[#f7f6f2] active:scale-[0.99]';
+
+/** Tertiary - no border, subtle hover */
+const BTN_GHOST =
+  'inline-flex items-center justify-center rounded-lg px-3 py-2 text-[13px] font-medium text-[#5c5c5c] transition hover:bg-[#ebeae6]';
+
+const SEGMENT_WRAP = 'inline-flex flex-wrap gap-1 rounded-xl border border-[#d4d2cc] bg-[#f3f2ee] p-1';
+const SEGMENT_ACTIVE = 'rounded-lg bg-white px-3.5 py-2 text-[13px] font-semibold text-[#121212] shadow-sm';
+const SEGMENT_IDLE =
+  'rounded-lg px-3.5 py-2 text-[13px] font-medium text-[#6b6b6b] transition hover:text-[#121212]';
+
+const QUICK_ADD_POPOVER_W = 380;
+const QUICK_ADD_POPOVER_H = 420;
+
+/** Anchor popover near the selected grid cell: horizontal centre on anchorX, vertical near anchorY (upper third of card). */
+function clampQuickAddPosition(anchorX: number, anchorY: number): { top: number; left: number } {
+  const margin = 12;
+  const left = Math.min(
+    Math.max(margin, anchorX - QUICK_ADD_POPOVER_W / 2),
+    window.innerWidth - QUICK_ADD_POPOVER_W - margin,
+  );
+  const topOffset = 56;
+  const top = Math.min(
+    Math.max(margin, anchorY - topOffset),
+    window.innerHeight - QUICK_ADD_POPOVER_H - margin,
+  );
+  return { top, left };
+}
+
+function toDatetimeLocalValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** `datetime-local` value from a **local** wall-time `Date` (do not round-trip through `toISOString()`). */
+function localDateToDatetimeLocalValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function shiftsTimeOverlap(a: ShiftRow, b: ShiftRow): boolean {
+  if (!a.user_id || !b.user_id || a.user_id !== b.user_id) return false;
+  const as = new Date(a.start_time).getTime();
+  const ae = new Date(a.end_time).getTime();
+  const bs = new Date(b.start_time).getTime();
+  const be = new Date(b.end_time).getTime();
+  return as < be && bs < ae;
+}
 
 export function RotaClient({ profile }: { profile: Profile }) {
   const supabase = useMemo(() => createClient(), []);
@@ -110,25 +172,37 @@ export function RotaClient({ profile }: { profile: Profile }) {
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [staff, setStaff] = useState<{ id: string; full_name: string }[]>([]);
   const [view, setView] = useState<ViewMode>('my');
+  const [pageSection, setPageSection] = useState<RotaPageSection>('schedule');
   const [listMode, setListMode] = useState(false);
   const [filterUser, setFilterUser] = useState<string>('');
   const [filterDept, setFilterDept] = useState<string>('');
   const [shiftEditorOpen, setShiftEditorOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<ShiftRow | null>(null);
+  const [shiftSlotPreset, setShiftSlotPreset] = useState<{ startLocal: string; endLocal: string } | null>(null);
+  const [quickAdd, setQuickAdd] = useState<null | {
+    position: { top: number; left: number };
+    startLocal: string;
+    endLocal: string;
+  }>(null);
+  const [rotas, setRotas] = useState<RotaRow[]>([]);
 
   const canTeam = canViewRotaDepartmentScope(profile.role);
   const canFull = canViewRotaFullOrgGrid(profile.role);
   const canEdit = canEditRotaShifts(profile.role);
+  const showSetupSection = canCreateRota(profile.role) || canEdit;
 
   useEffect(() => {
     void (async () => {
-      const [{ data: dm }, { data: deps }, { data: profs }] = await Promise.all([
+      const [{ data: dm }, { data: deps }, { data: profs }, { data: rotaRows }] = await Promise.all([
         supabase.from('dept_managers').select('dept_id').eq('user_id', profile.id),
         supabase.from('departments').select('id,name').eq('org_id', profile.org_id),
         supabase.from('profiles').select('id,full_name').eq('org_id', profile.org_id).eq('status', 'active'),
+        supabase.from('rotas').select('id,title,kind,dept_id,status').eq('org_id', profile.org_id).order('title'),
       ]);
       setManagedDeptIds((dm ?? []).map((r) => r.dept_id as string));
       setDepartments((deps ?? []) as { id: string; name: string }[]);
       setStaff((profs ?? []) as { id: string; full_name: string }[]);
+      setRotas((rotaRows ?? []) as RotaRow[]);
     })();
   }, [supabase, profile.id, profile.org_id]);
 
@@ -137,8 +211,22 @@ export function RotaClient({ profile }: { profile: Profile }) {
     if (view === 'full' && !canFull) setView('my');
   }, [view, canTeam, canFull]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  useEffect(() => {
+    setQuickAdd(null);
+  }, [weekStart]);
+
+  useEffect(() => {
+    if (listMode) setQuickAdd(null);
+  }, [listMode]);
+
+  useEffect(() => {
+    if (pageSection !== 'schedule') setQuickAdd(null);
+  }, [pageSection]);
+
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setLoading(true);
+    try {
     const from = weekStart.toISOString();
     const to = endOfWeekExclusive(weekStart).toISOString();
 
@@ -147,7 +235,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
 
     let q = supabase
       .from('rota_shifts')
-      .select('id, dept_id, user_id, role_label, start_time, end_time, notes, source')
+        .select('id, dept_id, rota_id, user_id, role_label, start_time, end_time, notes, source, rotas(id,title,kind)')
       .eq('org_id', profile.org_id)
       .gte('start_time', from)
       .lt('start_time', to)
@@ -158,7 +246,6 @@ export function RotaClient({ profile }: { profile: Profile }) {
     } else if (view === 'team' && profile.role === 'manager') {
       if (!managedDeptIds.length) {
         setShifts([]);
-        setLoading(false);
         return;
       }
       q = q.in('dept_id', managedDeptIds);
@@ -172,24 +259,38 @@ export function RotaClient({ profile }: { profile: Profile }) {
       let rows: ShiftRow[] = (data ?? []).map((r) => {
         const deptId = r.dept_id as string | null;
         const uid = r.user_id as string | null;
+          const rotRaw = (r as unknown as { rotas?: unknown }).rotas;
+          const rot: RotaBrief =
+            rotRaw == null
+              ? null
+              : Array.isArray(rotRaw)
+                ? ((rotRaw[0] as { id: string; title: string; kind: string } | undefined) ?? null)
+                : (rotRaw as { id: string; title: string; kind: string });
         return {
           id: r.id as string,
           dept_id: deptId,
+            rota_id: (r.rota_id as string | null) ?? null,
           user_id: uid,
           role_label: r.role_label as string | null,
           start_time: r.start_time as string,
           end_time: r.end_time as string,
           notes: r.notes as string | null,
           source: r.source as string,
-          departments: deptId ? { name: dm.get(deptId) ?? '—' } : null,
-          assignee: uid ? { full_name: sm.get(uid) ?? '—' } : null,
+          departments: deptId ? { name: dm.get(deptId) ?? '-' } : null,
+          assignee: uid ? { full_name: sm.get(uid) ?? '-' } : null,
+            rotas: rot,
         };
       });
       if (filterUser) rows = rows.filter((r) => r.user_id === filterUser);
       if (filterDept) rows = rows.filter((r) => r.dept_id === filterDept);
       setShifts(rows);
     }
-    setLoading(false);
+    } catch (e) {
+      console.error(e);
+      setShifts([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, [
     supabase,
     profile.org_id,
@@ -201,11 +302,48 @@ export function RotaClient({ profile }: { profile: Profile }) {
     staff,
     filterUser,
     filterDept,
+    profile.role,
   ]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const loadRef = useRef(load);
+  loadRef.current = load;
+
+  useEffect(() => {
+    const ch = supabase
+      .channel(`rota-shifts-${profile.org_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rota_shifts',
+          filter: `org_id=eq.${profile.org_id}`,
+        },
+        () => {
+          void loadRef.current({ silent: true });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [supabase, profile.org_id]);
+
+  const persistShiftMove = useCallback(
+    async (shiftId: string, start_time: string, end_time: string) => {
+      const { error } = await supabase.from('rota_shifts').update({ start_time, end_time }).eq('id', shiftId);
+      if (error) {
+        window.alert(friendlyDbError(error.message));
+        return;
+      }
+      await load({ silent: true });
+    },
+    [supabase, load],
+  );
 
   const days = useMemo(() => {
     const out: Date[] = [];
@@ -217,20 +355,57 @@ export function RotaClient({ profile }: { profile: Profile }) {
     return out;
   }, [weekStart]);
 
-  const byDay = useMemo(() => {
-    const m = new Map<string, ShiftRow[]>();
-    for (const d of days) {
-      const key = d.toDateString();
-      m.set(key, []);
+  const overlapShiftIds = useMemo(() => {
+    const s = new Set<string>();
+    for (let i = 0; i < shifts.length; i++) {
+      for (let j = i + 1; j < shifts.length; j++) {
+        if (shiftsTimeOverlap(shifts[i], shifts[j])) {
+          s.add(shifts[i].id);
+          s.add(shifts[j].id);
+        }
+      }
     }
+    return s;
+  }, [shifts]);
+
+  const draftSlotHighlight = useMemo(() => {
+    if (!quickAdd) return null;
+    const startD = new Date(quickAdd.startLocal);
+    const endD = new Date(quickAdd.endLocal);
+    if (Number.isNaN(startD.getTime()) || Number.isNaN(endD.getTime())) return null;
+    const dayIndex = days.findIndex((dd) => localYmd(dd) === localYmd(startD));
+    if (dayIndex < 0) return null;
+    const startMin = startD.getHours() * 60 + startD.getMinutes();
+    let endMin =
+      localYmd(endD) !== localYmd(startD)
+        ? GRID_END_HOUR * 60
+        : endD.getHours() * 60 + endD.getMinutes();
+    if (endMin <= startMin) endMin = startMin + 60;
+    return {
+      dayIndex,
+      startMin,
+      endMin,
+      primary: '(No title)',
+      secondary: formatShiftTimeRange(startD.toISOString(), endD.toISOString(), profile.org_timezone),
+    };
+  }, [quickAdd, days, profile.org_timezone]);
+
+  const requestShiftRefs = useMemo((): { my: RequestShiftRef[]; swap: RequestShiftRef[] } => {
+    const my: RequestShiftRef[] = [];
+    const swap: RequestShiftRef[] = [];
     for (const s of shifts) {
-      const dt = new Date(s.start_time);
-      const key = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).toDateString();
-      if (!m.has(key)) m.set(key, []);
-      m.get(key)!.push(s);
+      const ref: RequestShiftRef = {
+        id: s.id,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        role_label: s.role_label,
+        assigneeName: s.assignee?.full_name ?? (s.user_id ? null : 'Open slot'),
+      };
+      if (s.user_id === profile.id) my.push(ref);
+      else if (s.user_id) swap.push(ref);
     }
-    return m;
-  }, [days, shifts]);
+    return { my, swap };
+  }, [shifts, profile.id]);
 
   function exportCsv() {
     const lines = [
@@ -256,61 +431,155 @@ export function RotaClient({ profile }: { profile: Profile }) {
   }
 
   function openAddShift() {
+    setPageSection('schedule');
+    setEditingShift(null);
+    setShiftSlotPreset(null);
     setShiftEditorOpen(true);
     setTimeout(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  }
+
+  function openQuickAddFromGrid(detail: {
+    dayIndex: number;
+    startMinutesFromMidnight: number;
+    endMinutesFromMidnight: number;
+    clientX: number;
+    clientY: number;
+    popoverAnchorX: number;
+    popoverAnchorY: number;
+  }) {
+    const d = days[detail.dayIndex];
+    if (!d) return;
+    const startMin = detail.startMinutesFromMidnight;
+    let endMin = detail.endMinutesFromMidnight;
+    if (endMin <= startMin) endMin = startMin + 60;
+
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    start.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    end.setHours(Math.floor(endMin / 60), endMin % 60, 0, 0);
+    if (end <= start) {
+      end.setTime(start.getTime() + 60 * 60 * 1000);
+    }
+    setPageSection('schedule');
+    setQuickAdd({
+      position: clampQuickAddPosition(detail.popoverAnchorX, detail.popoverAnchorY),
+      startLocal: localDateToDatetimeLocalValue(start),
+      endLocal: localDateToDatetimeLocalValue(end),
+    });
+  }
+
+  function openEditShift(s: ShiftRow) {
+    setPageSection('schedule');
+    setShiftSlotPreset(null);
+    setEditingShift(s);
+    setShiftEditorOpen(true);
+    setTimeout(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  }
+
+  function dismissShiftEditor() {
+    setEditingShift(null);
+    setShiftSlotPreset(null);
+    setShiftEditorOpen(false);
   }
 
   const scopeSegments = [
     { mode: 'my' as const, label: 'My schedule', show: true },
     { mode: 'team' as const, label: 'Department', show: canTeam },
-    { mode: 'full' as const, label: 'Full rota', show: canFull },
+    { mode: 'full' as const, label: 'Whole organisation', show: canFull },
   ].filter((x) => x.show);
 
   const fieldSelect =
     'rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-2.5 py-2 text-sm text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10';
 
   function shiftTitleLines(s: ShiftRow): { time: string; primary: string; secondary: string | null } {
-    const time = `${new Date(s.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(s.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const time = formatShiftTimeRange(s.start_time, s.end_time, profile.org_timezone);
+    const rotaBit = s.rotas?.title ? s.rotas.title : null;
     if (view === 'my') {
       return {
         time,
-        primary: s.departments?.name ?? 'Shift',
-        secondary: s.role_label,
+        primary: rotaBit ?? s.departments?.name ?? 'Shift',
+        secondary: [s.role_label, s.departments?.name].filter(Boolean).join(' · ') || null,
       };
     }
     return {
       time,
-      primary: s.assignee?.full_name ?? 'Unassigned',
-      secondary: [s.departments?.name, s.role_label].filter(Boolean).join(' · ') || null,
+      primary: s.assignee?.full_name ?? 'Open slot',
+      secondary: [rotaBit, s.departments?.name, s.role_label].filter(Boolean).join(' · ') || null,
     };
+  }
+
+  async function claimOpenShift(shiftId: string) {
+    const { error } = await supabase.rpc('rota_claim_open_shift', { p_shift_id: shiftId });
+    if (error) window.alert(friendlyDbError(error.message));
+    else void load({ silent: true });
   }
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-[28px]">
-      <div className="mb-5">
-        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Rota</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">Your schedule and team shifts.</p>
+      <div className="mb-4">
+        <h1 className="font-authSerif text-[26px] tracking-tight text-[#121212]">Rota</h1>
+        <RotaHowItWorksSubtitle role={profile.role} />
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-[#d8d8d8] bg-white p-1 w-fit">
+      <RotaHowItWorksPanel role={profile.role} />
+
+      <nav className="mb-6 flex flex-wrap gap-2" aria-label="Rota sections">
+        <button
+          type="button"
+          onClick={() => setPageSection('schedule')}
+          className={pageSection === 'schedule' ? SEGMENT_ACTIVE : SEGMENT_IDLE}
+        >
+          Schedule
+        </button>
+        <button
+          type="button"
+          onClick={() => setPageSection('requests')}
+          className={pageSection === 'requests' ? SEGMENT_ACTIVE : SEGMENT_IDLE}
+        >
+          Requests &amp; swaps
+        </button>
+        {showSetupSection ? (
+          <button
+            type="button"
+            onClick={() => setPageSection('setup')}
+            className={pageSection === 'setup' ? SEGMENT_ACTIVE : SEGMENT_IDLE}
+          >
+            Rotas &amp; access
+          </button>
+        ) : null}
+      </nav>
+
+      {pageSection === 'schedule' ? (
+        <div className="rounded-2xl border border-[#e4e2dc] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="border-b border-[#ebe9e4] px-4 py-4 sm:px-6">
+            <p className="mb-3 text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">View</p>
+            <div className={SEGMENT_WRAP}>
         {scopeSegments.map(({ mode, label }) => (
           <button
             key={mode}
             type="button"
             onClick={() => setView(mode)}
-            className={[
-              'rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors',
-              view === mode
-                ? 'bg-[#121212] text-[#faf9f6]'
-                : 'text-[#6b6b6b] hover:bg-[#f5f4f1]',
-            ].join(' ')}
+                  className={view === mode ? SEGMENT_ACTIVE : SEGMENT_IDLE}
           >
             {label}
           </button>
         ))}
+            </div>
+            {canTeam ? (
+              <p className="mt-3 max-w-2xl text-[12px] leading-relaxed text-[#6b6b6b]">
+                <strong className="font-semibold text-[#121212]">Department</strong> shows shifts in the departments
+                you work with. If you are a manager, that usually means departments you manage.
+              </p>
+            ) : null}
+            {!canTeam ? (
+              <p className="mt-3 max-w-xl text-[12px] leading-relaxed text-[#6b6b6b]">
+                Only <strong className="font-semibold text-[#121212]">My schedule</strong> is available for your role  - 
+                coordinators, managers, and org admins also get wider views.
+              </p>
+            ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d8d8d8] bg-[#faf9f6] px-5 py-4 sm:px-7">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ebe9e4] bg-[#faf9f6] px-4 py-4 sm:px-6">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <button
             type="button"
@@ -342,13 +611,13 @@ export function RotaClient({ profile }: { profile: Profile }) {
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-[#d8d8d8] overflow-hidden">
+          <div className="flex overflow-hidden rounded-xl border border-[#d4d2cc] bg-white shadow-sm">
             <button
               type="button"
               onClick={() => setListMode(false)}
               className={[
-                'border-r border-[#d8d8d8] px-3.5 py-1.5 text-[12.5px] transition-colors',
-                !listMode ? 'bg-[#121212] text-[#faf9f6]' : 'bg-white text-[#6b6b6b] hover:bg-[#f5f4f1]',
+                'border-r border-[#ebe9e4] px-4 py-2 text-[13px] font-semibold transition-colors',
+                !listMode ? 'bg-[#121212] text-[#faf9f6]' : 'text-[#5c5c5c] hover:bg-[#f7f6f2]',
               ].join(' ')}
             >
               Week
@@ -357,43 +626,33 @@ export function RotaClient({ profile }: { profile: Profile }) {
               type="button"
               onClick={() => setListMode(true)}
               className={[
-                'px-3.5 py-1.5 text-[12.5px] transition-colors',
-                listMode ? 'bg-[#121212] text-[#faf9f6]' : 'bg-white text-[#6b6b6b] hover:bg-[#f5f4f1]',
+                'px-4 py-2 text-[13px] font-semibold transition-colors',
+                listMode ? 'bg-[#121212] text-[#faf9f6]' : 'text-[#5c5c5c] hover:bg-[#f7f6f2]',
               ].join(' ')}
             >
               List
             </button>
           </div>
-          <button
-            type="button"
-            className="rounded-lg border border-[#d8d8d8] bg-white px-3.5 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
-            onClick={() => window.alert('Import from Google Sheets is coming soon.')}
-          >
-            Import Sheets
-          </button>
           {canFull ? (
-            <button
-              type="button"
-              className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-              onClick={() => exportCsv()}
-            >
+            <Link href="/admin/rota-import" className={BTN_SECONDARY}>
+            Import Sheets
+            </Link>
+          ) : null}
+          {canFull ? (
+            <button type="button" className={BTN_GHOST} onClick={() => exportCsv()}>
               Export CSV
             </button>
           ) : null}
           {canEdit ? (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
-              onClick={openAddShift}
-            >
-              + Add shift
+            <button type="button" className={BTN_PRIMARY} onClick={openAddShift}>
+              Add shift
             </button>
           ) : null}
         </div>
       </div>
 
       {(view === 'team' || view === 'full') && (
-        <div className="flex flex-wrap gap-3 border-b border-[#d8d8d8] bg-[#faf9f6] px-5 py-3 sm:px-7">
+        <div className="flex flex-wrap gap-3 border-b border-[#ebe9e4] bg-[#faf9f6] px-4 py-3 sm:px-6">
           <label className="flex items-center gap-2 text-[13px] text-[#6b6b6b]">
             Staff
             <select className={fieldSelect} value={filterUser} onChange={(e) => setFilterUser(e.target.value)}>
@@ -421,13 +680,21 @@ export function RotaClient({ profile }: { profile: Profile }) {
         </div>
       )}
 
-      <div className="overflow-x-auto px-5 py-5 sm:px-7">
+      <div className="overflow-x-auto px-4 py-6 sm:px-6">
         {loading ? (
-          <p className="text-sm text-[#6b6b6b]">Loading…</p>
+          <p className="text-sm text-[#6b6b6b]">Loading...</p>
         ) : listMode ? (
-          <ul className="flex flex-col gap-2.5">
+          <ul className="flex flex-col gap-3">
             {shifts.length === 0 ? (
-              <li className="text-sm text-[#6b6b6b]">No shifts this week.</li>
+              <li className="rounded-xl border border-dashed border-[#d4d2cc] bg-[#faf9f6] px-5 py-8 text-center">
+                <p className="text-[15px] font-medium text-[#121212]">No shifts this week</p>
+                <p className="mt-1 text-[13px] text-[#6b6b6b]">Try another week or switch to Department / Full rota.</p>
+                {canEdit ? (
+                  <button type="button" className={`${BTN_PRIMARY} mt-4`} onClick={openAddShift}>
+                    Add a shift
+                  </button>
+                ) : null}
+              </li>
             ) : (
               shifts.map((s) => {
                 const v = shiftVariant(s.dept_id ?? s.id);
@@ -440,11 +707,38 @@ export function RotaClient({ profile }: { profile: Profile }) {
                     <span className={`mt-1 h-8 w-1 shrink-0 rounded-full ${v.bg} ring-1 ${v.border}`} aria-hidden />
                     <div className="min-w-0 flex-1">
                       <div className={`text-[11.5px] font-semibold ${v.text}`}>{time}</div>
-                      <div className="mt-0.5 font-medium text-[#121212]">{primary}</div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 font-medium text-[#121212]">
+                        {primary}
+                        {overlapShiftIds.has(s.id) ? (
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                            Overlap
+                          </span>
+                        ) : null}
+                      </div>
                       {secondary ? (
                         <div className="mt-0.5 truncate text-[12.5px] text-[#6b6b6b]" title={secondary}>
                           {secondary}
                         </div>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 flex-col gap-1">
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          className="rounded-lg border border-[#d8d8d8] px-2.5 py-1 text-[11.5px] text-[#121212] hover:bg-[#f5f4f1]"
+                          onClick={() => openEditShift(s)}
+                        >
+                          Edit
+                        </button>
+                      ) : null}
+                      {s.user_id === null ? (
+                        <button
+                          type="button"
+                          className="rounded-lg border border-[#d8d8d8] px-2.5 py-1 text-[11.5px] text-[#121212] hover:bg-[#f5f4f1]"
+                          onClick={() => void claimOpenShift(s.id)}
+                        >
+                          Claim
+                        </button>
                       ) : null}
                     </div>
                   </li>
@@ -452,102 +746,392 @@ export function RotaClient({ profile }: { profile: Profile }) {
               })
             )}
           </ul>
-        ) : shifts.length === 0 ? (
-          <p className="py-12 text-center text-sm text-[#6b6b6b]">No shifts this week.</p>
         ) : (
-          <div className="grid min-w-[700px] grid-cols-[100px_repeat(7,minmax(0,1fr))] gap-2">
-            <div aria-hidden className="min-h-[1px]" />
-            {days.map((d) => {
-              const dayIsToday = isToday(d);
-              return (
-                <div
-                  key={d.toISOString()}
-                  className="rounded-lg bg-[#f5f4f1] px-1 py-2 text-center"
-                >
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-                    {d.toLocaleDateString(undefined, { weekday: 'short' })}
+          <div className="space-y-3">
+            {shifts.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#d4d2cc] bg-[#faf9f6] px-4 py-3 text-center sm:px-5">
+                <p className="text-[14px] font-medium text-[#121212]">No shifts this week</p>
+                <p className="mt-0.5 text-[13px] text-[#6b6b6b]">
+                  {canEdit
+                    ? 'Drag on the week grid to select a time range (or click for a one-hour slot), or use Add shift above.'
+                    : 'Shifts you can see will appear in the grid when they exist.'}
+                </p>
+                {canEdit ? (
+                  <button type="button" className={`${BTN_PRIMARY} mt-3`} onClick={openAddShift}>
+                    Add a shift
+                  </button>
+                ) : null}
                   </div>
-                  {dayIsToday ? (
-                    <div className="mx-auto mt-0.5 flex h-[30px] w-[30px] items-center justify-center rounded-full bg-[#121212] font-authSerif text-[20px] text-[#faf9f6]">
-                      {d.getDate()}
+            ) : null}
+            <RotaWeekTimeGrid
+              days={days}
+              shifts={shifts}
+              shiftVariant={shiftVariant}
+              shiftTitleLines={shiftTitleLines}
+              overlapShiftIds={overlapShiftIds}
+              canEdit={canEdit}
+              onShiftClick={(s) => openEditShift(s)}
+              onShiftTimesUpdated={(id, start, end) => persistShiftMove(id, start, end)}
+              onBackgroundSlotClick={canEdit ? (d) => openQuickAddFromGrid(d) : undefined}
+              draftSlotHighlight={canEdit ? draftSlotHighlight : null}
+            />
                     </div>
-                  ) : (
-                    <div className="mt-0.5 font-authSerif text-[20px] text-[#121212]">{d.getDate()}</div>
                   )}
                 </div>
-              );
-            })}
 
-            <div className="flex flex-col gap-1 pt-[44px]">
-              {TIME_LABELS.map((t) => (
-                <div key={t} className="flex min-h-[64px] items-start justify-end pr-2">
-                  <span className="text-[10.5px] text-[#9b9b9b]">{t}</span>
+          {canEdit && shiftEditorOpen ? (
+            <div ref={editorRef} className="border-t border-[#ebe9e4] px-4 py-5 sm:px-6">
+              <ShiftEditor
+                profile={profile}
+                departments={departments}
+                staff={staff}
+                managedDeptIds={managedDeptIds}
+                rotas={rotas}
+                requireRota={profile.role === 'coordinator'}
+                prefillAssigneeUserId={view === 'my' ? profile.id : null}
+                editingShift={editingShift}
+                slotPreset={shiftSlotPreset}
+                onDismiss={dismissShiftEditor}
+                onSaved={() => {
+                  setEditingShift(null);
+                  setShiftSlotPreset(null);
+                  setShiftEditorOpen(false);
+                  void load({ silent: true });
+                }}
+                onRotasUpdated={() =>
+                  void supabase
+                    .from('rotas')
+                    .select('id,title,kind,dept_id,status')
+                    .eq('org_id', profile.org_id)
+                    .order('title')
+                    .then(({ data }) => setRotas((data ?? []) as RotaRow[]))
+                }
+              />
                 </div>
-              ))}
+          ) : null}
             </div>
+      ) : pageSection === 'requests' ? (
+        <RotaRequestsPanel
+          profile={profile}
+          myShifts={requestShiftRefs.my}
+          swapTargets={requestShiftRefs.swap}
+          onRefresh={() => void load({ silent: true })}
+        />
+      ) : (
+        <div className="space-y-6">
+          <p className="text-[14px] leading-relaxed text-[#5c5c5c]">
+            Create <strong className="font-semibold text-[#121212]">rotas</strong> (named schedules), publish or draft
+            them, transfer ownership, and choose who is invited to each rota. To place{' '}
+            <strong className="font-semibold text-[#121212]">shifts</strong> on the calendar, use the{' '}
+            <strong className="font-semibold text-[#121212]">Schedule</strong> tab and Add shift.
+          </p>
+          {canCreateRota(profile.role) ? (
+            <RotaManagePanel
+              profile={profile}
+              departments={departments}
+              managedDeptIds={managedDeptIds}
+              rotas={rotas}
+              onRotasChange={(next) => setRotas(next)}
+            />
+          ) : null}
+          {canEdit ? (
+            <RotaMembersPanel rotas={rotas.map((r) => ({ id: r.id, title: r.title }))} staff={staff} />
+          ) : null}
+        </div>
+      )}
+      {quickAdd && pageSection === 'schedule' ? (
+        <RotaQuickAddShiftPopover
+          orgId={profile.org_id}
+          profileId={profile.id}
+          assignToSelfIfUnassigned={view === 'my'}
+          profileRole={profile.role}
+          departments={departments}
+          staff={staff}
+          managedDeptIds={managedDeptIds}
+          rotas={rotas}
+          requireRota={profile.role === 'coordinator'}
+          position={quickAdd.position}
+          startLocal={quickAdd.startLocal}
+          endLocal={quickAdd.endLocal}
+          onTimesChange={(startLocal, endLocal) =>
+            setQuickAdd((q) => (q ? { ...q, startLocal, endLocal } : null))
+          }
+          onClose={() => setQuickAdd(null)}
+          onCreated={async () => {
+            await load({ silent: true });
+          }}
+          onMoreOptions={() => {
+            setShiftSlotPreset({
+              startLocal: quickAdd.startLocal,
+              endLocal: quickAdd.endLocal,
+            });
+            setQuickAdd(null);
+            setEditingShift(null);
+            setShiftEditorOpen(true);
+            setTimeout(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
 
-            {days.map((d) => {
-              const key = d.toDateString();
-              const list = byDay.get(key) ?? [];
+function RotaManagePanel({
+  profile,
+  departments,
+  managedDeptIds,
+  rotas,
+  onRotasChange,
+}: {
+  profile: Profile;
+  departments: { id: string; name: string }[];
+  managedDeptIds: string[];
+  rotas: RotaRow[];
+  onRotasChange: (r: RotaRow[]) => void;
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('New rota');
+  const [kind, setKind] = useState('shift');
+  const [deptId, setDeptId] = useState('');
+  const [newRotaStatus, setNewRotaStatus] = useState<'draft' | 'published'>('published');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [xferRota, setXferRota] = useState('');
+  const [xferUser, setXferUser] = useState('');
+  const [staff, setStaff] = useState<{ id: string; full_name: string }[]>([]);
+
+  const deptOpts =
+    profile.role === 'manager'
+      ? departments.filter((d) => managedDeptIds.includes(d.id))
+      : departments;
+
+  useEffect(() => {
+    void supabase
+      .from('profiles')
+      .select('id,full_name')
+      .eq('org_id', profile.org_id)
+      .eq('status', 'active')
+      .then(({ data }) => setStaff((data ?? []) as { id: string; full_name: string }[]));
+  }, [supabase, profile.org_id]);
+
+  async function createRota() {
+    setMsg(null);
+    if (profile.role === 'manager' && !deptId) {
+      setMsg(
+        'Choose a department you manage. Managers can only create rotas tied to one of their departments.',
+      );
+      return;
+    }
+    const { data, error } = await supabase
+      .from('rotas')
+      .insert({
+        org_id: profile.org_id,
+        title: title.trim() || 'Rota',
+        kind,
+        owner_id: profile.id,
+        dept_id: deptId || null,
+        status: newRotaStatus,
+        published_at: newRotaStatus === 'published' ? new Date().toISOString() : null,
+      })
+      .select('id,title,kind,dept_id,status')
+      .single();
+    if (error) {
+      setMsg(friendlyDbError(error.message));
+      return;
+    }
+    onRotasChange([...rotas, data as RotaRow]);
+    setOpen(false);
+  }
+
+  async function transfer() {
+    setMsg(null);
+    if (!xferRota || !xferUser) {
+      setMsg('Pick rota and new owner.');
+      return;
+    }
+    const { error } = await supabase.rpc('rota_transfer_owner', {
+      p_rota_id: xferRota,
+      p_new_owner_id: xferUser,
+    });
+    if (error) setMsg(friendlyDbError(error.message));
+    else {
+      setXferRota('');
+      setXferUser('');
+      const { data } = await supabase
+        .from('rotas')
+        .select('id,title,kind,dept_id,status')
+        .eq('org_id', profile.org_id)
+        .order('title');
+      onRotasChange((data ?? []) as RotaRow[]);
+    }
+  }
+
+  async function setRotaStatus(rotaId: string, status: 'draft' | 'published') {
+    setMsg(null);
+    const { error } = await supabase
+      .from('rotas')
+      .update({
+        status,
+        published_at: status === 'published' ? new Date().toISOString() : null,
+      })
+      .eq('id', rotaId);
+    if (error) setMsg(friendlyDbError(error.message));
+    else {
+      const { data } = await supabase
+        .from('rotas')
+        .select('id,title,kind,dept_id,status')
+        .eq('org_id', profile.org_id)
+        .order('title');
+      onRotasChange((data ?? []) as RotaRow[]);
+    }
+  }
+
               return (
-                <div key={`col-${key}`} className="flex flex-col gap-1">
-                  {list.length === 0 ? (
+    <div className="rounded-2xl border border-[#e4e2dc] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] sm:p-7">
                     <button
                       type="button"
-                      disabled={!canEdit}
-                      onClick={() => canEdit && openAddShift()}
-                      className={[
-                        'flex min-h-[min(768px,60vh)] items-center justify-center rounded-lg border border-dashed border-[#d8d8d8] text-sm text-[#9b9b9b] transition-colors',
-                        canEdit ? 'cursor-pointer hover:border-[#c8c8c8] hover:bg-[#faf9f6]' : 'cursor-default',
-                      ].join(' ')}
-                    >
-                      +
+        className={BTN_GHOST}
+        onClick={() => setOpen(!open)}
+      >
+        {open ? 'Hide rota admin tools' : 'Show rota admin tools'}
                     </button>
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      {list.map((s) => {
-                        const v = shiftVariant(s.dept_id ?? s.id);
-                        const { time, primary, secondary } = shiftTitleLines(s);
-                        const title = [primary, secondary, s.notes].filter(Boolean).join(' — ');
-                        return (
-                          <div
-                            key={s.id}
-                            title={title}
-                            className={[
-                              'cursor-default rounded-lg border px-2.5 py-2 text-[11.5px] transition hover:opacity-90',
-                              v.bg,
-                              v.border,
-                              v.text,
-                            ].join(' ')}
-                          >
-                            <div className="font-semibold leading-tight">{time}</div>
-                            <div className="mt-0.5 truncate leading-snug">{primary}</div>
-                            {secondary ? (
-                              <div className="mt-0.5 truncate text-[10.5px] opacity-90">{secondary}</div>
-                            ) : null}
+      {open ? (
+        <div className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div className="rounded-xl border border-[#ebe9e4] bg-[#faf9f6] p-5 sm:p-6">
+            <h3 className="font-authSerif text-[17px] text-[#121212]">Create rota</h3>
+            <p className="mt-1 text-[13px] leading-relaxed text-[#6b6b6b]">
+              {profile.role === 'manager'
+                ? 'Pick a department you manage - required for your role.'
+                : 'Department is optional for org admins and coordinators.'}
+            </p>
+            <label className="mt-4 block text-[13px] font-medium text-[#121212]">
+              Title
+              <input
+                className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm text-[#121212] outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </label>
+            <label className="mt-4 block text-[13px] font-medium text-[#121212]">
+              Kind
+              <select
+                className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
+                value={kind}
+                onChange={(e) => setKind(e.target.value)}
+              >
+                <option value="shift">Shift</option>
+                <option value="activity">Activity</option>
+                <option value="reception">Reception</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label className="mt-4 block text-[13px] font-medium text-[#121212]">
+              Department
+              {profile.role === 'manager' ? (
+                <span className="font-normal text-[#b45309]"> (required)</span>
+              ) : (
+                <span className="font-normal text-[#6b6b6b]"> (optional)</span>
+              )}
+              <select
+                className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
+                value={deptId}
+                onChange={(e) => setDeptId(e.target.value)}
+              >
+                <option value="">-</option>
+                {deptOpts.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="mt-4 block text-[13px] font-medium text-[#121212]">
+              Visibility
+              <select
+                className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
+                value={newRotaStatus}
+                onChange={(e) => setNewRotaStatus(e.target.value as 'draft' | 'published')}
+              >
+                <option value="published">Published (visible to roster)</option>
+                <option value="draft">Draft (editors only)</option>
+              </select>
+            </label>
+            <button type="button" className={`${BTN_PRIMARY} mt-5 w-full sm:w-auto`} onClick={() => void createRota()}>
+              Create rota
+            </button>
                           </div>
-                        );
-                      })}
+          {canTransferRotaOwnership(profile.role) ? (
+            <div className="rounded-xl border border-[#ebe9e4] bg-[#faf9f6] p-5 sm:p-6">
+              <h3 className="font-authSerif text-[17px] text-[#121212]">Transfer ownership</h3>
+              <p className="mt-1 text-[13px] text-[#6b6b6b]">Org admin only - hand a rota to another staff member.</p>
+              <label className="mt-4 block text-[13px] font-medium text-[#121212]">
+                Rota
+                <select
+                  className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
+                  value={xferRota}
+                  onChange={(e) => setXferRota(e.target.value)}
+                >
+                  <option value="">-</option>
+                  {rotas.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="mt-4 block text-[13px] font-medium text-[#121212]">
+                New owner
+                <select
+                  className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
+                  value={xferUser}
+                  onChange={(e) => setXferUser(e.target.value)}
+                >
+                  <option value="">-</option>
+                  {staff.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.full_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" className={`${BTN_PRIMARY} mt-5 w-full sm:w-auto`} onClick={() => void transfer()}>
+                Transfer
+              </button>
                     </div>
-                  )}
+          ) : null}
+          {rotas.length > 0 ? (
+            <div className="rounded-xl border border-[#ebe9e4] bg-[#faf9f6] p-5 sm:col-span-2 sm:p-6">
+              <h3 className="font-authSerif text-[17px] text-[#121212]">Draft or published</h3>
+              <p className="mt-1 text-[13px] leading-relaxed text-[#6b6b6b]">
+                Draft rotas stay hidden from most staff until you publish. Notifications are not sent for draft rotas.
+              </p>
+              <ul className="mt-4 space-y-2">
+                {rotas.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#d4d2cc] bg-white px-4 py-3 text-[13px]"
+                  >
+                    <span className="font-medium text-[#121212]">{r.title}</span>
+                    <select
+                      className="rounded-lg border border-[#d4d2cc] bg-[#faf9f6] px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-[#121212]/10"
+                      value={r.status === 'draft' ? 'draft' : 'published'}
+                      onChange={(e) =>
+                        void setRotaStatus(r.id, e.target.value as 'draft' | 'published')
+                      }
+                    >
+                      <option value="published">Published</option>
+                      <option value="draft">Draft</option>
+                    </select>
+                  </li>
+                ))}
+              </ul>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {canEdit ? (
-        <div ref={editorRef} className="mt-2 px-5 sm:px-[28px]">
-          <ShiftEditor
-            profile={profile}
-            departments={departments}
-            staff={staff}
-            managedDeptIds={managedDeptIds}
-            open={shiftEditorOpen}
-            onOpenChange={setShiftEditorOpen}
-            onSaved={() => void load()}
-          />
+          ) : null}
+          {msg ? (
+            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-900 sm:col-span-2">
+              {msg}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -559,26 +1143,72 @@ function ShiftEditor({
   departments,
   staff,
   managedDeptIds,
-  open,
-  onOpenChange,
+  rotas,
+  requireRota,
+  prefillAssigneeUserId,
+  editingShift,
+  slotPreset,
+  onDismiss,
   onSaved,
+  onRotasUpdated,
 }: {
   profile: Profile;
   departments: { id: string; name: string }[];
   staff: { id: string; full_name: string }[];
   managedDeptIds: string[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  rotas: RotaRow[];
+  requireRota: boolean;
+  /** When creating a shift from My schedule, default staff to this user so the row appears in that view. */
+  prefillAssigneeUserId: string | null;
+  editingShift: ShiftRow | null;
+  slotPreset: { startLocal: string; endLocal: string } | null;
+  onDismiss: () => void;
   onSaved: () => void;
+  onRotasUpdated: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const [rotaId, setRotaId] = useState('');
   const [deptId, setDeptId] = useState('');
-  const [userId, setUserId] = useState(profile.id);
+  const [userId, setUserId] = useState('');
   const [roleLabel, setRoleLabel] = useState('');
   const [notes, setNotes] = useState('');
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [newRotaTitle, setNewRotaTitle] = useState('');
+  const [newRotaKind, setNewRotaKind] = useState('shift');
+  const [newRotaDept, setNewRotaDept] = useState('');
+
+  const isEdit = Boolean(editingShift);
+
+  useEffect(() => {
+    setMsg(null);
+    if (editingShift) {
+      setRotaId(editingShift.rota_id ?? '');
+      setDeptId(editingShift.dept_id ?? '');
+      setUserId(editingShift.user_id ?? '');
+      setRoleLabel(editingShift.role_label ?? '');
+      setNotes(editingShift.notes ?? '');
+      setStartLocal(toDatetimeLocalValue(editingShift.start_time));
+      setEndLocal(toDatetimeLocalValue(editingShift.end_time));
+    } else if (slotPreset) {
+      setRotaId('');
+      setDeptId(profile.role === 'manager' && managedDeptIds.length === 1 ? managedDeptIds[0]! : '');
+      setUserId(prefillAssigneeUserId ?? '');
+      setRoleLabel('');
+      setNotes('');
+      setStartLocal(slotPreset.startLocal);
+      setEndLocal(slotPreset.endLocal);
+    } else {
+      setRotaId('');
+      setDeptId('');
+      setUserId(prefillAssigneeUserId ?? '');
+      setRoleLabel('');
+      setNotes('');
+      setStartLocal('');
+      setEndLocal('');
+    }
+  }, [editingShift, slotPreset, profile.role, managedDeptIds, prefillAssigneeUserId]);
 
   const deptOptions =
     profile.role === 'manager'
@@ -590,6 +1220,10 @@ function ShiftEditor({
 
   async function save() {
     setMsg(null);
+    if (requireRota && !rotaId) {
+      setMsg('Select a rota (coordinators must link shifts to a rota).');
+      return;
+    }
     if (!deptId && profile.role === 'manager') {
       setMsg('Department is required.');
       return;
@@ -604,10 +1238,50 @@ function ShiftEditor({
       setMsg('End must be after start.');
       return;
     }
+    const assignee = userId || null;
+    if (assignee) {
+      let q = supabase
+        .from('rota_shifts')
+        .select('id')
+        .eq('org_id', profile.org_id)
+        .eq('user_id', assignee)
+        .lt('start_time', end.toISOString())
+        .gt('end_time', start.toISOString())
+        .limit(1);
+      if (editingShift) {
+        q = q.neq('id', editingShift.id);
+      }
+      const { data: overlap } = await q;
+      if (overlap?.length) {
+        const ok = window.confirm(
+          'This person already has a shift overlapping this window. Save anyway?'
+        );
+        if (!ok) return;
+      }
+    }
+    if (isEdit && editingShift) {
+      const { error } = await supabase
+        .from('rota_shifts')
+        .update({
+          rota_id: rotaId || null,
+          dept_id: deptId || null,
+          user_id: assignee,
+          role_label: roleLabel || null,
+          notes: notes || null,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+        })
+        .eq('id', editingShift.id);
+      if (error) {
+        setMsg(friendlyDbError(error.message));
+        return;
+      }
+    } else {
     const { error } = await supabase.from('rota_shifts').insert({
       org_id: profile.org_id,
+        rota_id: rotaId || null,
       dept_id: deptId || null,
-      user_id: userId || null,
+        user_id: assignee,
       role_label: roleLabel || null,
       notes: notes || null,
       start_time: start.toISOString(),
@@ -615,28 +1289,140 @@ function ShiftEditor({
       source: 'manual',
     });
     if (error) {
-      setMsg(error.message);
+        setMsg(friendlyDbError(error.message));
       return;
     }
-    onOpenChange(false);
+    }
+    onDismiss();
     onSaved();
   }
 
+  async function removeShift() {
+    if (!editingShift) return;
+    if (!window.confirm('Delete this shift? This cannot be undone.')) return;
+    setMsg(null);
+    const { error } = await supabase.from('rota_shifts').delete().eq('id', editingShift.id);
+    if (error) {
+      setMsg(friendlyDbError(error.message));
+      return;
+    }
+    onDismiss();
+    onSaved();
+  }
+
+  async function createRotaInline() {
+    setMsg(null);
+    if (profile.role === 'manager' && !newRotaDept) {
+      setMsg('Pick a department for the new rota.');
+      return;
+    }
+    const { data, error } = await supabase
+      .from('rotas')
+      .insert({
+        org_id: profile.org_id,
+        title: newRotaTitle.trim() || 'Rota',
+        kind: newRotaKind,
+        owner_id: profile.id,
+        dept_id: newRotaDept || null,
+        status: 'published',
+        published_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+    if (error) {
+      setMsg(friendlyDbError(error.message));
+      return;
+    }
+    setRotaId((data as { id: string }).id);
+    onRotasUpdated();
+  }
+
   return (
-    <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
+    <div className="rounded-2xl border border-[#e4e2dc] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#ebe9e4] px-5 py-4 sm:px-6">
+        <div>
+          <h2 className="font-authSerif text-[18px] text-[#121212]">{isEdit ? 'Edit shift' : 'New shift'}</h2>
+          {isEdit ? (
+            <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-[#6b6b6b]">
+              Managers and rota owners can adjust shifts here. Staff use <strong className="font-medium text-[#121212]">Requests &amp; swaps</strong> for their own assignments.
+            </p>
+          ) : (
+            <p className="mt-1 max-w-xl text-[13px] text-[#6b6b6b]">
+              Add this shift to the calendar for the selected week.
+            </p>
+          )}
+        </div>
       <button
         type="button"
-        className="text-[13px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-        onClick={() => onOpenChange(!open)}
+          className={`${BTN_SECONDARY} shrink-0`}
+          onClick={() => onDismiss()}
       >
-        {open ? 'Hide add shift' : '+ Add shift'}
+          Close
       </button>
-      {open ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      </div>
+      <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
+          <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">
+            Rota {requireRota ? '(required)' : '(optional - link shifts to a named rota)'}
+            <select className={fieldClass} value={rotaId} onChange={(e) => setRotaId(e.target.value)}>
+              <option value="">-</option>
+              {rotas.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title} ({r.kind}){r.status === 'draft' ? ' - draft' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="sm:col-span-2 rounded-xl border border-dashed border-[#d4d2cc] bg-[#faf9f6] p-4 sm:p-5">
+            <p className="text-[13px] font-semibold text-[#121212]">Need a new rota?</p>
+            <p className="mt-1 text-[12.5px] text-[#6b6b6b]">
+              {isEdit ? 'Finish editing this shift first, or use Roster setup to create rotas.' : 'Create one inline and it will be selected for this shift.'}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <input
+                className={fieldClass + ' max-w-[200px]'}
+                placeholder="Title"
+                value={newRotaTitle}
+                onChange={(e) => setNewRotaTitle(e.target.value)}
+                disabled={isEdit}
+              />
+              <select
+                className={fieldClass + ' max-w-[140px]'}
+                value={newRotaKind}
+                onChange={(e) => setNewRotaKind(e.target.value)}
+                disabled={isEdit}
+              >
+                <option value="shift">shift</option>
+                <option value="activity">activity</option>
+                <option value="reception">reception</option>
+                <option value="other">other</option>
+              </select>
+              <select
+                className={fieldClass + ' max-w-[160px]'}
+                value={newRotaDept}
+                onChange={(e) => setNewRotaDept(e.target.value)}
+                disabled={isEdit}
+              >
+                <option value="">dept</option>
+                {deptOptions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={`${BTN_SECONDARY} text-[12.5px] disabled:opacity-40`}
+                onClick={() => void createRotaInline()}
+                disabled={isEdit}
+              >
+                Create &amp; select
+              </button>
+            </div>
+          </div>
           <label className="text-[13px] font-medium text-[#6b6b6b]">
             Department
             <select className={fieldClass} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
-              <option value="">—</option>
+              <option value="">-</option>
               {deptOptions.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -647,6 +1433,7 @@ function ShiftEditor({
           <label className="text-[13px] font-medium text-[#6b6b6b]">
             Staff
             <select className={fieldClass} value={userId} onChange={(e) => setUserId(e.target.value)}>
+              <option value="">Open slot</option>
               {staff.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.full_name}
@@ -680,16 +1467,29 @@ function ShiftEditor({
             Notes
             <textarea className={fieldClass} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
-          {msg ? <p className="text-sm text-[#b91c1c] sm:col-span-2">{msg}</p> : null}
+          {msg ? (
+            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-900 sm:col-span-2">
+              {msg}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-3 sm:col-span-2">
+            <button type="button" className={BTN_PRIMARY} onClick={() => void save()}>
+              {isEdit ? 'Save changes' : 'Save shift'}
+            </button>
+            <button type="button" className={BTN_SECONDARY} onClick={() => onDismiss()}>
+              Cancel
+            </button>
+            {isEdit ? (
           <button
             type="button"
-            className="rounded-lg bg-[#121212] px-4 py-2.5 text-sm font-medium text-[#faf9f6] transition hover:bg-[#2a2a2a] sm:col-span-2"
-            onClick={() => void save()}
+                className="rounded-xl border border-red-300 bg-white px-4 py-2.5 text-[13px] font-semibold text-red-800 transition hover:bg-red-50"
+                onClick={() => void removeShift()}
           >
-            Save shift
+                Delete shift
           </button>
-        </div>
       ) : null}
+          </div>
+      </div>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export function LandingScreen() {
             </Text>
           </Text>
           <Text style={styles.lead}>
-            A calm, focused workspace for staff comms and day-to-day operations — built for student
+            A calm, focused workspace for staff comms and day-to-day operations - built for student
             unions who expect better than a group chat and a spreadsheet.
           </Text>
           <View style={styles.heroCtas}>

@@ -104,7 +104,7 @@ export function ManagerTeamsClient({
           <Link href="/manager/departments" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
             Departments
           </Link>{' '}
-          — department membership.
+          - department membership.
         </p>
       </div>
 
@@ -133,7 +133,7 @@ export function ManagerTeamsClient({
                     href={`/manager/departments?dept=${encodeURIComponent(d.id)}`}
                     className="shrink-0 text-[12px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                   >
-                    Open department…
+                    Open department...
                   </Link>
                 </div>
                 {teams.length === 0 ? (
@@ -225,7 +225,7 @@ export function ManagerTeamsClient({
                               onChange={(e) => setPickByTeam((p) => ({ ...p, [t.id]: e.target.value }))}
                               aria-label={`Add person to ${t.name}`}
                             >
-                              <option value="">Add someone to this team…</option>
+                              <option value="">Add someone to this team...</option>
                               {staffOptions
                                 .filter((s) => !rosterIds.has(s.id))
                                 .map((s) => (

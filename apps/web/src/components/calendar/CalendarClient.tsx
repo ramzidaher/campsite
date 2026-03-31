@@ -6,6 +6,7 @@ import {
   addMonths,
   addWeeks,
   endOfWeekExclusive,
+  formatDateTimeRangeLocal,
   formatDayLabel,
   monthCalendarWeeks,
   startOfMonth,
@@ -13,7 +14,13 @@ import {
 } from '@/lib/datetime';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-type Profile = { id: string; org_id: string; role: ProfileRole; full_name: string };
+type Profile = {
+  id: string;
+  org_id: string;
+  role: ProfileRole;
+  full_name: string;
+  org_timezone?: string | null;
+};
 
 type CalKind = 'shift' | 'event';
 
@@ -145,7 +152,7 @@ export function CalendarClient({ profile }: { profile: Profile }) {
     const [shRes, evRes] = await Promise.all([
       supabase
         .from('rota_shifts')
-        .select('id, start_time, end_time, role_label, notes, dept_id')
+        .select('id, start_time, end_time, role_label, notes, dept_id, rotas(title,kind)')
         .eq('org_id', profile.org_id)
         .gte('start_time', from)
         .lt('start_time', to)
@@ -171,9 +178,11 @@ export function CalendarClient({ profile }: { profile: Profile }) {
       const end = new Date(r.end_time as string);
       const dept = r.dept_id ? dm.get(r.dept_id as string) : null;
       const role = r.role_label as string | null;
+      const rota = (r as { rotas?: { title?: string; kind?: string } | null }).rotas;
+      const rotaBit = rota?.title?.trim() ? rota.title : null;
       const title =
-        dept || role
-          ? `Shift — ${dept ?? 'Dept'}${role ? ` (${role})` : ''}`
+        rotaBit || dept || role
+          ? `Shift - ${rotaBit ?? dept ?? 'Dept'}${role ? ` (${role})` : ''}`
           : 'Shift';
       return {
         key: `shift-${r.id}`,
@@ -388,7 +397,7 @@ export function CalendarClient({ profile }: { profile: Profile }) {
           </div>
 
           {loading ? (
-            <p className="text-sm text-[#6b6b6b]">Loading…</p>
+            <p className="text-sm text-[#6b6b6b]">Loading...</p>
           ) : view === 'month' ? (
             <div className="overflow-x-auto">
               <div className="mb-2 grid grid-cols-7 gap-2">
@@ -543,13 +552,31 @@ export function CalendarClient({ profile }: { profile: Profile }) {
       ) : null}
 
       {detail ? (
-        <DetailModal item={detail} onClose={() => setDetail(null)} />
+        <DetailModal
+          item={detail}
+          orgTimezone={profile.org_timezone}
+          onClose={() => setDetail(null)}
+        />
       ) : null}
     </div>
   );
 }
 
-function DetailModal({ item, onClose }: { item: CalItem; onClose: () => void }) {
+function DetailModal({
+  item,
+  orgTimezone,
+  onClose,
+}: {
+  item: CalItem;
+  orgTimezone?: string | null;
+  onClose: () => void;
+}) {
+  const timeLine =
+    item.allDay
+      ? item.start.toLocaleDateString()
+      : item.source === 'rota'
+        ? formatDateTimeRangeLocal(item.start, item.end ?? item.start, orgTimezone)
+        : `${item.start.toLocaleString()} - ${(item.end ?? item.start).toLocaleString()}`;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-[2px] sm:items-center">
       <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#d8d8d8] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.07)]">
@@ -557,11 +584,7 @@ function DetailModal({ item, onClose }: { item: CalItem; onClose: () => void }) 
         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
           {item.source}
         </p>
-        <p className="mt-3 text-sm text-[#6b6b6b]">
-          {item.allDay
-            ? item.start.toLocaleDateString()
-            : `${item.start.toLocaleString()} – ${(item.end ?? item.start).toLocaleString()}`}
-        </p>
+        <p className="mt-3 text-sm text-[#6b6b6b]">{timeLine}</p>
         {item.description ? (
           <p className="mt-3 whitespace-pre-wrap text-sm text-[#121212]">{item.description}</p>
         ) : null}
@@ -710,7 +733,7 @@ function ManualEventForm({
           <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">
             Department (optional)
             <select className={fieldClass} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
-              <option value="">—</option>
+              <option value="">-</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}

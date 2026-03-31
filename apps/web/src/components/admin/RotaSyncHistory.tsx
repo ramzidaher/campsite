@@ -34,7 +34,7 @@ export async function RotaSyncHistory({ orgId }: { orgId: string }) {
               data.map((row) => (
                 <tr key={row.id} className="border-b border-[#d8d8d8]/80">
                   <td className="px-3 py-2 text-[#6b6b6b]">
-                    {row.started_at ? new Date(row.started_at).toLocaleString() : '—'}
+                    {row.started_at ? new Date(row.started_at).toLocaleString() : '-'}
                   </td>
                   <td className="px-3 py-2">{row.source}</td>
                   <td className="px-3 py-2">{row.rows_imported}</td>

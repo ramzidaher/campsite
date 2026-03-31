@@ -22,7 +22,7 @@ export function OfflineBanner() {
       accessibilityLabel="You are offline. Showing cached data where available."
     >
       <Text style={[styles.text, { color: tokens.textPrimary }]}>
-        You&apos;re offline — showing cached data where available.
+        You&apos;re offline - showing cached data where available.
       </Text>
     </View>
   );

@@ -144,7 +144,7 @@ export const CAMPSITES: Campsite[] = [
     revenue: 0,
     occ: 0,
     mgr: 'Unassigned',
-    mgr_init: '—',
+    mgr_init: '-',
   },
   {
     id: 12,
@@ -342,14 +342,14 @@ export type RotaRow = {
 };
 
 export const ROTA_GLOBAL: RotaRow[] = [
-  { name: 'Alex Johnson', site: 'Riverstone Glen', date: 'Mon 24 Mar', time: '09:00–13:00', role: 'Events Desk' },
-  { name: 'Marcus Webb', site: 'Cliffside Bay', date: 'Mon 24 Mar', time: '14:00–18:00', role: 'Front Desk' },
-  { name: 'Tom Okafor', site: 'Lakeside Peak', date: 'Tue 25 Mar', time: '10:00–14:00', role: 'Events Desk' },
-  { name: 'Lena Kim', site: 'Mossy Stone Creek', date: 'Wed 26 Mar', time: '09:00–17:00', role: 'Campaign Lead' },
-  { name: 'Sophie Park', site: 'Birchwood Valley', date: 'Wed 26 Mar', time: '15:00–19:00', role: 'Events Desk' },
-  { name: 'Priya Mehta', site: 'Ashdown Forest', date: 'Thu 27 Mar', time: '10:00–16:00', role: 'Drop-in Coord.' },
-  { name: 'Kate Phillips', site: 'Glenshee Highlands', date: 'Thu 27 Mar', time: '09:00–13:00', role: 'Reception' },
-  { name: 'Marcus Webb', site: 'Cliffside Bay', date: 'Fri 28 Mar', time: '14:00–18:00', role: 'Front Desk' },
+  { name: 'Alex Johnson', site: 'Riverstone Glen', date: 'Mon 24 Mar', time: '09:00-13:00', role: 'Events Desk' },
+  { name: 'Marcus Webb', site: 'Cliffside Bay', date: 'Mon 24 Mar', time: '14:00-18:00', role: 'Front Desk' },
+  { name: 'Tom Okafor', site: 'Lakeside Peak', date: 'Tue 25 Mar', time: '10:00-14:00', role: 'Events Desk' },
+  { name: 'Lena Kim', site: 'Mossy Stone Creek', date: 'Wed 26 Mar', time: '09:00-17:00', role: 'Campaign Lead' },
+  { name: 'Sophie Park', site: 'Birchwood Valley', date: 'Wed 26 Mar', time: '15:00-19:00', role: 'Events Desk' },
+  { name: 'Priya Mehta', site: 'Ashdown Forest', date: 'Thu 27 Mar', time: '10:00-16:00', role: 'Drop-in Coord.' },
+  { name: 'Kate Phillips', site: 'Glenshee Highlands', date: 'Thu 27 Mar', time: '09:00-13:00', role: 'Reception' },
+  { name: 'Marcus Webb', site: 'Cliffside Bay', date: 'Fri 28 Mar', time: '14:00-18:00', role: 'Front Desk' },
 ];
 
 export type BroadcastRow = {
@@ -364,21 +364,21 @@ export function getBroadcasts(founderDisplayName: string): BroadcastRow[] {
   return [
     {
       icon: '📡',
-      title: 'Spring Opening — All Sites',
+      title: 'Spring Opening - All Sites',
       by: `${founderDisplayName} (Founder)`,
       sent: '2 hours ago',
       reach: 'All 348 members',
     },
     {
       icon: '📡',
-      title: 'Safety Update — Lakeside Peak',
+      title: 'Safety Update - Lakeside Peak',
       by: 'Sarah Al-Amin',
       sent: 'Yesterday',
       reach: '42 members',
     },
     {
       icon: '📡',
-      title: 'Wellbeing Session — Ashdown Forest',
+      title: 'Wellbeing Session - Ashdown Forest',
       by: 'Priya Mehta',
       sent: '2 days ago',
       reach: '26 members',
@@ -417,7 +417,7 @@ export function getActivity(founderDisplayName: string): ActivityRow[] {
     },
     {
       icon: '👤',
-      html: '<strong>Dan Brown</strong> registered at Fernwood Glade — pending verification',
+      html: '<strong>Dan Brown</strong> registered at Fernwood Glade - pending verification',
       time: '2 hours ago',
     },
     {
@@ -427,7 +427,7 @@ export function getActivity(founderDisplayName: string): ActivityRow[] {
     },
     {
       icon: '🔗',
-      html: 'Google Sheets sync completed for Cliffside Bay — 14 shifts updated',
+      html: 'Google Sheets sync completed for Cliffside Bay - 14 shifts updated',
       time: '7 hours ago',
     },
     {
@@ -455,7 +455,7 @@ export const CS_MEMBERS: Record<number, CsMember[]> = {
 
 export const CS_ROTA: Record<number, RotaRow[]> = {
   1: [
-    { name: 'Tom Okafor', date: 'Tue 25 Mar', time: '10:00–14:00', role: 'Events Desk' },
-    { name: 'Marcus Webb', date: 'Wed 26 Mar', time: '14:00–18:00', role: 'Front Desk' },
+    { name: 'Tom Okafor', date: 'Tue 25 Mar', time: '10:00-14:00', role: 'Events Desk' },
+    { name: 'Marcus Webb', date: 'Wed 26 Mar', time: '14:00-18:00', role: 'Front Desk' },
   ],
 };

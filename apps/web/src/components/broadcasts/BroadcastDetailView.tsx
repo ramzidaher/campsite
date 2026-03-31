@@ -2,6 +2,7 @@
 
 import { BroadcastBackdropPicker } from '@/components/broadcasts/BroadcastBackdropPicker';
 import { BroadcastDetailStyleRail } from '@/components/broadcasts/BroadcastDetailStyleRail';
+import { cssBackgroundImageUrl } from '@/lib/broadcasts/cssBackgroundImageUrl';
 import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { enqueueBroadcastRead } from '@/lib/offline/broadcastReadQueue';
 import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
@@ -232,7 +233,7 @@ export function BroadcastDetailView({
             'pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-[filter,transform] duration-300',
             backdropBlur ? 'scale-[1.08] blur-lg' : '',
           ].join(' ')}
-          style={{ backgroundImage: `url(${coverImageUrl})` }}
+          style={{ backgroundImage: cssBackgroundImageUrl(coverImageUrl) }}
           aria-hidden
         />
       ) : null}
@@ -274,7 +275,12 @@ export function BroadcastDetailView({
 
         <Link
           href="/broadcasts"
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:text-[#121212]"
+          className={[
+            'inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors',
+            coverImageUrl
+              ? 'rounded-lg bg-white/92 px-3 py-2 text-[#121212] shadow-[0_2px_16px_rgba(0,0,0,0.14)] ring-1 ring-black/[0.08] backdrop-blur-sm hover:bg-white hover:text-black'
+              : 'text-[#6b6b6b] hover:text-[#121212]',
+          ].join(' ')}
         >
           <span aria-hidden>←</span> Back to broadcasts
         </Link>
@@ -374,7 +380,7 @@ export function BroadcastDetailView({
                 onClick={() => void requestSummary()}
                 className="shrink-0 rounded-lg border border-[#cfcfcf] bg-white px-3.5 py-2 text-sm font-medium text-[#121212] shadow-sm transition-colors hover:bg-[#f0f0ef] disabled:opacity-60"
               >
-                {summaryBusy ? 'Summarising…' : summary ? 'Regenerate' : 'Summarise'}
+                {summaryBusy ? 'Summarising...' : summary ? 'Regenerate' : 'Summarise'}
               </button>
             </div>
             {summaryErr ? (
@@ -410,7 +416,7 @@ export function BroadcastDetailView({
                 dateStyle: 'full',
                 timeStyle: 'short',
               })}{' '}
-              – {parsedRange.end.toLocaleTimeString(undefined, { timeStyle: 'short' })}
+              - {parsedRange.end.toLocaleTimeString(undefined, { timeStyle: 'short' })}
             </p>
             <button
               type="button"
@@ -418,7 +424,7 @@ export function BroadcastDetailView({
               onClick={() => void addToCalendar()}
               className="mt-4 rounded-lg bg-amber-700 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:bg-amber-800 disabled:opacity-60"
             >
-              {calendarBusy ? 'Saving…' : 'Add to organisation calendar'}
+              {calendarBusy ? 'Saving...' : 'Add to organisation calendar'}
             </button>
             {calendarMsg ? <p className="mt-2 text-xs text-amber-900/80">{calendarMsg}</p> : null}
           </div>

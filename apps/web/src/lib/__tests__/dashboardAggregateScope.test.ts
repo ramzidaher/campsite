@@ -5,7 +5,7 @@ import {
   dashboardAggregateScope,
 } from '@campsite/types';
 
-/** Mirrors product rules in `03-dashboard.md` — must stay aligned with `fetchDashboardStatCounts` (uses same types helper). */
+/** Mirrors product rules in `03-dashboard.md` - must stay aligned with `fetchDashboardStatCounts` (uses same types helper). */
 describe('dashboardAggregateScope', () => {
   it('uses org scope for org_admin and legacy super_admin', () => {
     expect(dashboardAggregateScope('org_admin')).toBe('org');

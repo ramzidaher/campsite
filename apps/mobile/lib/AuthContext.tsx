@@ -181,7 +181,7 @@ export function useAuth() {
   return ctx;
 }
 
-/** Expo Router auth redirects — mirrors web home gate (pending / inactive / profile). */
+/** Expo Router auth redirects - mirrors web home gate (pending / inactive / profile). */
 function isLandingPathname(pathname: string) {
   return pathname === '/' || pathname === '/index' || pathname === '';
 }

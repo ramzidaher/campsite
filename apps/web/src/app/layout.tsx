@@ -13,7 +13,7 @@ const dmSerif = DM_Serif_Display({
 
 export const metadata: Metadata = {
   title: 'Campsite',
-  description: 'Internal communications and staff management — Common Ground Studios Ltd',
+  description: 'Internal communications and staff management - Common Ground Studios Ltd',
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     apple: [{ url: '/apple-icon.svg', type: 'image/svg+xml' }],

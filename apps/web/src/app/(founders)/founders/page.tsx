@@ -26,7 +26,7 @@ export default async function FoundersPage() {
   ]);
   const initialOrgs = parseFounderOrgs(orgRpc);
   const initialAllMembers = parseFounderMembers(memRpc);
-  const loadError = [orgRpcError?.message, memRpcError?.message].filter(Boolean).join(' — ') || undefined;
+  const loadError = [orgRpcError?.message, memRpcError?.message].filter(Boolean).join(' - ') || undefined;
 
   const { data: profile } = await supabase
     .from('profiles')

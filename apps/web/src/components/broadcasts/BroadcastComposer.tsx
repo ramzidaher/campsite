@@ -43,7 +43,7 @@ function formatSupabaseWriteError(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) {
     const o = e as { message: string; details?: string; hint?: string; code?: string };
     const parts = [o.message, o.details, o.hint].filter((x): x is string => Boolean(x && x.trim()));
-    return parts.length ? parts.join(' — ') : 'Request failed';
+    return parts.length ? parts.join(' - ') : 'Request failed';
   }
   return e instanceof Error ? e.message : 'Request failed';
 }
@@ -604,7 +604,7 @@ export function BroadcastComposer({
               org-wide&rdquo; under Admin → Departments, or use Specific.
             </p>
           ) : null}
-          {orgWideCapsLoading ? <p className="mt-2 text-[12px] text-[#6b6b6b]">Checking permissions…</p> : null}
+          {orgWideCapsLoading ? <p className="mt-2 text-[12px] text-[#6b6b6b]">Checking permissions...</p> : null}
         </div>
       ) : null}
 
@@ -640,7 +640,7 @@ export function BroadcastComposer({
               disabled={!departments.length}
             >
               {!departments.length ? (
-                <option value="">Loading departments…</option>
+                <option value="">Loading departments...</option>
               ) : null}
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -719,7 +719,7 @@ export function BroadcastComposer({
               : 'Optional reach and ordering for this channel.'}
           </p>
           {capsLoading ? (
-            <p className="mt-2 text-xs text-[#6b6b6b]">Loading options…</p>
+            <p className="mt-2 text-xs text-[#6b6b6b]">Loading options...</p>
           ) : showExtraDelivery ? (
             <div className="mt-3 space-y-2.5">
               {!isOrgWideActive && caps.mandatory_broadcast ? (
@@ -766,7 +766,7 @@ export function BroadcastComposer({
       <div>
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-[#121212]">Message</span>
-          <span className="text-[12px] text-[#6b6b6b]">Use the buttons or type normally — preview updates as you go.</span>
+          <span className="text-[12px] text-[#6b6b6b]">Use the buttons or type normally - preview updates as you go.</span>
         </div>
         <div className="mb-2 flex flex-wrap gap-1.5">
           <button
@@ -803,7 +803,7 @@ export function BroadcastComposer({
           className={`${COMPOSE_INPUT_CLASS} min-h-[160px] resize-y leading-relaxed`}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Write your message…"
+          placeholder="Write your message..."
         />
         <div className="mt-3 rounded-lg border border-[#d8d8d8] bg-white p-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Preview</p>

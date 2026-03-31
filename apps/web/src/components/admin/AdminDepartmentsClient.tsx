@@ -356,7 +356,7 @@ export function AdminDepartmentsClient({
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
             {isOrgAdmin
               ? 'Manage all departments, societies and clubs in your organisation'
-              : 'Departments you manage — view members and update who belongs in each'}
+              : 'Departments you manage - view members and update who belongs in each'}
           </p>
           <p className="mt-1 text-[12px] text-[#9b9b9b]">
             {counts.all} total · {counts.department} department{counts.department === 1 ? '' : 's'} ·{' '}
@@ -371,7 +371,7 @@ export function AdminDepartmentsClient({
               >
                 Teams
               </Link>{' '}
-              — create teams and rosters for every department in one place.
+              - create teams and rosters for every department in one place.
             </p>
           ) : (
             <p className="mt-2 text-[12px] text-[#9b9b9b]">
@@ -381,7 +381,7 @@ export function AdminDepartmentsClient({
               >
                 Teams directory
               </Link>{' '}
-              — see team rosters for your departments.
+              - see team rosters for your departments.
             </p>
           )}
         </div>
@@ -410,7 +410,7 @@ export function AdminDepartmentsClient({
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search…"
+            placeholder="Search..."
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
             aria-label="Search departments"
           />
@@ -870,7 +870,7 @@ function DeptDetailForm({
         )}
         {teams.length === 0 ? (
           <p className="mt-2 text-[13px] text-[#9b9b9b]">
-            {isOrgAdmin ? 'No teams yet — add one below.' : 'No teams yet. Ask an org admin to create teams.'}
+            {isOrgAdmin ? 'No teams yet - add one below.' : 'No teams yet. Ask an org admin to create teams.'}
           </p>
         ) : (
           <div className="mt-3 space-y-4">
@@ -932,7 +932,7 @@ function DeptDetailForm({
                             ))}
                           </select>
                         ) : (
-                          <span className="ml-1 text-[#9b9b9b]">{ownerLabel ?? '—'}</span>
+                          <span className="ml-1 text-[#9b9b9b]">{ownerLabel ?? '-'}</span>
                         )}
                       </div>
                     </div>
@@ -977,7 +977,7 @@ function DeptDetailForm({
                         onChange={(e) => setTeamMemberPick((prev) => ({ ...prev, [t.id]: e.target.value }))}
                         aria-label={`Add person to ${t.name}`}
                       >
-                        <option value="">Add someone to this team…</option>
+                        <option value="">Add someone to this team...</option>
                         {staffOptions
                           .filter((s) => !rosterIds.has(s.id))
                           .map((s) => (
@@ -1079,7 +1079,7 @@ function DeptDetailForm({
             onChange={(e) => setMemberPick(e.target.value)}
             aria-label="Add member"
           >
-            <option value="">Add member…</option>
+            <option value="">Add member...</option>
             {staffOptions
               .filter((s) => !members.some((m) => m.user_id === s.id))
               .map((s) => (
@@ -1241,7 +1241,7 @@ function DeptDetailForm({
               value={mgrPick}
               onChange={(e) => setMgrPick(e.target.value)}
             >
-              <option value="">Add manager…</option>
+              <option value="">Add manager...</option>
               {staffOptions
                 .filter((s) => !managers.some((m) => m.user_id === s.id))
                 .map((s) => (

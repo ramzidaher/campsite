@@ -46,7 +46,7 @@ export default async function PendingPage({
           {orgCreator ? (
             <>
               <p className="mt-4 text-[13px] text-[#6b6b6b]">
-                You created a new organisation — no manager approval is required. Often signing out and
+                You created a new organisation - no manager approval is required. Often signing out and
                 back in fixes this immediately.
               </p>
               <form action={retryEnsureRegistrationProfile} className="mt-6">

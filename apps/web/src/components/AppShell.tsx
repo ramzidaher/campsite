@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { AppTopBar } from '@/components/shell/AppTopBar';
-import type { MainShellAdminNavItem } from '@/lib/adminGates';
+import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
+import type { MainShellAdminNavItem, ShellNavIconId } from '@/lib/adminGates';
+import { ChevronDown } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
@@ -41,7 +43,7 @@ function NavLink({
   onNavigate,
 }: {
   href: string;
-  icon: string;
+  icon: ShellNavIconId;
   label: string;
   badge?: number;
   /** e.g. broadcasts awaiting approval (shown beside unread). */
@@ -66,7 +68,9 @@ function NavLink({
           : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
       ].join(' ')}
     >
-      <span className="w-5 shrink-0 text-center text-[15px]">{icon}</span>
+      <span className="flex w-5 shrink-0 items-center justify-center text-current">
+        <ShellNavIcon name={icon} />
+      </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="ml-auto flex shrink-0 items-center gap-1">
         {secondaryBadge !== undefined && secondaryBadge > 0 ? (
@@ -203,7 +207,7 @@ export function AppShell({
               )}
             </div>
             <span className="min-w-0 flex-1 truncate text-xs font-medium text-white/[0.8]">{orgName}</span>
-            <span className="shrink-0 text-[10px] text-white/35">⌄</span>
+            <ChevronDown className="shrink-0 text-white/35" size={14} strokeWidth={2} aria-hidden />
           </button>
         </div>
 
@@ -212,19 +216,19 @@ export function AppShell({
           aria-label="Main"
         >
           <div className="space-y-0.5">
-            <NavLink href="/dashboard" icon="📊" label="Dashboard" onNavigate={closeMobile} />
+            <NavLink href="/dashboard" icon="dashboard" label="Dashboard" onNavigate={closeMobile} />
             <NavLink
               href="/broadcasts"
-              icon="📡"
+              icon="broadcasts"
               label="Broadcasts"
               secondaryBadge={pendingBroadcastApprovals > 0 ? pendingBroadcastApprovals : undefined}
               secondaryBadgeTitle="Broadcasts awaiting your approval"
               badge={unreadBroadcasts > 0 ? unreadBroadcasts : undefined}
               onNavigate={closeMobile}
             />
-            <NavLink href="/calendar" icon="📅" label="Calendar" onNavigate={closeMobile} />
-            <NavLink href="/rota" icon="🗓" label="Rota" onNavigate={closeMobile} />
-            <NavLink href="/discount" icon="🎫" label="Discount Card" onNavigate={closeMobile} />
+            <NavLink href="/calendar" icon="calendar" label="Calendar" onNavigate={closeMobile} />
+            <NavLink href="/rota" icon="rota" label="Rota" onNavigate={closeMobile} />
+            <NavLink href="/discount" icon="discount" label="Discount Card" onNavigate={closeMobile} />
           </div>
 
           {adminNavItems && adminNavItems.length > 0 ? (
@@ -252,19 +256,21 @@ export function AppShell({
                   });
                 }}
               >
-                <span className="w-5 shrink-0 text-center text-[15px]">⚙</span>
+                <span className="flex w-5 shrink-0 items-center justify-center text-current">
+                  <ShellNavIcon name="settings" />
+                </span>
                 <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
                   Admin
                 </span>
-                <span
+                <ChevronDown
                   className={[
-                    'shrink-0 text-[10px] text-white/45 transition-transform duration-200',
+                    'shrink-0 text-white/45 transition-transform duration-200',
                     adminNavExpanded ? 'rotate-0' : '-rotate-90',
                   ].join(' ')}
+                  size={14}
+                  strokeWidth={2}
                   aria-hidden
-                >
-                  ⌄
-                </span>
+                />
               </button>
               <div
                 id="admin-shell-nav-items"
@@ -309,7 +315,7 @@ export function AppShell({
             <div className="mt-3 space-y-0.5">
               <NavLink
                 href="/pending-approvals"
-                icon="⏳"
+                icon="pending"
                 label="Approvals"
                 badge={pendingApprovalCount > 0 ? pendingApprovalCount : undefined}
                 onNavigate={closeMobile}
@@ -322,7 +328,7 @@ export function AppShell({
               <div className="px-2 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/35">
                 Manager
               </div>
-              <NavLink href="/manager" icon="📋" label="Manager" onNavigate={closeMobile} />
+              <NavLink href="/manager" icon="manager" label="Manager" onNavigate={closeMobile} />
             </div>
           ) : null}
         </nav>
@@ -357,7 +363,9 @@ export function AppShell({
               )}
             </div>
           </div>
-          <span className="shrink-0 text-sm text-white/30">⚙</span>
+          <span className="flex shrink-0 text-white/30">
+            <ShellNavIcon name="settings" />
+          </span>
         </Link>
       </aside>
 

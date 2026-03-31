@@ -49,7 +49,7 @@ export function isManagerRole(role: string | null | undefined): boolean {
 }
 
 /**
- * Staff discount QR verification (scanner) — org admin, manager, duty manager.
+ * Staff discount QR verification (scanner) - org admin, manager, duty manager.
  * Edge Function allowlist: `supabase/functions/_shared/staff_discount_verifier_roles.ts`
  */
 export function canVerifyStaffDiscountQr(role: string | null | undefined): boolean {

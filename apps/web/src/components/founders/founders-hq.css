@@ -1,4 +1,4 @@
-/* Scoped to .founder-hq-root — ported from founders.html */
+/* Scoped to .founder-hq-root - ported from founders.html */
 
 .founder-hq-root *,
 .founder-hq-root *::before,
@@ -41,7 +41,7 @@
   position: relative;
 }
 
-/* Row shell: sidebar (fixed) + scrollable main — keeps modals/toast out of the flex row */
+/* Row shell: sidebar (fixed) + scrollable main - keeps modals/toast out of the flex row */
 .founder-hq-root .founder-hq-body {
   display: flex;
   flex: 1;

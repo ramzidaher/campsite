@@ -5,7 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
  * Diagnostic + future fan-out worker for `broadcast_notification_jobs`.
  *
  * Auth: `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` (verify_jwt = false).
- * For each pending job, calls `broadcast_notification_recipient_user_ids` — same rules as
+ * For each pending job, calls `broadcast_notification_recipient_user_ids` - same rules as
  * `broadcast_visible_to_reader` for sent posts (mandatory, subscriptions, org admins).
  *
  * Next step: join `push_tokens`, send via Expo/FCM, then set `processed_at` / `last_error` on the job.

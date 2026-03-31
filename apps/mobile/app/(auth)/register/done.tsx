@@ -10,7 +10,7 @@ export default function RegisterDoneScreen() {
       <View style={styles.center}>
         <Text style={styles.title}>Awaiting approval</Text>
         <Text style={styles.sub}>
-          Thanks for registering. A manager will review your account — you&apos;ll get an email when
+          Thanks for registering. A manager will review your account - you&apos;ll get an email when
           you&apos;re approved.
         </Text>
         <View style={styles.box}>

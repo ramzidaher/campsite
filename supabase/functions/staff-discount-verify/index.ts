@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
 
   const { data: udRows } = await admin.from('user_departments').select('dept_id').eq('user_id', payload.uid);
   const deptIds = (udRows ?? []).map((r) => r.dept_id as string).filter(Boolean);
-  let department = '—';
+  let department = '-';
   if (deptIds.length) {
     const { data: depRows } = await admin.from('departments').select('name').in('id', deptIds).limit(8);
     const names = (depRows ?? []).map((r) => r.name as string).filter(Boolean);

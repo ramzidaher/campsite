@@ -204,7 +204,7 @@ export async function loadAdminOverview(
     activities.push({
       id: `b-${b.id}`,
       icon: '📡',
-      text: `${who} sent “${title.length > 48 ? `${title.slice(0, 48)}…` : title}”`,
+      text: `${who} sent “${title.length > 48 ? `${title.slice(0, 48)}...` : title}”`,
       timeLabel: relTime(sent),
       at: t,
     });
@@ -217,7 +217,7 @@ export async function loadAdminOverview(
     const st = p.status as string;
     const line =
       st === 'pending'
-        ? `${name} registered — pending verification`
+        ? `${name} registered - pending verification`
         : `${name} joined the organisation`;
     activities.push({
       id: `p-${p.id}`,

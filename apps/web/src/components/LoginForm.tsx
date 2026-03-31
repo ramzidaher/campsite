@@ -8,7 +8,7 @@ import { LoginOrgChoiceModal } from '@/components/auth/LoginOrgChoiceModal';
 import { createClient } from '@/lib/supabase/client';
 
 type Props = {
-  /** From server `searchParams` — avoids `useSearchParams` + Suspense on the login page. */
+  /** From server `searchParams` - avoids `useSearchParams` + Suspense on the login page. */
   nextPath?: string;
   errorParam?: string | null;
 };

@@ -19,7 +19,7 @@ export function ManagerDashboardClient({
       <header>
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Manager dashboard</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Your department tools — full editing works best on web.
+          Your department tools - full editing works best on web.
         </p>
       </header>
 
@@ -68,7 +68,7 @@ export function ManagerDashboardClient({
           <p className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {stats.shiftsWeek}
           </p>
-          <p className="mt-2 text-xs text-[#9b9b9b]">Your departments (Mon–Sun)</p>
+          <p className="mt-2 text-xs text-[#9b9b9b]">Your departments (Mon-Sun)</p>
         </Link>
       </div>
 

@@ -394,7 +394,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
           <Text style={styles.label}>Organisation</Text>
           <Pressable style={styles.input} onPress={() => setOrgModal(true)}>
             <Text style={orgId ? styles.orgPickText : styles.orgPickPlaceholder}>
-              {orgName ?? 'Select…'}
+              {orgName ?? 'Select...'}
             </Text>
           </Pressable>
           <Modal visible={orgModal} animationType="slide" transparent>
@@ -537,9 +537,9 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
           <Text style={styles.sub}>Check your details before sending your registration for approval</Text>
           <View style={styles.reviewBox}>
             <Text style={styles.reviewHeading}>Account details</Text>
-            <ReviewRow label="Name" value={fullName || '—'} />
-            <ReviewRow label="Email" value={email || '—'} />
-            <ReviewRow label="Organisation" value={orgName ?? '—'} />
+            <ReviewRow label="Name" value={fullName || '-'} />
+            <ReviewRow label="Email" value={email || '-'} />
+            <ReviewRow label="Organisation" value={orgName ?? '-'} />
           </View>
           <View style={styles.reviewBox}>
             <Text style={styles.reviewHeading}>Selected teams</Text>

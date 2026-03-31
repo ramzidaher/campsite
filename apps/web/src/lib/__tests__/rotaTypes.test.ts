@@ -1,15 +1,17 @@
 import {
   canEditRotaShifts,
+  canFinalApproveRotaRequests,
+  canTransferRotaOwnership,
   canViewRotaDepartmentScope,
   canViewRotaFullOrgGrid,
 } from '@campsite/types';
 
 describe('rota view / edit helpers', () => {
-  it('department scope for manager and org admins only', () => {
+  it('department scope for manager, coordinator, and org admins', () => {
     expect(canViewRotaDepartmentScope('manager')).toBe(true);
     expect(canViewRotaDepartmentScope('org_admin')).toBe(true);
     expect(canViewRotaDepartmentScope('super_admin')).toBe(true);
-    expect(canViewRotaDepartmentScope('coordinator')).toBe(false);
+    expect(canViewRotaDepartmentScope('coordinator')).toBe(true);
     expect(canViewRotaDepartmentScope('csa')).toBe(false);
   });
 
@@ -19,9 +21,22 @@ describe('rota view / edit helpers', () => {
     expect(canViewRotaFullOrgGrid('manager')).toBe(false);
   });
 
-  it('edit shifts for manager and org admins', () => {
+  it('edit shifts for manager, coordinator, and org admins', () => {
     expect(canEditRotaShifts('manager')).toBe(true);
     expect(canEditRotaShifts('org_admin')).toBe(true);
-    expect(canEditRotaShifts('coordinator')).toBe(false);
+    expect(canEditRotaShifts('coordinator')).toBe(true);
+    expect(canEditRotaShifts('duty_manager')).toBe(false);
+  });
+
+  it('final rota request approval pool', () => {
+    expect(canFinalApproveRotaRequests('manager')).toBe(true);
+    expect(canFinalApproveRotaRequests('duty_manager')).toBe(true);
+    expect(canFinalApproveRotaRequests('org_admin')).toBe(true);
+    expect(canFinalApproveRotaRequests('coordinator')).toBe(false);
+  });
+
+  it('transfer ownership org admin only', () => {
+    expect(canTransferRotaOwnership('org_admin')).toBe(true);
+    expect(canTransferRotaOwnership('manager')).toBe(false);
   });
 });

@@ -13,7 +13,7 @@ type TierRow = {
   valid_at: string | null;
 };
 
-/** Static fake QR pattern from [cpasite.html](cpasite.html) `drawQR` — not a scannable payload. */
+/** Static fake QR pattern from [cpasite.html](cpasite.html) `drawQR` - not a scannable payload. */
 const QR_SEED: number[][] = [
   [1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1],
   [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
@@ -180,7 +180,7 @@ export function DiscountCardClient({
   const discountDisplay =
     tierRow?.discount_value?.trim() ||
     tierRow?.label ||
-    (tierConfigured ? '—' : 'Not configured');
+    (tierConfigured ? '-' : 'Not configured');
 
   const sortedTiers = allTiers;
 
@@ -189,7 +189,7 @@ export function DiscountCardClient({
       <div className="flex flex-wrap items-start gap-7">
         <div className="w-full shrink-0 sm:w-auto">
           <div className="mb-3.5">
-            <h2 className="font-authSerif text-lg tracking-tight text-[#121212]">My Discount Card</h2>
+            <h1 className="font-authSerif text-lg tracking-tight text-[#121212]">My Discount Card</h1>
           </div>
 
           <div className="relative w-full max-w-[320px] overflow-hidden rounded-[18px] bg-[#121212] px-[26px] pb-[22px] pt-[26px] text-[#faf9f6] sm:w-[320px]">
@@ -230,7 +230,7 @@ export function DiscountCardClient({
 
           <div className="mt-3.5 flex gap-2">
             <button type="button" disabled={refreshing} onClick={onRefresh} className={ghostBtn}>
-              {refreshing ? 'Refreshing…' : 'Refresh QR'}
+              {refreshing ? 'Refreshing...' : 'Refresh QR'}
             </button>
             {canScan ? (
               <Link href="/discount/scan" className={ghostBtn}>
@@ -253,7 +253,7 @@ export function DiscountCardClient({
           </div>
 
           {tierLoading ? (
-            <p className="text-sm text-[#6b6b6b]">Loading tiers…</p>
+            <p className="text-sm text-[#6b6b6b]">Loading tiers...</p>
           ) : !tierConfigured ? (
             <div className="mb-5 rounded-xl border border-amber-500/35 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               No discount configured for your role. Contact your admin.
@@ -284,7 +284,7 @@ export function DiscountCardClient({
                       ) : null}
                     </div>
                     <div className="shrink-0 font-authSerif text-[17px] text-[#166534]">
-                      {t.discount_value?.trim() || '—'}
+                      {t.discount_value?.trim() || '-'}
                     </div>
                   </div>
                 );

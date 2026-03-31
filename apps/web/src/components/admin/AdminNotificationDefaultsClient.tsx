@@ -102,7 +102,7 @@ export function AdminNotificationDefaultsClient({
             onClick={() => void save()}
             className="h-9 rounded-lg border border-[#121212] bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] disabled:opacity-45"
           >
-            {loading ? 'Saving…' : 'Save'}
+            {loading ? 'Saving...' : 'Save'}
           </button>
           <Link
             href="/admin/settings"

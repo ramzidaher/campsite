@@ -90,13 +90,13 @@ export function DiscountScannerClient() {
             className="overflow-hidden rounded-xl border border-[#d8d8d8]"
           />
           {!scannerReady ? (
-            <p className="text-[13px] text-[#6b6b6b]">Starting camera…</p>
+            <p className="text-[13px] text-[#6b6b6b]">Starting camera...</p>
           ) : null}
         </div>
       ) : result.valid ? (
         <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <div className="rounded-lg bg-[#15803d] px-3 py-2 text-center text-[13px] font-semibold text-white">
-            Valid — Active Staff
+            Valid - Active Staff
           </div>
           <dl className="space-y-2 text-[13px]">
             <div>
@@ -113,7 +113,7 @@ export function DiscountScannerClient() {
             </div>
             <div>
               <dt className="text-[#9b9b9b]">Entitled to</dt>
-              <dd className="text-[#121212]">{result.discount_label ?? '—'}</dd>
+              <dd className="text-[#121212]">{result.discount_label ?? '-'}</dd>
             </div>
           </dl>
           <button

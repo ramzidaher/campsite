@@ -102,7 +102,7 @@ export function ScanLogsClient({ initialRows }: { initialRows: ScanLogRow[] }) {
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name, role, dept, code…"
+            placeholder="Search name, role, dept, code..."
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
             aria-label="Search scan logs"
           />
@@ -134,7 +134,7 @@ export function ScanLogsClient({ initialRows }: { initialRows: ScanLogRow[] }) {
           onClick={() => void refresh()}
           className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1] disabled:opacity-50"
         >
-          {busy ? 'Refreshing…' : 'Refresh'}
+          {busy ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
@@ -177,11 +177,11 @@ export function ScanLogsClient({ initialRows }: { initialRows: ScanLogRow[] }) {
                       <span className="font-medium text-[#121212]">{scanner}</span> verified{' '}
                       <span className="font-medium text-[#121212]">{staff}</span>
                       {r.token_valid ? (
-                        <span className="text-[#15803d]"> — valid token</span>
+                        <span className="text-[#15803d]"> - valid token</span>
                       ) : (
                         <span className="text-[#b91c1c]">
                           {' '}
-                          — failed{r.error_code ? ` (${r.error_code})` : ''}
+                          - failed{r.error_code ? ` (${r.error_code})` : ''}
                         </span>
                       )}
                     </p>

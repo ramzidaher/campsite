@@ -105,11 +105,11 @@ function memberInitials(name: string) {
 }
 
 function formatJoined(iso: string) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   try {
     return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   } catch {
-    return '—';
+    return '-';
   }
 }
 
@@ -268,7 +268,7 @@ export function FounderHqApp({
     for (const o of orgs.filter((x) => !x.is_active).slice(0, 3)) {
       out.push({
         kind: 'warn',
-        html: `<strong>${escapeHtml(o.name)}</strong> is inactive — tenants cannot use this workspace.`,
+        html: `<strong>${escapeHtml(o.name)}</strong> is inactive - tenants cannot use this workspace.`,
       });
     }
     if (pendingApprovalsCount > 0) {
@@ -422,7 +422,7 @@ export function FounderHqApp({
     if (!selectedOrgId) return;
     const slug = normalizeWorkspaceSlugInput(settingsDraft.slug);
     if (!isValidWorkspaceSlug(slug)) {
-      showToast('Enter a valid subdomain slug (2–63 chars, lowercase letters, numbers, hyphens).');
+      showToast('Enter a valid subdomain slug (2-63 chars, lowercase letters, numbers, hyphens).');
       return;
     }
     setBusySaveOrg(true);
@@ -554,7 +554,7 @@ export function FounderHqApp({
     }
     const slug = normalizeWorkspaceSlugInput(newSite.slug || suggestSlugFromOrganisationName(newSite.name));
     if (!isValidWorkspaceSlug(slug)) {
-      showToast('Enter a valid subdomain slug (2–63 chars).');
+      showToast('Enter a valid subdomain slug (2-63 chars).');
       return;
     }
     setCreatingOrg(true);
@@ -713,7 +713,7 @@ export function FounderHqApp({
             <button type="button" className="icon-btn" title="Notifications" onClick={() => showToast('Notifications')}>
               🔔
             </button>
-            <button type="button" className="icon-btn" title="Export" onClick={() => showToast('📊 Exporting report…')}>
+            <button type="button" className="icon-btn" title="Export" onClick={() => showToast('📊 Exporting report...')}>
               ⬇
             </button>
             <button type="button" className="topbar-av" title="Profile">
@@ -888,7 +888,7 @@ export function FounderHqApp({
                   <div className="card-pad" style={{ paddingTop: 6, paddingBottom: 6 }}>
                     {platformActivityLines.length === 0 ? (
                       <div style={{ fontSize: 13, color: 'var(--text2)', padding: '10px 0' }}>
-                        No organisations or members yet — activity will appear here as you onboard tenants.
+                        No organisations or members yet - activity will appear here as you onboard tenants.
                       </div>
                     ) : (
                       platformActivityLines.map((a) => (
@@ -996,7 +996,7 @@ export function FounderHqApp({
               <div>
                 <div className="page-title">All organisations</div>
                 <div className="page-sub">
-                  {orgs.length} tenant{orgs.length === 1 ? '' : 's'} — click to manage members and settings
+                  {orgs.length} tenant{orgs.length === 1 ? '' : 's'} - click to manage members and settings
                 </div>
               </div>
               <button type="button" className="btn btn-primary" onClick={() => setModal('new-site')}>
@@ -1007,7 +1007,7 @@ export function FounderHqApp({
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
               <div className="search-bar" style={{ width: 240 }}>
                 <span style={{ color: 'var(--text3)', fontSize: 12 }}>🔍</span>
-                <input type="text" placeholder="Search…" value={csQuery} onChange={(e) => setCsQuery(e.target.value)} />
+                <input type="text" placeholder="Search..." value={csQuery} onChange={(e) => setCsQuery(e.target.value)} />
               </div>
               {(['all', 'open', 'closed'] as const).map((f) => (
                 <button
@@ -1050,11 +1050,11 @@ export function FounderHqApp({
                         <div className="cm-lbl">Broadcasts</div>
                       </div>
                       <div className="cm-item">
-                        <div className="cm-val">—</div>
+                        <div className="cm-val"> - </div>
                         <div className="cm-lbl">Bookings</div>
                       </div>
                       <div className="cm-item">
-                        <div className="cm-val">—</div>
+                        <div className="cm-val"> - </div>
                         <div className="cm-lbl">Revenue</div>
                       </div>
                     </div>
@@ -1139,7 +1139,7 @@ export function FounderHqApp({
               </div>
               <div className="card">
                 <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
-                  <div className="section-title">Monthly Trend (Oct–Mar)</div>
+                  <div className="section-title">Monthly Trend (Oct-Mar)</div>
                 </div>
                 <div className="card-pad">
                   <div style={{ height: 160, display: 'flex', alignItems: 'flex-end', gap: 6 }}>
@@ -1280,7 +1280,7 @@ export function FounderHqApp({
             <div className="page-title">All Members</div>
             <div className="page-sub">
               {totalMemberCount} member{totalMemberCount === 1 ? '' : 's'} across {orgs.length} organisation
-              {orgs.length === 1 ? '' : 's'} — global view
+              {orgs.length === 1 ? '' : 's'} - global view
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
@@ -1288,7 +1288,7 @@ export function FounderHqApp({
                 <span style={{ color: 'var(--text3)', fontSize: 12 }}>🔍</span>
                 <input
                   type="text"
-                  placeholder="Search name, email or site…"
+                  placeholder="Search name, email or site..."
                   value={memberQuery}
                   onChange={(e) => setMemberQuery(e.target.value)}
                 />
@@ -1350,7 +1350,7 @@ export function FounderHqApp({
                               <div className="td-av">{memberInitials(m.full_name)}</div>
                               <div>
                                 <div style={{ fontWeight: 500, color: 'var(--text)' }}>{m.full_name}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.email ?? '—'}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{m.email ?? '-'}</div>
                               </div>
                             </div>
                           </td>
@@ -1372,7 +1372,7 @@ export function FounderHqApp({
                               disabled={busyRemoveUserId === m.id}
                               onClick={() => void handleRemoveMember(m.org_id, m.id)}
                             >
-                              {busyRemoveUserId === m.id ? '…' : 'Remove'}
+                              {busyRemoveUserId === m.id ? '...' : 'Remove'}
                             </button>
                           </td>
                         </tr>
@@ -1398,7 +1398,7 @@ export function FounderHqApp({
               <div className="table-wrap">
                 {pendingApprovalsCount === 0 ? (
                   <div className="card-pad" style={{ color: 'var(--text2)', fontSize: 13 }}>
-                    You&apos;re all caught up — new requests will appear here when registrations use pending approval.
+                    You&apos;re all caught up - new requests will appear here when registrations use pending approval.
                   </div>
                 ) : (
                   <table>
@@ -1419,7 +1419,7 @@ export function FounderHqApp({
                               <div className="td-av">{memberInitials(p.full_name)}</div>
                               <div>
                                 <div style={{ fontWeight: 500, color: 'var(--text)' }}>{p.full_name}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{p.email ?? '—'}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{p.email ?? '-'}</div>
                               </div>
                             </div>
                           </td>
@@ -1460,7 +1460,7 @@ export function FounderHqApp({
             <div className="card card-pad">
               <div className="alert alert-info" style={{ marginBottom: 18 }}>
                 ℹ️ As a founder you can broadcast to all {totalMemberCount} members simultaneously, or target by organisation
-                (UI mock — sending is not wired to live broadcasts yet).
+                (UI mock - sending is not wired to live broadcasts yet).
               </div>
               <div className="section-title" style={{ marginBottom: 14 }}>
                 Recent Broadcasts
@@ -1476,7 +1476,7 @@ export function FounderHqApp({
                       {b.by} · {b.sent} · {b.reach}
                     </div>
                   </div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => showToast('Opening broadcast…')}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => showToast('Opening broadcast...')}>
                     View
                   </button>
                 </div>
@@ -1489,7 +1489,7 @@ export function FounderHqApp({
         <div className={`page${activePage === 'rota-hq' ? ' active' : ''}`}>
           <div className="page-inner">
             <div className="page-title">Rota Overview</div>
-            <div className="page-sub">Upcoming shifts across all campsites — week of 24–28 Mar</div>
+            <div className="page-sub">Upcoming shifts across all campsites - week of 24-28 Mar</div>
             <div className="card">
               <div className="table-wrap">
                 <table>
@@ -1641,7 +1641,7 @@ export function FounderHqApp({
                   <div className="ds-lbl">Broadcasts</div>
                 </div>
                 <div className="detail-stat">
-                  <div className="ds-val">—</div>
+                  <div className="ds-val"> - </div>
                   <div className="ds-lbl">Revenue</div>
                   <div className="ds-trend" style={{ color: 'var(--text3)' }}>
                     Not tracked here
@@ -1671,7 +1671,7 @@ export function FounderHqApp({
               </div>
               <div style={{ display: csTab === 'members' ? 'block' : 'none' }}>
                 {membersLoading ? (
-                  <p style={{ fontSize: 13, color: 'var(--text2)', padding: '12px 0' }}>Loading members…</p>
+                  <p style={{ fontSize: 13, color: 'var(--text2)', padding: '12px 0' }}>Loading members...</p>
                 ) : membersLoadErr ? (
                   <p style={{ fontSize: 13, color: '#b91c1c', padding: '12px 0' }}>{membersLoadErr}</p>
                 ) : (
@@ -1708,7 +1708,7 @@ export function FounderHqApp({
                             </div>
                             <div>
                               <div style={{ fontSize: 12.5, color: 'var(--text)' }}>{m.full_name}</div>
-                              <div style={{ fontSize: 10, color: 'var(--text3)' }}>{m.email ?? '—'}</div>
+                              <div style={{ fontSize: 10, color: 'var(--text3)' }}>{m.email ?? '-'}</div>
                             </div>
                           </div>
                         </td>
@@ -1730,7 +1730,7 @@ export function FounderHqApp({
                             disabled={busyRemoveUserId === m.id}
                             onClick={() => void handleRemoveMember(currentOrg.id, m.id)}
                           >
-                            {busyRemoveUserId === m.id ? '…' : 'Remove'}
+                            {busyRemoveUserId === m.id ? '...' : 'Remove'}
                           </button>
                         </td>
                       </tr>
@@ -1742,7 +1742,7 @@ export function FounderHqApp({
               <div style={{ display: csTab === 'rota' ? 'block' : 'none' }}>
                 <div className="alert alert-info">
                   📅 Rota for this site loads from Google Sheets integration.{' '}
-                  <button type="button" className="fh-link" onClick={() => showToast('Opening Google Sheets…')}>
+                  <button type="button" className="fh-link" onClick={() => showToast('Opening Google Sheets...')}>
                     Open sheet →
                   </button>
                 </div>
@@ -1808,7 +1808,7 @@ export function FounderHqApp({
                   <label>Logo URL (optional)</label>
                   <input
                     type="url"
-                    placeholder="https://…"
+                    placeholder="https://..."
                     value={settingsDraft.logo_url}
                     onChange={(e) => setSettingsDraft((s) => ({ ...s, logo_url: e.target.value }))}
                   />
@@ -1827,7 +1827,7 @@ export function FounderHqApp({
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
                   <button type="button" className="btn btn-primary" disabled={busySaveOrg} onClick={() => void saveOrgSettings()}>
-                    {busySaveOrg ? 'Saving…' : 'Save changes'}
+                    {busySaveOrg ? 'Saving...' : 'Save changes'}
                   </button>
                   <button
                     type="button"
@@ -1835,7 +1835,7 @@ export function FounderHqApp({
                     disabled={busyDeactivate || !currentOrg.is_active}
                     onClick={() => void handleDeactivateOrg()}
                   >
-                    {busyDeactivate ? '…' : 'Deactivate organisation'}
+                    {busyDeactivate ? '...' : 'Deactivate organisation'}
                   </button>
                 </div>
                 <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
@@ -1843,7 +1843,7 @@ export function FounderHqApp({
                   <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10 }}>
                     Deletes all member accounts in this organisation, then removes the organisation and related data.
                     <strong> Platform founders</strong> (users in <code style={{ fontSize: 11 }}>platform_admins</code>) are
-                    not deleted — they are only removed from this org.
+                    not deleted - they are only removed from this org.
                     Type the organisation name <strong>{currentOrg.name}</strong> to confirm.
                   </p>
                   <div className="field" style={{ marginBottom: 10 }}>
@@ -1862,7 +1862,7 @@ export function FounderHqApp({
                     disabled={busyHardDelete}
                     onClick={() => void handlePermanentDeleteOrg()}
                   >
-                    {busyHardDelete ? 'Deleting…' : 'Permanently delete organisation'}
+                    {busyHardDelete ? 'Deleting...' : 'Permanently delete organisation'}
                   </button>
                 </div>
               </div>
@@ -1912,7 +1912,7 @@ export function FounderHqApp({
               Cancel
             </button>
             <button type="button" className="btn btn-primary" disabled={creatingOrg} onClick={() => void createNewSite()}>
-              {creatingOrg ? 'Creating…' : 'Create organisation'}
+              {creatingOrg ? 'Creating...' : 'Create organisation'}
             </button>
           </div>
         </div>
@@ -1970,7 +1970,7 @@ export function FounderHqApp({
               <label>Message</label>
               <textarea
                 rows={4}
-                placeholder="Write your message…"
+                placeholder="Write your message..."
                 value={broadcastDraft.body}
                 onChange={(e) => setBroadcastDraft((d) => ({ ...d, body: e.target.value }))}
               />

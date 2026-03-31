@@ -1,41 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
-
-const TITLES: { prefix: string; title: string }[] = [
-  { prefix: '/dashboard', title: 'Dashboard' },
-  { prefix: '/admin/integrations', title: 'Integrations' },
-  { prefix: '/admin/notifications', title: 'Notification defaults' },
-  { prefix: '/admin/categories', title: 'Categories' },
-  { prefix: '/admin/roles', title: 'Roles & permissions' },
-  { prefix: '/admin/users', title: 'All members' },
-  { prefix: '/admin/pending', title: 'Pending approval' },
-  { prefix: '/admin/teams', title: 'Teams' },
-  { prefix: '/admin/departments', title: 'Departments' },
-  { prefix: '/admin/broadcasts', title: 'Broadcast management' },
-  { prefix: '/admin/rota-import', title: 'Sheets import' },
-  { prefix: '/admin/rota', title: 'Rota management' },
-  { prefix: '/admin/discount', title: 'Discount rules' },
-  { prefix: '/admin/scan-logs', title: 'Activity log' },
-  { prefix: '/admin/settings', title: 'Organisation settings' },
-  { prefix: '/admin', title: 'Admin overview' },
-  { prefix: '/broadcasts', title: 'Broadcasts' },
-  { prefix: '/calendar', title: 'Calendar' },
-  { prefix: '/rota', title: 'Rota' },
-  { prefix: '/discount', title: 'Discount Card' },
-  { prefix: '/pending-approvals', title: 'Approvals' },
-  { prefix: '/settings', title: 'Settings' },
-  { prefix: '/manager/teams', title: 'Teams' },
-  { prefix: '/manager/departments', title: 'Departments' },
-  { prefix: '/manager', title: 'Manager' },
-];
-
-function titleForPath(pathname: string) {
-  const hit = TITLES.find((t) => pathname === t.prefix || pathname.startsWith(`${t.prefix}/`));
-  return hit?.title ?? 'Campsite';
-}
+import { useRouter } from 'next/navigation';
+import { useCallback, useState } from 'react';
 
 export function AppTopBar({
   userInitials,
@@ -48,9 +15,7 @@ export function AppTopBar({
   onAvatarImageError?: () => void;
   hasNotifDot?: boolean;
 }) {
-  const pathname = usePathname() ?? '';
   const router = useRouter();
-  const title = useMemo(() => titleForPath(pathname), [pathname]);
   const [q, setQ] = useState('');
 
   const onSearchKey = useCallback(
@@ -64,7 +29,7 @@ export function AppTopBar({
 
   return (
     <header className="sticky top-0 z-50 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#d8d8d8] bg-[#faf9f6] px-5 sm:px-7">
-      <h1 className="min-w-0 flex-1 font-authSerif text-xl tracking-tight text-[#121212]">{title}</h1>
+      <div className="min-w-0 flex-1" aria-hidden />
       <div className="hidden max-w-[220px] flex-1 items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 py-0 sm:flex sm:h-9">
         <span className="text-sm text-[#9b9b9b]" aria-hidden>
           🔍
@@ -74,7 +39,7 @@ export function AppTopBar({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onSearchKey}
-          placeholder="Search broadcasts…"
+          placeholder="Search broadcasts..."
           className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
           aria-label="Search broadcasts"
         />

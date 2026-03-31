@@ -41,7 +41,7 @@ export default async function RegisterDonePage({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Workspace</p>
           <p className="mt-1 font-mono text-[14px] font-medium text-[#121212]">{orgSlug}.camp-site.co.uk</p>
           <p className="mt-3 text-[12px] text-[#6b6b6b]">
-            You&apos;re the organisation admin for this space — no manager approval. Check spam if the
+            You&apos;re the organisation admin for this space - no manager approval. Check spam if the
             email is slow.
           </p>
         </div>

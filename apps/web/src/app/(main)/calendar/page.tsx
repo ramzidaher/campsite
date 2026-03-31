@@ -18,6 +18,12 @@ export default async function CalendarPage() {
   if (!profile?.org_id) redirect('/login');
   if (profile.status !== 'active') redirect('/pending');
 
+  const { data: orgRow } = await supabase
+    .from('organisations')
+    .select('timezone')
+    .eq('id', profile.org_id)
+    .single();
+
   return (
     <CalendarClient
       profile={{
@@ -25,6 +31,7 @@ export default async function CalendarPage() {
         org_id: profile.org_id,
         role: profile.role,
         full_name: profile.full_name,
+        org_timezone: (orgRow?.timezone as string | null) ?? null,
       }}
     />
   );
