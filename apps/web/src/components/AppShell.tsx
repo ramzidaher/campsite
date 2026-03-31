@@ -111,6 +111,7 @@ export function AppShell({
   pendingApprovalCount,
   rotaPendingFinalCount,
   rotaPendingPeerCount,
+  recruitmentPendingReviewCount = 0,
   topBarNotifications,
   managerNavItems = null,
   managerNavSectionLabel = 'Manager',
@@ -134,6 +135,8 @@ export function AppShell({
   pendingApprovalCount: number;
   rotaPendingFinalCount: number;
   rotaPendingPeerCount: number;
+  /** Open recruitment requests in `pending_review` (org admins only; layout passes 0 for others). */
+  recruitmentPendingReviewCount?: number;
   topBarNotifications: TopBarNotificationItem[];
   /** Collapsible “Manager” links (same pattern as `adminNavItems`). */
   managerNavItems?: MainShellAdminNavItem[] | null;
@@ -178,7 +181,8 @@ export function AppShell({
     pendingBroadcastApprovals +
     pendingApprovalCount +
     rotaPendingFinalCount +
-    rotaPendingPeerCount;
+    rotaPendingPeerCount +
+    recruitmentPendingReviewCount;
   const userInitials = useMemo(() => initials(userName), [userName]);
   const orgInitials = useMemo(() => initials(orgName), [orgName]);
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;

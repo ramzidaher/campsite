@@ -10,3 +10,8 @@ const AUTH_PATHS = [
 export function isAuthPath(pathname: string): boolean {
   return AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
+
+/** Unauthenticated access (e.g. public job listings). Keep narrow. */
+export function isPublicPath(pathname: string): boolean {
+  return pathname === '/jobs' || pathname.startsWith('/jobs/');
+}

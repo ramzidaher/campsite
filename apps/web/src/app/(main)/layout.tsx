@@ -53,6 +53,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let pendingBroadcastApprovals = 0;
   let rotaPendingFinalCount = 0;
   let rotaPendingPeerCount = 0;
+  let recruitmentPendingReviewCount = 0;
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
@@ -127,8 +128,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
     if (typeof broadcastPendingCount === 'number') pendingBroadcastApprovals = broadcastPendingCount;
 
+    const needsRecruitmentBadge = Boolean(orgId && profileRole && canAccessOrgAdminArea(profileRole));
+
     const canApproveRota = Boolean(profileRole && canFinalApproveRotaRequests(profileRole));
-    const [rotaFinalRes, rotaPeerRes] = await Promise.all([
+    const [rotaFinalRes, rotaPeerRes, recruitmentCountRes] = await Promise.all([
       canApproveRota
         ? supabase
             .from('rota_change_requests')
@@ -142,10 +145,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         .eq('org_id', orgId ?? '')
         .eq('counterparty_user_id', user.id)
         .eq('status', 'pending_peer'),
+      needsRecruitmentBadge
+        ? supabase.rpc('recruitment_requests_pending_review_count')
+        : Promise.resolve({ data: null as number | null }),
     ]);
     rotaPendingFinalCount = Math.max(0, Number(rotaFinalRes.count ?? 0));
     rotaPendingPeerCount = Math.max(0, Number(rotaPeerRes.count ?? 0));
 
+    const rc = recruitmentCountRes.data;
+    if (typeof rc === 'number') recruitmentPendingReviewCount = rc;
+    else if (rc !== null && rc !== undefined) recruitmentPendingReviewCount = Number(rc);
+    recruitmentPendingReviewCount = Math.max(0, recruitmentPendingReviewCount);
   }
 
   const managerNavItems =
@@ -158,11 +168,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const adminNavItemsRaw = getMainShellAdminNavItems(profileRole);
   const adminNavItems =
-    adminNavItemsRaw?.map((item) =>
-      item.href === '/admin/pending' && pendingApprovalCount > 0
-        ? { ...item, badge: pendingApprovalCount }
-        : item
-    ) ?? null;
+    adminNavItemsRaw?.map((item) => {
+      if (item.href === '/admin/pending' && pendingApprovalCount > 0) {
+        return { ...item, badge: pendingApprovalCount };
+      }
+      if (item.href === '/admin/recruitment' && recruitmentPendingReviewCount > 0) {
+        return { ...item, badge: recruitmentPendingReviewCount };
+      }
+      return item;
+    }) ?? null;
 
   const showStandaloneApprovals =
     Boolean(profileRole && isApproverRole(profileRole)) &&
@@ -200,6 +214,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       href: '/rota',
       count: rotaPendingFinalCount,
     },
+    {
+      id: 'recruitment-pending',
+      label: 'Recruitment requests to review',
+      href: '/admin/recruitment',
+      count: recruitmentPendingReviewCount,
+    },
   ].filter((item) => item.count > 0);
 
   return (
@@ -219,6 +239,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           pendingApprovalCount={pendingApprovalCount}
           rotaPendingFinalCount={rotaPendingFinalCount}
           rotaPendingPeerCount={rotaPendingPeerCount}
+          recruitmentPendingReviewCount={recruitmentPendingReviewCount}
           topBarNotifications={topBarNotifications}
           managerNavItems={managerNavItems}
           managerNavSectionLabel={

@@ -3,9 +3,13 @@ import {
   Bell,
   Briefcase,
   Building2,
+  CalendarClock,
   CalendarDays,
   CalendarRange,
   ClipboardList,
+  FileSignature,
+  FileText,
+  Inbox,
   Home,
   Hourglass,
   LayoutDashboard,
@@ -62,6 +66,16 @@ export function ShellNavIcon({ name }: { name: ShellNavIconId }) {
       return <Link2 {...p} />;
     case 'manager':
       return <Briefcase {...p} />;
+    case 'recruitment':
+      return <Briefcase {...p} />;
+    case 'jobs':
+      return <FileText {...p} />;
+    case 'applications':
+      return <Inbox {...p} />;
+    case 'offerTemplates':
+      return <FileSignature {...p} />;
+    case 'interviews':
+      return <CalendarClock {...p} />;
     default: {
       const _x: never = name;
       return _x;

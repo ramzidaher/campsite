@@ -1,0 +1,45 @@
+import { AdminJobsListClient } from '@/components/admin/AdminJobsListClient';
+import { canAccessOrgAdminArea } from '@/lib/adminGates';
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+
+export default async function AdminJobsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id, role, status')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
+  if (!canAccessOrgAdminArea(profile.role)) redirect('/broadcasts');
+
+  const orgId = profile.org_id as string;
+
+  const [{ data: orgRow }, { data: jobRows }, { data: deptRows }] = await Promise.all([
+    supabase.from('organisations').select('slug').eq('id', orgId).single(),
+    supabase
+      .from('job_listings')
+      .select(
+        'id, title, slug, status, grade_level, salary_band, contract_type, published_at, posted_year, department_id, departments(name)'
+      )
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false }),
+    supabase.from('departments').select('id, name').eq('org_id', orgId).order('name'),
+  ]);
+
+  const orgSlug = (orgRow?.slug as string | undefined)?.trim() ?? '';
+
+  return (
+    <AdminJobsListClient
+      rows={(jobRows ?? []) as Parameters<typeof AdminJobsListClient>[0]['rows']}
+      departments={(deptRows ?? []) as Parameters<typeof AdminJobsListClient>[0]['departments']}
+      orgSlug={orgSlug}
+    />
+  );
+}

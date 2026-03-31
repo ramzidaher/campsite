@@ -59,7 +59,12 @@ export type ShellNavIconId =
   | 'orgSettings'
   | 'notifications'
   | 'integrations'
-  | 'manager';
+  | 'manager'
+  | 'recruitment'
+  | 'jobs'
+  | 'applications'
+  | 'offerTemplates'
+  | 'interviews';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -90,6 +95,11 @@ export function getMainShellAdminNavItems(
     { href: '/admin/teams', label: 'Teams', icon: 'teams', section: 'Content' },
     { href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' },
     { href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' },
+    { href: '/admin/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'Operations' },
+    { href: '/admin/jobs', label: 'Job listings', icon: 'jobs', section: 'Operations' },
+    { href: '/admin/applications', label: 'Applications', icon: 'applications', section: 'Operations' },
+    { href: '/admin/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'Operations' },
+    { href: '/admin/interviews', label: 'Interview schedule', icon: 'interviews', section: 'Operations' },
     { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
     { href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' },
     { href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' },
@@ -120,6 +130,12 @@ export function getMainShellManagerNavItems(
     label: 'Pending members',
     icon: 'pending',
     badge: pendingApprovalCount > 0 ? pendingApprovalCount : undefined,
+    section: 'People',
+  };
+  const recruitment: MainShellAdminNavItem = {
+    href: '/manager/recruitment',
+    label: 'Recruitment requests',
+    icon: 'recruitment',
     section: 'People',
   };
   const departments: MainShellAdminNavItem = {
@@ -159,6 +175,7 @@ export function getMainShellManagerNavItems(
     return [
       { href: '/manager', label: 'Overview', icon: 'home', exact: true },
       pendingMembers,
+      recruitment,
       departments,
       teams,
       subTeams,
@@ -167,5 +184,5 @@ export function getMainShellManagerNavItems(
     ];
   }
 
-  return [pendingMembers, departments, teams, broadcasts, rota];
+  return [pendingMembers, recruitment, departments, teams, broadcasts, rota];
 }

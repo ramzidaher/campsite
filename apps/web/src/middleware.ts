@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { isAuthPath } from './lib/middleware/authPaths';
+import { isAuthPath, isPublicPath } from './lib/middleware/authPaths';
 import { resolveHostRequestContext } from './lib/middleware/resolveHostRequestContext';
 import { getSupabasePublicKey, getSupabaseUrl } from './lib/supabase/env';
 
@@ -85,7 +85,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (!user && !isAuthPath(pathname) && pathname !== '/' && !isAuthEmailReturn) {
+  if (
+    !user &&
+    !isAuthPath(pathname) &&
+    !isPublicPath(pathname) &&
+    pathname !== '/' &&
+    !isAuthEmailReturn
+  ) {
     const login = request.nextUrl.clone();
     login.pathname = '/login';
     login.searchParams.set('next', pathname);

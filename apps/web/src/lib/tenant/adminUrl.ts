@@ -16,3 +16,21 @@ export function tenantAdminDashboardUrl(orgSlug: string): string {
   }
   return `${protocol}//${orgSlug}.localhost${p}/admin`;
 }
+
+/** Public job posting URL for the tenant (share off-site). */
+export function tenantJobPublicUrl(orgSlug: string, jobSlug: string): string {
+  const path = `/jobs/${encodeURIComponent(jobSlug)}`;
+  if (typeof window === 'undefined') {
+    return `https://${orgSlug}.${HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN}${path}`;
+  }
+  const { protocol, hostname, port } = window.location;
+  const p = port ? `:${port}` : '';
+  const root = HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN;
+  if (hostname === 'localhost' || hostname === 'admin.localhost' || hostname.endsWith('.localhost')) {
+    return `${protocol}//${orgSlug}.localhost${p}${path}`;
+  }
+  if (hostname.endsWith(`.${root}`)) {
+    return `${protocol}//${orgSlug}.${root}${p}${path}`;
+  }
+  return `${protocol}//${orgSlug}.localhost${p}${path}`;
+}

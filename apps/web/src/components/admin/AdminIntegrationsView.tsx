@@ -36,19 +36,25 @@ export function AdminIntegrationsView({
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#d8d8d8] bg-[#f5f4f1] p-5">
+        <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 shadow-sm">
           <div className="flex items-start gap-3">
             <span className="text-2xl" aria-hidden>
               📅
             </span>
             <div className="min-w-0 flex-1">
-              <h2 className="font-authSerif text-lg text-[#121212]">Google Calendar</h2>
+              <h2 className="font-authSerif text-lg text-[#121212]">Google Calendar &amp; interviews</h2>
               <p className="mt-1 text-[13px] leading-snug text-[#6b6b6b]">
-                Calendar sync is not wired in this build yet. Use Sheets import or manual rota entry for now.
+                Configure the Google OAuth client in deployment (see <code className="text-[12px]">.env.example</code>
+                ). Staff who sit on interview panels should open{' '}
+                <strong>Settings → Integrations</strong> and connect Google Calendar once. HR creates panel slots under{' '}
+                <strong>Admin → Interview schedule</strong>; events are written to each connected panelist&apos;s calendar.
               </p>
-              <span className="mt-3 inline-block rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-                Coming later
-              </span>
+              <Link
+                href="/admin/interviews"
+                className="mt-3 inline-flex h-9 items-center rounded-lg border border-[#008B60] bg-[#f0fdf9] px-4 text-[13px] font-medium text-[#008B60]"
+              >
+                Interview schedule
+              </Link>
             </div>
           </div>
         </div>

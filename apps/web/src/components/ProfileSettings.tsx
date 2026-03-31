@@ -544,7 +544,8 @@ export function ProfileSettings({
           Integrations
         </h2>
         <p className="mb-4 text-[13px] leading-relaxed text-[#6b6b6b]">
-          Connect Google to sync your calendar or import a rota from Sheets (rota import: Admin → Rota import).
+          Connect Google Calendar so HR can place interview slots on your calendar when you&apos;re on a panel. You can
+          also connect Sheets for rota import (Admin → Rota import).
         </p>
         <div className="flex flex-wrap gap-2">
           <a href="/api/google/oauth/start?type=calendar" className={btnSecondary}>
