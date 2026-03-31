@@ -1,10 +1,21 @@
 import { AppShell } from '@/components/AppShell';
+import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { MainProviders } from '@/components/providers/MainProviders';
 import { ThemeRoot } from '@/components/ThemeRoot';
-import { canAccessOrgAdminArea, getMainShellAdminNavItems } from '@/lib/adminGates';
+import {
+  canAccessOrgAdminArea,
+  getMainShellAdminNavItems,
+  getMainShellManagerNavItems,
+  getMainShellManagerNavSectionLabel,
+} from '@/lib/adminGates';
 import { countPendingBroadcastApprovalsForViewer } from '@/lib/broadcasts/countPendingBroadcastApprovalsForViewer';
 import { createClient } from '@/lib/supabase/server';
-import { isApproverRole, isBroadcastApproverRole, isManagerRole } from '@campsite/types';
+import {
+  canFinalApproveRotaRequests,
+  isApproverRole,
+  isBroadcastApproverRole,
+  isDepartmentWorkspaceRole,
+} from '@campsite/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,8 +51,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let unreadBroadcasts = 0;
   let pendingApprovalCount = 0;
   let pendingBroadcastApprovals = 0;
-  let showManager = false;
-
+  let rotaPendingFinalCount = 0;
+  let rotaPendingPeerCount = 0;
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
@@ -116,8 +127,34 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
     if (typeof broadcastPendingCount === 'number') pendingBroadcastApprovals = broadcastPendingCount;
 
-    showManager = isManagerRole(profileRole);
+    const canApproveRota = Boolean(profileRole && canFinalApproveRotaRequests(profileRole));
+    const [rotaFinalRes, rotaPeerRes] = await Promise.all([
+      canApproveRota
+        ? supabase
+            .from('rota_change_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('org_id', orgId ?? '')
+            .eq('status', 'pending_final')
+        : Promise.resolve({ count: 0 }),
+      supabase
+        .from('rota_change_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId ?? '')
+        .eq('counterparty_user_id', user.id)
+        .eq('status', 'pending_peer'),
+    ]);
+    rotaPendingFinalCount = Math.max(0, Number(rotaFinalRes.count ?? 0));
+    rotaPendingPeerCount = Math.max(0, Number(rotaPeerRes.count ?? 0));
+
   }
+
+  const managerNavItems =
+    profileRole && isDepartmentWorkspaceRole(profileRole)
+      ? getMainShellManagerNavItems(profileRole, {
+          pendingApprovalCount,
+          pendingBroadcastApprovals,
+        })
+      : null;
 
   const adminNavItemsRaw = getMainShellAdminNavItems(profileRole);
   const adminNavItems =
@@ -128,7 +165,42 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ) ?? null;
 
   const showStandaloneApprovals =
-    Boolean(profileRole && isApproverRole(profileRole)) && !canAccessOrgAdminArea(profileRole);
+    Boolean(profileRole && isApproverRole(profileRole)) &&
+    !canAccessOrgAdminArea(profileRole) &&
+    !isDepartmentWorkspaceRole(profileRole);
+
+  const topBarNotifications: TopBarNotificationItem[] = [
+    {
+      id: 'broadcast-unread',
+      label: 'Unread broadcasts',
+      href: '/broadcasts',
+      count: unreadBroadcasts,
+    },
+    {
+      id: 'broadcast-pending',
+      label: 'Broadcast approvals',
+      href: '/broadcasts?tab=pending',
+      count: pendingBroadcastApprovals,
+    },
+    {
+      id: 'profile-pending',
+      label: 'Pending member approvals',
+      href: canAccessOrgAdminArea(profileRole) ? '/admin/pending' : '/pending-approvals',
+      count: pendingApprovalCount,
+    },
+    {
+      id: 'rota-peer',
+      label: 'Rota swaps awaiting your OK',
+      href: '/rota',
+      count: rotaPendingPeerCount,
+    },
+    {
+      id: 'rota-final',
+      label: 'Rota requests awaiting approval',
+      href: '/rota',
+      count: rotaPendingFinalCount,
+    },
+  ].filter((item) => item.count > 0);
 
   return (
     <ThemeRoot>
@@ -145,7 +217,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           unreadBroadcasts={unreadBroadcasts}
           pendingBroadcastApprovals={pendingBroadcastApprovals}
           pendingApprovalCount={pendingApprovalCount}
-          showManager={showManager}
+          rotaPendingFinalCount={rotaPendingFinalCount}
+          rotaPendingPeerCount={rotaPendingPeerCount}
+          topBarNotifications={topBarNotifications}
+          managerNavItems={managerNavItems}
+          managerNavSectionLabel={
+            managerNavItems && profileRole ? getMainShellManagerNavSectionLabel(profileRole) : 'Manager'
+          }
           adminNavItems={adminNavItems}
           showStandaloneApprovals={showStandaloneApprovals}
         >

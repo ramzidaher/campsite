@@ -298,7 +298,15 @@ export function DashboardHome({
                 const deptName = b.departments?.name ?? 'General';
                 const channelName = b.broadcast_channels?.name ?? '';
                 const teamName = b.department_teams?.name ?? '';
+                const collabDepartments = b.collab_departments ?? [];
                 const unread = b.read === false;
+                const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
+                const sentLabel = b.sent_at
+                  ? new Date(b.sent_at).toLocaleString(undefined, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })
+                  : 'Send time unavailable';
                 return (
                   <Link
                     key={b.id}
@@ -323,6 +331,11 @@ export function DashboardHome({
                     </div>
                     <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">
                       {stripPreview(b.body)}
+                    </p>
+                    <p className="mt-2 text-[11.5px] text-[#6b6b6b]">
+                      Sent by <span className="font-medium text-[#121212]">{senderName}</span>
+                      <span className="mx-1.5 text-[#9b9b9b]">·</span>
+                      <span>{sentLabel}</span>
                     </p>
                     <div className="mt-2.5 flex flex-wrap gap-2">
                       {b.is_pinned ? (
@@ -366,6 +379,14 @@ export function DashboardHome({
                           {teamName}
                         </span>
                       ) : null}
+                      {collabDepartments.map((d) => (
+                        <span
+                          key={`${b.id}-collab-${d.id}`}
+                          className="inline-flex items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2.5 py-0.5 text-[11px] font-medium text-[#1d4ed8]"
+                        >
+                          {d.name}
+                        </span>
+                      ))}
                     </div>
                   </Link>
                 );

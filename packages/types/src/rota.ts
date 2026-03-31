@@ -34,3 +34,9 @@ export function canFinalApproveRotaRequests(role: string | null | undefined): bo
 export function canTransferRotaOwnership(role: string | null | undefined): boolean {
   return isOrgAdminRole(role);
 }
+
+/** Submit recurring weekly availability + per-date overrides (rota staffing). */
+export function canSubmitStaffAvailability(role: string | null | undefined): boolean {
+  const r = role?.trim();
+  return r === 'csa' || r === 'administrator';
+}

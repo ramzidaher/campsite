@@ -59,7 +59,7 @@ export function DashboardCalendarWidget({
             preview.map((ev) => (
               <Link
                 key={ev.id}
-                href="/calendar"
+                href={ev.kind === 'shift' ? '/rota' : '/calendar'}
                 className="flex gap-2.5 border-b border-[#d8d8d8] py-2 last:border-0 hover:opacity-80"
               >
                 <span
@@ -68,7 +68,14 @@ export function DashboardCalendarWidget({
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[12.5px] font-medium text-[#121212]">{ev.title}</div>
+                  <div className="text-[12.5px] font-medium text-[#121212]">
+                    {ev.title}
+                    {ev.kind === 'shift' ? (
+                      <span className="ml-1.5 rounded-full border border-[#dbeafe] bg-[#eff6ff] px-1.5 py-0.5 text-[10px] font-semibold text-[#1d4ed8]">
+                        Shift
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="text-[11.5px] text-[#9b9b9b]">{formatEventWhen(ev.start_time)}</div>
                 </div>
               </Link>

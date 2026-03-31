@@ -1,8 +1,8 @@
-import { ManagerNav } from '@/components/manager/ManagerNav';
 import { createClient } from '@/lib/supabase/server';
-import { isManagerRole } from '@campsite/types';
+import { isDepartmentWorkspaceRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
+/** Nav lives in the main shell under “Manager” (same idea as `/admin`). */
 export default async function ManagerLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
@@ -17,12 +17,9 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!isManagerRole(profile.role)) redirect('/broadcasts');
+  if (!isDepartmentWorkspaceRole(profile.role)) redirect('/broadcasts');
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 py-7 sm:px-[28px] md:flex-row md:items-start">
-      <ManagerNav />
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
+    <div className="mx-auto min-w-0 max-w-6xl px-5 py-7 pb-10 sm:px-[28px]">{children}</div>
   );
 }

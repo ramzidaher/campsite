@@ -45,10 +45,10 @@ export default async function PendingApprovalsPage() {
         </div>
         {showManagerLink ? (
           <Link
-            href="/manager"
+            href={me.role === 'coordinator' ? '/manager/teams' : '/manager'}
             className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
           >
-            Manager overview
+            {me.role === 'coordinator' ? 'Department workspace' : 'Manager overview'}
           </Link>
         ) : null}
       </div>

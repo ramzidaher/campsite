@@ -27,7 +27,7 @@ export default async function SettingsPage({
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'full_name,avatar_url,role,accent_preset,color_scheme,dnd_enabled,dnd_start,dnd_end,shift_reminder_before_minutes,org_id'
+      'full_name,avatar_url,role,accent_preset,color_scheme,dnd_enabled,dnd_start,dnd_end,shift_reminder_before_minutes,rota_open_slot_alerts_enabled,org_id'
     )
     .eq('id', user.id)
     .single();
@@ -50,13 +50,6 @@ export default async function SettingsPage({
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  const { data: userDeptRows } = await supabase
-    .from('user_departments')
-    .select('dept_id, departments(name)')
-    .eq('user_id', user.id);
-
-  const deptIds = [...new Set((userDeptRows ?? []).map((r) => r.dept_id as string).filter(Boolean))];
-
   type BroadcastChannelPref = {
     channel_id: string;
     name: string;
@@ -66,34 +59,42 @@ export default async function SettingsPage({
   };
 
   let broadcastChannelPrefs: BroadcastChannelPref[] = [];
-  if (deptIds.length) {
-    const [{ data: chans }, { data: subs }] = await Promise.all([
-      supabase.from('broadcast_channels').select('id, name, dept_id').in('dept_id', deptIds).order('name'),
+  const orgId = profile?.org_id as string | undefined;
+  if (orgId) {
+    const [{ data: orgDepts }, { data: subs }] = await Promise.all([
+      supabase.from('departments').select('id, name').eq('org_id', orgId).eq('is_archived', false),
       supabase.from('user_subscriptions').select('channel_id, subscribed').eq('user_id', user.id),
     ]);
-    const subMap = new Map(
-      (subs ?? []).map((s) => [s.channel_id as string, Boolean(s.subscribed)])
-    );
-    const deptNameById = new Map<string, string>();
-    for (const r of userDeptRows ?? []) {
-      const did = r.dept_id as string;
-      const rel = r.departments as { name: string } | { name: string }[] | null;
-      const n = Array.isArray(rel) ? rel[0]?.name : rel?.name;
-      deptNameById.set(did, (n ?? 'Team').trim() || 'Team');
+    const deptIds = [...new Set((orgDepts ?? []).map((d) => d.id as string).filter(Boolean))];
+    if (deptIds.length) {
+      const { data: chans } = await supabase
+        .from('broadcast_channels')
+        .select('id, name, dept_id')
+        .in('dept_id', deptIds)
+        .order('name');
+      const subMap = new Map(
+        (subs ?? []).map((s) => [s.channel_id as string, Boolean(s.subscribed)])
+      );
+      const deptNameById = new Map<string, string>();
+      for (const d of orgDepts ?? []) {
+        const did = d.id as string;
+        const n = String(d.name ?? '').trim();
+        deptNameById.set(did, n || 'Department');
+      }
+      for (const c of chans ?? []) {
+        const id = c.id as string;
+        broadcastChannelPrefs.push({
+          channel_id: id,
+          name: String(c.name ?? ''),
+          dept_id: c.dept_id as string,
+          dept_name: deptNameById.get(c.dept_id as string) ?? 'Department',
+          subscribed: subMap.get(id) ?? false,
+        });
+      }
+      broadcastChannelPrefs.sort(
+        (a, b) => a.dept_name.localeCompare(b.dept_name) || a.name.localeCompare(b.name)
+      );
     }
-    for (const c of chans ?? []) {
-      const id = c.id as string;
-      broadcastChannelPrefs.push({
-        channel_id: id,
-        name: String(c.name ?? ''),
-        dept_id: c.dept_id as string,
-        dept_name: deptNameById.get(c.dept_id as string) ?? 'Team',
-        subscribed: subMap.get(id) ?? false,
-      });
-    }
-    broadcastChannelPrefs.sort(
-      (a, b) => a.dept_name.localeCompare(b.dept_name) || a.name.localeCompare(b.name)
-    );
   }
 
   return (
@@ -119,6 +120,7 @@ export default async function SettingsPage({
                   dnd_start: profile.dnd_start,
                   dnd_end: profile.dnd_end,
                   shift_reminder_before_minutes: profile.shift_reminder_before_minutes,
+                  rota_open_slot_alerts_enabled: profile.rota_open_slot_alerts_enabled,
                 }
               : null
           }

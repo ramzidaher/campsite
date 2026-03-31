@@ -13,6 +13,7 @@ export type FeedRow = {
   departments: { name: string } | null;
   broadcast_channels: { name: string } | null;
   department_teams?: { name: string } | null;
+  collab_departments?: { id: string; name: string }[];
   profiles: { full_name: string } | null;
   read?: boolean;
 };

@@ -1,0 +1,136 @@
+/* TipTap / ProseMirror — Notion-style writing surface */
+.root :global(.ProseMirror) {
+  min-height: min(55vh, 360px);
+  outline: none;
+}
+
+.root :global(.ProseMirror p.is-empty::before) {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #b8b5b0;
+}
+
+.root :global(.ProseMirror p) {
+  margin: 0.35em 0;
+}
+
+.root :global(.ProseMirror p:first-child) {
+  margin-top: 0;
+}
+
+.root :global(.ProseMirror h1) {
+  font-size: 1.65rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 0.85em 0 0.35em;
+  color: #37352f;
+}
+
+.root :global(.ProseMirror h2) {
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  margin: 0.75em 0 0.3em;
+  color: #37352f;
+}
+
+.root :global(.ProseMirror h3) {
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0.65em 0 0.25em;
+  color: #37352f;
+}
+
+.root :global(.ProseMirror ul),
+.root :global(.ProseMirror ol) {
+  margin: 0.4em 0;
+  padding-left: 1.35rem;
+}
+
+.root :global(.ProseMirror ul) {
+  list-style-type: disc;
+}
+
+.root :global(.ProseMirror ol) {
+  list-style-type: decimal;
+}
+
+.root :global(.ProseMirror li) {
+  margin: 0.2em 0;
+}
+
+.root :global(.ProseMirror li p) {
+  margin: 0;
+}
+
+.root :global(.ProseMirror blockquote) {
+  margin: 0.6em 0;
+  padding-left: 1rem;
+  border-left: 3px solid #e8e4df;
+  color: #6b6b6b;
+}
+
+.root :global(.ProseMirror pre) {
+  margin: 0.65em 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: #f5f3f0;
+  border: 1px solid #ebe8e3;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.root :global(.ProseMirror code) {
+  font-size: 0.9em;
+  padding: 0.12em 0.35em;
+  border-radius: 0.25rem;
+  background: #f0ebe6;
+  color: #37352f;
+}
+
+.root :global(.ProseMirror pre code) {
+  padding: 0;
+  background: transparent;
+  font-size: inherit;
+}
+
+.root :global(.ProseMirror hr) {
+  margin: 1.25em 0;
+  border: none;
+  border-top: 1px solid #ebe8e3;
+}
+
+.root :global(.ProseMirror a) {
+  color: #047857;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(4, 120, 87, 0.35);
+}
+
+.root :global(.ProseMirror strong) {
+  font-weight: 600;
+}
+
+.bubbleBtn {
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: #504e49;
+  transition: background-color 0.12s ease;
+}
+
+.bubbleBtn:hover {
+  background: #ebe8e3;
+}
+
+.bubbleBtn[data-active='true'] {
+  background: #e3dfd9;
+  color: #121212;
+}

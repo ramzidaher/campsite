@@ -4,8 +4,6 @@ import { isBroadcastDraftOnlyRole, isOrgAdminRole, type ProfileRole } from '@cam
 import { canComposeBroadcast } from '@campsite/types';
 import type { ReactNode, SelectHTMLAttributes } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 import {
   composeChannelExplainer,
@@ -18,6 +16,11 @@ import type { DeptRow } from './dept-scope';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 
+import {
+  BroadcastBodyEditor,
+  type BroadcastBodyEditorHandle,
+} from '@/components/broadcasts/BroadcastBodyEditor';
+
 type CatRow = { id: string; name: string; dept_id: string };
 
 type DeptBroadcastCaps = {
@@ -29,6 +32,7 @@ type DeptBroadcastCaps = {
 type TeamRow = { id: string; name: string };
 
 type DeliveryMode = 'org_wide' | 'specific';
+let collabDepartmentsTableMissing = false;
 
 function parseDeptBroadcastCaps(raw: unknown): DeptBroadcastCaps {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
@@ -46,6 +50,18 @@ function formatSupabaseWriteError(e: unknown): string {
     return parts.length ? parts.join(' - ') : 'Request failed';
   }
   return e instanceof Error ? e.message : 'Request failed';
+}
+
+function isMissingCollabDepartmentsTableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { code?: string; message?: string };
+  const msg = (e.message ?? '').toLowerCase();
+  return (
+    e.code === '42P01' ||
+    e.code === 'PGRST205' ||
+    msg.includes('broadcast_collab_departments') ||
+    msg.includes('does not exist')
+  );
 }
 
 /** Map keys from BroadcastsClient are lowercased dept UUIDs. */
@@ -72,6 +88,12 @@ type Props = {
 };
 
 const TITLE_MAX = 120;
+
+/** `datetime-local` values are local wall time; never use `toISOString().slice` for min/value. */
+function toDatetimeLocalValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 const COMPOSE_INPUT_CLASS =
   'w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-sm text-[#121212] shadow-sm outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10';
@@ -151,9 +173,10 @@ export function BroadcastComposer({
   const [isMandatory, setIsMandatory] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [teamId, setTeamId] = useState<string>('');
+  const [collabDeptIds, setCollabDeptIds] = useState<string[]>([]);
   const [teamsForDept, setTeamsForDept] = useState<TeamRow[]>([]);
   const dirty = useRef(false);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const bodyEditorRef = useRef<BroadcastBodyEditorHandle>(null);
 
   const displayDeptId = useMemo(() => {
     if (departments.some((d) => d.id === deptId)) return deptId;
@@ -191,6 +214,7 @@ export function BroadcastComposer({
     isMandatory,
     isPinned,
     teamId,
+    collabDeptIds,
   ]);
 
   useEffect(() => {
@@ -278,14 +302,41 @@ export function BroadcastComposer({
   useEffect(() => {
     if (isOrgWideActive) {
       setIsMandatory(false);
+      setCollabDeptIds([]);
     }
   }, [isOrgWideActive]);
 
-  const minScheduleIso = useMemo(() => {
+  const syncCollaborationDepartments = useCallback(
+    async (broadcastId: string) => {
+      if (collabDepartmentsTableMissing) return;
+      const desired =
+        draftOnly || isOrgWideActive || !displayDeptId
+          ? []
+          : [...new Set(collabDeptIds)].filter((id) => id !== displayDeptId);
+      const { error: delErr } = await supabase
+        .from('broadcast_collab_departments')
+        .delete()
+        .eq('broadcast_id', broadcastId);
+      if (delErr && !isMissingCollabDepartmentsTableError(delErr)) throw delErr;
+      if (delErr) {
+        collabDepartmentsTableMissing = true;
+        return;
+      }
+      if (!desired.length) return;
+      const { error: insErr } = await supabase
+        .from('broadcast_collab_departments')
+        .insert(desired.map((dept_id) => ({ broadcast_id: broadcastId, dept_id })));
+      if (insErr && !isMissingCollabDepartmentsTableError(insErr)) throw insErr;
+      if (insErr) collabDepartmentsTableMissing = true;
+    },
+    [supabase, collabDeptIds, displayDeptId, draftOnly, isOrgWideActive]
+  );
+
+  const minScheduleLocal = useMemo(() => {
     const t = new Date(Date.now() + 5 * 60 * 1000);
     t.setSeconds(0, 0);
-    return t.toISOString().slice(0, 16);
-  }, [schedule, scheduledAt]);
+    return toDatetimeLocalValue(t);
+  }, [schedule]);
 
   const persistDraft = useCallback(async (): Promise<boolean> => {
     if (!canComposeBroadcast(role) || !title.trim()) return true;
@@ -325,11 +376,15 @@ export function BroadcastComposer({
       if (draftId) {
         const { error: ue } = await supabase.from('broadcasts').update(row).eq('id', draftId).eq('created_by', userId);
         if (ue) throw ue;
+        await syncCollaborationDepartments(draftId);
       } else {
         const { data, error: e } = await supabase.from('broadcasts').insert(row).select('id');
         if (e) throw e;
         const id = data?.[0]?.id as string | undefined;
-        if (id) setDraftId(id);
+        if (id) {
+          setDraftId(id);
+          await syncCollaborationDepartments(id);
+        }
       }
       dirty.current = false;
       return true;
@@ -356,6 +411,7 @@ export function BroadcastComposer({
     isMandatory,
     isPinned,
     teamId,
+    syncCollaborationDepartments,
   ]);
 
   useEffect(() => {
@@ -365,21 +421,6 @@ export function BroadcastComposer({
     }, 30_000);
     return () => window.clearInterval(t);
   }, [persistDraft, role, title]);
-
-  const wrapSelection = (before: string, after: string) => {
-    const ta = bodyRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const sel = body.slice(start, end) || 'text';
-    const next = body.slice(0, start) + before + sel + after + body.slice(end);
-    setBody(next);
-    requestAnimationFrame(() => {
-      ta.focus();
-      const pos = start + before.length + sel.length + after.length;
-      ta.setSelectionRange(start + before.length, start + before.length + sel.length);
-    });
-  };
 
   const submit = async (mode: 'draft' | 'pending' | 'send' | 'schedule') => {
     if (draftOnly) {
@@ -472,8 +513,9 @@ export function BroadcastComposer({
           created_by: userId,
           ...baseFlags,
         };
-        const { error: e } = await supabase.from('broadcasts').insert(row);
+        const { data, error: e } = await supabase.from('broadcasts').insert(row).select('id').single();
         if (e) throw e;
+        if (data?.id) await syncCollaborationDepartments(data.id as string);
         setTitle('');
         setBody('');
         setSchedule(false);
@@ -482,6 +524,7 @@ export function BroadcastComposer({
         setIsMandatory(false);
         setIsPinned(false);
         setTeamId('');
+        setCollabDeptIds([]);
         onCreated?.('scheduled');
         return;
       }
@@ -497,14 +540,16 @@ export function BroadcastComposer({
         created_by: userId,
         ...baseFlags,
       };
-      const { error: e } = await supabase.from('broadcasts').insert(row);
+      const { data, error: e } = await supabase.from('broadcasts').insert(row).select('id').single();
       if (e) throw e;
+      if (data?.id) await syncCollaborationDepartments(data.id as string);
       setTitle('');
       setBody('');
       setDeliveryMode('specific');
       setIsMandatory(false);
       setIsPinned(false);
       setTeamId('');
+      setCollabDeptIds([]);
       onCreated?.('sent');
     } catch (e: unknown) {
       setError(formatSupabaseWriteError(e));
@@ -539,11 +584,11 @@ export function BroadcastComposer({
       <div>
         <label className="mb-1 block text-sm font-medium text-[#121212]">Title</label>
         <input
-          className={COMPOSE_INPUT_CLASS}
+          className={`${COMPOSE_INPUT_CLASS} text-lg font-semibold tracking-tight text-[#37352f] placeholder:font-normal placeholder:text-[#aeaca7]`}
           maxLength={TITLE_MAX}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Short headline for the feed"
+          placeholder="Headline"
         />
         <div className="mt-1 text-right text-xs text-[#6b6b6b]">
           {title.length}/{TITLE_MAX}
@@ -710,6 +755,39 @@ export function BroadcastComposer({
         </div>
       ) : null}
 
+      {!draftOnly && deliveryMode === 'specific' ? (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[#121212]">
+            Collaboration departments (optional)
+          </label>
+          <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
+            Add extra departments to make this a cross-department broadcast. Members subscribed to channels
+            in any selected collaboration department can also see this post.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {departments
+              .filter((d) => d.id !== displayDeptId)
+              .map((d) => (
+                <label
+                  key={d.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-sm text-[#121212]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={collabDeptIds.includes(d.id)}
+                    onChange={(e) =>
+                      setCollabDeptIds((prev) =>
+                        e.target.checked ? [...new Set([...prev, d.id])] : prev.filter((id) => id !== d.id)
+                      )
+                    }
+                  />
+                  <span>{d.name}</span>
+                </label>
+              ))}
+          </div>
+        </div>
+      ) : null}
+
       {!draftOnly && capsDeptId ? (
         <div className="rounded-lg border border-[#d8d8d8] bg-white p-3">
           <p className="text-sm font-medium text-[#121212]">Delivery options</p>
@@ -764,56 +842,79 @@ export function BroadcastComposer({
       ) : null}
 
       <div>
-        <div className="mb-1 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-[#121212]">Message</span>
-          <span className="text-[12px] text-[#6b6b6b]">Use the buttons or type normally - preview updates as you go.</span>
+        <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium text-[#121212]">Write</p>
+            <p className="mt-0.5 text-[12px] leading-snug text-[#6b6b6b]">
+              Edit visually like Notion — content is stored as markdown for the feed. Select text for a quick format bar.
+            </p>
+          </div>
         </div>
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 text-xs font-medium text-[#121212] transition hover:bg-[#f5f4f1]"
-            onClick={() => wrapSelection('**', '**')}
+        <div className="overflow-hidden rounded-2xl border border-[#e8e4df] bg-white shadow-[0_2px_12px_rgba(15,15,15,0.05)]">
+          <div
+            className="flex flex-wrap items-center gap-0.5 border-b border-[#f0ebe6] bg-[#faf9f7] px-2 py-1.5 sm:gap-1 sm:px-3"
+            role="toolbar"
+            aria-label="Text formatting"
           >
-            Bold
-          </button>
-          <button
-            type="button"
-            className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 text-xs font-medium text-[#121212] transition hover:bg-[#f5f4f1]"
-            onClick={() => wrapSelection('*', '*')}
-          >
-            Italic
-          </button>
-          <button
-            type="button"
-            className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 text-xs font-medium text-[#121212] transition hover:bg-[#f5f4f1]"
-            onClick={() => {
-              const ta = bodyRef.current;
-              if (!ta) return;
-              const start = ta.selectionStart;
-              const lineStart = body.lastIndexOf('\n', start - 1) + 1;
-              const next = body.slice(0, lineStart) + '- ' + body.slice(lineStart);
-              setBody(next);
-            }}
-          >
-            Bullet list
-          </button>
-        </div>
-        <textarea
-          ref={bodyRef}
-          className={`${COMPOSE_INPUT_CLASS} min-h-[160px] resize-y leading-relaxed`}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Write your message..."
-        />
-        <div className="mt-3 rounded-lg border border-[#d8d8d8] bg-white p-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Preview</p>
-          {body.trim() ? (
-            <div className="max-w-none text-sm leading-relaxed text-[#121212] [&_a]:text-emerald-700 [&_a]:underline [&_li]:my-0.5 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
-            </div>
-          ) : (
-            <p className="text-sm text-[#9b9b9b]">Recipients will see your message here once you start typing.</p>
-          )}
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[#504e49] transition hover:bg-[#ebe8e3] active:bg-[#e3dfd9]"
+              onClick={() => bodyEditorRef.current?.bold()}
+            >
+              Bold
+            </button>
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[#504e49] transition hover:bg-[#ebe8e3] active:bg-[#e3dfd9]"
+              onClick={() => bodyEditorRef.current?.italic()}
+            >
+              Italic
+            </button>
+            <span className="mx-0.5 hidden h-4 w-px shrink-0 bg-[#ddd9d4] sm:block" aria-hidden />
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[#504e49] transition hover:bg-[#ebe8e3] active:bg-[#e3dfd9]"
+              onClick={() => bodyEditorRef.current?.bulletList()}
+            >
+              Bullet list
+            </button>
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[#504e49] transition hover:bg-[#ebe8e3] active:bg-[#e3dfd9]"
+              onClick={() => bodyEditorRef.current?.orderedList()}
+            >
+              Numbered
+            </button>
+            <span className="mx-0.5 hidden h-4 w-px shrink-0 bg-[#ddd9d4] sm:block" aria-hidden />
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[#504e49] transition hover:bg-[#ebe8e3] active:bg-[#e3dfd9]"
+              onClick={() => bodyEditorRef.current?.undo()}
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[#504e49] transition hover:bg-[#ebe8e3] active:bg-[#e3dfd9]"
+              onClick={() => bodyEditorRef.current?.redo()}
+            >
+              Redo
+            </button>
+          </div>
+          <BroadcastBodyEditor
+            ref={bodyEditorRef}
+            markdown={body}
+            onMarkdownChange={setBody}
+            disabled={saving}
+            placeholder="Write something for your organisation…"
+          />
+          <p className="border-t border-[#f0ebe6] px-5 py-2.5 text-[12px] leading-snug text-[#9b9b9b] sm:px-6">
+            <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">⌘/Ctrl+B</kbd> bold,{' '}
+            <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">⌘/Ctrl+I</kbd> italic,{' '}
+            <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">⌘/Ctrl+Z</kbd> undo. Type{' '}
+            <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">#</kbd> then space for a
+            heading.
+          </p>
         </div>
       </div>
 
@@ -826,7 +927,7 @@ export function BroadcastComposer({
           {schedule ? (
             <input
               type="datetime-local"
-              min={minScheduleIso}
+              min={minScheduleLocal}
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
               className={`${COMPOSE_INPUT_CLASS} max-w-xs`}

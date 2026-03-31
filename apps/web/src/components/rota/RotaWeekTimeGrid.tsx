@@ -639,7 +639,10 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
           );
         })}
 
-        <div className="flex flex-col border-r border-[#ebe9e4] pr-1 pt-1" style={{ height: GRID_HEIGHT_PX }}>
+        <div
+          className="relative flex flex-col border-r border-[#ebe9e4] pr-1 pt-1"
+          style={{ height: GRID_HEIGHT_PX }}
+        >
           {Array.from({ length: HOUR_COUNT }, (_, i) => GRID_START_HOUR + i).map((h) => (
             <div
               key={h}
@@ -649,6 +652,9 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
               {String(h).padStart(2, '0')}:00
             </div>
           ))}
+          <div className="pointer-events-none absolute bottom-0 right-1 translate-y-1/2 text-[10px] text-[#9b9b9b]">
+            {String(GRID_END_HOUR).padStart(2, '0')}:00
+          </div>
         </div>
 
         {days.map((d, dayIndex) => (

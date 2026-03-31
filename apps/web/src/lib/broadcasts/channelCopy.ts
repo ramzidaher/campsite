@@ -6,7 +6,17 @@
 export const settingsBroadcastChannelsTitle = 'Broadcast channels';
 
 export const settingsBroadcastChannelsHelp =
-  'Targeted broadcasts only reach members who follow that channel for the department. Mandatory and org-wide sends bypass channel follows.';
+  'Channels are listed for every department in your organisation. Follow a channel to receive its targeted posts. Mandatory and org-wide sends bypass channel follows.';
+
+export const broadcastDetailFollowChannelTitle = 'Follow this channel';
+
+export const broadcastDetailFollowChannelHelp =
+  'Future targeted posts for this department channel will appear in your feed. Mandatory and org-wide sends are unchanged.';
+
+export const broadcastDetailFollowingChannel = 'You follow this channel';
+
+export const broadcastDetailOrgAdminChannelNote =
+  'Org admins see all targeted broadcasts; you can still toggle follows for your own preferences.';
 
 export const composeChannelLabel = 'Channel';
 

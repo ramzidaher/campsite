@@ -24,6 +24,7 @@ export type UpcomingEventRow = {
   title: string;
   start_time: string;
   color: string;
+  kind: 'event' | 'shift';
 };
 
 export type DashboardHomeModel = {
@@ -106,6 +107,7 @@ export async function loadDashboardHome(
   const now = new Date();
   const w0 = startOfLocalWeek(now);
   const w1 = endOfLocalWeek(now);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
   const unreadRpcPromise = canViewDashboardUnreadBroadcastKpi(profile.role)
     ? supabase.rpc('broadcast_unread_count')
@@ -117,6 +119,7 @@ export async function loadDashboardHome(
     { data: nextShifts },
     { data: recentRaw },
     { data: eventsRaw },
+    { data: shiftCalendarRaw },
     unreadRpc,
   ] = await Promise.all([
     fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
@@ -149,6 +152,14 @@ export async function loadDashboardHome(
       .gte('start_time', now.toISOString())
       .order('start_time', { ascending: true })
       .limit(5),
+    supabase
+      .from('rota_shifts')
+      .select('id,start_time,role_label')
+      .eq('user_id', userId)
+      .gte('start_time', now.toISOString())
+      .lt('start_time', monthEnd.toISOString())
+      .order('start_time', { ascending: true })
+      .limit(8),
     unreadRpcPromise,
   ]);
 
@@ -179,14 +190,27 @@ export async function loadDashboardHome(
         : Number(unreadRaw);
 
   const eventColors = ['#44403c', '#059669', '#7C3AED', '#C2410C', '#E11D48'];
-  const upcomingEvents: UpcomingEventRow[] = (eventsRaw ?? []).map((e, i) => ({
+  const upcomingCalendarEvents: UpcomingEventRow[] = (eventsRaw ?? []).map((e, i) => ({
     id: e.id as string,
     title: e.title as string,
     start_time: e.start_time as string,
     color: eventColors[i % eventColors.length]!,
+    kind: 'event',
   }));
 
-  const calendarEventDays = upcomingEvents
+  const upcomingShiftRows: UpcomingEventRow[] = (shiftCalendarRaw ?? []).map((s) => ({
+    id: `shift-${String(s.id)}`,
+    title: ((s.role_label as string | null)?.trim() || 'Upcoming shift'),
+    start_time: s.start_time as string,
+    color: '#2563EB',
+    kind: 'shift',
+  }));
+
+  const upcomingEvents = [...upcomingCalendarEvents, ...upcomingShiftRows]
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .slice(0, 5);
+
+  const calendarEventDays = [...upcomingCalendarEvents, ...upcomingShiftRows]
     .map((e) => {
       const dt = new Date(e.start_time);
       if (dt.getFullYear() !== now.getFullYear() || dt.getMonth() !== now.getMonth()) return null;

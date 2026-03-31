@@ -26,10 +26,13 @@ type Props = {
   supabase: SupabaseClient;
   orgId: string;
   userId: string;
+  viewerDeptIds?: Set<string>;
   deptFilter: Set<string>;
   catFilter: Set<string>;
   searchQuery: string;
   unreadOnly?: boolean;
+  advancedFilter?: 'all' | 'my_departments' | 'pinned' | 'mandatory' | 'org_wide';
+  sortBy?: 'newest' | 'oldest' | 'title_asc' | 'title_desc';
   /** Shown in empty-state subline when filters yield no rows */
   emptyStateCanCompose?: boolean;
   /** When true with `emptyStateCanCompose`, copy refers to drafts for approval instead of sending. */
@@ -81,10 +84,13 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     supabase,
     orgId,
     userId,
+    viewerDeptIds = new Set(),
     deptFilter,
     catFilter,
     searchQuery,
     unreadOnly = false,
+    advancedFilter = 'all',
+    sortBy = 'newest',
     emptyStateCanCompose = false,
     emptyStateDraftForApproval = false,
     onUnreadChange,
@@ -197,7 +203,46 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     ? (searchQueryResult.data ?? [])
     : (feedInfinite.data?.pages.flatMap((p) => p.rows) ?? []);
 
-  const displayRows = unreadOnly ? rows.filter((r) => !r.read) : rows;
+  const displayRows = useMemo(() => {
+    let next = unreadOnly ? rows.filter((r) => !r.read) : rows;
+
+    if (advancedFilter === 'my_departments') {
+      next = next.filter((r) => {
+        if (viewerDeptIds.has(r.dept_id)) return true;
+        return (r.collab_departments ?? []).some((d) => viewerDeptIds.has(d.id));
+      });
+    } else if (advancedFilter === 'pinned') {
+      next = next.filter((r) => r.is_pinned);
+    } else if (advancedFilter === 'mandatory') {
+      next = next.filter((r) => r.is_mandatory);
+    } else if (advancedFilter === 'org_wide') {
+      next = next.filter((r) => r.is_org_wide);
+    }
+
+    const sorted = [...next];
+    if (sortBy === 'oldest') {
+      sorted.sort((a, b) => {
+        const at = a.sent_at ? new Date(a.sent_at).getTime() : 0;
+        const bt = b.sent_at ? new Date(b.sent_at).getTime() : 0;
+        return at - bt;
+      });
+      return sorted;
+    }
+    if (sortBy === 'title_asc') {
+      sorted.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
+      return sorted;
+    }
+    if (sortBy === 'title_desc') {
+      sorted.sort((a, b) => b.title.localeCompare(a.title, undefined, { sensitivity: 'base' }));
+      return sorted;
+    }
+    sorted.sort((a, b) => {
+      const at = a.sent_at ? new Date(a.sent_at).getTime() : 0;
+      const bt = b.sent_at ? new Date(b.sent_at).getTime() : 0;
+      return bt - at;
+    });
+    return sorted;
+  }, [rows, unreadOnly, advancedFilter, sortBy, viewerDeptIds]);
 
   const loading = searchActive ? searchQueryResult.isLoading : feedInfinite.isLoading;
   const fetching = searchActive ? searchQueryResult.isFetching : feedInfinite.isFetching;
@@ -292,6 +337,14 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
             const deptName = b.departments?.name ?? 'General';
             const channelName = b.broadcast_channels?.name ?? '';
             const teamName = b.department_teams?.name ?? '';
+            const collabDepartments = b.collab_departments ?? [];
+            const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
+            const sentLabel = b.sent_at
+              ? new Date(b.sent_at).toLocaleString(undefined, {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })
+              : 'Send time unavailable';
             return (
               <li key={b.id}>
                 <Link
@@ -319,6 +372,11 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
                   </div>
                   <p className="mb-2.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">
                     {preview(b.body)}
+                  </p>
+                  <p className="mb-2.5 text-[11.5px] text-[#6b6b6b]">
+                    Sent by <span className="font-medium text-[#121212]">{senderName}</span>
+                    <span className="mx-1.5 text-[#9b9b9b]">·</span>
+                    <span>{sentLabel}</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {b.is_pinned ? (
@@ -362,6 +420,14 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
                         {teamName}
                       </span>
                     ) : null}
+                    {collabDepartments.map((d) => (
+                      <span
+                        key={`${b.id}-collab-${d.id}`}
+                        className="inline-flex items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2.5 py-0.5 text-[11px] font-medium text-[#1d4ed8]"
+                      >
+                        {d.name}
+                      </span>
+                    ))}
                   </div>
                 </Link>
               </li>

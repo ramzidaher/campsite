@@ -674,8 +674,8 @@ function ModalOverlay({
         ].join(' ')}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-[#d8d8d8] px-6 py-4">
-          <div>
+        <div className="flex items-center justify-between gap-3 border-b border-[#d8d8d8] px-6 py-4">
+          <div className="min-w-0 flex-1">
             <h2 id="dept-modal-title" className="font-authSerif text-[19px] tracking-tight text-[#121212]">
               {title}
             </h2>
@@ -683,11 +683,22 @@ function ModalOverlay({
           </div>
           <button
             type="button"
-            className="rounded-lg px-2 py-1 text-[15px] leading-none text-[#9b9b9b] hover:bg-[#f5f4f1] hover:text-[#121212]"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#f5f4f1] text-[#6b6b6b] transition-colors hover:bg-[#ebe9e4] hover:text-[#121212] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]"
             aria-label="Close"
             onClick={onClose}
           >
-            ✕
+            <svg
+              width={18}
+              height={18}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
           </button>
         </div>
         <div className="px-6 py-5">{children}</div>
@@ -844,7 +855,7 @@ function DeptDetailForm({
       <div className={`${isOrgAdmin ? 'mt-6' : ''} border-t border-[#d8d8d8] pt-4`}>
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Teams</p>
         <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
-          Named groups for targeted broadcasts (e.g. morning shift, night shift). Assign a <span className="font-medium text-[#6b6b6b]">team owner</span> to let them manage the roster and rename the team. Org admins and department managers can manage every team; higher roles can broadcast to any team in the department without joining it.
+          Named groups for targeted broadcasts (e.g. morning shift, night shift). Assign a <span className="font-medium text-[#6b6b6b]">team owner</span> to let them manage the roster and rename the team. Org admins, department managers, and coordinators can create and manage teams in their scope; higher roles can broadcast to any team in the department without joining it.
         </p>
         {isOrgAdmin ? (
           <p className="mt-2 text-[11px] text-[#9b9b9b]">
@@ -870,7 +881,9 @@ function DeptDetailForm({
         )}
         {teams.length === 0 ? (
           <p className="mt-2 text-[13px] text-[#9b9b9b]">
-            {isOrgAdmin ? 'No teams yet - add one below.' : 'No teams yet. Ask an org admin to create teams.'}
+            {isOrgAdmin
+              ? 'No teams yet - add one below.'
+              : 'No teams yet. Create teams from Manager → Teams (managers and coordinators) or ask an org admin.'}
           </p>
         ) : (
           <div className="mt-3 space-y-4">

@@ -27,10 +27,14 @@ type Tab = 'feed' | 'compose' | 'drafts' | 'submitted' | 'scheduled' | 'pending'
 
 /** Toolbar filter: all, unread only, or a single department id */
 type FeedPill = 'all' | 'unread' | string;
+type AdvancedFeedFilter = 'all' | 'my_departments' | 'pinned' | 'mandatory' | 'org_wide';
+type BroadcastSort = 'newest' | 'oldest' | 'title_asc' | 'title_desc';
 
 const FILTER_KEY_D = 'campsite_broadcast_filter_depts';
 const FILTER_KEY_C = 'campsite_broadcast_filter_cats';
 const FILTER_KEY_PILL = 'campsite_broadcast_feed_pill';
+const FILTER_KEY_ADV = 'campsite_broadcast_feed_adv_filter';
+const FILTER_KEY_SORT = 'campsite_broadcast_feed_sort';
 
 export function BroadcastsClient({
   profile,
@@ -70,6 +74,8 @@ export function BroadcastsClient({
   const [deptFilter, setDeptFilter] = useState<Set<string>>(new Set());
   const [catFilter, setCatFilter] = useState<Set<string>>(new Set());
   const [feedPill, setFeedPill] = useState<FeedPill>('all');
+  const [advancedFilter, setAdvancedFilter] = useState<AdvancedFeedFilter>('all');
+  const [sortBy, setSortBy] = useState<BroadcastSort>('newest');
   const [hydrated, setHydrated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [unread, setUnread] = useState(0);
@@ -103,6 +109,25 @@ export function BroadcastsClient({
           }
         }
       }
+      const advRaw = sessionStorage.getItem(FILTER_KEY_ADV);
+      if (
+        advRaw === 'all' ||
+        advRaw === 'my_departments' ||
+        advRaw === 'pinned' ||
+        advRaw === 'mandatory' ||
+        advRaw === 'org_wide'
+      ) {
+        setAdvancedFilter(advRaw);
+      }
+      const sortRaw = sessionStorage.getItem(FILTER_KEY_SORT);
+      if (
+        sortRaw === 'newest' ||
+        sortRaw === 'oldest' ||
+        sortRaw === 'title_asc' ||
+        sortRaw === 'title_desc'
+      ) {
+        setSortBy(sortRaw);
+      }
     } catch {
       /* ignore */
     }
@@ -117,10 +142,12 @@ export function BroadcastsClient({
       const pillStored =
         feedPill === 'all' ? 'all' : feedPill === 'unread' ? 'unread' : feedPill;
       sessionStorage.setItem(FILTER_KEY_PILL, pillStored);
+      sessionStorage.setItem(FILTER_KEY_ADV, advancedFilter);
+      sessionStorage.setItem(FILTER_KEY_SORT, sortBy);
     } catch {
       /* ignore */
     }
-  }, [hydrated, deptFilter, catFilter, feedPill]);
+  }, [hydrated, deptFilter, catFilter, feedPill, advancedFilter, sortBy]);
 
   const loadMeta = useCallback(async () => {
     const compose = canComposeBroadcast(profile.role);
@@ -193,6 +220,12 @@ export function BroadcastsClient({
       departmentsForBroadcast(profile.role, profile.org_id, departments, userDeptIds, managedDeptIds),
     [profile.role, profile.org_id, departments, userDeptIds, managedDeptIds]
   );
+  const viewerDeptIds = useMemo(() => {
+    const out = new Set<string>();
+    for (const id of userDeptIds) out.add(id);
+    for (const id of managedDeptIds) out.add(id);
+    return out;
+  }, [userDeptIds, managedDeptIds]);
 
   /** Lowercase dept_id keys so lookups match `displayDeptId` from the departments query (UUID casing can differ). */
   const categoriesByDept = useMemo(() => {
@@ -371,17 +404,58 @@ export function BroadcastsClient({
           </div>
 
           <div className="border-b border-[#d8d8d8] bg-[#faf9f6] px-7 py-3">
-            <div className="relative max-w-md">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9b9b9b]">
-                🔍
-              </span>
-              <input
-                type="search"
-                placeholder="Search broadcasts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
-              />
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative min-w-[240px] flex-1 max-w-md">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9b9b9b]">
+                  🔍
+                </span>
+                <input
+                  type="search"
+                  placeholder="Search broadcasts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+                />
+              </div>
+              <div className="relative">
+                <select
+                  value={advancedFilter}
+                  onChange={(e) => setAdvancedFilter(e.target.value as AdvancedFeedFilter)}
+                  className="h-9 appearance-none rounded-lg border border-[#d8d8d8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+                  aria-label="Filter broadcasts"
+                >
+                  <option value="all">All broadcasts</option>
+                  <option value="my_departments">My departments</option>
+                  <option value="pinned">Pinned only</option>
+                  <option value="mandatory">Mandatory only</option>
+                  <option value="org_wide">Org-wide only</option>
+                </select>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
+                >
+                  ▾
+                </span>
+              </div>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as BroadcastSort)}
+                  className="h-9 appearance-none rounded-lg border border-[#d8d8d8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+                  aria-label="Sort broadcasts"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="title_asc">Title A-Z</option>
+                  <option value="title_desc">Title Z-A</option>
+                </select>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
+                >
+                  ▾
+                </span>
+              </div>
             </div>
           </div>
 
@@ -391,10 +465,13 @@ export function BroadcastsClient({
               supabase={supabase}
               orgId={profile.org_id}
               userId={profile.id}
+              viewerDeptIds={viewerDeptIds}
               deptFilter={deptFilter.size ? deptFilter : new Set()}
               catFilter={catFilter.size ? catFilter : new Set()}
               searchQuery={searchQuery}
               unreadOnly={feedPill === 'unread'}
+              advancedFilter={advancedFilter}
+              sortBy={sortBy}
               emptyStateCanCompose={composeAllowed}
               emptyStateDraftForApproval={draftOnlyRole}
               onUnreadChange={setUnread}

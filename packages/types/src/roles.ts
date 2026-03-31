@@ -49,6 +49,15 @@ export function isManagerRole(role: string | null | undefined): boolean {
 }
 
 /**
+ * `/manager` area: department managers and coordinators (teams, departments directory, rota link).
+ * Coordinators are scoped by `user_departments`; managers by `dept_managers`.
+ */
+export function isDepartmentWorkspaceRole(role: string | null | undefined): boolean {
+  const r = role?.trim();
+  return r === 'manager' || r === 'coordinator';
+}
+
+/**
  * Staff discount QR verification (scanner) - org admin, manager, duty manager.
  * Edge Function allowlist: `supabase/functions/_shared/staff_discount_verifier_roles.ts`
  */

@@ -5,12 +5,14 @@ import { usePathname } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { AppTopBar } from '@/components/shell/AppTopBar';
+import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
 import type { MainShellAdminNavItem, ShellNavIconId } from '@/lib/adminGates';
 import { ChevronDown } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
+const MANAGER_NAV_EXPANDED_KEY = 'campsite_nav_manager_expanded';
 
 function initials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -107,7 +109,11 @@ export function AppShell({
   unreadBroadcasts,
   pendingBroadcastApprovals,
   pendingApprovalCount,
-  showManager,
+  rotaPendingFinalCount,
+  rotaPendingPeerCount,
+  topBarNotifications,
+  managerNavItems = null,
+  managerNavSectionLabel = 'Manager',
   adminNavItems = null,
   showStandaloneApprovals = true,
 }: {
@@ -126,13 +132,20 @@ export function AppShell({
   /** Broadcasts in pending_approval the user can approve (managers: scoped depts). */
   pendingBroadcastApprovals: number;
   pendingApprovalCount: number;
-  showManager: boolean;
+  rotaPendingFinalCount: number;
+  rotaPendingPeerCount: number;
+  topBarNotifications: TopBarNotificationItem[];
+  /** Collapsible “Manager” links (same pattern as `adminNavItems`). */
+  managerNavItems?: MainShellAdminNavItem[] | null;
+  /** Sidebar group title (e.g. “Department” for coordinators). */
+  managerNavSectionLabel?: string;
   adminNavItems?: MainShellAdminNavItem[] | null;
-  /** Managers use `/pending-approvals`; org admins use Admin → Pending. */
+  /** Managers use the Manager section; other approvers use this standalone link. */
   showStandaloneApprovals?: boolean;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
+  const [managerNavExpanded, setManagerNavExpanded] = useState(true);
   const [orgLogoFailed, setOrgLogoFailed] = useState(false);
   const [userAvatarFailed, setUserAvatarFailed] = useState(false);
 
@@ -141,6 +154,9 @@ export function AppShell({
       const stored = localStorage.getItem(ADMIN_NAV_EXPANDED_KEY);
       if (stored === '0') setAdminNavExpanded(false);
       else if (stored === '1') setAdminNavExpanded(true);
+      const mgr = localStorage.getItem(MANAGER_NAV_EXPANDED_KEY);
+      if (mgr === '0') setManagerNavExpanded(false);
+      else if (mgr === '1') setManagerNavExpanded(true);
     } catch {
       /* ignore */
     }
@@ -157,6 +173,12 @@ export function AppShell({
   }, [safeUserAvatar]);
 
   const showApprovals = isApproverRole(profileRole);
+  const totalNotifCount =
+    unreadBroadcasts +
+    pendingBroadcastApprovals +
+    pendingApprovalCount +
+    rotaPendingFinalCount +
+    rotaPendingPeerCount;
   const userInitials = useMemo(() => initials(userName), [userName]);
   const orgInitials = useMemo(() => initials(orgName), [orgName]);
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
@@ -227,7 +249,17 @@ export function AppShell({
               onNavigate={closeMobile}
             />
             <NavLink href="/calendar" icon="calendar" label="Calendar" onNavigate={closeMobile} />
-            <NavLink href="/rota" icon="rota" label="Rota" onNavigate={closeMobile} />
+            <NavLink
+              href="/rota"
+              icon="rota"
+              label="Rota"
+              badge={
+                rotaPendingFinalCount + rotaPendingPeerCount > 0
+                  ? rotaPendingFinalCount + rotaPendingPeerCount
+                  : undefined
+              }
+              onNavigate={closeMobile}
+            />
             <NavLink href="/discount" icon="discount" label="Discount Card" onNavigate={closeMobile} />
           </div>
 
@@ -299,7 +331,91 @@ export function AppShell({
                             icon={item.icon}
                             label={item.label}
                             badge={item.badge}
-                            exact={item.href === '/admin'}
+                            secondaryBadge={item.secondaryBadge}
+                            secondaryBadgeTitle={item.secondaryBadgeTitle}
+                            exact={item.exact ?? item.href === '/admin'}
+                            onNavigate={closeMobile}
+                          />
+                        </Fragment>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {managerNavItems && managerNavItems.length > 0 ? (
+            <div className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+              <button
+                type="button"
+                className={[
+                  'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors',
+                  managerNavExpanded
+                    ? 'bg-white/[0.08] text-white/80'
+                    : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                ].join(' ')}
+                aria-expanded={managerNavExpanded}
+                aria-controls="manager-shell-nav-items"
+                id="manager-shell-nav-trigger"
+                onClick={() => {
+                  setManagerNavExpanded((open) => {
+                    const next = !open;
+                    try {
+                      localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, next ? '1' : '0');
+                    } catch {
+                      /* ignore */
+                    }
+                    return next;
+                  });
+                }}
+              >
+                <span className="flex w-5 shrink-0 items-center justify-center text-current">
+                  <ShellNavIcon name="manager" />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
+                  {managerNavSectionLabel}
+                </span>
+                <ChevronDown
+                  className={[
+                    'shrink-0 text-white/45 transition-transform duration-200',
+                    managerNavExpanded ? 'rotate-0' : '-rotate-90',
+                  ].join(' ')}
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </button>
+              <div
+                id="manager-shell-nav-items"
+                role="region"
+                aria-labelledby="manager-shell-nav-trigger"
+                className={[
+                  'grid transition-[grid-template-rows] duration-200 ease-out',
+                  managerNavExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+                ].join(' ')}
+              >
+                <div className="min-h-0 overflow-hidden" inert={!managerNavExpanded ? true : undefined}>
+                  <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
+                    {managerNavItems.map((item, idx) => {
+                      const prev = idx > 0 ? managerNavItems[idx - 1] : undefined;
+                      const showSection =
+                        Boolean(item.section) && (!prev || prev.section !== item.section);
+                      return (
+                        <Fragment key={`${item.href}-${item.label}`}>
+                          {showSection ? (
+                            <div className="border-t border-white/[0.07] pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/38">
+                              {item.section}
+                            </div>
+                          ) : null}
+                          <NavLink
+                            href={item.href}
+                            icon={item.icon}
+                            label={item.label}
+                            badge={item.badge}
+                            secondaryBadge={item.secondaryBadge}
+                            secondaryBadgeTitle={item.secondaryBadgeTitle}
+                            exact={item.exact ?? item.href === '/manager'}
                             onNavigate={closeMobile}
                           />
                         </Fragment>
@@ -320,15 +436,6 @@ export function AppShell({
                 badge={pendingApprovalCount > 0 ? pendingApprovalCount : undefined}
                 onNavigate={closeMobile}
               />
-            </div>
-          ) : null}
-
-          {showManager ? (
-            <div className="mt-3">
-              <div className="px-2 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/35">
-                Manager
-              </div>
-              <NavLink href="/manager" icon="manager" label="Manager" onNavigate={closeMobile} />
             </div>
           ) : null}
         </nav>
@@ -384,7 +491,8 @@ export function AppShell({
           userInitials={userInitials}
           avatarImageSrc={showUserAvatar ? safeUserAvatar! : null}
           onAvatarImageError={() => setUserAvatarFailed(true)}
-          hasNotifDot={unreadBroadcasts > 0}
+          hasNotifDot={totalNotifCount > 0}
+          notifications={topBarNotifications}
         />
         <div className="flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       </div>

@@ -22,6 +22,7 @@ type Profile = {
   dnd_start: string | null;
   dnd_end: string | null;
   shift_reminder_before_minutes: number | null;
+  rota_open_slot_alerts_enabled: boolean;
 };
 
 function profileRoleDisplay(role: string): string {
@@ -114,6 +115,9 @@ export function ProfileSettings({
     return m;
   });
   const [password, setPassword] = useState('');
+  const [openSlotAlertsEnabled, setOpenSlotAlertsEnabled] = useState(
+    initial?.rota_open_slot_alerts_enabled ?? false
+  );
   const [msg, setMsg] = useState<string | null>(googleFlash ?? null);
   const [msgTone, setMsgTone] = useState<'success' | 'error' | 'neutral'>(() => {
     if (googleFlashTone === 'success') return 'success';
@@ -136,6 +140,7 @@ export function ProfileSettings({
     setProfile(initial);
     const m = initial?.shift_reminder_before_minutes;
     setShiftReminder(m == null ? 'off' : m);
+    setOpenSlotAlertsEnabled(initial?.rota_open_slot_alerts_enabled ?? false);
   }, [initial]);
 
   useEffect(() => {
@@ -203,6 +208,7 @@ export function ProfileSettings({
         dnd_start: dnd ? dndStart : null,
         dnd_end: dnd ? dndEnd : null,
         shift_reminder_before_minutes: shiftReminder === 'off' ? null : shiftReminder,
+        rota_open_slot_alerts_enabled: openSlotAlertsEnabled,
       })
       .eq('id', u.user.id);
     setLoading(false);
@@ -472,6 +478,20 @@ export function ProfileSettings({
               <option value={1440}>1 day</option>
             </select>
           </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+            <input
+              type="checkbox"
+              checked={openSlotAlertsEnabled}
+              onChange={(e) => setOpenSlotAlertsEnabled(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+            />
+            <span className="text-[13px] leading-snug text-[#121212]">
+              <span className="font-medium">Notify me about new open bookable shifts</span>
+              <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                You&apos;ll get rota notifications when a manager posts an open slot you can claim.
+              </span>
+            </span>
+          </label>
           <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnSecondary}>
             Save notification preferences
           </button>
@@ -485,7 +505,7 @@ export function ProfileSettings({
         <p className="mb-4 text-[13px] leading-relaxed text-[#6b6b6b]">{settingsBroadcastChannelsHelp}</p>
         {channelPrefs.length === 0 ? (
           <p className="text-[13px] text-[#9b9b9b]">
-            No teams or channels yet. After an admin adds you to a department with channels, they appear here.
+            No broadcast channels yet. Org admins add channels under Admin → Departments; then you can follow them here.
           </p>
         ) : (
           <div className="space-y-5">

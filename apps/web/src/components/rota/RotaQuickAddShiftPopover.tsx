@@ -2,10 +2,18 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { friendlyDbError } from '@/lib/rota/friendlyDbError';
+import {
+  formatAvailabilityHint,
+  staffAvailabilityHintForShift,
+  type StaffAvailabilityHint,
+  type StaffAvailabilityOverride,
+  type StaffAvailabilityTemplate,
+} from '@/lib/rota/staffAvailability';
 import type { ProfileRole } from '@campsite/types';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type RotaRow = { id: string; title: string; kind: string; dept_id: string | null; status: string };
+type StaffOption = { id: string; full_name: string; role: string; dept_ids: string[] };
 
 type Props = {
   orgId: string;
@@ -14,10 +22,12 @@ type Props = {
   assignToSelfIfUnassigned: boolean;
   profileRole: ProfileRole;
   departments: { id: string; name: string }[];
-  staff: { id: string; full_name: string }[];
+  staff: StaffOption[];
   managedDeptIds: string[];
   rotas: RotaRow[];
   requireRota: boolean;
+  availabilityTemplates: StaffAvailabilityTemplate[];
+  availabilityOverrides: StaffAvailabilityOverride[];
   position: { top: number; left: number };
   startLocal: string;
   endLocal: string;
@@ -37,6 +47,8 @@ export function RotaQuickAddShiftPopover({
   managedDeptIds,
   rotas,
   requireRota,
+  availabilityTemplates,
+  availabilityOverrides,
   position,
   startLocal,
   endLocal,
@@ -46,18 +58,26 @@ export function RotaQuickAddShiftPopover({
   onMoreOptions,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState('');
   const [rotaId, setRotaId] = useState('');
   const [deptId, setDeptId] = useState('');
   const [userId, setUserId] = useState(() => (assignToSelfIfUnassigned ? profileId : ''));
+  const [level, setLevel] = useState<'all' | 'csa' | 'dm'>('all');
+  const [busyStaffIds, setBusyStaffIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [clampedPos, setClampedPos] = useState(position);
 
   useEffect(() => {
     if (profileRole === 'manager' && managedDeptIds.length === 1) {
       setDeptId(managedDeptIds[0]!);
     }
   }, [profileRole, managedDeptIds]);
+
+  useEffect(() => {
+    setClampedPos(position);
+  }, [position]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -67,10 +87,90 @@ export function RotaQuickAddShiftPopover({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    const clampToViewport = () => {
+      const el = cardRef.current;
+      if (!el) return;
+      const margin = 12;
+      const maxLeft = Math.max(margin, window.innerWidth - el.offsetWidth - margin);
+      const maxTop = Math.max(margin, window.innerHeight - el.offsetHeight - margin);
+      const next = {
+        left: Math.min(Math.max(position.left, margin), maxLeft),
+        top: Math.min(Math.max(position.top, margin), maxTop),
+      };
+      setClampedPos((prev) =>
+        prev.left === next.left && prev.top === next.top ? prev : next
+      );
+    };
+    clampToViewport();
+    window.addEventListener('resize', clampToViewport);
+    return () => window.removeEventListener('resize', clampToViewport);
+  }, [position.left, position.top]);
+
   const deptOptions =
     profileRole === 'manager'
       ? departments.filter((d) => managedDeptIds.includes(d.id))
       : departments;
+
+  const roleLevel = useCallback((role: string): 'csa' | 'dm' | 'other' => {
+    const r = (role || '').toLowerCase();
+    if (r === 'duty_manager') return 'dm';
+    if (r === 'administrator' || r === 'csa') return 'csa';
+    return 'other';
+  }, []);
+
+  useEffect(() => {
+    if (!startLocal || !endLocal) return;
+    const start = new Date(startLocal);
+    const end = new Date(endLocal);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return;
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from('rota_shifts')
+        .select('user_id')
+        .eq('org_id', orgId)
+        .lt('start_time', end.toISOString())
+        .gt('end_time', start.toISOString());
+      if (cancelled) return;
+      const ids = new Set((data ?? []).map((r) => r.user_id as string).filter(Boolean));
+      setBusyStaffIds(ids);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, orgId, startLocal, endLocal]);
+
+  const eligibleStaff = useMemo(() => {
+    return staff.filter((s) => {
+      if (deptId && !s.dept_ids.includes(deptId)) return false;
+      if (level !== 'all' && roleLevel(s.role) !== level) return false;
+      return !busyStaffIds.has(s.id);
+    });
+  }, [staff, deptId, level, roleLevel, busyStaffIds]);
+
+  useEffect(() => {
+    if (userId && !eligibleStaff.some((s) => s.id === userId)) {
+      setUserId('');
+    }
+  }, [eligibleStaff, userId]);
+
+  const assigneeHintById = useMemo(() => {
+    if (!startLocal || !endLocal) return new Map<string, StaffAvailabilityHint>();
+    const start = new Date(startLocal);
+    const end = new Date(endLocal);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      return new Map<string, StaffAvailabilityHint>();
+    }
+    const m = new Map<string, StaffAvailabilityHint>();
+    for (const s of eligibleStaff) {
+      m.set(
+        s.id,
+        staffAvailabilityHintForShift(s.id, start, end, availabilityTemplates, availabilityOverrides),
+      );
+    }
+    return m;
+  }, [startLocal, endLocal, eligibleStaff, availabilityTemplates, availabilityOverrides]);
 
   const save = useCallback(async () => {
     setMsg(null);
@@ -133,13 +233,14 @@ export function RotaQuickAddShiftPopover({
     <>
       <button
         type="button"
-        className="fixed inset-0 z-[60] cursor-default bg-[#2a2825]/[0.12] backdrop-blur-[1px]"
+        className="fixed inset-0 z-[60] cursor-default bg-transparent"
         aria-label="Close"
         onClick={onClose}
       />
       <div
-        className="fixed z-[70] w-[min(100vw-24px,380px)] overflow-hidden rounded-xl border border-[#e4e2dc] bg-[#faf9f6] shadow-[0_10px_40px_rgba(18,18,18,0.09),0_2px_8px_rgba(18,18,18,0.04)]"
-        style={{ top: position.top, left: position.left }}
+        ref={cardRef}
+        className="fixed z-[70] flex max-h-[calc(100dvh-24px)] w-[min(100vw-24px,380px)] flex-col overflow-hidden rounded-xl border border-[#e4e2dc] bg-[#faf9f6] shadow-[0_10px_40px_rgba(18,18,18,0.09),0_2px_8px_rgba(18,18,18,0.04)]"
+        style={{ top: clampedPos.top, left: clampedPos.left }}
         role="dialog"
         aria-labelledby="rota-quick-add-heading"
       >
@@ -157,7 +258,7 @@ export function RotaQuickAddShiftPopover({
           </button>
         </div>
 
-        <div className="px-4 pb-4 pt-4">
+        <div className="overflow-y-auto px-4 pb-4 pt-4">
           <label className="sr-only" htmlFor="rota-quick-add-title-input">
             Title (optional)
           </label>
@@ -197,18 +298,6 @@ export function RotaQuickAddShiftPopover({
             </p>
           </div>
 
-          <label className="mb-3 block text-[12px] font-medium text-[#121212]">
-            Assignee
-            <select className={`${field} mt-1.5`} value={userId} onChange={(e) => setUserId(e.target.value)}>
-              <option value="">Open slot</option>
-              {staff.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.full_name}
-                </option>
-              ))}
-            </select>
-          </label>
-
           {deptOptions.length > 0 ? (
             <label className="mb-3 block text-[12px] font-medium text-[#121212]">
               Department{profileRole === 'manager' ? ' (required)' : ''}
@@ -222,6 +311,32 @@ export function RotaQuickAddShiftPopover({
               </select>
             </label>
           ) : null}
+
+          <label className="mb-3 block text-[12px] font-medium text-[#121212]">
+            Level
+            <select className={`${field} mt-1.5`} value={level} onChange={(e) => setLevel(e.target.value as 'all' | 'csa' | 'dm')}>
+              <option value="all">All levels</option>
+              <option value="csa">CSA</option>
+              <option value="dm">DM</option>
+            </select>
+          </label>
+
+          <label className="mb-3 block text-[12px] font-medium text-[#121212]">
+            Assignee
+            <select className={`${field} mt-1.5`} value={userId} onChange={(e) => setUserId(e.target.value)}>
+              <option value="">Open slot</option>
+              {eligibleStaff.map((s) => {
+                const hint = assigneeHintById.get(s.id);
+                const hintLabel = hint ? ` — ${formatAvailabilityHint(hint)}` : '';
+                return (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name}
+                    {hintLabel}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
 
           <label className="mb-1 block text-[12px] font-medium text-[#121212]">
             Rota {requireRota ? '(required)' : '(optional)'}

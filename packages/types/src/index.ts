@@ -13,6 +13,7 @@ export {
   isOrgAdminRole,
   isApproverRole,
   isManagerRole,
+  isDepartmentWorkspaceRole,
   canVerifyStaffDiscountQr,
   rolesAssignableOnApprove,
 } from './roles';
@@ -40,6 +41,7 @@ export {
   canCreateRota,
   canEditRotaShifts,
   canFinalApproveRotaRequests,
+  canSubmitStaffAvailability,
   canTransferRotaOwnership,
   canViewRotaDepartmentScope,
   canViewRotaFullOrgGrid,

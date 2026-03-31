@@ -4,7 +4,14 @@ import { BroadcastBackdropPicker } from '@/components/broadcasts/BroadcastBackdr
 import { BroadcastDetailStyleRail } from '@/components/broadcasts/BroadcastDetailStyleRail';
 import { cssBackgroundImageUrl } from '@/lib/broadcasts/cssBackgroundImageUrl';
 import { DEFAULT_BROADCAST_BACKDROP_PATH } from '@/lib/broadcasts/defaultBroadcastBackdrop';
-import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
+import {
+  broadcastDetailFollowChannelHelp,
+  broadcastDetailFollowChannelTitle,
+  broadcastDetailFollowingChannel,
+  broadcastDetailOrgAdminChannelNote,
+  channelPillAccessibleName,
+} from '@/lib/broadcasts/channelCopy';
+import { isOrgAdminRole } from '@campsite/types';
 import { enqueueBroadcastRead } from '@/lib/offline/broadcastReadQueue';
 import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
 import { createClient } from '@/lib/supabase/client';
@@ -26,6 +33,9 @@ type Row = {
   is_pinned?: boolean;
   is_org_wide?: boolean;
   cover_image_url?: string | null;
+  dept_id: string;
+  channel_id: string | null;
+  created_by: string;
   departments: { name: string } | null;
   broadcast_channels: { name: string } | null;
   department_teams?: { name: string } | null;
@@ -35,10 +45,12 @@ type Row = {
 export function BroadcastDetailView({
   initial,
   userId,
+  viewerRole,
   canSetCover,
 }: {
   initial: Row;
   userId: string;
+  viewerRole?: string | null;
   canSetCover: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -56,6 +68,57 @@ export function BroadcastDetailView({
   const [marked, setMarked] = useState(false);
   const [calendarMsg, setCalendarMsg] = useState<string | null>(null);
   const [calendarBusy, setCalendarBusy] = useState(false);
+  const [channelFollowSubscribed, setChannelFollowSubscribed] = useState<boolean | null>(null);
+  const [channelFollowBusy, setChannelFollowBusy] = useState(false);
+  const [channelFollowErr, setChannelFollowErr] = useState<string | null>(null);
+
+  const showChannelFollow =
+    initial.status === 'sent' &&
+    !initial.is_org_wide &&
+    !initial.is_mandatory &&
+    initial.channel_id != null &&
+    initial.created_by !== userId;
+
+  useEffect(() => {
+    if (!showChannelFollow || !initial.channel_id) return;
+    let cancel = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select('subscribed')
+        .eq('user_id', userId)
+        .eq('channel_id', initial.channel_id)
+        .maybeSingle();
+      if (cancel) return;
+      if (error) {
+        setChannelFollowErr(error.message);
+        setChannelFollowSubscribed(false);
+        return;
+      }
+      setChannelFollowErr(null);
+      setChannelFollowSubscribed(data?.subscribed === true);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [supabase, showChannelFollow, userId, initial.channel_id]);
+
+  async function toggleChannelFollow(next: boolean) {
+    if (!initial.channel_id) return;
+    setChannelFollowBusy(true);
+    setChannelFollowErr(null);
+    const snapshot = channelFollowSubscribed;
+    setChannelFollowSubscribed(next);
+    const { error } = await supabase.from('user_subscriptions').upsert(
+      { user_id: userId, channel_id: initial.channel_id, subscribed: next },
+      { onConflict: 'user_id,channel_id' }
+    );
+    setChannelFollowBusy(false);
+    if (error) {
+      setChannelFollowSubscribed(snapshot ?? false);
+      setChannelFollowErr(error.message);
+    }
+  }
 
   useEffect(() => {
     if (marked) return;
@@ -363,6 +426,44 @@ export function BroadcastDetailView({
             </>
           ) : null}
         </p>
+
+        {showChannelFollow && initial.broadcast_channels?.name ? (
+          <div className="mt-5 rounded-xl border border-[#e4e4e4] bg-[#fafaf9] px-4 py-4">
+            <p className="text-sm font-semibold text-[#121212]">{broadcastDetailFollowChannelTitle}</p>
+            <p className="mt-1 text-xs leading-relaxed text-[#6b6b6b]">
+              <span className="font-medium text-[#121212]">{initial.broadcast_channels.name}</span>
+              <span className="mx-1.5 text-[#9b9b9b]">·</span>
+              {initial.departments?.name ?? 'Department'}
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-[#6b6b6b]">{broadcastDetailFollowChannelHelp}</p>
+            {channelFollowErr ? (
+              <p className="mt-2 text-xs text-red-800" role="alert">
+                {channelFollowErr}
+              </p>
+            ) : null}
+            {channelFollowSubscribed === null ? (
+              <p className="mt-3 text-xs text-[#6b6b6b]">Loading…</p>
+            ) : (
+              <label className="mt-3 flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  checked={channelFollowSubscribed}
+                  disabled={channelFollowBusy}
+                  onChange={(e) => void toggleChannelFollow(e.target.checked)}
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  {channelFollowSubscribed ? broadcastDetailFollowingChannel : 'Follow this channel'}
+                </span>
+              </label>
+            )}
+            {viewerRole && isOrgAdminRole(viewerRole) ? (
+              <p className="mt-2 text-[11px] leading-relaxed text-[#9b9b9b]">
+                {broadcastDetailOrgAdminChannelNote}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {showAiSummary ? (
           <div className="mt-8 rounded-xl border border-[#e4e4e4] bg-[#fafaf9] px-4 py-4 sm:px-5">

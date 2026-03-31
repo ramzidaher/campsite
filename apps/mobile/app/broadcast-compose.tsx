@@ -575,18 +575,35 @@ export default function BroadcastComposeScreen() {
           </View>
         ) : null}
 
-        <Input label="Title" value={title} onChangeText={setTitle} maxLength={TITLE_MAX} />
+        <Input
+          label="Title"
+          value={title}
+          onChangeText={setTitle}
+          maxLength={TITLE_MAX}
+          style={{ fontSize: 18, fontWeight: '600' }}
+          placeholder="Headline"
+        />
         <Text style={[styles.counter, { color: tokens.textMuted }]}>
           {title.length}/{TITLE_MAX}
         </Text>
 
         <Input
-          label="Message"
+          label="Write"
           value={body}
           onChangeText={setBody}
           multiline
-          style={{ minHeight: 160, textAlignVertical: 'top' }}
+          placeholder="Start typing… Use **bold**, *italic*, or lines starting with - for bullets."
+          style={{
+            minHeight: 240,
+            textAlignVertical: 'top',
+            fontSize: 17,
+            lineHeight: 26,
+            paddingTop: 14,
+          }}
         />
+        <Text style={[styles.boxHint, { color: tokens.textMuted }]}>
+          Markdown is applied when the broadcast is sent; there is no live preview.
+        </Text>
 
         {!draftOnly ? (
           <View style={[styles.box, { borderColor: tokens.border }]}>

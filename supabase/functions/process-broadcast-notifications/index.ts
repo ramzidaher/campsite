@@ -33,6 +33,15 @@ Deno.serve(async (req) => {
   }
 
   const supabase = createClient(url, serviceKey);
+
+  const { data: released, error: releaseErr } = await supabase.rpc('release_due_scheduled_broadcasts');
+  if (releaseErr) {
+    return new Response(JSON.stringify({ error: releaseErr.message }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    });
+  }
+
   const limitJobs = Math.min(
     50,
     Math.max(1, Number(new URL(req.url).searchParams.get('limit')) || 20),
@@ -87,6 +96,7 @@ Deno.serve(async (req) => {
 
   return new Response(
     JSON.stringify({
+      scheduled_released_count: typeof released === 'number' ? released : Number(released ?? 0),
       pending_jobs_scanned: (jobs ?? []).length,
       results,
     }),

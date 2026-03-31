@@ -32,6 +32,8 @@ export function ManagerTeamsClient({
   const router = useRouter();
   const [msg, setMsg] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [draftByDept, setDraftByDept] = useState<Record<string, string>>({});
+  const [newOwnerByDept, setNewOwnerByDept] = useState<Record<string, string>>({});
   const [pickByTeam, setPickByTeam] = useState<Record<string, string>>({});
   const [teamNameDrafts, setTeamNameDrafts] = useState<Record<string, string>>({});
 
@@ -53,6 +55,25 @@ export function ManagerTeamsClient({
     });
     setTeamNameDrafts(next);
   }, [allTeams]);
+
+  async function addTeam(deptId: string) {
+    const name = (draftByDept[deptId] ?? '').trim();
+    if (!name) return;
+    const lead = (newOwnerByDept[deptId] ?? '').trim() || null;
+    setMsg(null);
+    setBusyKey(`dept:${deptId}`);
+    const row: { dept_id: string; name: string; lead_user_id?: string } = { dept_id: deptId, name };
+    if (lead) row.lead_user_id = lead;
+    const { error } = await supabase.from('department_teams').insert(row);
+    setBusyKey(null);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setDraftByDept((d) => ({ ...d, [deptId]: '' }));
+    setNewOwnerByDept((d) => ({ ...d, [deptId]: '' }));
+    router.refresh();
+  }
 
   async function updateTeam(teamId: string, patch: { name?: string; lead_user_id?: string | null }) {
     setMsg(null);
@@ -93,8 +114,8 @@ export function ManagerTeamsClient({
       <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Teams</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Set <span className="font-medium text-[#121212]">team owners</span> and rosters for departments you manage.
-          Owners can also manage their team. Only org admins can create or delete team names.
+          Create teams, set <span className="font-medium text-[#121212]">team owners</span>, and manage rosters for your
+          departments. Owners can rename the team and edit their roster. Only org admins can delete a team.
         </p>
         <p className="mt-2 rounded-lg border border-[#eceae6] bg-[#faf9f6] px-3 py-2 text-[12px] leading-snug text-[#6b6b6b]">
           You can broadcast to any team in these departments without being on the team. Team owners who are{' '}
@@ -104,7 +125,7 @@ export function ManagerTeamsClient({
           <Link href="/manager/departments" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
             Departments
           </Link>{' '}
-          - department membership.
+          — department membership (rota and channels) is separate from teams.
         </p>
       </div>
 
@@ -113,12 +134,16 @@ export function ManagerTeamsClient({
       {sorted.length === 0 ? (
         <div className="rounded-xl border border-[#d8d8d8] bg-white px-6 py-14 text-center text-[#6b6b6b]">
           <p className="text-[15px] font-medium">No departments assigned</p>
-          <p className="mt-1 text-[13px] text-[#9b9b9b]">Ask an org admin to add you as a manager on a department.</p>
+          <p className="mt-1 text-[13px] text-[#9b9b9b]">
+            Ask an org admin to assign you as a department manager or add you to a department as a coordinator.
+          </p>
         </div>
       ) : (
         <ul className="space-y-4">
           {sorted.map((d) => {
             const teams = teamsByDept[d.id] ?? [];
+            const draft = draftByDept[d.id] ?? '';
+            const busyDept = busyKey === `dept:${d.id}`;
             return (
               <li key={d.id} className="rounded-xl border border-[#d8d8d8] bg-white p-4 sm:p-5">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -250,6 +275,46 @@ export function ManagerTeamsClient({
                     })}
                   </ul>
                 )}
+
+                <div className="mt-3 space-y-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] outline-none focus:border-[#121212]"
+                      placeholder="New team name (e.g. Night shift)"
+                      value={draft}
+                      disabled={busyDept}
+                      onChange={(e) => setDraftByDept((prev) => ({ ...prev, [d.id]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          void addTeam(d.id);
+                        }
+                      }}
+                    />
+                    <select
+                      className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] sm:max-w-xs"
+                      value={newOwnerByDept[d.id] ?? ''}
+                      disabled={busyDept}
+                      onChange={(e) => setNewOwnerByDept((prev) => ({ ...prev, [d.id]: e.target.value }))}
+                      aria-label="Optional owner for new team"
+                    >
+                      <option value="">Owner (optional)</option>
+                      {staffOptions.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.full_name} ({s.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busyDept || !draft.trim()}
+                    className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+                    onClick={() => void addTeam(d.id)}
+                  >
+                    Add team
+                  </button>
+                </div>
               </li>
             );
           })}

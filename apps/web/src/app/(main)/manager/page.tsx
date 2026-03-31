@@ -1,7 +1,7 @@
 import { ManagerDashboardClient } from '@/components/admin/ManagerDashboardClient';
 import { endOfWeekExclusive, startOfWeekMonday } from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
-import { isManagerRole } from '@campsite/types';
+import { isDepartmentWorkspaceRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function ManagerDashboardPage() {
@@ -17,8 +17,12 @@ export default async function ManagerDashboardPage() {
     .eq('id', user.id)
     .single();
 
-  if (!profile?.org_id || profile.status !== 'active' || !isManagerRole(profile.role)) {
+  if (!profile?.org_id || profile.status !== 'active' || !isDepartmentWorkspaceRole(profile.role)) {
     redirect('/broadcasts');
+  }
+
+  if (profile.role === 'coordinator') {
+    redirect('/manager/teams');
   }
 
   const { data: managed } = await supabase.from('dept_managers').select('dept_id').eq('user_id', user.id);

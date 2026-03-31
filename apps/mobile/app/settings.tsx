@@ -54,16 +54,23 @@ export default function SettingsScreen() {
     setChannelsLoading(true);
     setChannelsError(null);
     const supabase = getSupabase();
-    const { data: userDeptRows, error: udErr } = await supabase
-      .from('user_departments')
-      .select('dept_id, departments(name)')
-      .eq('user_id', user.id);
-    if (udErr) {
-      setChannelsError(udErr.message);
+    const orgId = profile?.org_id?.trim();
+    if (!orgId) {
+      setChannelPrefs([]);
       setChannelsLoading(false);
       return;
     }
-    const deptIds = [...new Set((userDeptRows ?? []).map((r) => r.dept_id as string).filter(Boolean))];
+    const { data: orgDepts, error: odErr } = await supabase
+      .from('departments')
+      .select('id, name')
+      .eq('org_id', orgId)
+      .eq('is_archived', false);
+    if (odErr) {
+      setChannelsError(odErr.message);
+      setChannelsLoading(false);
+      return;
+    }
+    const deptIds = [...new Set((orgDepts ?? []).map((d) => d.id as string).filter(Boolean))];
     if (!deptIds.length) {
       setChannelPrefs([]);
       setChannelsLoading(false);
@@ -80,11 +87,10 @@ export default function SettingsScreen() {
     }
     const subMap = new Map((subs ?? []).map((x) => [x.channel_id as string, Boolean(x.subscribed)]));
     const deptNameById = new Map<string, string>();
-    for (const r of userDeptRows ?? []) {
-      const did = r.dept_id as string;
-      const rel = r.departments as { name: string } | { name: string }[] | null;
-      const n = Array.isArray(rel) ? rel[0]?.name : rel?.name;
-      deptNameById.set(did, (n ?? 'Team').trim() || 'Team');
+    for (const d of orgDepts ?? []) {
+      const did = d.id as string;
+      const n = String(d.name ?? '').trim();
+      deptNameById.set(did, n || 'Department');
     }
     const next: ChannelPref[] = (chans ?? []).map((c) => {
       const id = c.id as string;
@@ -99,7 +105,7 @@ export default function SettingsScreen() {
     next.sort((a, b) => a.dept_name.localeCompare(b.dept_name) || a.name.localeCompare(b.name));
     setChannelPrefs(next);
     setChannelsLoading(false);
-  }, [configured, user?.id]);
+  }, [configured, user?.id, profile?.org_id]);
 
   useEffect(() => {
     void loadChannels();
@@ -161,8 +167,8 @@ export default function SettingsScreen() {
 
         <Text style={styles.section}>Broadcast channels</Text>
         <Text style={styles.hint}>
-          Targeted broadcasts only reach members who follow that channel for the department. Mandatory and org-wide
-          sends bypass these choices.
+          Channels are listed for every department in your organisation. Follow a channel to receive its targeted posts.
+          Mandatory and org-wide sends bypass these choices.
         </Text>
         {channelsLoading ? (
           <ActivityIndicator style={{ marginBottom: 20 }} color={mainShell.pageText} />
@@ -172,7 +178,7 @@ export default function SettingsScreen() {
         ) : null}
         {!channelsLoading && channelPrefs.length === 0 ? (
           <Text style={[styles.hint, { marginBottom: 24 }]}>
-            No teams with channels yet. After an admin adds channels to your departments, they appear here.
+            No broadcast channels yet. Org admins add them under department settings; then you can follow them here.
           </Text>
         ) : null}
         {channelsByDept.map(([deptName, rows]) => (

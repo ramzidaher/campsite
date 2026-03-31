@@ -3,6 +3,7 @@
 import {
   canCreateRota,
   canEditRotaShifts,
+  canSubmitStaffAvailability,
   canTransferRotaOwnership,
   canViewRotaDepartmentScope,
   canViewRotaFullOrgGrid,
@@ -24,7 +25,15 @@ import { RotaHowItWorksPanel, RotaHowItWorksSubtitle } from '@/components/rota/R
 import { RotaMembersPanel } from '@/components/rota/RotaMembersPanel';
 import { RotaRequestsPanel, type RequestShiftRef } from '@/components/rota/RotaRequestsPanel';
 import { RotaQuickAddShiftPopover } from '@/components/rota/RotaQuickAddShiftPopover';
+import { RotaStaffAvailabilityPanel } from '@/components/rota/RotaStaffAvailabilityPanel';
 import { RotaWeekTimeGrid } from '@/components/rota/RotaWeekTimeGrid';
+import {
+  formatAvailabilityHint,
+  staffAvailabilityHintForShift,
+  type StaffAvailabilityHint,
+  type StaffAvailabilityOverride,
+  type StaffAvailabilityTemplate,
+} from '@/lib/rota/staffAvailability';
 
 type Profile = {
   id: string;
@@ -53,9 +62,10 @@ type ShiftRow = {
 
 type ViewMode = 'my' | 'team' | 'full';
 
-type RotaPageSection = 'schedule' | 'requests' | 'setup';
+type RotaPageSection = 'schedule' | 'requests' | 'setup' | 'availability';
 
 type RotaRow = { id: string; title: string; kind: string; dept_id: string | null; status: string };
+type StaffOption = { id: string; full_name: string; role: string; dept_ids: string[] };
 
 const SHIFT_VARIANTS = [
   {
@@ -170,7 +180,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
   const [loading, setLoading] = useState(true);
   const [managedDeptIds, setManagedDeptIds] = useState<string[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
-  const [staff, setStaff] = useState<{ id: string; full_name: string }[]>([]);
+  const [staff, setStaff] = useState<StaffOption[]>([]);
   const [view, setView] = useState<ViewMode>('my');
   const [pageSection, setPageSection] = useState<RotaPageSection>('schedule');
   const [listMode, setListMode] = useState(false);
@@ -190,18 +200,82 @@ export function RotaClient({ profile }: { profile: Profile }) {
   const canFull = canViewRotaFullOrgGrid(profile.role);
   const canEdit = canEditRotaShifts(profile.role);
   const showSetupSection = canCreateRota(profile.role) || canEdit;
+  const showAvailabilitySection = canSubmitStaffAvailability(profile.role);
+
+  const [staffAvTemplates, setStaffAvTemplates] = useState<StaffAvailabilityTemplate[]>([]);
+  const [staffAvOverrides, setStaffAvOverrides] = useState<StaffAvailabilityOverride[]>([]);
+
+  const availabilityAnchor = useMemo(() => {
+    if (editingShift) return new Date(editingShift.start_time);
+    if (shiftSlotPreset?.startLocal) return new Date(shiftSlotPreset.startLocal);
+    if (quickAdd?.startLocal) return new Date(quickAdd.startLocal);
+    return weekStart;
+  }, [editingShift, shiftSlotPreset, quickAdd, weekStart]);
+
+  useEffect(() => {
+    if (!canEdit || staff.length === 0) {
+      setStaffAvTemplates([]);
+      setStaffAvOverrides([]);
+      return;
+    }
+    const ids = staff.map((s) => s.id);
+    const mon = startOfWeekMonday(availabilityAnchor);
+    const sun = new Date(mon);
+    sun.setDate(sun.getDate() + 6);
+    const fromStr = localYmd(mon);
+    const toStr = localYmd(sun);
+    let cancelled = false;
+    void (async () => {
+      const [tRes, oRes] = await Promise.all([
+        supabase
+          .from('rota_staff_availability_template')
+          .select('user_id,weekday,start_time,end_time')
+          .eq('org_id', profile.org_id)
+          .in('user_id', ids),
+        supabase
+          .from('rota_staff_availability_override')
+          .select('user_id,on_date,start_time,end_time')
+          .eq('org_id', profile.org_id)
+          .in('user_id', ids)
+          .gte('on_date', fromStr)
+          .lte('on_date', toStr),
+      ]);
+      if (cancelled) return;
+      setStaffAvTemplates((tRes.data ?? []) as StaffAvailabilityTemplate[]);
+      setStaffAvOverrides((oRes.data ?? []) as StaffAvailabilityOverride[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [canEdit, staff, profile.org_id, availabilityAnchor, supabase]);
 
   useEffect(() => {
     void (async () => {
-      const [{ data: dm }, { data: deps }, { data: profs }, { data: rotaRows }] = await Promise.all([
+      const [{ data: dm }, { data: deps }, { data: profs }, { data: ud }, { data: rotaRows }] = await Promise.all([
         supabase.from('dept_managers').select('dept_id').eq('user_id', profile.id),
         supabase.from('departments').select('id,name').eq('org_id', profile.org_id),
-        supabase.from('profiles').select('id,full_name').eq('org_id', profile.org_id).eq('status', 'active'),
+        supabase.from('profiles').select('id,full_name,role').eq('org_id', profile.org_id).eq('status', 'active'),
+        supabase.from('user_departments').select('user_id,dept_id'),
         supabase.from('rotas').select('id,title,kind,dept_id,status').eq('org_id', profile.org_id).order('title'),
       ]);
       setManagedDeptIds((dm ?? []).map((r) => r.dept_id as string));
       setDepartments((deps ?? []) as { id: string; name: string }[]);
-      setStaff((profs ?? []) as { id: string; full_name: string }[]);
+      const deptByUser = new Map<string, string[]>();
+      for (const row of ud ?? []) {
+        const uid = row.user_id as string;
+        const did = row.dept_id as string;
+        const list = deptByUser.get(uid) ?? [];
+        list.push(did);
+        deptByUser.set(uid, list);
+      }
+      setStaff(
+        (profs ?? []).map((p) => ({
+          id: p.id as string,
+          full_name: (p.full_name as string) ?? 'Member',
+          role: (p.role as string) ?? '',
+          dept_ids: deptByUser.get(p.id as string) ?? [],
+        }))
+      );
       setRotas((rotaRows ?? []) as RotaRow[]);
     })();
   }, [supabase, profile.id, profile.org_id]);
@@ -242,7 +316,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
       .order('start_time');
 
     if (view === 'my') {
-      q = q.eq('user_id', profile.id);
+      q = q.or(`user_id.eq.${profile.id},user_id.is.null`);
     } else if (view === 'team' && profile.role === 'manager') {
       if (!managedDeptIds.length) {
         setShifts([]);
@@ -538,6 +612,15 @@ export function RotaClient({ profile }: { profile: Profile }) {
         >
           Requests &amp; swaps
         </button>
+        {showAvailabilitySection ? (
+          <button
+            type="button"
+            onClick={() => setPageSection('availability')}
+            className={pageSection === 'availability' ? SEGMENT_ACTIVE : SEGMENT_IDLE}
+          >
+            My availability
+          </button>
+        ) : null}
         {showSetupSection ? (
           <button
             type="button"
@@ -653,7 +736,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
 
       {(view === 'team' || view === 'full') && (
         <div className="flex flex-wrap gap-3 border-b border-[#ebe9e4] bg-[#faf9f6] px-4 py-3 sm:px-6">
-          <label className="flex items-center gap-2 text-[13px] text-[#6b6b6b]">
+      <label className="flex items-center gap-2 text-[13px] text-[#6b6b6b]">
             Staff
             <select className={fieldSelect} value={filterUser} onChange={(e) => setFilterUser(e.target.value)}>
               <option value="">All</option>
@@ -770,7 +853,15 @@ export function RotaClient({ profile }: { profile: Profile }) {
               shiftTitleLines={shiftTitleLines}
               overlapShiftIds={overlapShiftIds}
               canEdit={canEdit}
-              onShiftClick={(s) => openEditShift(s)}
+              onShiftClick={(s) => {
+                if (canEdit) {
+                  openEditShift(s);
+                  return;
+                }
+                if (s.user_id === null) {
+                  void claimOpenShift(s.id);
+                }
+              }}
               onShiftTimesUpdated={(id, start, end) => persistShiftMove(id, start, end)}
               onBackgroundSlotClick={canEdit ? (d) => openQuickAddFromGrid(d) : undefined}
               draftSlotHighlight={canEdit ? draftSlotHighlight : null}
@@ -791,6 +882,8 @@ export function RotaClient({ profile }: { profile: Profile }) {
                 prefillAssigneeUserId={view === 'my' ? profile.id : null}
                 editingShift={editingShift}
                 slotPreset={shiftSlotPreset}
+                availabilityTemplates={staffAvTemplates}
+                availabilityOverrides={staffAvOverrides}
                 onDismiss={dismissShiftEditor}
                 onSaved={() => {
                   setEditingShift(null);
@@ -817,6 +910,10 @@ export function RotaClient({ profile }: { profile: Profile }) {
           swapTargets={requestShiftRefs.swap}
           onRefresh={() => void load({ silent: true })}
         />
+      ) : pageSection === 'availability' ? (
+        <div className="rounded-2xl border border-[#e4e2dc] bg-white px-4 py-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] sm:px-8 sm:py-8">
+          <RotaStaffAvailabilityPanel profileId={profile.id} orgId={profile.org_id} />
+        </div>
       ) : (
         <div className="space-y-6">
           <p className="text-[14px] leading-relaxed text-[#5c5c5c]">
@@ -850,6 +947,8 @@ export function RotaClient({ profile }: { profile: Profile }) {
           managedDeptIds={managedDeptIds}
           rotas={rotas}
           requireRota={profile.role === 'coordinator'}
+          availabilityTemplates={staffAvTemplates}
+          availabilityOverrides={staffAvOverrides}
           position={quickAdd.position}
           startLocal={quickAdd.startLocal}
           endLocal={quickAdd.endLocal}
@@ -1148,13 +1247,15 @@ function ShiftEditor({
   prefillAssigneeUserId,
   editingShift,
   slotPreset,
+  availabilityTemplates,
+  availabilityOverrides,
   onDismiss,
   onSaved,
   onRotasUpdated,
 }: {
   profile: Profile;
   departments: { id: string; name: string }[];
-  staff: { id: string; full_name: string }[];
+  staff: StaffOption[];
   managedDeptIds: string[];
   rotas: RotaRow[];
   requireRota: boolean;
@@ -1162,6 +1263,8 @@ function ShiftEditor({
   prefillAssigneeUserId: string | null;
   editingShift: ShiftRow | null;
   slotPreset: { startLocal: string; endLocal: string } | null;
+  availabilityTemplates: StaffAvailabilityTemplate[];
+  availabilityOverrides: StaffAvailabilityOverride[];
   onDismiss: () => void;
   onSaved: () => void;
   onRotasUpdated: () => void;
@@ -1170,6 +1273,7 @@ function ShiftEditor({
   const [rotaId, setRotaId] = useState('');
   const [deptId, setDeptId] = useState('');
   const [userId, setUserId] = useState('');
+  const [level, setLevel] = useState<'all' | 'csa' | 'dm'>('all');
   const [roleLabel, setRoleLabel] = useState('');
   const [notes, setNotes] = useState('');
   const [startLocal, setStartLocal] = useState('');
@@ -1178,6 +1282,7 @@ function ShiftEditor({
   const [newRotaTitle, setNewRotaTitle] = useState('');
   const [newRotaKind, setNewRotaKind] = useState('shift');
   const [newRotaDept, setNewRotaDept] = useState('');
+  const [busyStaffIds, setBusyStaffIds] = useState<Set<string>>(new Set());
 
   const isEdit = Boolean(editingShift);
 
@@ -1214,6 +1319,65 @@ function ShiftEditor({
     profile.role === 'manager'
       ? departments.filter((d) => managedDeptIds.includes(d.id))
       : departments;
+
+  const roleLevel = useCallback((role: string): 'csa' | 'dm' | 'other' => {
+    const r = (role || '').toLowerCase();
+    if (r === 'duty_manager') return 'dm';
+    if (r === 'administrator' || r === 'csa') return 'csa';
+    return 'other';
+  }, []);
+
+  useEffect(() => {
+    if (!startLocal || !endLocal) return;
+    const start = new Date(startLocal);
+    const end = new Date(endLocal);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return;
+    let cancelled = false;
+    void (async () => {
+      let q = supabase
+        .from('rota_shifts')
+        .select('user_id')
+        .eq('org_id', profile.org_id)
+        .lt('start_time', end.toISOString())
+        .gt('end_time', start.toISOString());
+      if (editingShift) q = q.neq('id', editingShift.id);
+      const { data } = await q;
+      if (cancelled) return;
+      setBusyStaffIds(new Set((data ?? []).map((r) => r.user_id as string).filter(Boolean)));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, profile.org_id, startLocal, endLocal, editingShift]);
+
+  const eligibleStaff = useMemo(() => {
+    return staff.filter((s) => {
+      if (deptId && !s.dept_ids.includes(deptId)) return false;
+      if (level !== 'all' && roleLevel(s.role) !== level) return false;
+      return !busyStaffIds.has(s.id);
+    });
+  }, [staff, deptId, level, roleLevel, busyStaffIds]);
+
+  useEffect(() => {
+    if (userId && !eligibleStaff.some((s) => s.id === userId)) setUserId('');
+  }, [eligibleStaff, userId]);
+
+  const assigneeHintById = useMemo(() => {
+    if (!startLocal || !endLocal) return new Map<string, StaffAvailabilityHint>();
+    const start = new Date(startLocal);
+    const end = new Date(endLocal);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      return new Map<string, StaffAvailabilityHint>();
+    }
+    const m = new Map<string, StaffAvailabilityHint>();
+    for (const s of eligibleStaff) {
+      m.set(
+        s.id,
+        staffAvailabilityHintForShift(s.id, start, end, availabilityTemplates, availabilityOverrides),
+      );
+    }
+    return m;
+  }, [startLocal, endLocal, eligibleStaff, availabilityTemplates, availabilityOverrides]);
 
   const fieldClass =
     'mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-sm text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10';
@@ -1431,14 +1595,27 @@ function ShiftEditor({
             </select>
           </label>
           <label className="text-[13px] font-medium text-[#6b6b6b]">
-            Staff
+            Level
+            <select className={fieldClass} value={level} onChange={(e) => setLevel(e.target.value as 'all' | 'csa' | 'dm')}>
+              <option value="all">All levels</option>
+              <option value="csa">CSA</option>
+              <option value="dm">DM</option>
+            </select>
+          </label>
+          <label className="text-[13px] font-medium text-[#6b6b6b]">
+            Assignee
             <select className={fieldClass} value={userId} onChange={(e) => setUserId(e.target.value)}>
               <option value="">Open slot</option>
-              {staff.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.full_name}
-                </option>
-              ))}
+              {eligibleStaff.map((s) => {
+                const hint = assigneeHintById.get(s.id);
+                const hintLabel = hint ? ` — ${formatAvailabilityHint(hint)}` : '';
+                return (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name}
+                    {hintLabel}
+                  </option>
+                );
+              })}
             </select>
           </label>
           <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">

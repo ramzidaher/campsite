@@ -22,6 +22,8 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
 
   if (error || !b) notFound();
 
+  const { data: viewerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+
   const deptId = b.dept_id as string;
   const channelId = b.channel_id as string | null;
   const teamId = b.team_id as string | null;
@@ -48,6 +50,7 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
   return (
     <BroadcastDetailView
       userId={user.id}
+      viewerRole={(viewerProfile?.role as string | undefined) ?? null}
       canSetCover={maySetCover === true}
       initial={{
         id: b.id as string,
@@ -60,6 +63,9 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
         is_pinned: Boolean(b.is_pinned),
         is_org_wide: Boolean(b.is_org_wide),
         cover_image_url: (b.cover_image_url as string | null) ?? null,
+        dept_id: deptId,
+        channel_id: channelId,
+        created_by: createdBy,
         departments: dept ? { name: dept.name as string } : null,
         broadcast_channels: channel ? { name: channel.name as string } : null,
         department_teams: team ? { name: team.name as string } : null,

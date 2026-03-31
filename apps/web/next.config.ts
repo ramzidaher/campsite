@@ -40,7 +40,15 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  transpilePackages: ['@campsite/ui', '@campsite/theme'],
+  transpilePackages: [
+    '@campsite/ui',
+    '@campsite/theme',
+    '@tiptap/react',
+    '@tiptap/starter-kit',
+    '@tiptap/markdown',
+    '@tiptap/extension-placeholder',
+    '@tiptap/extension-bubble-menu',
+  ],
   async headers() {
     const base = [
       { key: 'X-DNS-Prefetch-Control', value: 'on' },
