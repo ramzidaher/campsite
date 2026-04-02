@@ -46,6 +46,12 @@ export default async function CandidatePortalPage({ params }: { params: Promise<
       </header>
 
       <main className="mx-auto max-w-lg px-5 py-8">
+        <section className="mb-4 rounded-xl border border-[#e8e8e8] bg-white p-4 shadow-sm">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Application Tracker</h2>
+          <p className="mt-2 text-[13px] text-[#505050]">
+            This portal shows your application stage and messages from HR. Applications are read-only after submission.
+          </p>
+        </section>
         <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
           <h2 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Messages from the team</h2>
           {messages.length === 0 ? (

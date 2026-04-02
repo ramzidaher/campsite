@@ -1,6 +1,5 @@
 'use client';
 
-import { PROFILE_ROLES, rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -86,7 +85,7 @@ export function AdminUsersClient({
   totalMemberCount,
 }: {
   currentUserId: string;
-  assignableRoles: ProfileRole[];
+  assignableRoles: { id: string; key: string; label: string; is_archived: boolean }[];
   initialRows: UserRow[];
   departments: { id: string; name: string; type: string; is_archived: boolean }[];
   defaultFilters: { q?: string; dept?: string; status?: string; role?: string };
@@ -107,24 +106,27 @@ export function AdminUsersClient({
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<ProfileRole>('csa');
+  const [inviteRole, setInviteRole] = useState<string>('');
   const [inviteDepts, setInviteDepts] = useState<Set<string>>(new Set());
 
   const [edit, setEdit] = useState<UserRow | null>(null);
-  const [editRole, setEditRole] = useState<ProfileRole>('csa');
+  const [editRole, setEditRole] = useState<string>('');
   const [editDepts, setEditDepts] = useState<Set<string>>(new Set());
 
   const [qInput, setQInput] = useState(defaultFilters.q ?? '');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeDepts = departments.filter((d) => !d.is_archived);
-  const orgAdminAssignableRoles = useMemo(() => rolesAssignableOnApprove('org_admin'), []);
-  const [bulkApproveRole, setBulkApproveRole] = useState<ProfileRole>('csa');
+  const [bulkApproveRole, setBulkApproveRole] = useState<string>('');
 
-  const defaultInviteRole = useMemo((): ProfileRole => {
-    if (assignableRoles.includes('csa')) return 'csa';
-    return assignableRoles[0] ?? 'csa';
+  const defaultInviteRole = useMemo((): string => {
+    return assignableRoles.find((r) => r.key === 'csa')?.key ?? assignableRoles[0]?.key ?? '';
   }, [assignableRoles]);
+
+  useEffect(() => {
+    if (!inviteRole) setInviteRole(defaultInviteRole);
+    if (!bulkApproveRole) setBulkApproveRole(defaultInviteRole);
+  }, [bulkApproveRole, defaultInviteRole, inviteRole]);
 
   const filterHref = useCallback(
     (patch: Record<string, string | undefined>) => {
@@ -253,7 +255,7 @@ export function AdminUsersClient({
 
   function openEdit(r: UserRow) {
     setEdit(r);
-    setEditRole(r.role as ProfileRole);
+    setEditRole(r.role);
     setEditDepts(new Set());
     void (async () => {
       const { data } = await supabase.from('user_departments').select('dept_id').eq('user_id', r.id);
@@ -265,6 +267,23 @@ export function AdminUsersClient({
     if (!edit) return;
     setBusy(edit.id);
     setMsg(null);
+    const roleId = assignableRoles.find((r) => r.key === editRole)?.id;
+    if (!roleId) {
+      setMsg('Invalid role selected');
+      setBusy(null);
+      return;
+    }
+    const assignRes = await fetch('/api/admin/members/assign-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: edit.id, role_id: roleId }),
+    });
+    const assignData = (await assignRes.json().catch(() => ({}))) as { error?: string };
+    if (!assignRes.ok) {
+      setMsg(assignData.error ?? 'Could not assign role');
+      setBusy(null);
+      return;
+    }
     const { error: e1 } = await supabase.from('profiles').update({ role: editRole }).eq('id', edit.id);
     if (e1) {
       setMsg(e1.message);
@@ -468,9 +487,9 @@ export function AdminUsersClient({
         >
           <option value="all">All roles</option>
           <option value="unassigned">{ROLE_OPTION_LABEL.unassigned}</option>
-          {PROFILE_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {ROLE_OPTION_LABEL[r] ?? r.replace(/_/g, ' ')}
+          {assignableRoles.map((r) => (
+            <option key={r.id} value={r.key}>
+              {r.label}
             </option>
           ))}
         </select>
@@ -510,13 +529,13 @@ export function AdminUsersClient({
           Role when approving
           <select
             value={bulkApproveRole}
-            onChange={(e) => setBulkApproveRole(e.target.value as ProfileRole)}
+            onChange={(e) => setBulkApproveRole(e.target.value)}
             className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2 text-[13px] text-[#121212]"
             aria-label="Role to assign when bulk approving pending members"
           >
-            {orgAdminAssignableRoles.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_OPTION_LABEL[r] ?? r}
+            {assignableRoles.map((r) => (
+              <option key={r.id} value={r.key}>
+                {r.label}
               </option>
             ))}
           </select>
@@ -778,11 +797,11 @@ export function AdminUsersClient({
                 <select
                   className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as ProfileRole)}
+                  onChange={(e) => setInviteRole(e.target.value)}
                 >
                   {assignableRoles.map((r) => (
-                    <option key={r} value={r}>
-                      {ROLE_OPTION_LABEL[r] ?? r.replace(/_/g, ' ')}
+                    <option key={r.id} value={r.key}>
+                      {r.label}
                     </option>
                   ))}
                 </select>
@@ -878,11 +897,11 @@ export function AdminUsersClient({
                 <select
                   className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as ProfileRole)}
+                  onChange={(e) => setEditRole(e.target.value)}
                 >
-                  {PROFILE_ROLES.map((role) => (
-                    <option key={role} value={role}>
-                      {ROLE_OPTION_LABEL[role] ?? role.replace(/_/g, ' ')}
+                  {assignableRoles.map((role) => (
+                    <option key={role.id} value={role.key}>
+                      {role.label}
                     </option>
                   ))}
                 </select>

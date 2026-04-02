@@ -1,12 +1,5 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-
-import {
-  canManageOrgBroadcastsAdmin,
-  canManageOrgDepartments,
-  canManageOrgUsers,
-} from '@/lib/adminGates';
-import { isOrgAdminRole } from '@campsite/types';
 import type { AdminOverviewModel } from '@/lib/admin/loadAdminOverview';
 
 function statFillPct(value: number, cap: number) {
@@ -48,10 +41,10 @@ function StatShell({
 }
 
 export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
-  const role = data.viewerRole;
-  const canUsers = canManageOrgUsers(role);
-  const canBroadcastsAdmin = canManageOrgBroadcastsAdmin(role);
-  const canDepts = canManageOrgDepartments(role);
+  const canUsers = data.canManageUsers;
+  const canBroadcastsAdmin = data.canManageBroadcasts;
+  const canDepts = data.canManageDepartments;
+  const canSettings = data.canManageSettings;
   const activityLogHref = '/admin/scan-logs';
 
   const bcPrev = data.broadcastsPrev30d || 0;
@@ -271,7 +264,7 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
                   📡 Open broadcasts
                 </Link>
               )}
-              {isOrgAdminRole(role) ? (
+              {canSettings ? (
                 <Link
                   href="/admin/settings"
                   className="inline-flex w-full items-center justify-start rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-left text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"

@@ -132,6 +132,9 @@ export function AdminJobEditClient({
             {job.status === 'draft' ? ' · Drafts use a temporary URL until you publish.' : null}
             {isArchived ? ' · This listing is archived (read-only).' : null}
           </p>
+          <p className="mt-2 text-[12px] text-[#9b9b9b]">
+            Prefilled from approved recruitment brief: title, grade/level, salary band, contract type.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {showPublic ? (
@@ -238,7 +241,7 @@ export function AdminJobEditClient({
         <div className="space-y-4 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <h2 className="font-authSerif text-lg text-[#121212]">Application options</h2>
           <p className="text-[12px] text-[#6b6b6b]">
-            These settings control what candidates submit on the public apply form for this listing.
+            Choose exactly how applicants apply for this job.
           </p>
           <div className="space-y-2">
             {JOB_APPLICATION_MODES.map((m) => (
@@ -268,6 +271,9 @@ export function AdminJobEditClient({
                 {jobApplicationModeLabel(m)}
               </label>
             ))}
+          </div>
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafafa] p-3 text-[12px] text-[#6b6b6b]">
+            Modes: CV upload, Loom 1-minute link, StaffSavvy score (out of 5), or Combination.
           </div>
           {applicationMode === 'combination' ? (
             <div className="mt-3 space-y-2 border-t border-[#f0f0f0] pt-3">

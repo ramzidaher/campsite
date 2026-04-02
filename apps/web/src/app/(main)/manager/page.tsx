@@ -1,7 +1,6 @@
 import { ManagerDashboardClient } from '@/components/admin/ManagerDashboardClient';
 import { endOfWeekExclusive, startOfWeekMonday } from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
-import { isDepartmentWorkspaceRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function ManagerDashboardPage() {
@@ -17,11 +16,26 @@ export default async function ManagerDashboardPage() {
     .eq('id', user.id)
     .single();
 
-  if (!profile?.org_id || profile.status !== 'active' || !isDepartmentWorkspaceRole(profile.role)) {
+  if (!profile?.org_id || profile.status !== 'active') {
     redirect('/broadcasts');
   }
+  const [{ data: canViewDepartments }, { data: canCreateRecruitment }] = await Promise.all([
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'departments.view',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'recruitment.create_request',
+      p_context: {},
+    }),
+  ]);
+  if (!canViewDepartments && !canCreateRecruitment) redirect('/broadcasts');
 
-  if (profile.role === 'coordinator') {
+  if (!canCreateRecruitment) {
     redirect('/manager/teams');
   }
 

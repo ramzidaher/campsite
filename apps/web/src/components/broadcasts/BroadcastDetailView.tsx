@@ -8,10 +8,8 @@ import {
   broadcastDetailFollowChannelHelp,
   broadcastDetailFollowChannelTitle,
   broadcastDetailFollowingChannel,
-  broadcastDetailOrgAdminChannelNote,
   channelPillAccessibleName,
 } from '@/lib/broadcasts/channelCopy';
-import { isOrgAdminRole } from '@campsite/types';
 import { enqueueBroadcastRead } from '@/lib/offline/broadcastReadQueue';
 import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
 import { createClient } from '@/lib/supabase/client';
@@ -45,12 +43,12 @@ type Row = {
 export function BroadcastDetailView({
   initial,
   userId,
-  viewerRole,
+  showAdminChannelNote,
   canSetCover,
 }: {
   initial: Row;
   userId: string;
-  viewerRole?: string | null;
+  showAdminChannelNote?: boolean;
   canSetCover: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -457,10 +455,8 @@ export function BroadcastDetailView({
                 </span>
               </label>
             )}
-            {viewerRole && isOrgAdminRole(viewerRole) ? (
-              <p className="mt-2 text-[11px] leading-relaxed text-[#9b9b9b]">
-                {broadcastDetailOrgAdminChannelNote}
-              </p>
+            {showAdminChannelNote ? (
+              <p className="mt-2 text-[11px] leading-relaxed text-[#9b9b9b]">You can manage channel defaults in Admin.</p>
             ) : null}
           </div>
         ) : null}

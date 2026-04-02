@@ -1,5 +1,5 @@
 import { AdminRecruitmentDetailClient } from '@/components/admin/AdminRecruitmentDetailClient';
-import { canAccessOrgAdminArea } from '@/lib/adminGates';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -21,7 +21,7 @@ export default async function AdminRecruitmentDetailPage({ params }: { params: P
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canAccessOrgAdminArea(profile.role)) redirect('/broadcasts');
+  if (!(await viewerHasPermission('recruitment.view'))) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
 

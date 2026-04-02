@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { isOrgAdminRole } from '@campsite/types';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ offerId: string }> }) {
   const { offerId } = await params;
@@ -15,11 +14,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ offerId
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, role, status')
+    .select('org_id, status')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  if (!profile?.org_id || profile.status !== 'active') {
+    return new Response('Forbidden', { status: 403 });
+  }
+  const { data: allowed } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'offers.view_signed_pdf',
+    p_context: {},
+  });
+  if (!allowed) {
     return new Response('Forbidden', { status: 403 });
   }
 

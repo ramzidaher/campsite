@@ -1,10 +1,9 @@
-import { canManageOrgUsers } from '@/lib/adminGates';
 import { isAuthUserAlreadyExistsError } from '@/lib/admin/sendOrgMemberAccessEmail';
 import { inviteCallbackUrl } from '@/lib/auth/inviteCallbackBaseUrl';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
-import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
+import { type ProfileRole } from '@campsite/types';
 import { NextRequest, NextResponse } from 'next/server';
 
 const UUID_RE =
@@ -35,11 +34,20 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!me?.org_id || me.status !== 'active' || !canManageOrgUsers(me.role)) {
+  if (!me?.org_id || me.status !== 'active') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const orgId = me.org_id as string;
+  const { data: canInvite, error: invitePermErr } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: orgId,
+    p_permission_key: 'members.invite',
+    p_context: {},
+  });
+  if (invitePermErr || !canInvite) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   let body: unknown;
   try {
@@ -64,9 +72,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Enter a name (max 200 characters).' }, { status: 400 });
   }
 
-  const allowed = new Set(rolesAssignableOnApprove('org_admin') as ProfileRole[]);
-  if (!allowed.has(role as ProfileRole)) {
-    return NextResponse.json({ error: 'Invalid role.' }, { status: 400 });
+  if (!role) {
+    return NextResponse.json({ error: 'Role is required.' }, { status: 400 });
+  }
+  const { data: roleRow, error: roleErr } = await supabase
+    .from('org_roles')
+    .select('id, key')
+    .eq('org_id', orgId)
+    .eq('key', role)
+    .eq('is_archived', false)
+    .maybeSingle();
+  if (roleErr || !roleRow) {
+    return NextResponse.json({ error: 'Invalid role for this organisation.' }, { status: 400 });
   }
 
   let deptIds: string[] = [];
@@ -164,7 +181,7 @@ export async function POST(req: NextRequest) {
     p_user_id: targetUserId,
     p_org_id: orgId,
     p_full_name: fullName,
-    p_role: role,
+    p_role: roleRow.key as ProfileRole,
     p_dept_ids: deptArray,
   });
 

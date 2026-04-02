@@ -1,7 +1,5 @@
 import { AdminUsersClient } from '@/components/admin/AdminUsersClient';
 import { createClient } from '@/lib/supabase/server';
-import { canManageOrgUsers } from '@/lib/adminGates';
-import { rolesAssignableOnApprove } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function AdminUsersPage({
@@ -23,7 +21,13 @@ export default async function AdminUsersPage({
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canManageOrgUsers(profile.role)) redirect('/admin');
+  const { data: canViewMembers } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'members.view',
+    p_context: {},
+  });
+  if (!canViewMembers) redirect('/admin');
 
   const [{ data: orgRow }, { count: totalMemberCount }] = await Promise.all([
     supabase.from('organisations').select('name, slug').eq('id', profile.org_id).single(),
@@ -96,12 +100,17 @@ export default async function AdminUsersPage({
     }
   }
 
-  const assignableRoles = rolesAssignableOnApprove(profile.role as string);
+  const { data: orgRoles } = await supabase
+    .from('org_roles')
+    .select('id, key, label, is_archived')
+    .eq('org_id', profile.org_id)
+    .eq('is_archived', false)
+    .order('label');
 
   return (
     <AdminUsersClient
       currentUserId={user.id}
-      assignableRoles={assignableRoles}
+      assignableRoles={(orgRoles ?? []) as { id: string; key: string; label: string; is_archived: boolean }[]}
       initialRows={filtered.map((p) => ({
         id: p.id as string,
         full_name: p.full_name as string,

@@ -1,4 +1,5 @@
 import { isOrgAdminRole } from './roles';
+import type { PermissionKey } from './permissions';
 
 /** How dashboard KPI tiles (broadcasts sent, active members) are scoped for the viewer. */
 export type DashboardAggregateScope = 'none' | 'org' | 'dept';
@@ -36,4 +37,10 @@ export function canViewDashboardUnreadBroadcastKpi(role: string | null | undefin
 /** @deprecated Use dashboardAggregateScope(role) === 'org' - managers/coordinators use dept scope. */
 export function canViewOrgWideDashboardStats(role: string | null | undefined): boolean {
   return dashboardAggregateScope(role) === 'org';
+}
+
+export function canViewDashboardByPermissions(
+  permissions: readonly PermissionKey[] | null | undefined
+): boolean {
+  return Boolean(permissions?.includes('members.view') || permissions?.includes('broadcasts.compose'));
 }

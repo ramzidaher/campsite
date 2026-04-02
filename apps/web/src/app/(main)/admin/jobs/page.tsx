@@ -1,5 +1,5 @@
 import { AdminJobsListClient } from '@/components/admin/AdminJobsListClient';
-import { canAccessOrgAdminArea } from '@/lib/adminGates';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -17,7 +17,7 @@ export default async function AdminJobsPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canAccessOrgAdminArea(profile.role)) redirect('/broadcasts');
+  if (!(await viewerHasPermission('jobs.view'))) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
 

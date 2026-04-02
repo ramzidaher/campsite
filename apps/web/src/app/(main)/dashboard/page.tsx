@@ -2,12 +2,7 @@ import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { loadDashboardHome } from '@/lib/dashboard/loadDashboardHome';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
-import {
-  canComposeBroadcast,
-  isBroadcastDraftOnlyRole,
-  isOrgAdminRole,
-  type ProfileRole,
-} from '@campsite/types';
+import { canComposeBroadcastByPermissions, type PermissionKey } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 function greeting(hour: number, name: string) {
@@ -37,7 +32,10 @@ export default async function DashboardPage() {
   }
   if (profile.status !== 'active') redirect('/pending');
 
-  const role = profile.role as ProfileRole;
+  const { data: permissionRows } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id as string });
+  const permissionKeys = ((permissionRows ?? []) as Array<{ permission_key?: string }>)
+    .map((row) => String(row.permission_key ?? ''))
+    .filter((key): key is PermissionKey => key.length > 0);
   const data = await loadDashboardHome(supabase, user.id, profile.org_id as string, {
     full_name: profile.full_name as string | null,
     role: profile.role as string,
@@ -46,9 +44,9 @@ export default async function DashboardPage() {
   const hour = new Date().getHours();
   const greetingLine = `${greeting(hour, data.userName)} 👋`;
 
-  const canViewOrgDirectory = isOrgAdminRole(role);
-  const canCompose = canComposeBroadcast(role);
-  const showPrimaryComposeCta = canCompose && !isBroadcastDraftOnlyRole(role);
+  const canViewOrgDirectory = permissionKeys.includes('members.view');
+  const canCompose = canComposeBroadcastByPermissions(permissionKeys);
+  const showPrimaryComposeCta = canCompose && permissionKeys.includes('broadcasts.publish_without_approval');
 
   return (
     <DashboardHome

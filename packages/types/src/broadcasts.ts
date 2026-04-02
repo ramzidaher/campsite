@@ -1,4 +1,5 @@
 import { isOrgAdminRole, type ProfileRole } from './roles';
+import type { PermissionKey } from './permissions';
 
 export const BROADCAST_STATUSES = [
   'draft',
@@ -29,4 +30,16 @@ export function isBroadcastApproverRole(role: ProfileRole | string | null | unde
 /** Draft + submit-for-approval only (duty manager + CSA). Administrators send like managers (no approval required). */
 export function isBroadcastDraftOnlyRole(role: ProfileRole | string | null | undefined): boolean {
   return role === 'duty_manager' || role === 'csa';
+}
+
+export function canComposeBroadcastByPermissions(
+  permissions: readonly PermissionKey[] | null | undefined
+): boolean {
+  return Boolean(permissions?.includes('broadcasts.compose'));
+}
+
+export function canApproveBroadcastByPermissions(
+  permissions: readonly PermissionKey[] | null | undefined
+): boolean {
+  return Boolean(permissions?.includes('broadcasts.approve'));
 }

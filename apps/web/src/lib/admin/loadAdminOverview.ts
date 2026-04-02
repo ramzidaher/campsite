@@ -1,7 +1,7 @@
 import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isOrgAdminRole } from '@campsite/types';
+import type { PermissionKey } from '@campsite/types';
 
 import { relTime } from '@/lib/format/relTime';
 
@@ -34,6 +34,10 @@ export type AdminOverviewModel = {
   deptDepartments: number;
   roleBreakdown: AdminOverviewRoleRow[];
   activities: AdminOverviewActivity[];
+  canManageUsers: boolean;
+  canManageBroadcasts: boolean;
+  canManageDepartments: boolean;
+  canManageSettings: boolean;
 };
 
 const ROLE_ORDER = [
@@ -67,7 +71,7 @@ function roleDisplayLabel(role: string): string {
 export async function loadAdminOverview(
   supabase: SupabaseClient,
   orgId: string,
-  profile: { role: string; full_name: string | null }
+  profile: { role: string; full_name: string | null; permissions: PermissionKey[] }
 ): Promise<AdminOverviewModel> {
   const { data: orgRow } = await supabase.from('organisations').select('name').eq('id', orgId).single();
   const orgName = (orgRow?.name as string) ?? 'Organisation';
@@ -81,9 +85,11 @@ export async function loadAdminOverview(
   weekAgo.setDate(weekAgo.getDate() - 7);
 
   const roleLabel = roleDisplayLabel(profile.role);
-  const accessLine = isOrgAdminRole(profile.role)
-    ? `Full control of ${orgName} · ${roleLabel}`
-    : `Admin access · ${orgName} · ${roleLabel}`;
+  const canManageUsers = profile.permissions.includes('members.view');
+  const canManageBroadcasts = profile.permissions.includes('broadcasts.view');
+  const canManageDepartments = profile.permissions.includes('departments.view');
+  const canManageSettings = profile.permissions.includes('members.edit_status');
+  const accessLine = `Permission-based admin access · ${orgName} · ${roleLabel}`;
 
   const [
     { count: totalMembers },
@@ -147,7 +153,7 @@ export async function loadAdminOverview(
       .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(4),
-    isOrgAdminRole(profile.role)
+    profile.permissions.includes('members.view')
       ? supabase
           .from('scan_logs')
           .select('id,created_at,scanned_display_name,token_valid')
@@ -228,7 +234,7 @@ export async function loadAdminOverview(
     });
   }
 
-  if (isOrgAdminRole(profile.role)) {
+  if (profile.permissions.includes('members.view')) {
     for (const s of scanRows ?? []) {
       const created = s.created_at as string;
       const ok = s.token_valid === true;
@@ -262,5 +268,9 @@ export async function loadAdminOverview(
     deptDepartments,
     roleBreakdown,
     activities: topActivities,
+    canManageUsers,
+    canManageBroadcasts,
+    canManageDepartments,
+    canManageSettings,
   };
 }

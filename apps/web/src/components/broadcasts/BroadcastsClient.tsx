@@ -486,7 +486,9 @@ export function BroadcastsClient({
             supabase={supabase}
             orgId={profile.org_id}
             userId={profile.id}
-            role={profile.role}
+            canCompose={composeAllowed}
+            draftOnly={draftOnlyRole}
+            canPublishWithoutApproval={composeAllowed && !draftOnlyRole}
             departments={scopedDepts}
             categoriesByDept={categoriesByDept}
             onCreated={(outcome) => {

@@ -8,7 +8,6 @@ import {
   quoteSheetNameForRange,
   zonedWallToUtc,
 } from '@/lib/rota/sheetsImportParse';
-import { isOrgAdminRole, type ProfileRole } from '@campsite/types';
 import { NextResponse } from 'next/server';
 
 type MappingRow = {
@@ -51,13 +50,21 @@ export async function POST() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, role')
+    .select('org_id')
     .eq('id', user.id)
     .single();
 
   const orgId = profile?.org_id as string | undefined;
-  const role = profile?.role as ProfileRole | undefined;
-  if (!orgId || !isOrgAdminRole(role)) {
+  if (!orgId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  const { data: allowed } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: orgId,
+    p_permission_key: 'rota.manage',
+    p_context: {},
+  });
+  if (!allowed) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

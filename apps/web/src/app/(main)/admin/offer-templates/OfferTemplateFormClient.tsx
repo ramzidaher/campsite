@@ -103,6 +103,10 @@ export function OfferTemplateFormClient({
       </div>
 
       <div>
+        <p className="mb-1 text-[12px] text-[#6b6b6b]">
+          Use merge fields in the letter body: <code>{'{{candidate_name}}'}</code>, <code>{'{{job_title}}'}</code>,{' '}
+          <code>{'{{salary}}'}</code>, <code>{'{{start_date}}'}</code>, <code>{'{{contract_type}}'}</code>.
+        </p>
         <p className="mb-1 text-[12px] font-medium text-[#505050]">Body</p>
         <OfferTemplateEditor initialHtml={html} onHtmlChange={setHtml} disabled={pending} />
       </div>

@@ -3,18 +3,14 @@ import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { MainProviders } from '@/components/providers/MainProviders';
 import { ThemeRoot } from '@/components/ThemeRoot';
 import {
-  canAccessOrgAdminArea,
-  getMainShellAdminNavItems,
-  getMainShellManagerNavItems,
+  getMainShellAdminNavItemsByPermissions,
+  getMainShellManagerNavItemsByPermissions,
   getMainShellManagerNavSectionLabel,
 } from '@/lib/adminGates';
 import { countPendingBroadcastApprovalsForViewer } from '@/lib/broadcasts/countPendingBroadcastApprovalsForViewer';
 import { createClient } from '@/lib/supabase/server';
 import {
-  canFinalApproveRotaRequests,
-  isApproverRole,
-  isBroadcastApproverRole,
-  isDepartmentWorkspaceRole,
+  type PermissionKey,
 } from '@campsite/types';
 
 export const dynamic = 'force-dynamic';
@@ -54,6 +50,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let rotaPendingFinalCount = 0;
   let rotaPendingPeerCount = 0;
   let recruitmentPendingReviewCount = 0;
+  let hasAdminAreaAccess = false;
+  let canApproveRecruitment = false;
+  let permissionKeys: PermissionKey[] = [];
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
@@ -77,10 +76,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     userRoleLabel = profileRole ? roleLabel(profileRole) : '';
 
     const orgId = profile?.org_id as string | undefined;
-    const needsPendingBadge = Boolean(orgId && profileRole && isApproverRole(profileRole));
-    const needsBroadcastPendingBadge = Boolean(
-      orgId && profileRole && isBroadcastApproverRole(profileRole)
-    );
+    const needsPendingBadge = Boolean(orgId);
+    const needsBroadcastPendingBadge = Boolean(orgId);
 
     const orgEmbed = profile?.organisations as
       | { name: string; logo_url: string | null }
@@ -128,9 +125,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
     if (typeof broadcastPendingCount === 'number') pendingBroadcastApprovals = broadcastPendingCount;
 
-    const needsRecruitmentBadge = Boolean(orgId && profileRole && canAccessOrgAdminArea(profileRole));
+    if (orgId) {
+      const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: orgId });
+      if (Array.isArray(perms)) {
+        permissionKeys = (perms as Array<{ permission_key?: string }>).map((p) =>
+          String(p.permission_key ?? '')
+        ) as PermissionKey[];
+      }
+    }
+    hasAdminAreaAccess = permissionKeys.some(
+      (k) =>
+        k.startsWith('members.') ||
+        k.startsWith('roles.') ||
+        k.startsWith('recruitment.') ||
+        k.startsWith('jobs.') ||
+        k.startsWith('applications.') ||
+        k.startsWith('offers.') ||
+        k.startsWith('interviews.')
+    );
+    canApproveRecruitment = permissionKeys.includes('recruitment.approve_request');
+    const needsRecruitmentBadge = Boolean(orgId && permissionKeys.includes('recruitment.approve_request'));
 
-    const canApproveRota = Boolean(profileRole && canFinalApproveRotaRequests(profileRole));
+    const canApproveRota = permissionKeys.includes('rota.final_approve');
     const [rotaFinalRes, rotaPeerRes, recruitmentCountRes] = await Promise.all([
       canApproveRota
         ? supabase
@@ -158,15 +174,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     recruitmentPendingReviewCount = Math.max(0, recruitmentPendingReviewCount);
   }
 
-  const managerNavItems =
-    profileRole && isDepartmentWorkspaceRole(profileRole)
-      ? getMainShellManagerNavItems(profileRole, {
-          pendingApprovalCount,
-          pendingBroadcastApprovals,
-        })
-      : null;
+  const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
+    pendingApprovalCount,
+    pendingBroadcastApprovals,
+  });
 
-  const adminNavItemsRaw = getMainShellAdminNavItems(profileRole);
+  const adminNavItemsRaw = getMainShellAdminNavItemsByPermissions(permissionKeys);
   const adminNavItems =
     adminNavItemsRaw?.map((item) => {
       if (item.href === '/admin/pending' && pendingApprovalCount > 0) {
@@ -179,9 +192,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     }) ?? null;
 
   const showStandaloneApprovals =
-    Boolean(profileRole && isApproverRole(profileRole)) &&
-    !canAccessOrgAdminArea(profileRole) &&
-    !isDepartmentWorkspaceRole(profileRole);
+    permissionKeys.includes('approvals.members.review') && !hasAdminAreaAccess && !managerNavItems;
 
   const topBarNotifications: TopBarNotificationItem[] = [
     {
@@ -199,7 +210,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     {
       id: 'profile-pending',
       label: 'Pending member approvals',
-      href: canAccessOrgAdminArea(profileRole) ? '/admin/pending' : '/pending-approvals',
+      href: hasAdminAreaAccess ? '/admin/pending' : '/pending-approvals',
       count: pendingApprovalCount,
     },
     {
@@ -218,7 +229,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       id: 'recruitment-pending',
       label: 'Recruitment requests to review',
       href: '/admin/recruitment',
-      count: recruitmentPendingReviewCount,
+      count: canApproveRecruitment ? recruitmentPendingReviewCount : 0,
     },
   ].filter((item) => item.count > 0);
 

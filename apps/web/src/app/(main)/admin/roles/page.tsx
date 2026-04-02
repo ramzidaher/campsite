@@ -1,6 +1,5 @@
 import { AdminRolesAndPermissionsView } from '@/components/admin/AdminRolesAndPermissionsView';
 import { createClient } from '@/lib/supabase/server';
-import { canManageOrgUsers } from '@/lib/adminGates';
 import { redirect } from 'next/navigation';
 
 export default async function AdminRolesPage() {
@@ -17,7 +16,13 @@ export default async function AdminRolesPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canManageOrgUsers(profile.role)) redirect('/admin');
+  const { data: canViewRoles } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'roles.view',
+    p_context: {},
+  });
+  if (!canViewRoles) redirect('/admin');
 
   return <AdminRolesAndPermissionsView />;
 }

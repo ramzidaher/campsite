@@ -5,7 +5,6 @@ import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { sendOfferLetterSigningEmail } from '@/lib/recruitment/sendOfferLetterEmails';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { isOrgAdminRole } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
 
 function relationOne<T>(rel: T | T[] | null | undefined): T | null {
@@ -19,20 +18,24 @@ function newOfferPortalToken(): string {
   return `${a}${b}`;
 }
 
-async function requireOrgAdmin() {
+async function requireOrgPermission(permissionKey: string) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null as null, profile: null as null, orgId: null as null };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, org_id, role, status')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  const { data: profile } = await supabase.from('profiles').select('id, org_id, status').eq('id', user.id).maybeSingle();
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { supabase, user, profile: null as null, orgId: null as null };
+  }
+  const { data: allowed } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: permissionKey,
+    p_context: {},
+  });
+  if (!allowed) {
     return { supabase, user, profile: null as null, orgId: null as null };
   }
 
@@ -46,7 +49,7 @@ export async function previewMergedOfferLetter(args: {
   startDate: string;
   salaryOverride?: string;
 }): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
-  const { supabase, orgId } = await requireOrgAdmin();
+  const { supabase, orgId } = await requireOrgPermission('offers.generate');
   if (!orgId) return { ok: false, error: 'Not allowed.' };
 
   const tid = args.templateId?.trim();
@@ -99,7 +102,7 @@ export async function sendOfferLetterForApplication(args: {
   bodyHtml: string;
   offerStartDate: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { supabase, profile, orgId, user } = await requireOrgAdmin();
+  const { supabase, profile, orgId, user } = await requireOrgPermission('offers.send_esign');
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const appId = args.jobApplicationId?.trim();

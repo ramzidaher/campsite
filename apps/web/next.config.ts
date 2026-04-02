@@ -41,6 +41,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   transpilePackages: [
+    '@campsite/types',
     '@campsite/ui',
     '@campsite/theme',
     '@tiptap/react',

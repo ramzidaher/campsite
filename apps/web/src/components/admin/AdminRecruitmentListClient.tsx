@@ -16,12 +16,13 @@ export type AdminRecruitmentListRow = {
   submitter: { full_name: string } | { full_name: string }[] | null;
 };
 
-type SortKey = 'date' | 'department' | 'urgency';
+type SortKey = 'date' | 'department' | 'urgency' | 'status';
 
 const URGENCY_RANK: Record<string, number> = { high: 0, normal: 1, low: 2 };
 
 export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentListRow[] }) {
   const [filter, setFilter] = useState<'open' | 'archived' | 'all'>('open');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sort, setSort] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -29,8 +30,9 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
     let r = rows;
     if (filter === 'open') r = r.filter((x) => !x.archived_at);
     else if (filter === 'archived') r = r.filter((x) => x.archived_at);
+    if (statusFilter !== 'all') r = r.filter((x) => x.status === statusFilter);
     return r;
-  }, [rows, filter]);
+  }, [rows, filter, statusFilter]);
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
@@ -43,6 +45,16 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
         const an = (Array.isArray(a.departments) ? a.departments[0]?.name : a.departments?.name) ?? '';
         const bn = (Array.isArray(b.departments) ? b.departments[0]?.name : b.departments?.name) ?? '';
         return dir * an.localeCompare(bn, undefined, { sensitivity: 'base' });
+      }
+      if (sort === 'status') {
+        const rank: Record<string, number> = {
+          pending_review: 0,
+          approved: 1,
+          in_progress: 2,
+          filled: 3,
+          rejected: 4,
+        };
+        return dir * ((rank[a.status] ?? 99) - (rank[b.status] ?? 99));
       }
       const au = URGENCY_RANK[a.urgency] ?? 9;
       const bu = URGENCY_RANK[b.urgency] ?? 9;
@@ -57,10 +69,9 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Recruitment</h1>
+          <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Recruitment requests</h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Review requests from department managers. Nothing is deleted — filled and rejected requests are
-            archived with full history.
+            HR queue for all requests. Sort by date, department, urgency, and set statuses through to Filled/Rejected.
           </p>
         </div>
       </header>
@@ -82,6 +93,19 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          <label className="text-[#505050]">Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[13px]"
+          >
+            <option value="all">All</option>
+            <option value="pending_review">Pending Review</option>
+            <option value="approved">Approved</option>
+            <option value="in_progress">In Progress</option>
+            <option value="filled">Filled</option>
+            <option value="rejected">Rejected</option>
+          </select>
           <label className="text-[#505050]">Sort by</label>
           <select
             value={sort}
@@ -91,6 +115,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
             <option value="date">Date submitted</option>
             <option value="department">Department</option>
             <option value="urgency">Urgency</option>
+            <option value="status">Status flow</option>
           </select>
           <select
             value={sortDir}
@@ -136,7 +161,11 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                     </td>
                     <td className="px-4 py-3 text-[#505050]">{deptName ?? '—'}</td>
                     <td className="px-4 py-3 text-[#505050]">{submitterName?.trim() || '—'}</td>
-                    <td className="px-4 py-3">{recruitmentStatusLabel(r.status)}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-full border border-[#d8d8d8] px-2.5 py-1 text-[11px]">
+                        {recruitmentStatusLabel(r.status)}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">{recruitmentUrgencyLabel(r.urgency)}</td>
                     <td className="px-4 py-3 text-[#505050]">
                       {new Date(r.created_at).toLocaleDateString(undefined, {

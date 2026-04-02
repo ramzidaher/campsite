@@ -1,26 +1,29 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { isOrgAdminRole } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
 
 export type OfferTemplateListItem = { id: string; name: string; updated_at: string };
 export type OfferTemplateActionResult = { ok: true } | { ok: false; error: string };
 
-async function requireOrgAdmin() {
+async function requireOrgPermission(permissionKey: string) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null as null, profile: null as null, orgId: null as null };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, org_id, role, status')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  const { data: profile } = await supabase.from('profiles').select('id, org_id, status').eq('id', user.id).maybeSingle();
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { supabase, user, profile: null as null, orgId: null as null };
+  }
+  const { data: allowed } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: permissionKey,
+    p_context: {},
+  });
+  if (!allowed) {
     return { supabase, user, profile: null as null, orgId: null as null };
   }
 
@@ -30,7 +33,7 @@ async function requireOrgAdmin() {
 export async function listOfferTemplates(): Promise<
   { ok: true; templates: OfferTemplateListItem[] } | { ok: false; error: string }
 > {
-  const { supabase, orgId } = await requireOrgAdmin();
+  const { supabase, orgId } = await requireOrgPermission('offers.view');
   if (!orgId) return { ok: false, error: 'Not allowed.' };
 
   const { data, error } = await supabase
@@ -47,7 +50,7 @@ export async function createOfferTemplate(
   name: string,
   bodyHtml: string
 ): Promise<OfferTemplateActionResult & { id?: string }> {
-  const { supabase, profile, orgId, user } = await requireOrgAdmin();
+  const { supabase, profile, orgId, user } = await requireOrgPermission('offers.manage');
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const n = name?.trim();
@@ -78,7 +81,7 @@ export async function updateOfferTemplate(
   const tid = id?.trim();
   if (!tid) return { ok: false, error: 'Missing template.' };
 
-  const { supabase, orgId, user } = await requireOrgAdmin();
+  const { supabase, orgId, user } = await requireOrgPermission('offers.manage');
   if (!orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const n = name?.trim();
@@ -104,7 +107,7 @@ export async function deleteOfferTemplate(id: string): Promise<OfferTemplateActi
   const tid = id?.trim();
   if (!tid) return { ok: false, error: 'Missing template.' };
 
-  const { supabase, orgId } = await requireOrgAdmin();
+  const { supabase, orgId } = await requireOrgPermission('offers.manage');
   if (!orgId) return { ok: false, error: 'Not allowed.' };
 
   const { error } = await supabase.from('offer_letter_templates').delete().eq('id', tid).eq('org_id', orgId);

@@ -1,5 +1,5 @@
 import { InterviewScheduleClient } from '@/app/(main)/admin/interviews/InterviewScheduleClient';
-import { canAccessOrgAdminArea } from '@/lib/adminGates';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -17,7 +17,7 @@ export default async function AdminInterviewsPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canAccessOrgAdminArea(profile.role)) redirect('/broadcasts');
+  if (!(await viewerHasPermission('interviews.view'))) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
   const fromPast = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();

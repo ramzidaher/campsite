@@ -1,4 +1,5 @@
 import { isOrgAdminRole } from './roles';
+import type { PermissionKey } from './permissions';
 
 /** Staff `/rota` - “Department” scope tab (managers, coordinators, org admins; query is RLS-scoped). */
 export function canViewRotaDepartmentScope(role: string | null | undefined): boolean {
@@ -39,4 +40,8 @@ export function canTransferRotaOwnership(role: string | null | undefined): boole
 export function canSubmitStaffAvailability(role: string | null | undefined): boolean {
   const r = role?.trim();
   return r === 'csa' || r === 'administrator';
+}
+
+export function canManageRotaByPermissions(permissions: readonly PermissionKey[] | null | undefined): boolean {
+  return Boolean(permissions?.includes('rota.manage'));
 }

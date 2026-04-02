@@ -1,6 +1,6 @@
 import { ScanLogsClient, type ScanLogRow } from '@/components/admin/ScanLogsClient';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
-import { isOrgAdminRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function ScanLogsPage() {
@@ -10,15 +10,11 @@ export default async function ScanLogsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, status, org_id')
-    .eq('id', user.id)
-    .single();
+  const { data: profile } = await supabase.from('profiles').select('status, org_id').eq('id', user.id).single();
 
   if (!profile?.org_id) redirect('/login');
   if (profile.status !== 'active') redirect('/pending');
-  if (!isOrgAdminRole(profile.role)) {
+  if (!(await viewerHasPermission('members.view'))) {
     redirect('/admin');
   }
 

@@ -1,4 +1,4 @@
-import { isOrgAdminRole, type ProfileRole } from '@campsite/types';
+import { isOrgAdminRole, type PermissionKey, type ProfileRole } from '@campsite/types';
 
 export type DeptRow = {
   id: string;
@@ -10,29 +10,18 @@ export type DeptRow = {
 
 /** Departments the user may target when composing a broadcast (matches SQL RLS intent). */
 export function departmentsForBroadcast(
-  role: ProfileRole,
+  roleOrPermissions: ProfileRole | readonly PermissionKey[] | null | undefined,
   orgId: string,
   departments: DeptRow[],
   userDeptIds: Set<string>,
   managedDeptIds: Set<string>
 ): DeptRow[] {
   const active = departments.filter((d) => d.org_id === orgId && !d.is_archived);
-  if (isOrgAdminRole(role)) {
+  if (Array.isArray(roleOrPermissions)) {
+    if (roleOrPermissions.includes('broadcasts.publish_without_approval')) return active;
+  } else if (typeof roleOrPermissions === 'string' && isOrgAdminRole(roleOrPermissions)) {
     return active;
   }
-  switch (role) {
-    case 'manager':
-      return active.filter((d) => managedDeptIds.has(d.id));
-    case 'coordinator':
-    case 'administrator':
-    case 'duty_manager':
-    case 'csa':
-      return active.filter((d) => userDeptIds.has(d.id));
-    case 'society_leader':
-      return active.filter(
-        (d) => userDeptIds.has(d.id) && (d.type === 'society' || d.type === 'club')
-      );
-    default:
-      return [];
-  }
+  if (managedDeptIds.size > 0) return active.filter((d) => managedDeptIds.has(d.id));
+  return active.filter((d) => userDeptIds.has(d.id));
 }

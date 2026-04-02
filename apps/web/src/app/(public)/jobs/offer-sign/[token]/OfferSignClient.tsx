@@ -128,6 +128,7 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">{row.org_name}</p>
         <h1 className="font-authSerif text-[22px] tracking-tight">Offer — {row.job_title}</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">{row.candidate_name}</p>
+        <p className="mt-1 text-[12px] text-[#9b9b9b]">Secure signing link. No account required.</p>
       </header>
 
       <main className="mx-auto max-w-3xl px-5 py-8">
@@ -150,8 +151,8 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
         <section className="mt-8 space-y-4 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
           <h2 className="text-[13px] font-semibold text-[#121212]">Your signature</h2>
           <p className="text-[12px] text-[#6b6b6b]">
-            Draw your signature below, type your full name, then confirm. This is legally binding only if permitted
-            by your jurisdiction — CampSite provides tooling only.
+            Review the letter, draw your signature, type your full name, then confirm. Once submitted, HR and you
+            automatically receive a signed PDF copy.
           </p>
           <label className="block text-[12px] font-medium text-[#505050]">
             Full name (must match)

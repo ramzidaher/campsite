@@ -7,11 +7,19 @@ import {
   deactivatePlatformOrg,
   deletePlatformOrgUser,
   permanentlyDeletePlatformOrg,
+  publishPermissionCatalogVersion,
+  startSupportViewAsSession,
+  updateOrganisationGovernance,
+  upsertPermissionDraftEntry,
+  upsertRolePreset,
 } from '@/app/(founders)/founders/platform-actions';
 import {
+  type FounderAuditEvent,
   type FounderMember,
   type FounderOrg,
+  type FounderPermissionCatalogEntry,
   type FounderOrgProfile,
+  type FounderRolePreset,
   parseFounderOrgProfiles,
 } from '@/components/founders/founderTypes';
 import { type BroadcastRow, escapeHtml, getBroadcasts, ROTA_GLOBAL } from '@/components/founders/mockData';
@@ -42,6 +50,7 @@ const PAGE_LABELS: Record<string, string> = {
   'broadcasts-hq': 'Broadcasts HQ',
   'rota-hq': 'Rota Overview',
   'audit-hq': 'Audit Log',
+  'rbac-hq': 'RBAC Catalog',
   'settings-hq': 'Platform Settings',
 };
 
@@ -117,16 +126,25 @@ export function FounderHqApp({
   user,
   initialOrgs,
   initialAllMembers,
+  initialCatalogDraft,
+  initialRolePresets,
+  initialAuditEvents,
   loadError,
 }: {
   user: FounderHqUser;
   initialOrgs: FounderOrg[];
   initialAllMembers: FounderMember[];
+  initialCatalogDraft: FounderPermissionCatalogEntry[];
+  initialRolePresets: FounderRolePreset[];
+  initialAuditEvents: FounderAuditEvent[];
   loadError?: string;
 }) {
   const router = useRouter();
   const [orgs, setOrgs] = useState<FounderOrg[]>(initialOrgs);
   const [allMembers, setAllMembers] = useState<FounderMember[]>(initialAllMembers);
+  const [catalogDraft, setCatalogDraft] = useState<FounderPermissionCatalogEntry[]>(initialCatalogDraft);
+  const [rolePresets, setRolePresets] = useState<FounderRolePreset[]>(initialRolePresets);
+  const [auditEvents, setAuditEvents] = useState<FounderAuditEvent[]>(initialAuditEvents);
 
   useEffect(() => {
     setOrgs(initialOrgs);
@@ -134,6 +152,15 @@ export function FounderHqApp({
   useEffect(() => {
     setAllMembers(initialAllMembers);
   }, [initialAllMembers]);
+  useEffect(() => {
+    setCatalogDraft(initialCatalogDraft);
+  }, [initialCatalogDraft]);
+  useEffect(() => {
+    setRolePresets(initialRolePresets);
+  }, [initialRolePresets]);
+  useEffect(() => {
+    setAuditEvents(initialAuditEvents);
+  }, [initialAuditEvents]);
 
   const [activePage, setActivePage] = useState<FounderPageKey>('overview');
   const [csFilter, setCsFilter] = useState<OrgStatusFilter>('all');
@@ -142,6 +169,7 @@ export function FounderHqApp({
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [csTab, setCsTab] = useState<'members' | 'rota' | 'broadcasts' | 'settings'>('members');
   const [toast, setToast] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [flagSheets, setFlagSheets] = useState(true);
   const [flagDiscount, setFlagDiscount] = useState(true);
   const [flagBroadcast, setFlagBroadcast] = useState(true);
@@ -175,6 +203,24 @@ export function FounderHqApp({
     body: '',
   });
   const [sentBroadcasts, setSentBroadcasts] = useState<BroadcastRow[]>([]);
+  const [catalogForm, setCatalogForm] = useState({
+    key: '',
+    label: '',
+    description: '',
+    category: 'other',
+    is_founder_only: false,
+  });
+  const [publishNote, setPublishNote] = useState('');
+  const [presetForm, setPresetForm] = useState({
+    key: '',
+    name: '',
+    description: '',
+    target_use_case: '',
+    recommended_permission_keys: '',
+  });
+  const [auditOrgFilter, setAuditOrgFilter] = useState('all');
+  const [auditEventFilter, setAuditEventFilter] = useState('all');
+  const [supportToken, setSupportToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (broadcastDraft.siteId || !orgs[0]?.id) return;
@@ -589,6 +635,103 @@ export function FounderHqApp({
     router.refresh();
   };
 
+  const saveCatalogDraftEntry = async () => {
+    if (!catalogForm.key.trim() || !catalogForm.label.trim()) {
+      showToast('Permission key and label are required.');
+      return;
+    }
+    setBusy(true);
+    const result = await upsertPermissionDraftEntry({
+      ...catalogForm,
+      key: catalogForm.key.trim().toLowerCase(),
+      label: catalogForm.label.trim(),
+      description: catalogForm.description.trim(),
+      category: catalogForm.category.trim().toLowerCase() || 'other',
+      is_archived: false,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    showToast('Draft permission saved');
+    setCatalogForm((curr) => ({ ...curr, key: '', label: '', description: '' }));
+    router.refresh();
+  };
+
+  const publishCatalog = async () => {
+    setBusy(true);
+    const result = await publishPermissionCatalogVersion(publishNote.trim());
+    setBusy(false);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    setPublishNote('');
+    showToast(`Published catalog version ${result.data.versionNo}`);
+    router.refresh();
+  };
+
+  const saveRolePreset = async () => {
+    if (!presetForm.key.trim() || !presetForm.name.trim()) {
+      showToast('Preset key and name are required.');
+      return;
+    }
+    const keys = presetForm.recommended_permission_keys
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
+    setBusy(true);
+    const result = await upsertRolePreset({
+      key: presetForm.key.trim().toLowerCase(),
+      name: presetForm.name.trim(),
+      description: presetForm.description.trim(),
+      target_use_case: presetForm.target_use_case.trim(),
+      recommended_permission_keys: keys,
+      is_archived: false,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    showToast('Role preset saved');
+    setPresetForm({ key: '', name: '', description: '', target_use_case: '', recommended_permission_keys: '' });
+    router.refresh();
+  };
+
+  const saveGovernance = async (org: FounderOrg, forceLogout: boolean) => {
+    setBusy(true);
+    const result = await updateOrganisationGovernance({
+      orgId: org.id,
+      planTier: org.plan_tier ?? 'starter',
+      subscriptionStatus: (org.subscription_status as 'active' | 'limited' | 'suspended') ?? 'active',
+      isLocked: Boolean(org.is_locked),
+      maintenanceMode: Boolean(org.maintenance_mode),
+      forceLogout,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    showToast(forceLogout ? 'Force logout scheduled for org members' : 'Org governance saved');
+    router.refresh();
+  };
+
+  const startSupportSession = async (orgId: string, targetUserId: string) => {
+    setBusy(true);
+    const result = await startSupportViewAsSession({ orgId, targetUserId, minutes: 20 });
+    setBusy(false);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    setSupportToken(result.data.token);
+    showToast('Support session token generated');
+    router.refresh();
+  };
+
   const NavBtn = ({
     page,
     icon,
@@ -665,6 +808,7 @@ export function FounderHqApp({
           <div className="nav-label" style={{ marginTop: 4 }}>
             Platform
           </div>
+          <NavBtn page="rbac-hq" icon="🛡️" label="RBAC Catalog" />
           <NavBtn page="audit-hq" icon="🔎" label="Audit Log" />
           <NavBtn page="settings-hq" icon="⚙" label="Platform Settings" />
         </div>
@@ -1192,6 +1336,100 @@ export function FounderHqApp({
                 </div>
               </div>
             </div>
+            <div className="card card-pad" style={{ marginTop: 16 }}>
+              <div className="section-title" style={{ marginBottom: 10 }}>
+                Billing, security, and support controls
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Organisation</th>
+                      <th>Plan</th>
+                      <th>Subscription</th>
+                      <th>Security</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orgs.map((org) => {
+                      const firstMemberId = allMembers.find((m) => m.org_id === org.id)?.id;
+                      return (
+                        <tr key={org.id}>
+                          <td>{org.name}</td>
+                          <td>{org.plan_tier ?? 'starter'}</td>
+                          <td>{org.subscription_status ?? 'active'}</td>
+                          <td>
+                            {org.is_locked ? 'Locked' : 'Unlocked'} · {org.maintenance_mode ? 'Maintenance' : 'Live'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                disabled={busy}
+                                onClick={() =>
+                                  setOrgs((prev) =>
+                                    prev.map((p) => (p.id === org.id ? { ...p, is_locked: !Boolean(p.is_locked) } : p))
+                                  )
+                                }
+                              >
+                                Toggle lock
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                disabled={busy}
+                                onClick={() =>
+                                  setOrgs((prev) =>
+                                    prev.map((p) =>
+                                      p.id === org.id ? { ...p, maintenance_mode: !Boolean(p.maintenance_mode) } : p
+                                    )
+                                  )
+                                }
+                              >
+                                Toggle maintenance
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                disabled={busy}
+                                onClick={() => void saveGovernance(org, false)}
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm"
+                                disabled={busy}
+                                onClick={() => void saveGovernance(org, true)}
+                              >
+                                Force logout
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                disabled={busy || !firstMemberId}
+                                onClick={() => {
+                                  if (firstMemberId) void startSupportSession(org.id, firstMemberId);
+                                }}
+                              >
+                                View as org admin
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {supportToken ? (
+                <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text2)' }}>
+                  Latest support token: <code>{supportToken}</code>
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -1519,24 +1757,232 @@ export function FounderHqApp({
           </div>
         </div>
 
+        {/* RBAC HQ */}
+        <div className={`page${activePage === 'rbac-hq' ? ' active' : ''}`}>
+          <div className="page-inner">
+            <div className="page-title">RBAC Catalog & Presets</div>
+            <div className="page-sub">Edit draft permissions, publish new versions, and manage cloneable role templates.</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="card card-pad">
+                <div className="section-title" style={{ marginBottom: 12 }}>
+                  Draft permission entry
+                </div>
+                <div className="field">
+                  <label>Permission key</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. jobs.manage_budget"
+                    value={catalogForm.key}
+                    onChange={(e) => setCatalogForm((s) => ({ ...s, key: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Label</label>
+                  <input
+                    type="text"
+                    value={catalogForm.label}
+                    onChange={(e) => setCatalogForm((s) => ({ ...s, label: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Description</label>
+                  <textarea
+                    rows={3}
+                    value={catalogForm.description}
+                    onChange={(e) => setCatalogForm((s) => ({ ...s, description: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Category</label>
+                  <input
+                    type="text"
+                    value={catalogForm.category}
+                    onChange={(e) => setCatalogForm((s) => ({ ...s, category: e.target.value }))}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text2)' }}>Founder-only permission</span>
+                  <button
+                    type="button"
+                    className={`toggle${catalogForm.is_founder_only ? ' on' : ''}`}
+                    onClick={() => setCatalogForm((s) => ({ ...s, is_founder_only: !s.is_founder_only }))}
+                    aria-label="Toggle founder only"
+                  />
+                </div>
+                <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => void saveCatalogDraftEntry()}>
+                  Save draft entry
+                </button>
+              </div>
+              <div className="card card-pad">
+                <div className="section-title" style={{ marginBottom: 12 }}>
+                  Publish draft
+                </div>
+                <div className="field">
+                  <label>Publish note</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Explain what changed in this version"
+                    value={publishNote}
+                    onChange={(e) => setPublishNote(e.target.value)}
+                  />
+                </div>
+                <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => void publishCatalog()}>
+                  Publish catalog version
+                </button>
+                <div className="section-title" style={{ margin: '20px 0 12px' }}>
+                  Active role presets
+                </div>
+                <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  {rolePresets.length === 0 ? (
+                    <p style={{ fontSize: 12, color: 'var(--text2)' }}>No role presets yet.</p>
+                  ) : (
+                    rolePresets.map((preset) => (
+                      <div key={preset.id} className="activity-item">
+                        <div className="activity-icon">🧩</div>
+                        <div>
+                          <div className="activity-text">
+                            <strong>{preset.name}</strong> ({preset.key})
+                          </div>
+                          <div className="activity-time">
+                            v{preset.source_version_no} · {preset.recommended_permission_keys.length} permissions
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="card card-pad" style={{ marginTop: 16 }}>
+              <div className="section-title" style={{ marginBottom: 12 }}>
+                Create or update role preset
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="field">
+                  <label>Preset key</label>
+                  <input
+                    type="text"
+                    value={presetForm.key}
+                    onChange={(e) => setPresetForm((s) => ({ ...s, key: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Name</label>
+                  <input
+                    type="text"
+                    value={presetForm.name}
+                    onChange={(e) => setPresetForm((s) => ({ ...s, name: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Description</label>
+                  <input
+                    type="text"
+                    value={presetForm.description}
+                    onChange={(e) => setPresetForm((s) => ({ ...s, description: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Target use case</label>
+                  <input
+                    type="text"
+                    value={presetForm.target_use_case}
+                    onChange={(e) => setPresetForm((s) => ({ ...s, target_use_case: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label>Recommended permissions (comma separated keys)</label>
+                <textarea
+                  rows={2}
+                  value={presetForm.recommended_permission_keys}
+                  onChange={(e) => setPresetForm((s) => ({ ...s, recommended_permission_keys: e.target.value }))}
+                />
+              </div>
+              <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => void saveRolePreset()}>
+                Save role preset
+              </button>
+            </div>
+            <div className="card card-pad" style={{ marginTop: 16 }}>
+              <div className="section-title" style={{ marginBottom: 12 }}>
+                Draft catalog preview ({catalogDraft.length})
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Key</th>
+                      <th>Label</th>
+                      <th>Category</th>
+                      <th>Founder-only</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {catalogDraft.map((entry) => (
+                      <tr key={entry.key}>
+                        <td style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{entry.key}</td>
+                        <td>{entry.label}</td>
+                        <td>{entry.category}</td>
+                        <td>{entry.is_founder_only ? 'Yes' : 'No'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Audit */}
         <div className={`page${activePage === 'audit-hq' ? ' active' : ''}`}>
           <div className="page-inner">
             <div className="page-title">Platform Audit Log</div>
-            <div className="page-sub">Recent org and profile events from the database (not a full immutable audit trail yet)</div>
+            <div className="page-sub">Cross-org timeline for catalog, presets, support, and governance events.</div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+              <select className="fh-muted-select" value={auditOrgFilter} onChange={(e) => setAuditOrgFilter(e.target.value)}>
+                <option value="all">All organisations</option>
+                {orgs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+              <select className="fh-muted-select" value={auditEventFilter} onChange={(e) => setAuditEventFilter(e.target.value)}>
+                <option value="all">All event types</option>
+                {[...new Set(auditEvents.map((a) => a.event_type))].map((eventType) => (
+                  <option key={eventType} value={eventType}>
+                    {eventType}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="card card-pad">
               <div className="section-title" style={{ marginBottom: 14 }}>
                 Recent events
               </div>
-              {platformActivityLines.length === 0 ? (
+              {auditEvents.filter((event) => {
+                if (auditOrgFilter !== 'all' && event.org_id !== auditOrgFilter) return false;
+                if (auditEventFilter !== 'all' && event.event_type !== auditEventFilter) return false;
+                return true;
+              }).length === 0 ? (
                 <div style={{ fontSize: 13, color: 'var(--text2)' }}>No events to show yet.</div>
               ) : (
-                platformActivityLines.map((a) => (
-                  <div key={`audit-${a.key}`} className="activity-item">
-                    <div className="activity-icon">{a.icon}</div>
+                auditEvents
+                  .filter((event) => {
+                    if (auditOrgFilter !== 'all' && event.org_id !== auditOrgFilter) return false;
+                    if (auditEventFilter !== 'all' && event.event_type !== auditEventFilter) return false;
+                    return true;
+                  })
+                  .map((event) => (
+                  <div key={`audit-${event.id}`} className="activity-item">
+                    <div className="activity-icon">🔎</div>
                     <div>
-                      <div className="activity-text" dangerouslySetInnerHTML={{ __html: a.html }} />
-                      <div className="activity-time">{a.time}</div>
+                      <div className="activity-text">
+                        <strong>{event.event_type}</strong> · {event.entity_type} · {event.entity_id}
+                      </div>
+                      <div className="activity-time">
+                        {event.org_id ? `org: ${event.org_id}` : 'global'} · {relTime(event.created_at)}
+                      </div>
                     </div>
                   </div>
                 ))

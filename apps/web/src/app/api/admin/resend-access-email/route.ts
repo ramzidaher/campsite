@@ -1,4 +1,3 @@
-import { canManageOrgUsers } from '@/lib/adminGates';
 import { sendOrgMemberAccessEmail } from '@/lib/admin/sendOrgMemberAccessEmail';
 import { inviteCallbackUrl } from '@/lib/auth/inviteCallbackBaseUrl';
 import { createClient } from '@/lib/supabase/server';
@@ -42,11 +41,20 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!me?.org_id || me.status !== 'active' || !canManageOrgUsers(me.role)) {
+  if (!me?.org_id || me.status !== 'active') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const orgId = me.org_id as string;
+  const { data: canInvite, error: permErr } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: orgId,
+    p_permission_key: 'members.invite',
+    p_context: {},
+  });
+  if (permErr || !canInvite) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   let body: unknown;
   try {

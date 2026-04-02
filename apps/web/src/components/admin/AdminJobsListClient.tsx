@@ -3,7 +3,6 @@
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
-import { JOB_LISTING_STATUSES, type JobListingStatus } from '@campsite/types';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -38,6 +37,7 @@ export function AdminJobsListClient({
   const [salary, setSalary] = useState<string>('');
   const [contract, setContract] = useState<string>('');
   const [year, setYear] = useState<string>('');
+  const [search, setSearch] = useState('');
 
   const gradeOptions = useMemo(() => [...new Set(rows.map((r) => r.grade_level))].sort(), [rows]);
   const salaryOptions = useMemo(() => [...new Set(rows.map((r) => r.salary_band))].sort(), [rows]);
@@ -50,6 +50,11 @@ export function AdminJobsListClient({
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const deptName = (Array.isArray(r.departments) ? r.departments[0]?.name : r.departments?.name) ?? '';
+        if (!r.title.toLowerCase().includes(q) && !deptName.toLowerCase().includes(q)) return false;
+      }
       if (status && r.status !== status) return false;
       if (deptId && r.department_id !== deptId) return false;
       if (grade && r.grade_level !== grade) return false;
@@ -58,7 +63,7 @@ export function AdminJobsListClient({
       if (year && String(r.posted_year ?? '') !== year) return false;
       return true;
     });
-  }, [rows, status, deptId, grade, salary, contract, year]);
+  }, [rows, status, deptId, grade, salary, contract, year, search]);
 
   const sel =
     'rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[13px] text-[#121212]';
@@ -68,19 +73,23 @@ export function AdminJobsListClient({
       <header>
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Job listings</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Publish roles to a public page on your organisation&apos;s subdomain. Filter by tags copied from each
-          recruitment brief.
+          HR publishes approved requests as shareable public job URLs. Filter by department, grade, contract,
+          salary band, and year posted.
         </p>
       </header>
 
       <div className="flex flex-wrap gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search title or department..."
+          className="min-w-[220px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[13px] text-[#121212]"
+        />
         <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          {JOB_LISTING_STATUSES.map((s: JobListingStatus) => (
-            <option key={s} value={s}>
-              {jobListingStatusLabel(s)}
-            </option>
-          ))}
+          <option value="">All states</option>
+          <option value="live">Live</option>
+          <option value="archived">Archived</option>
+          <option value="draft">Draft</option>
         </select>
         <select className={sel} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
           <option value="">All departments</option>
@@ -133,6 +142,7 @@ export function AdminJobsListClient({
                 <th className="px-4 py-3">Department</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Posted</th>
+                <th className="px-4 py-3">Tags</th>
                 <th className="px-4 py-3">Public link</th>
               </tr>
             </thead>
@@ -153,7 +163,11 @@ export function AdminJobsListClient({
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-[#505050]">{deptName ?? '—'}</td>
-                    <td className="px-4 py-3">{jobListingStatusLabel(r.status)}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-full border border-[#d8d8d8] px-2.5 py-1 text-[11px]">
+                        {jobListingStatusLabel(r.status)}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-[#505050]">
                       {r.published_at
                         ? new Date(r.published_at).toLocaleDateString(undefined, {
@@ -162,6 +176,18 @@ export function AdminJobsListClient({
                             year: 'numeric',
                           })
                         : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px]">{r.grade_level}</span>
+                        <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px]">
+                          {recruitmentContractLabel(r.contract_type as 'full_time' | 'part_time' | 'seasonal')}
+                        </span>
+                        <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px]">{r.salary_band}</span>
+                        {r.posted_year ? (
+                          <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px]">{r.posted_year}</span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {showPublic ? (

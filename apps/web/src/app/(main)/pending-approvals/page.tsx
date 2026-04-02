@@ -1,7 +1,6 @@
 import { PendingApprovalsClient, type PendingRow } from '@/components/PendingApprovalsClient';
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { createClient } from '@/lib/supabase/server';
-import { isApproverRole } from '@campsite/types';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -12,13 +11,33 @@ export default async function PendingApprovalsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('role,org_id,id,status')
-    .eq('id', user.id)
-    .single();
+  const { data: me } = await supabase.from('profiles').select('role,org_id,id,status').eq('id', user.id).single();
 
-  if (!me || me.status !== 'active' || !isApproverRole(me.role)) {
+  if (!me || me.status !== 'active' || !me.org_id) {
+    redirect('/dashboard');
+  }
+  const [{ data: canReviewApprovals }, { data: canViewManagerTeams }, { data: canManageManagerWorkspace }] =
+    await Promise.all([
+      supabase.rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: me.org_id,
+        p_permission_key: 'approvals.members.review',
+        p_context: {},
+      }),
+      supabase.rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: me.org_id,
+        p_permission_key: 'teams.view',
+        p_context: {},
+      }),
+      supabase.rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: me.org_id,
+        p_permission_key: 'recruitment.create_request',
+        p_context: {},
+      }),
+    ]);
+  if (!canReviewApprovals) {
     redirect('/dashboard');
   }
 
@@ -32,7 +51,7 @@ export default async function PendingApprovalsPage() {
     departments: p.departments,
   }));
 
-  const showManagerLink = me.role === 'manager' || me.role === 'coordinator';
+  const showManagerLink = Boolean(canViewManagerTeams || canManageManagerWorkspace);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-[28px]">
@@ -45,10 +64,10 @@ export default async function PendingApprovalsPage() {
         </div>
         {showManagerLink ? (
           <Link
-            href={me.role === 'coordinator' ? '/manager/teams' : '/manager'}
+            href={canManageManagerWorkspace ? '/manager' : '/manager/teams'}
             className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
           >
-            {me.role === 'coordinator' ? 'Department workspace' : 'Manager overview'}
+            {canManageManagerWorkspace ? 'Manager overview' : 'Department workspace'}
           </Link>
         ) : null}
       </div>

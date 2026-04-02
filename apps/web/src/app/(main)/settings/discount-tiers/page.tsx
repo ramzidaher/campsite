@@ -1,6 +1,5 @@
 import { DiscountTiersClient } from '@/components/settings/DiscountTiersClient';
 import { createClient } from '@/lib/supabase/server';
-import { isOrgAdminRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function DiscountTiersPage() {
@@ -18,7 +17,13 @@ export default async function DiscountTiersPage() {
 
   if (!profile?.org_id) redirect('/login');
   if (profile.status !== 'active') redirect('/pending');
-  if (!isOrgAdminRole(profile.role)) {
+  const { data: canViewDiscounts } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'discounts.view',
+    p_context: {},
+  });
+  if (!canViewDiscounts) {
     redirect('/settings');
   }
 

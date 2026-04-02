@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { isRecruitmentRequestStatus, isOrgAdminRole } from '@campsite/types';
+import { isRecruitmentRequestStatus } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
 
 export type SetRecruitmentStatusState = { ok: true } | { ok: false; error: string };
@@ -24,13 +24,17 @@ export async function setRecruitmentRequestStatusAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, status, org_id')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  const { data: profile } = await supabase.from('profiles').select('status, org_id').eq('id', user.id).maybeSingle();
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { ok: false, error: 'Not allowed.' };
+  }
+  const { data: canApprove } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'recruitment.approve_request',
+    p_context: {},
+  });
+  if (!canApprove) {
     return { ok: false, error: 'Not allowed.' };
   }
 

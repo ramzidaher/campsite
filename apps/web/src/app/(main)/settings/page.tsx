@@ -60,11 +60,19 @@ export default async function SettingsPage({
 
   let broadcastChannelPrefs: BroadcastChannelPref[] = [];
   const orgId = profile?.org_id as string | undefined;
+  let canManageDiscounts = false;
   if (orgId) {
-    const [{ data: orgDepts }, { data: subs }] = await Promise.all([
+    const [{ data: orgDepts }, { data: subs }, { data: hasDiscounts }] = await Promise.all([
       supabase.from('departments').select('id, name').eq('org_id', orgId).eq('is_archived', false),
       supabase.from('user_subscriptions').select('channel_id, subscribed').eq('user_id', user.id),
+      supabase.rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: orgId,
+        p_permission_key: 'discounts.view',
+        p_context: {},
+      }),
     ]);
+    canManageDiscounts = Boolean(hasDiscounts);
     const deptIds = [...new Set((orgDepts ?? []).map((d) => d.id as string).filter(Boolean))];
     if (deptIds.length) {
       const { data: chans } = await supabase
@@ -125,6 +133,7 @@ export default async function SettingsPage({
               : null
           }
         initialBroadcastChannels={broadcastChannelPrefs}
+        canManageDiscounts={canManageDiscounts}
       />
     </div>
   );

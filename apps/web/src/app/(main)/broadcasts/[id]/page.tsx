@@ -22,7 +22,12 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
 
   if (error || !b) notFound();
 
-  const { data: viewerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  const { data: hasBroadcastAdmin } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: b.org_id as string,
+    p_permission_key: 'broadcasts.publish_without_approval',
+    p_context: {},
+  });
 
   const deptId = b.dept_id as string;
   const channelId = b.channel_id as string | null;
@@ -50,7 +55,7 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
   return (
     <BroadcastDetailView
       userId={user.id}
-      viewerRole={(viewerProfile?.role as string | undefined) ?? null}
+      showAdminChannelNote={Boolean(hasBroadcastAdmin)}
       canSetCover={maySetCover === true}
       initial={{
         id: b.id as string,

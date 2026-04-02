@@ -2,7 +2,6 @@ import { AdminDepartmentsClient } from '@/components/admin/AdminDepartmentsClien
 import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
 import { loadWorkspaceDepartmentIds } from '@/lib/manager/workspaceDepartmentIds';
 import { createClient } from '@/lib/supabase/server';
-import { isDepartmentWorkspaceRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function ManagerDepartmentsPage({
@@ -26,7 +25,13 @@ export default async function ManagerDepartmentsPage({
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!isDepartmentWorkspaceRole(profile.role)) redirect('/broadcasts');
+  const { data: canViewDepartments } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'departments.view',
+    p_context: {},
+  });
+  if (!canViewDepartments) redirect('/broadcasts');
 
   const managedDeptIds = await loadWorkspaceDepartmentIds(supabase, user.id, profile.role);
 

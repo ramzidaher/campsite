@@ -6,7 +6,6 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import {
   isJobApplicationStage,
-  isOrgAdminRole,
 } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
 
@@ -17,20 +16,24 @@ function relationOne<T>(rel: T | T[] | null | undefined): T | null {
   return Array.isArray(rel) ? (rel[0] ?? null) : rel;
 }
 
-async function requireOrgAdmin() {
+async function requireOrgPermission(permissionKey: string) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null as null, profile: null as null, orgId: null as null };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, org_id, role, status')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  const { data: profile } = await supabase.from('profiles').select('id, org_id, status').eq('id', user.id).maybeSingle();
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { supabase, user, profile: null as null, orgId: null as null };
+  }
+  const { data: allowed } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: permissionKey,
+    p_context: {},
+  });
+  if (!allowed) {
     return { supabase, user, profile: null as null, orgId: null as null };
   }
 
@@ -50,7 +53,7 @@ export async function updateJobApplicationStage(
   if (!id) return { ok: false, error: 'Missing application.' };
   if (!isJobApplicationStage(newStage)) return { ok: false, error: 'Invalid stage.' };
 
-  const { supabase, profile, orgId, user } = await requireOrgAdmin();
+  const { supabase, profile, orgId, user } = await requireOrgPermission('applications.move_stage');
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const notify = opts.notifyCandidate && opts.messageBody.trim().length > 0;
@@ -120,7 +123,7 @@ export async function addJobApplicationNote(
   const text = body?.trim();
   if (!id || !text) return { ok: false, error: 'Note cannot be empty.' };
 
-  const { supabase, profile, orgId, user } = await requireOrgAdmin();
+  const { supabase, profile, orgId, user } = await requireOrgPermission('applications.add_internal_notes');
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const { error } = await supabase.from('job_application_notes').insert({
@@ -144,7 +147,7 @@ export async function sendCandidateOnlyMessage(
   const text = messageBody?.trim();
   if (!id || !text) return { ok: false, error: 'Message cannot be empty.' };
 
-  const { supabase, profile, orgId, user } = await requireOrgAdmin();
+  const { supabase, profile, orgId, user } = await requireOrgPermission('applications.notify_candidate');
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const { data: app, error: fetchErr } = await supabase
@@ -219,7 +222,7 @@ export async function loadJobApplicationDetail(
   const id = applicationId?.trim();
   if (!id) return { error: 'Missing application.' };
 
-  const { supabase, profile, orgId } = await requireOrgAdmin();
+  const { supabase, profile, orgId } = await requireOrgPermission('applications.view');
   if (!profile || !orgId) return { error: 'Not allowed.' };
 
   const { data: application, error: appErr } = await supabase

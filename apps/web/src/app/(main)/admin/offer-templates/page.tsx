@@ -1,4 +1,4 @@
-import { canAccessOrgAdminArea } from '@/lib/adminGates';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -17,7 +17,7 @@ export default async function OfferTemplatesPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canAccessOrgAdminArea(profile.role)) redirect('/broadcasts');
+  if (!(await viewerHasPermission('offers.view'))) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
 
@@ -36,6 +36,9 @@ export default async function OfferTemplatesPage() {
           <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">Operations</p>
           <h1 className="mt-1 font-authSerif text-[26px] text-[#121212]">Offer letter templates</h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            Create and manage templates for Offer Sent stage. Merge fields auto-fill from candidate and job data.
+          </p>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
             Merge fields: <code className="text-[12px]">{`{{candidate_name}}`}</code>,{' '}
             <code className="text-[12px]">{`{{job_title}}`}</code>, <code className="text-[12px]">{`{{salary}}`}</code>,{' '}
             <code className="text-[12px]">{`{{start_date}}`}</code>, <code className="text-[12px]">{`{{contract_type}}`}</code>
@@ -51,7 +54,9 @@ export default async function OfferTemplatesPage() {
 
       <ul className="mt-8 divide-y divide-[#f0f0f0] rounded-xl border border-[#e8e8e8] bg-white shadow-sm">
         {templates.length === 0 ? (
-          <li className="px-4 py-8 text-center text-[13px] text-[#6b6b6b]">No templates yet.</li>
+          <li className="px-4 py-8 text-center text-[13px] text-[#6b6b6b]">
+            No templates yet. Create one to start generating e-sign offer letters.
+          </li>
         ) : (
           templates.map((t) => (
             <li key={t.id as string} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">

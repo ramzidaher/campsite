@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { canAccessOrgAdminArea } from '@/lib/adminGates';
+import { viewerHasAnyAdminAccess } from '@/lib/authz/serverGuards';
 import { redirect } from 'next/navigation';
 
 /** Org tenant admin routes; nav lives in the main shell under “Admin”. */
@@ -17,7 +17,8 @@ export default async function OrgAdminLayout({ children }: { children: React.Rea
     .maybeSingle();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canAccessOrgAdminArea(profile.role)) redirect('/broadcasts');
+  const hasAdminAccess = await viewerHasAnyAdminAccess();
+  if (!hasAdminAccess) redirect('/broadcasts');
 
   return <div className="min-w-0">{children}</div>;
 }

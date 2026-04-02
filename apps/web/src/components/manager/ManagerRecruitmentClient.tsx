@@ -43,17 +43,39 @@ export function ManagerRecruitmentClient({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [sortBy, setSortBy] = useState<'date' | 'urgency' | 'status'>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const filteredRequests = useMemo(
-    () =>
-      initialRequests.filter((r) => (showArchived ? Boolean(r.archived_at) : !r.archived_at)),
-    [initialRequests, showArchived]
-  );
+  const filteredRequests = useMemo(() => {
+    const filtered = initialRequests.filter((r) => (showArchived ? Boolean(r.archived_at) : !r.archived_at));
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const rank: Record<string, number> = {
+      pending_review: 0,
+      approved: 1,
+      in_progress: 2,
+      filled: 3,
+      rejected: 4,
+      high: 0,
+      normal: 1,
+      low: 2,
+    };
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'date') {
+        return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      }
+      if (sortBy === 'urgency') {
+        return dir * ((rank[a.urgency] ?? 99) - (rank[b.urgency] ?? 99));
+      }
+      return dir * ((rank[a.status] ?? 99) - (rank[b.status] ?? 99));
+    });
+  }, [initialRequests, showArchived, sortBy, sortDir]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await createRecruitmentRequest({
@@ -73,6 +95,7 @@ export function ManagerRecruitmentClient({
         return;
       }
       (e.target as HTMLFormElement).reset();
+      setSuccess('Recruitment request submitted. HR has been notified in-app and by email.');
       router.refresh();
     });
   }
@@ -86,7 +109,7 @@ export function ManagerRecruitmentClient({
       <header>
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Recruitment requests</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Raise a formal hiring request for HR. Your submissions stay on record with full status history.
+          Raise Recruitment Request to HR using a structured brief. Your submissions are never deleted and keep full history.
         </p>
       </header>
 
@@ -107,8 +130,16 @@ export function ManagerRecruitmentClient({
         </div>
       ) : (
         <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <h2 className="font-authSerif text-lg text-[#121212]">Raise recruitment request</h2>
+          <h2 className="font-authSerif text-lg text-[#121212]">Raise Recruitment Request</h2>
           <form className="mt-5 space-y-4" onSubmit={onSubmit}>
+            {success ? (
+              <div
+                role="status"
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-900"
+              >
+                {success}
+              </div>
+            ) : null}
             {error ? (
               <div
                 role="alert"
@@ -223,7 +254,7 @@ export function ManagerRecruitmentClient({
                 disabled={pending}
                 className="inline-flex h-10 items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white transition hover:bg-[#007a54] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008B60]"
               >
-                {pending ? 'Submitting…' : 'Submit request'}
+                {pending ? 'Submitting…' : 'Raise Recruitment Request'}
               </button>
             </div>
           </form>
@@ -233,27 +264,46 @@ export function ManagerRecruitmentClient({
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-authSerif text-lg text-[#121212]">My requests</h2>
-          <div className="flex gap-2 rounded-lg border border-[#e8e8e8] bg-[#fafafa] p-1 text-[12px]">
-            <button
-              type="button"
-              onClick={() => setShowArchived(false)}
-              className={[
-                'rounded-md px-3 py-1.5 font-medium transition',
-                !showArchived ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]',
-              ].join(' ')}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-2 rounded-lg border border-[#e8e8e8] bg-[#fafafa] p-1 text-[12px]">
+              <button
+                type="button"
+                onClick={() => setShowArchived(false)}
+                className={[
+                  'rounded-md px-3 py-1.5 font-medium transition',
+                  !showArchived ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]',
+                ].join(' ')}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowArchived(true)}
+                className={[
+                  'rounded-md px-3 py-1.5 font-medium transition',
+                  showArchived ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]',
+                ].join(' ')}
+              >
+                Archived
+              </button>
+            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'date' | 'urgency' | 'status')}
+              className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px]"
             >
-              Active
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowArchived(true)}
-              className={[
-                'rounded-md px-3 py-1.5 font-medium transition',
-                showArchived ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]',
-              ].join(' ')}
+              <option value="date">Sort: Date</option>
+              <option value="urgency">Sort: Urgency</option>
+              <option value="status">Sort: Status</option>
+            </select>
+            <select
+              value={sortDir}
+              onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}
+              className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px]"
             >
-              Archived
-            </button>
+              <option value="desc">Desc</option>
+              <option value="asc">Asc</option>
+            </select>
           </div>
         </div>
 
@@ -281,7 +331,11 @@ export function ManagerRecruitmentClient({
                     <tr key={r.id} className="text-[#242424]">
                       <td className="px-4 py-3 font-medium">{r.job_title}</td>
                       <td className="px-4 py-3 text-[#505050]">{deptName ?? '—'}</td>
-                      <td className="px-4 py-3">{recruitmentStatusLabel(r.status)}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-full border border-[#d8d8d8] px-2.5 py-1 text-[11px]">
+                          {recruitmentStatusLabel(r.status)}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">{recruitmentUrgencyLabel(r.urgency)}</td>
                       <td className="px-4 py-3 text-[#505050]">
                         {new Date(r.created_at).toLocaleDateString(undefined, {

@@ -48,7 +48,10 @@ export function ApplyJobFormClient({ jobSlug, listing }: { jobSlug: string; list
             role="status"
             className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[14px] text-emerald-950"
           >
-            {state.message}
+            <p>{state.message}</p>
+            <p className="mt-1 text-[12px] text-emerald-900">
+              You cannot edit this application after submission. Use your portal link for updates.
+            </p>
           </div>
         ) : null}
 
@@ -63,6 +66,7 @@ export function ApplyJobFormClient({ jobSlug, listing }: { jobSlug: string; list
           <p className="text-[13px] leading-relaxed text-[#505050]">
             This role accepts: {bits.length ? bits.join(', ') : jobApplicationModeLabel(listing.application_mode)}.
           </p>
+          <p className="text-[12px] text-[#9b9b9b]">After submitting, your application is locked and tracked in your private status portal.</p>
 
           <div>
             <label className={labelClass} htmlFor="candidate_name">

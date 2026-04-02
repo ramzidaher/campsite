@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 export type PlatformActionResult = { ok: true } | { ok: false; error: string };
+export type PlatformActionDataResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
 async function getPlatformFounderContext(): Promise<
   | { ok: true; userId: string; userSupabase: Awaited<ReturnType<typeof createClient>> }
@@ -111,4 +112,94 @@ export async function permanentlyDeletePlatformOrg(orgId: string): Promise<Platf
   const { error: delOrg } = await admin.from('organisations').delete().eq('id', orgId);
   if (delOrg) return { ok: false, error: delOrg.message };
   return { ok: true };
+}
+
+export async function upsertPermissionDraftEntry(input: {
+  key: string;
+  label: string;
+  description: string;
+  category: string;
+  is_founder_only: boolean;
+  is_archived: boolean;
+}): Promise<PlatformActionResult> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { error } = await ctx.userSupabase.rpc('platform_upsert_catalog_draft_entry', {
+    p_key: input.key,
+    p_label: input.label,
+    p_description: input.description,
+    p_category: input.category,
+    p_is_founder_only: input.is_founder_only,
+    p_is_archived: input.is_archived,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function publishPermissionCatalogVersion(publishNote: string): Promise<PlatformActionDataResult<{ versionNo: number }>> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { data, error } = await ctx.userSupabase.rpc('platform_publish_catalog', { p_publish_note: publishNote });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { versionNo: Number(data ?? 0) } };
+}
+
+export async function upsertRolePreset(input: {
+  key: string;
+  name: string;
+  description: string;
+  target_use_case: string;
+  recommended_permission_keys: string[];
+  is_archived: boolean;
+}): Promise<PlatformActionResult> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { error } = await ctx.userSupabase.rpc('platform_founder_upsert_role_preset', {
+    p_key: input.key,
+    p_name: input.name,
+    p_description: input.description,
+    p_target_use_case: input.target_use_case,
+    p_recommended_permission_keys: input.recommended_permission_keys,
+    p_is_archived: input.is_archived,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function updateOrganisationGovernance(input: {
+  orgId: string;
+  planTier: string;
+  subscriptionStatus: 'active' | 'limited' | 'suspended';
+  isLocked: boolean;
+  maintenanceMode: boolean;
+  forceLogout: boolean;
+}): Promise<PlatformActionResult> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { error } = await ctx.userSupabase.rpc('platform_update_org_governance', {
+    p_org_id: input.orgId,
+    p_plan_tier: input.planTier,
+    p_subscription_status: input.subscriptionStatus,
+    p_is_locked: input.isLocked,
+    p_maintenance_mode: input.maintenanceMode,
+    p_force_logout: input.forceLogout,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function startSupportViewAsSession(input: {
+  orgId: string;
+  targetUserId: string;
+  minutes: number;
+}): Promise<PlatformActionDataResult<{ token: string }>> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { data, error } = await ctx.userSupabase.rpc('platform_create_support_session', {
+    p_org_id: input.orgId,
+    p_target_user_id: input.targetUserId,
+    p_minutes: input.minutes,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { token: String(data ?? '') } };
 }

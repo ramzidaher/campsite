@@ -9,7 +9,6 @@ import {
 import { sendInterviewScheduledEmail } from '@/lib/recruitment/sendInterviewScheduledEmail';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { isOrgAdminRole } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
 
 export type InterviewActionResult = { ok: true } | { ok: false; error: string };
@@ -19,20 +18,24 @@ function relOne<T>(rel: T | T[] | null | undefined): T | null {
   return Array.isArray(rel) ? (rel[0] ?? null) : rel;
 }
 
-async function requireOrgAdmin() {
+async function requireOrgPermission(permissionKey: string) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null as null, profile: null as null, orgId: null as null };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, org_id, role, status')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  const { data: profile } = await supabase.from('profiles').select('id, org_id, status').eq('id', user.id).maybeSingle();
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { supabase, user, profile: null as null, orgId: null as null };
+  }
+  const { data: allowed } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: permissionKey,
+    p_context: {},
+  });
+  if (!allowed) {
     return { supabase, user, profile: null as null, orgId: null as null };
   }
 
@@ -54,7 +57,7 @@ export async function listAvailableInterviewSlotsForJob(jobListingId: string): P
   const jid = jobListingId?.trim();
   if (!jid) return { ok: false, error: 'Missing job.' };
 
-  const { supabase, orgId } = await requireOrgAdmin();
+  const { supabase, orgId } = await requireOrgPermission('interviews.view');
   if (!orgId) return { ok: false, error: 'Not allowed.' };
 
   const { data, error } = await supabase
@@ -76,7 +79,7 @@ export async function createInterviewSlot(fields: {
   endsAtIso: string;
   panelistProfileIds: string[];
 }): Promise<InterviewActionResult & { warnings?: string[] }> {
-  const { supabase, profile, orgId, user } = await requireOrgAdmin();
+  const { supabase, profile, orgId, user } = await requireOrgPermission('interviews.create_slot');
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const jobId = fields.jobListingId?.trim();
@@ -197,7 +200,7 @@ export async function completeInterviewSlot(slotId: string): Promise<InterviewAc
   const id = slotId?.trim();
   if (!id) return { ok: false, error: 'Missing slot.' };
 
-  const { supabase, orgId } = await requireOrgAdmin();
+  const { supabase, orgId } = await requireOrgPermission('interviews.complete_slot');
   if (!orgId) return { ok: false, error: 'Not allowed.' };
 
   const { data: slot, error: fetchErr } = await supabase
@@ -254,7 +257,7 @@ export async function cancelAvailableInterviewSlot(slotId: string): Promise<Inte
   const id = slotId?.trim();
   if (!id) return { ok: false, error: 'Missing slot.' };
 
-  const { supabase, orgId } = await requireOrgAdmin();
+  const { supabase, orgId } = await requireOrgPermission('interviews.create_slot');
   if (!orgId) return { ok: false, error: 'Not allowed.' };
 
   const { data: slot } = await supabase
@@ -311,7 +314,7 @@ export async function bookInterviewForApplication(opts: {
   const jobListingId = opts.jobListingId?.trim();
   if (!appId || !slotId || !jobListingId) return { ok: false, error: 'Missing data.' };
 
-  const { supabase, profile, orgId, user } = await requireOrgAdmin();
+  const { supabase, profile, orgId, user } = await requireOrgPermission('interviews.book_slot');
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const joining = opts.joiningInstructions?.trim() ?? '';

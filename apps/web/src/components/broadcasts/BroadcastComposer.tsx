@@ -1,7 +1,4 @@
 'use client';
-
-import { isBroadcastDraftOnlyRole, isOrgAdminRole, type ProfileRole } from '@campsite/types';
-import { canComposeBroadcast } from '@campsite/types';
 import type { ReactNode, SelectHTMLAttributes } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -80,7 +77,9 @@ type Props = {
   supabase: SupabaseClient;
   orgId: string;
   userId: string;
-  role: ProfileRole;
+  canCompose: boolean;
+  draftOnly: boolean;
+  canPublishWithoutApproval: boolean;
   departments: DeptRow[];
   categoriesByDept: Map<string, CatRow[]>;
   /** Called after a successful save/send; use to switch tabs or refresh lists. */
@@ -149,12 +148,13 @@ export function BroadcastComposer({
   supabase,
   orgId,
   userId,
-  role,
+  canCompose,
+  draftOnly,
+  canPublishWithoutApproval,
   departments,
   categoriesByDept,
   onCreated,
 }: Props) {
-  const draftOnly = isBroadcastDraftOnlyRole(role);
   const [deptId, setDeptId] = useState<string>('');
   const [catId, setCatId] = useState<string>('');
   const [authorityDeptId, setAuthorityDeptId] = useState<string>('');
@@ -339,7 +339,7 @@ export function BroadcastComposer({
   }, [schedule]);
 
   const persistDraft = useCallback(async (): Promise<boolean> => {
-    if (!canComposeBroadcast(role) || !title.trim()) return true;
+    if (!canCompose || !title.trim()) return true;
 
     if (draftOnly) {
       if (!displayDeptId || !displayCatId) return true;
@@ -395,7 +395,7 @@ export function BroadcastComposer({
       setSaving(false);
     }
   }, [
-    role,
+    canCompose,
     draftOnly,
     isOrgWideActive,
     displayDeptId,
@@ -415,12 +415,12 @@ export function BroadcastComposer({
   ]);
 
   useEffect(() => {
-    if (!canComposeBroadcast(role)) return;
+    if (!canCompose) return;
     const t = window.setInterval(() => {
       if (dirty.current && title.trim().length) void persistDraft();
     }, 30_000);
     return () => window.clearInterval(t);
-  }, [persistDraft, role, title]);
+  }, [persistDraft, canCompose, title]);
 
   const submit = async (mode: 'draft' | 'pending' | 'send' | 'schedule') => {
     if (draftOnly) {
@@ -569,7 +569,7 @@ export function BroadcastComposer({
     ((isOrgWideActive && caps.pin_broadcasts) ||
       (!isOrgWideActive && (caps.mandatory_broadcast || caps.pin_broadcasts)));
 
-  if (!canComposeBroadcast(role)) {
+  if (!canCompose) {
     return <p className="text-sm text-[#6b6b6b]">Your role cannot compose broadcasts.</p>;
   }
 
@@ -643,7 +643,7 @@ export function BroadcastComposer({
               </span>
             </label>
           </div>
-          {!orgWideDeptIds.length && !orgWideCapsLoading && !isOrgAdminRole(role) ? (
+          {!orgWideDeptIds.length && !orgWideCapsLoading && !canPublishWithoutApproval ? (
             <p className="mt-2 text-[12px] text-[#9b9b9b]">
               You don&apos;t have org-wide send permission on any department. Ask an org admin to enable &ldquo;Send
               org-wide&rdquo; under Admin → Departments, or use Specific.

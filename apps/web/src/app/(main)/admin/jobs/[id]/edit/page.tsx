@@ -1,5 +1,5 @@
 import { AdminJobEditClient } from '@/components/admin/AdminJobEditClient';
-import { canAccessOrgAdminArea } from '@/lib/adminGates';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 
@@ -21,7 +21,7 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canAccessOrgAdminArea(profile.role)) redirect('/broadcasts');
+  if (!(await viewerHasPermission('jobs.edit'))) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
 

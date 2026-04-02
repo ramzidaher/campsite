@@ -3,6 +3,11 @@ export type FounderOrg = {
   name: string;
   slug: string;
   is_active: boolean;
+  plan_tier?: string;
+  subscription_status?: string;
+  is_locked?: boolean;
+  maintenance_mode?: boolean;
+  force_logout_after?: string | null;
   created_at: string;
   logo_url: string | null;
   user_count: number;
@@ -30,6 +35,40 @@ export type FounderOrgProfile = {
   created_at: string;
 };
 
+export type FounderPermissionCatalogEntry = {
+  version_no: number;
+  key: string;
+  label: string;
+  description: string;
+  category: string;
+  is_founder_only: boolean;
+  is_archived: boolean;
+};
+
+export type FounderRolePreset = {
+  id: string;
+  source_version_no: number;
+  key: string;
+  name: string;
+  description: string;
+  target_use_case: string;
+  recommended_permission_keys: string[];
+  is_archived: boolean;
+};
+
+export type FounderAuditEvent = {
+  id: string;
+  actor_user_id: string | null;
+  org_id: string | null;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  before_state: unknown;
+  after_state: unknown;
+  metadata: unknown;
+  created_at: string;
+};
+
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null;
 }
@@ -48,10 +87,78 @@ export function parseFounderOrgs(json: unknown): FounderOrg[] {
       name,
       slug,
       is_active: Boolean(row.is_active),
+      plan_tier: typeof row.plan_tier === 'string' ? row.plan_tier : 'starter',
+      subscription_status: typeof row.subscription_status === 'string' ? row.subscription_status : 'active',
+      is_locked: Boolean(row.is_locked),
+      maintenance_mode: Boolean(row.maintenance_mode),
+      force_logout_after: typeof row.force_logout_after === 'string' ? row.force_logout_after : null,
       created_at: typeof row.created_at === 'string' ? row.created_at : '',
       logo_url: typeof row.logo_url === 'string' ? row.logo_url : null,
       user_count: typeof row.user_count === 'number' ? row.user_count : 0,
       broadcast_count: typeof row.broadcast_count === 'number' ? row.broadcast_count : 0,
+    });
+  }
+  return out;
+}
+
+export function parseFounderPermissionCatalogEntries(json: unknown): FounderPermissionCatalogEntry[] {
+  if (!Array.isArray(json)) return [];
+  const out: FounderPermissionCatalogEntry[] = [];
+  for (const row of json) {
+    if (!isRecord(row)) continue;
+    if (typeof row.key !== 'string') continue;
+    out.push({
+      version_no: typeof row.version_no === 'number' ? row.version_no : 0,
+      key: row.key,
+      label: typeof row.label === 'string' ? row.label : '',
+      description: typeof row.description === 'string' ? row.description : '',
+      category: typeof row.category === 'string' ? row.category : 'other',
+      is_founder_only: Boolean(row.is_founder_only),
+      is_archived: Boolean(row.is_archived),
+    });
+  }
+  return out;
+}
+
+export function parseFounderRolePresets(json: unknown): FounderRolePreset[] {
+  if (!Array.isArray(json)) return [];
+  const out: FounderRolePreset[] = [];
+  for (const row of json) {
+    if (!isRecord(row)) continue;
+    if (typeof row.id !== 'string' || typeof row.key !== 'string') continue;
+    out.push({
+      id: row.id,
+      source_version_no: typeof row.source_version_no === 'number' ? row.source_version_no : 0,
+      key: row.key,
+      name: typeof row.name === 'string' ? row.name : '',
+      description: typeof row.description === 'string' ? row.description : '',
+      target_use_case: typeof row.target_use_case === 'string' ? row.target_use_case : '',
+      recommended_permission_keys: Array.isArray(row.recommended_permission_keys)
+        ? row.recommended_permission_keys.filter((x): x is string => typeof x === 'string')
+        : [],
+      is_archived: Boolean(row.is_archived),
+    });
+  }
+  return out;
+}
+
+export function parseFounderAuditEvents(json: unknown): FounderAuditEvent[] {
+  if (!Array.isArray(json)) return [];
+  const out: FounderAuditEvent[] = [];
+  for (const row of json) {
+    if (!isRecord(row)) continue;
+    if (typeof row.id !== 'string') continue;
+    out.push({
+      id: row.id,
+      actor_user_id: typeof row.actor_user_id === 'string' ? row.actor_user_id : null,
+      org_id: typeof row.org_id === 'string' ? row.org_id : null,
+      event_type: typeof row.event_type === 'string' ? row.event_type : '',
+      entity_type: typeof row.entity_type === 'string' ? row.entity_type : '',
+      entity_id: typeof row.entity_id === 'string' ? row.entity_id : '',
+      before_state: row.before_state,
+      after_state: row.after_state,
+      metadata: row.metadata,
+      created_at: typeof row.created_at === 'string' ? row.created_at : '',
     });
   }
   return out;

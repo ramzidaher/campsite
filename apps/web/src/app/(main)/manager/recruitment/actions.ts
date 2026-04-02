@@ -6,7 +6,6 @@ import {
   isRecruitmentContractType,
   isRecruitmentHireReason,
   isRecruitmentUrgency,
-  isManagerRole,
 } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
 
@@ -39,8 +38,14 @@ export async function createRecruitmentRequest(form: {
   if (!profile?.org_id || profile.status !== 'active') {
     return { ok: false, error: 'Account not active or missing organisation.' };
   }
-  if (!isManagerRole(profile.role)) {
-    return { ok: false, error: 'Only department managers can raise recruitment requests.' };
+  const { data: canCreateRequest } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'recruitment.create_request',
+    p_context: {},
+  });
+  if (!canCreateRequest) {
+    return { ok: false, error: 'You do not have permission to raise recruitment requests.' };
   }
 
   const deptId = form.departmentId?.trim();

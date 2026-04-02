@@ -5,17 +5,33 @@ import Link from 'next/link';
 import { DashboardMiniCalendar } from '@/components/dashboard/DashboardMiniCalendar';
 import type { UpcomingEventRow } from '@/lib/dashboard/loadDashboardHome';
 
+const EVENT_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+  timeZone: 'UTC',
+});
+
+const EVENT_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
+
+function toUtcDayKey(d: Date) {
+  return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+}
+
 function formatEventWhen(iso: string) {
   const d = new Date(iso);
   const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const isToday = d.toDateString() === now.toDateString();
-  const isTomorrow = d.toDateString() === tomorrow.toDateString();
-  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  const isToday = toUtcDayKey(d) === toUtcDayKey(now);
+  const isTomorrow = toUtcDayKey(d) === toUtcDayKey(tomorrow);
+  const time = EVENT_TIME_FORMATTER.format(d);
   if (isToday) return `Today · ${time}`;
   if (isTomorrow) return `Tomorrow · ${time}`;
-  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${time}`;
+  return `${EVENT_DATE_FORMATTER.format(d)} · ${time}`;
 }
 
 export function DashboardCalendarWidget({

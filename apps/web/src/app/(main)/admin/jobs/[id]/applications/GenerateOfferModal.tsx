@@ -101,6 +101,9 @@ export function GenerateOfferModal({
           <div>
             <h2 className="font-authSerif text-lg text-[#121212]">Generate offer letter</h2>
             <p className="mt-1 text-[13px] text-[#6b6b6b]">{candidateName}</p>
+            <p className="mt-1 text-[12px] text-[#9b9b9b]">
+              HR flow: select template → merge fields → review/edit → send for e-signature.
+            </p>
           </div>
           <button
             type="button"

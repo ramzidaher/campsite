@@ -2,6 +2,8 @@ import {
   isDepartmentWorkspaceRole,
   isManagerRole,
   isOrgAdminRole,
+  PERMISSION_KEYS,
+  type PermissionKey,
   type ProfileRole,
 } from '@campsite/types';
 
@@ -24,6 +26,14 @@ export function canAccessOrgAdminArea(role: ProfileRole | string | null | undefi
  */
 export function canManageOrgUsers(role: ProfileRole | string | null | undefined): boolean {
   return isOrgAdminRole(role);
+}
+
+export function hasPermission(
+  permissions: readonly string[] | null | undefined,
+  permission: (typeof PERMISSION_KEYS)[number]
+): boolean {
+  if (!permissions?.length) return false;
+  return permissions.includes(permission);
 }
 
 export function canManageOrgDepartments(role: ProfileRole | string | null | undefined): boolean {
@@ -95,11 +105,11 @@ export function getMainShellAdminNavItems(
     { href: '/admin/teams', label: 'Teams', icon: 'teams', section: 'Content' },
     { href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' },
     { href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' },
-    { href: '/admin/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'Operations' },
-    { href: '/admin/jobs', label: 'Job listings', icon: 'jobs', section: 'Operations' },
-    { href: '/admin/applications', label: 'Applications', icon: 'applications', section: 'Operations' },
-    { href: '/admin/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'Operations' },
-    { href: '/admin/interviews', label: 'Interview schedule', icon: 'interviews', section: 'Operations' },
+    { href: '/admin/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'HR' },
+    { href: '/admin/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' },
+    { href: '/admin/applications', label: 'Applications', icon: 'applications', section: 'HR' },
+    { href: '/admin/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'HR' },
+    { href: '/admin/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' },
     { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
     { href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' },
     { href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' },
@@ -185,4 +195,111 @@ export function getMainShellManagerNavItems(
   }
 
   return [pendingMembers, recruitment, departments, teams, broadcasts, rota];
+}
+
+export function getMainShellAdminNavItemsByPermissions(
+  permissions: readonly string[] | null | undefined
+): MainShellAdminNavItem[] | null {
+  const p = permissions ?? [];
+  const canSeeAnyAdmin = p.some(
+    (k) =>
+      k.startsWith('members.') ||
+      k.startsWith('roles.') ||
+      k.startsWith('recruitment.') ||
+      k.startsWith('jobs.') ||
+      k.startsWith('applications.') ||
+      k.startsWith('offers.') ||
+      k.startsWith('interviews.') ||
+      k.startsWith('departments.') ||
+      k.startsWith('teams.') ||
+      k.startsWith('broadcasts.') ||
+      k.startsWith('discounts.') ||
+      k.startsWith('rota.')
+  );
+  if (!canSeeAnyAdmin) return null;
+
+  const items: MainShellAdminNavItem[] = [{ href: '/admin', label: 'Overview', icon: 'home' }];
+  if (p.includes('members.view')) items.push({ href: '/admin/users', label: 'All members', icon: 'members' });
+  if (p.includes('approvals.members.review'))
+    items.push({ href: '/admin/pending', label: 'Pending approval', icon: 'pending' });
+  if (p.includes('roles.view')) items.push({ href: '/admin/roles', label: 'Roles & permissions', icon: 'roles' });
+  if (p.includes('broadcasts.view'))
+    items.push({ href: '/admin/broadcasts', label: 'Broadcasts', icon: 'broadcasts', section: 'Content' });
+  if (p.includes('departments.view'))
+    items.push({ href: '/admin/departments', label: 'Departments', icon: 'departments', section: 'Content' });
+  if (p.includes('teams.view'))
+    items.push({ href: '/admin/teams', label: 'Teams', icon: 'teams', section: 'Content' });
+  items.push({ href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' });
+  if (p.includes('rota.view') || p.includes('rota.manage'))
+    items.push({ href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' });
+  if (p.includes('recruitment.view'))
+    items.push({ href: '/admin/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'HR' });
+  if (p.includes('jobs.view')) items.push({ href: '/admin/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' });
+  if (p.includes('applications.view'))
+    items.push({ href: '/admin/applications', label: 'Applications', icon: 'applications', section: 'HR' });
+  if (p.includes('offers.view'))
+    items.push({
+      href: '/admin/offer-templates',
+      label: 'Offer templates',
+      icon: 'offerTemplates',
+      section: 'HR',
+    });
+  if (p.includes('interviews.view'))
+    items.push({ href: '/admin/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' });
+  if (p.includes('discounts.view'))
+    items.push({ href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' });
+  if (p.includes('members.view'))
+    items.push({ href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' });
+  items.push({ href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' });
+  items.push({
+    href: '/admin/notifications',
+    label: 'Notification defaults',
+    icon: 'notifications',
+    section: 'Configuration',
+  });
+  items.push({ href: '/admin/integrations', label: 'Integrations', icon: 'integrations', section: 'Configuration' });
+  return items;
+}
+
+export function getMainShellManagerNavItemsByPermissions(
+  permissions: readonly PermissionKey[] | null | undefined,
+  opts: { pendingApprovalCount: number; pendingBroadcastApprovals: number }
+): MainShellAdminNavItem[] | null {
+  const p = permissions ?? [];
+  const { pendingApprovalCount, pendingBroadcastApprovals } = opts;
+  const items: MainShellAdminNavItem[] = [];
+  const canManageWorkspace = p.includes('recruitment.create_request');
+  const canViewDepts = p.includes('departments.view');
+  const canViewTeams = p.includes('teams.view');
+  const canReviewMembers = p.includes('approvals.members.review');
+  if (!canManageWorkspace && !canViewDepts && !canViewTeams && !canReviewMembers) return null;
+
+  if (canManageWorkspace) items.push({ href: '/manager', label: 'Overview', icon: 'home', exact: true });
+  if (canReviewMembers) {
+    items.push({
+      href: '/pending-approvals',
+      label: 'Pending members',
+      icon: 'pending',
+      badge: pendingApprovalCount > 0 ? pendingApprovalCount : undefined,
+      section: 'People',
+    });
+  }
+  if (p.includes('recruitment.view'))
+    items.push({ href: '/manager/recruitment', label: 'Recruitment requests', icon: 'recruitment', section: 'People' });
+  if (canViewDepts)
+    items.push({ href: '/manager/departments', label: 'Departments', icon: 'departments', section: 'Your departments' });
+  if (canViewTeams)
+    items.push({ href: '/manager/teams', label: 'Teams', icon: 'teams', section: 'Your departments' });
+  if (canManageWorkspace)
+    items.push({ href: '/manager/sub-teams', label: 'Sub-teams', icon: 'categories', section: 'Your departments' });
+  items.push({
+    href: '/broadcasts',
+    label: 'Broadcasts',
+    icon: 'broadcasts',
+    section: 'Operations',
+    secondaryBadge: pendingBroadcastApprovals > 0 ? pendingBroadcastApprovals : undefined,
+    secondaryBadgeTitle: 'Broadcasts awaiting your approval',
+  });
+  items.push({ href: '/rota', label: 'Department rota', icon: 'rota', section: 'Operations' });
+  return items;
 }

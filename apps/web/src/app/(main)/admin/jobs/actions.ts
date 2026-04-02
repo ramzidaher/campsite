@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server';
 import {
   combinationModeHasChannel,
   isJobApplicationMode,
-  isOrgAdminRole,
   isRecruitmentContractType,
   normaliseJobApplicationFlags,
   type JobApplicationMode,
@@ -39,7 +38,16 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { ok: false, error: 'Not allowed.' };
+  }
+  const { data: canCreate } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'jobs.create',
+    p_context: {},
+  });
+  if (!canCreate) {
     return { ok: false, error: 'Not allowed.' };
   }
 
@@ -167,7 +175,16 @@ export async function updateJobListing(
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { ok: false, error: 'Not allowed.' };
+  }
+  const { data: canEdit } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'jobs.edit',
+    p_context: {},
+  });
+  if (!canEdit) {
     return { ok: false, error: 'Not allowed.' };
   }
 
@@ -210,7 +227,16 @@ export async function publishJobListing(jobId: string): Promise<JobActionState> 
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { ok: false, error: 'Not allowed.' };
+  }
+  const { data: canPublish } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'jobs.publish',
+    p_context: {},
+  });
+  if (!canPublish) {
     return { ok: false, error: 'Not allowed.' };
   }
 
@@ -289,7 +315,16 @@ export async function archiveJobListing(jobId: string): Promise<JobActionState> 
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile?.org_id || profile.status !== 'active' || !isOrgAdminRole(profile.role)) {
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { ok: false, error: 'Not allowed.' };
+  }
+  const { data: canArchive } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'jobs.archive',
+    p_context: {},
+  });
+  if (!canArchive) {
     return { ok: false, error: 'Not allowed.' };
   }
 

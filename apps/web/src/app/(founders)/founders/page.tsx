@@ -1,5 +1,11 @@
 import { FounderHqApp } from '@/components/founders/FounderHqApp';
-import { parseFounderMembers, parseFounderOrgs } from '@/components/founders/founderTypes';
+import {
+  parseFounderAuditEvents,
+  parseFounderMembers,
+  parseFounderOrgs,
+  parseFounderPermissionCatalogEntries,
+  parseFounderRolePresets,
+} from '@/components/founders/founderTypes';
 import { requirePlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -20,13 +26,28 @@ export default async function FoundersPage() {
 
   await requirePlatformFounder(supabase, user.id);
 
-  const [{ data: orgRpc, error: orgRpcError }, { data: memRpc, error: memRpcError }] = await Promise.all([
+  const [
+    { data: orgRpc, error: orgRpcError },
+    { data: memRpc, error: memRpcError },
+    { data: draftCatalogRpc, error: draftCatalogError },
+    { data: rolePresetsRpc, error: rolePresetsError },
+    { data: auditRpc, error: auditError },
+  ] = await Promise.all([
     supabase.rpc('platform_organisations_list'),
     supabase.rpc('platform_profiles_list_all'),
+    supabase.rpc('platform_founder_catalog_draft'),
+    supabase.rpc('platform_list_role_presets', { p_include_archived: true }),
+    supabase.rpc('platform_list_audit_events', { p_org_id: null, p_event_type: null, p_days: 30 }),
   ]);
   const initialOrgs = parseFounderOrgs(orgRpc);
   const initialAllMembers = parseFounderMembers(memRpc);
-  const loadError = [orgRpcError?.message, memRpcError?.message].filter(Boolean).join(' - ') || undefined;
+  const initialCatalogDraft = parseFounderPermissionCatalogEntries(draftCatalogRpc);
+  const initialRolePresets = parseFounderRolePresets(rolePresetsRpc);
+  const initialAuditEvents = parseFounderAuditEvents(auditRpc);
+  const loadError =
+    [orgRpcError?.message, memRpcError?.message, draftCatalogError?.message, rolePresetsError?.message, auditError?.message]
+      .filter(Boolean)
+      .join(' - ') || undefined;
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -51,6 +72,9 @@ export default async function FoundersPage() {
     <FounderHqApp
       initialOrgs={initialOrgs}
       initialAllMembers={initialAllMembers}
+      initialCatalogDraft={initialCatalogDraft}
+      initialRolePresets={initialRolePresets}
+      initialAuditEvents={initialAuditEvents}
       loadError={loadError}
       user={{
         displayName,

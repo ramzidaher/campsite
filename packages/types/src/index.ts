@@ -5,6 +5,15 @@ export type UserId = string & { readonly __brand: 'UserId' };
 export type OrgSlug = string & { readonly __brand: 'OrgSlug' };
 
 export {
+  PERMISSION_KEYS,
+  FOUNDER_ONLY_PERMISSION_KEYS,
+  type PermissionKey,
+  type FounderOnlyPermissionKey,
+  type EffectivePermissionKey,
+  type PermissionCondition,
+} from './permissions';
+
+export {
   PROFILE_ROLES,
   PROFILE_REGISTRATION_ROLE,
   PROFILE_STATUSES,
@@ -22,6 +31,8 @@ export {
   BROADCAST_STATUSES,
   type BroadcastStatus,
   canComposeBroadcast,
+  canComposeBroadcastByPermissions,
+  canApproveBroadcastByPermissions,
   isBroadcastApproverRole,
   isBroadcastDraftOnlyRole,
 } from './broadcasts';
@@ -30,6 +41,7 @@ export {
   canViewDashboardSentBroadcastKpi,
   canViewDashboardStatTiles,
   canViewDashboardUnreadBroadcastKpi,
+  canViewDashboardByPermissions,
   canViewOrgWideDashboardStats,
   dashboardAggregateScope,
   type DashboardAggregateScope,
@@ -42,6 +54,7 @@ export {
   canEditRotaShifts,
   canFinalApproveRotaRequests,
   canSubmitStaffAvailability,
+  canManageRotaByPermissions,
   canTransferRotaOwnership,
   canViewRotaDepartmentScope,
   canViewRotaFullOrgGrid,

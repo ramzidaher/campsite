@@ -8,7 +8,6 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { isOrgAdminRole } from '@campsite/types';
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { createClient } from '@/lib/supabase/client';
 
@@ -91,6 +90,7 @@ export function ProfileSettings({
   tenantOrgs,
   currentOrgId,
   initialBroadcastChannels = [],
+  canManageDiscounts = false,
 }: {
   initial: Profile | null;
   googleFlash?: string | null;
@@ -99,6 +99,7 @@ export function ProfileSettings({
   tenantOrgs?: LoginOrgOption[] | null;
   currentOrgId?: string | null;
   initialBroadcastChannels?: BroadcastChannelPref[];
+  canManageDiscounts?: boolean;
 }) {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(initial);
@@ -557,7 +558,7 @@ export function ProfileSettings({
         </div>
       </section>
 
-      {isOrgAdminRole(profile.role) ? (
+      {canManageDiscounts ? (
         <section className={sectionCard} aria-labelledby="settings-org-heading">
           <h2 id="settings-org-heading" className={sectionTitle}>
             Organisation

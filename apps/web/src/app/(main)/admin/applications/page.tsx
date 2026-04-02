@@ -1,4 +1,4 @@
-import { canAccessOrgAdminArea } from '@/lib/adminGates';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { jobApplicationStageLabel } from '@/lib/jobs/labels';
 import { createClient } from '@/lib/supabase/server';
 import { JOB_APPLICATION_STAGES } from '@campsite/types';
@@ -34,7 +34,7 @@ export default async function AdminApplicationsPage({
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canAccessOrgAdminArea(profile.role)) redirect('/broadcasts');
+  if (!(await viewerHasPermission('applications.view'))) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
   const sp = await searchParams;
@@ -86,8 +86,10 @@ export default async function AdminApplicationsPage({
     <div className="space-y-6">
       <div>
         <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">Operations</p>
-        <h1 className="mt-1 font-authSerif text-[22px] tracking-tight text-[#121212]">Applications</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">All candidate applications for your organisation.</p>
+        <h1 className="mt-1 font-authSerif text-[22px] tracking-tight text-[#121212]">Application Tracker</h1>
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">
+          Flat database view across all jobs. Filter by job, stage, department, and date applied.
+        </p>
       </div>
 
       <form

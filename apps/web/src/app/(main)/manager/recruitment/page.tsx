@@ -1,6 +1,5 @@
 import { ManagerRecruitmentClient } from '@/components/manager/ManagerRecruitmentClient';
 import { createClient } from '@/lib/supabase/server';
-import { isDepartmentWorkspaceRole, isManagerRole, isOrgAdminRole } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function ManagerRecruitmentPage() {
@@ -12,15 +11,36 @@ export default async function ManagerRecruitmentPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, org_id, role, status')
+    .select('id, org_id, status')
     .eq('id', user.id)
     .single();
 
-  if (!profile?.org_id || profile.status !== 'active' || !isDepartmentWorkspaceRole(profile.role)) {
+  if (!profile?.org_id || profile.status !== 'active') {
     redirect('/broadcasts');
   }
-
-  const canRaise = isManagerRole(profile.role);
+  const [{ data: canCreateRequest }, { data: canViewRecruitment }, { data: canApproveRequest }] =
+    await Promise.all([
+      supabase.rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: profile.org_id,
+        p_permission_key: 'recruitment.create_request',
+        p_context: {},
+      }),
+      supabase.rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: profile.org_id,
+        p_permission_key: 'recruitment.view',
+        p_context: {},
+      }),
+      supabase.rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: profile.org_id,
+        p_permission_key: 'recruitment.approve_request',
+        p_context: {},
+      }),
+    ]);
+  const canRaise = Boolean(canCreateRequest);
+  if (!canRaise && !canViewRecruitment) redirect('/broadcasts');
 
   const { data: dmRows } = await supabase
     .from('dept_managers')
@@ -52,7 +72,7 @@ export default async function ManagerRecruitmentPage() {
       managedDepartments={managedDepartments}
       initialRequests={initialRequests}
       canRaise={canRaise}
-      showHrAdminLink={isOrgAdminRole(profile.role)}
+      showHrAdminLink={Boolean(canApproveRequest)}
     />
   );
 }

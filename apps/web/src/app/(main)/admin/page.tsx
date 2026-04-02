@@ -3,7 +3,7 @@ import { AdminOverviewView } from '@/components/admin/AdminOverviewView';
 import { loadAdminOverview } from '@/lib/admin/loadAdminOverview';
 import { loadPendingApprovalsPreview } from '@/lib/dashboard/loadDashboardHome';
 import { createClient } from '@/lib/supabase/server';
-import { canManageOrgUsers } from '@/lib/adminGates';
+import type { PermissionKey } from '@campsite/types';
 import { redirect } from 'next/navigation';
 
 export default async function AdminHomePage() {
@@ -22,12 +22,23 @@ export default async function AdminHomePage() {
   if (!profile?.org_id) redirect('/broadcasts');
   if (profile.status !== 'active') redirect('/pending');
 
+  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id });
+  const permissionKeys = ((perms ?? []) as Array<{ permission_key?: string }>).map(
+    (p) => String(p.permission_key ?? '') as PermissionKey
+  );
   const data = await loadAdminOverview(supabase, profile.org_id as string, {
     role: profile.role as string,
     full_name: profile.full_name as string | null,
+    permissions: permissionKeys,
   });
 
-  const showQuickApprove = canManageOrgUsers(profile.role);
+  const { data: canBulkApprove } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'members.edit_status',
+    p_context: {},
+  });
+  const showQuickApprove = Boolean(canBulkApprove);
   const pendingPreview =
     showQuickApprove && data.pendingCount > 0
       ? (await loadPendingApprovalsPreview(

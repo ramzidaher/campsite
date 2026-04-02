@@ -55,11 +55,20 @@ function StageColumn({
   renderCard: (app: PipelineApplicationRow) => React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
+  const tone: Record<JobApplicationStage, string> = {
+    applied: 'bg-[#f8fafc]',
+    shortlisted: 'bg-[#f0fdf4]',
+    interview_scheduled: 'bg-[#eff6ff]',
+    offer_sent: 'bg-[#fff7ed]',
+    hired: 'bg-[#ecfdf3]',
+    rejected: 'bg-[#f8fafc]',
+  };
   return (
     <div
       ref={setNodeRef}
       className={[
-        'flex min-h-[280px] flex-1 flex-col rounded-xl border bg-[#fafafa] p-3 min-w-[200px]',
+        'flex min-h-[280px] flex-1 flex-col rounded-xl border p-3 min-w-[210px]',
+        tone[stage],
         isOver ? 'border-[#008B60] ring-2 ring-[#008B60]/20' : 'border-[#e8e8e8]',
       ].join(' ')}
     >
@@ -123,12 +132,12 @@ function PipelineCard({
           {app.stage === 'offer_sent' && app.offer_letter_status && isOfferLetterWorkflowStatus(app.offer_letter_status) ? (
             <p
               className={[
-                'mt-1 text-[10px] font-semibold uppercase tracking-wide',
+                'mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
                 app.offer_letter_status === 'signed'
-                  ? 'text-[#0f5132]'
+                  ? 'border-emerald-200 bg-emerald-50 text-[#0f5132]'
                   : app.offer_letter_status === 'declined'
-                    ? 'text-[#b91c1c]'
-                    : 'text-[#b45309]',
+                    ? 'border-red-200 bg-red-50 text-[#b91c1c]'
+                    : 'border-amber-200 bg-amber-50 text-[#b45309]',
               ].join(' ')}
             >
               Offer:{' '}
@@ -191,6 +200,7 @@ export function JobPipelineClient({
     }
     return m;
   }, [applications]);
+  const totalApplications = applications.length;
 
   const [stageDialog, setStageDialog] = useState<StageDialogState | null>(null);
   const [notify, setNotify] = useState(false);
@@ -344,10 +354,18 @@ export function JobPipelineClient({
           Drag cards between columns or use the stage menu on each card. Optional email to the candidate when you move
           stage.
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6b6b6b]">
+          <span className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1">
+            Total applications: {totalApplications}
+          </span>
+          <a href="/admin/applications" className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 hover:bg-[#fafafa]">
+            Open full application tracker
+          </a>
+        </div>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-        <div className="flex flex-wrap gap-3 overflow-x-auto pb-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {JOB_APPLICATION_STAGE_ORDER.map((stage) => (
             <StageColumn
               key={stage}

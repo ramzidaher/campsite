@@ -38,6 +38,18 @@ function panelistLabel(p: NonNullable<SlotListRow['interview_slot_panelists']>[n
   return pr?.full_name?.trim() || '—';
 }
 
+function slotStatusPill(status: string) {
+  const s = isInterviewSlotStatus(status) ? status : 'available';
+  const tone =
+    s === 'available'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      : s === 'booked'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : 'border-slate-200 bg-slate-100 text-slate-700';
+  const label = s.charAt(0).toUpperCase() + s.slice(1);
+  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${tone}`}>{label}</span>;
+}
+
 export function InterviewScheduleClient({
   jobs,
   profiles,
@@ -56,12 +68,27 @@ export function InterviewScheduleClient({
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
   const [selectedPanel, setSelectedPanel] = useState<Record<string, boolean>>({});
+  const [scheduleView, setScheduleView] = useState<'list' | 'calendar'>('list');
 
   const togglePanel = (id: string) => {
     setSelectedPanel((s) => ({ ...s, [id]: !s[id] }));
   };
 
   const selectedIds = useMemo(() => Object.keys(selectedPanel).filter((k) => selectedPanel[k]), [selectedPanel]);
+  const slotsByDay = useMemo(() => {
+    const map = new Map<string, SlotListRow[]>();
+    for (const slot of initialSlots) {
+      const key = new Date(slot.starts_at).toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+      const arr = map.get(key) ?? [];
+      arr.push(slot);
+      map.set(key, arr);
+    }
+    return [...map.entries()];
+  }, [initialSlots]);
 
   function submitCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -117,6 +144,27 @@ export function InterviewScheduleClient({
           → <strong>View pipeline</strong> on a live job.
         </p>
       </div>
+
+      <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
+        <h2 className="font-authSerif text-lg text-[#121212]">Setup checklist</h2>
+        <ol className="mt-3 space-y-2 text-[13px] text-[#505050]">
+          <li>
+            1. HR Admin connects Google Workspace OAuth in{' '}
+            <Link href="/admin/integrations" className="text-[#008B60] hover:underline">
+              Admin → Integrations
+            </Link>
+            .
+          </li>
+          <li>
+            2. Each interviewer connects Calendar once in{' '}
+            <Link href="/settings" className="text-[#008B60] hover:underline">
+              Settings
+            </Link>
+            .
+          </li>
+          <li>3. Create slots here (job + dates/times + panel members), then pick slot when moving candidate to Interview Scheduled.</li>
+        </ol>
+      </section>
 
       {msg ? (
         <div
@@ -217,6 +265,23 @@ export function InterviewScheduleClient({
 
       <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
         <h2 className="font-authSerif text-lg text-[#121212]">Upcoming slots</h2>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setScheduleView('list')}
+            className={`rounded-md px-3 py-1.5 text-[12px] ${scheduleView === 'list' ? 'bg-[#121212] text-white' : 'border border-[#d8d8d8] bg-white text-[#505050]'}`}
+          >
+            List view
+          </button>
+          <button
+            type="button"
+            onClick={() => setScheduleView('calendar')}
+            className={`rounded-md px-3 py-1.5 text-[12px] ${scheduleView === 'calendar' ? 'bg-[#121212] text-white' : 'border border-[#d8d8d8] bg-white text-[#505050]'}`}
+          >
+            Calendar view
+          </button>
+        </div>
+        {scheduleView === 'list' ? (
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-[13px]">
             <thead className="border-b border-[#f0f0f0] text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
@@ -258,7 +323,7 @@ export function InterviewScheduleClient({
                       <td className="py-3 pr-4 align-top text-[#505050]">
                         {pan.length ? pan.map((p) => panelistLabel(p)).join(', ') : '—'}
                       </td>
-                      <td className="py-3 pr-4 align-top capitalize">{st}</td>
+                      <td className="py-3 pr-4 align-top">{slotStatusPill(st)}</td>
                       <td className="py-3 align-top">
                         <div className="flex flex-wrap gap-2">
                           {st === 'available' ? (
@@ -303,6 +368,34 @@ export function InterviewScheduleClient({
             </tbody>
           </table>
         </div>
+        ) : (
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {slotsByDay.length === 0 ? (
+              <p className="text-[13px] text-[#6b6b6b]">No upcoming slots.</p>
+            ) : (
+              slotsByDay.map(([day, daySlots]) => (
+                <div key={day} className="rounded-lg border border-[#e8e8e8] bg-[#fafafa] p-3">
+                  <p className="text-[12px] font-semibold text-[#121212]">{day}</p>
+                  <div className="mt-2 space-y-2">
+                    {daySlots.map((s) => {
+                      const jl = relOne(s.job_listings);
+                      return (
+                        <div key={s.id} className="rounded-md border border-[#e4e4e4] bg-white p-2">
+                          <p className="text-[12px] font-medium text-[#121212]">
+                            {new Date(s.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
+                            {new Date(s.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          <p className="text-[12px] text-[#6b6b6b]">{jl?.title?.trim() || '—'}</p>
+                          <div className="mt-1">{slotStatusPill(s.status)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
         <p className="mt-3 text-[12px] text-[#6b6b6b]">
           Use <strong>Mark completed</strong> after the interview has taken place. Available slots can be cancelled to
           remove them from calendars.
