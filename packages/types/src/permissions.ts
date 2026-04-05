@@ -79,6 +79,10 @@ export const PERMISSION_KEYS = [
   // HR records
   'hr.view_records',
   'hr.manage_records',
+  // Onboarding
+  'onboarding.manage_templates',
+  'onboarding.manage_runs',
+  'onboarding.complete_own_tasks',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];

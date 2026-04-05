@@ -76,7 +76,8 @@ export type ShellNavIconId =
   | 'offerTemplates'
   | 'interviews'
   | 'leave'
-  | 'hrRecords';
+  | 'hrRecords'
+  | 'onboarding';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -113,6 +114,7 @@ export function getMainShellAdminNavItems(
     { href: '/admin/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'HR' },
     { href: '/admin/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' },
     { href: '/admin/hr', label: 'Employee records', icon: 'hrRecords', section: 'HR' },
+    { href: '/admin/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
     { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
     { href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' },
     { href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' },
@@ -253,6 +255,8 @@ export function getMainShellAdminNavItemsByPermissions(
     items.push({ href: '/admin/leave', label: 'Leave & allowances', icon: 'leave', section: 'HR' });
   if (p.includes('hr.view_records'))
     items.push({ href: '/admin/hr', label: 'Employee records', icon: 'hrRecords', section: 'HR' });
+  if (p.includes('onboarding.manage_runs') || p.includes('onboarding.manage_templates'))
+    items.push({ href: '/admin/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' });
   if (p.includes('discounts.view'))
     items.push({ href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' });
   if (p.includes('members.view'))

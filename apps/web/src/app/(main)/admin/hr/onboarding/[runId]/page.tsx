@@ -1,0 +1,88 @@
+import { OnboardingRunClient } from '@/components/admin/hr/onboarding/OnboardingRunClient';
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+
+export default async function OnboardingRunPage({ params }: { params: Promise<{ runId: string }> }) {
+  const { runId } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id, status')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
+  const orgId = profile.org_id as string;
+
+  const canRuns = await supabase
+    .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.manage_runs', p_context: {} })
+    .then(({ data }) => !!data);
+
+  if (!canRuns) redirect('/admin/hr/onboarding');
+
+  const [{ data: run }, { data: tasks }] = await Promise.all([
+    supabase
+      .from('onboarding_runs')
+      .select('id, user_id, status, employment_start_date, created_at, template_id')
+      .eq('org_id', orgId)
+      .eq('id', runId)
+      .maybeSingle(),
+    supabase
+      .from('onboarding_run_tasks')
+      .select('id, title, description, assignee_type, category, due_date, sort_order, status, completed_at, completed_by')
+      .eq('run_id', runId)
+      .eq('org_id', orgId)
+      .order('sort_order'),
+  ]);
+
+  if (!run) redirect('/admin/hr/onboarding');
+
+  const { data: employee } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, avatar_url')
+    .eq('id', run.user_id as string)
+    .maybeSingle();
+
+  const completerIds = [...new Set((tasks ?? []).map((t) => t.completed_by as string).filter(Boolean))];
+  const completerNames: Record<string, string> = {};
+  if (completerIds.length) {
+    const { data: completers } = await supabase.from('profiles').select('id, full_name').in('id', completerIds);
+    for (const c of completers ?? []) completerNames[c.id as string] = c.full_name as string;
+  }
+
+  return (
+    <OnboardingRunClient
+      runId={runId}
+      run={{
+        id: run.id as string,
+        user_id: run.user_id as string,
+        status: run.status as string,
+        employment_start_date: run.employment_start_date as string,
+        created_at: run.created_at as string,
+      }}
+      employee={{
+        id: (employee?.id as string) ?? run.user_id as string,
+        full_name: (employee?.full_name as string) ?? 'Unknown',
+        email: (employee?.email as string | null) ?? null,
+        avatar_url: (employee?.avatar_url as string | null) ?? null,
+      }}
+      tasks={(tasks ?? []).map((t) => ({
+        id: t.id as string,
+        title: t.title as string,
+        description: (t.description as string | null) ?? null,
+        assignee_type: t.assignee_type as string,
+        category: t.category as string,
+        due_date: (t.due_date as string | null) ?? null,
+        sort_order: t.sort_order as number,
+        status: t.status as string,
+        completed_at: (t.completed_at as string | null) ?? null,
+        completer_name: t.completed_by ? (completerNames[t.completed_by as string] ?? 'Unknown') : null,
+      }))}
+    />
+  );
+}

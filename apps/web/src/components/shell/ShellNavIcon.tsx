@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Link2,
   Megaphone,
+  ClipboardCheck,
   FolderOpen,
   Palmtree,
   Puzzle,
@@ -82,6 +83,8 @@ export function ShellNavIcon({ name }: { name: ShellNavIconId }) {
       return <Palmtree {...p} />;
     case 'hrRecords':
       return <FolderOpen {...p} />;
+    case 'onboarding':
+      return <ClipboardCheck {...p} />;
     default: {
       const _x: never = name;
       return _x;
