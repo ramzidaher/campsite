@@ -74,6 +74,8 @@ export const DEFAULT_PERMISSION_SEED: DefaultPermissionSeed[] = [
   { key: 'leave.view_direct_reports', label: 'View team leave', description: 'View leave and sickness for direct reports.', is_founder_only: false },
   { key: 'leave.approve_direct_reports', label: 'Approve direct reports leave', description: 'Approve or reject leave for users who report to you.', is_founder_only: false },
   { key: 'leave.manage_org', label: 'Manage organisation leave', description: 'Set allowances, org leave settings, approve any request.', is_founder_only: false },
+  { key: 'hr.view_records', label: 'View HR records', description: 'View employee HR files including contract details and employment dates.', is_founder_only: false },
+  { key: 'hr.manage_records', label: 'Manage HR records', description: 'Create and edit employee HR records, contract type, salary band, employment dates.', is_founder_only: false },
   { key: 'founder.platform.manage', label: 'Founder platform access', description: 'Platform-global founder controls.', is_founder_only: true },
   { key: 'founder.billing.manage', label: 'Founder billing access', description: 'Billing and subscription controls.', is_founder_only: true },
   { key: 'founder.feature_flags.manage', label: 'Founder feature flags', description: 'Platform feature flag controls.', is_founder_only: true },

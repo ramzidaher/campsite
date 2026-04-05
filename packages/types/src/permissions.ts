@@ -76,6 +76,9 @@ export const PERMISSION_KEYS = [
   'leave.view_direct_reports',
   'leave.approve_direct_reports',
   'leave.manage_org',
+  // HR records
+  'hr.view_records',
+  'hr.manage_records',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];

@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Link2,
   Megaphone,
+  FolderOpen,
   Palmtree,
   Puzzle,
   Settings,
@@ -79,6 +80,8 @@ export function ShellNavIcon({ name }: { name: ShellNavIconId }) {
       return <CalendarClock {...p} />;
     case 'leave':
       return <Palmtree {...p} />;
+    case 'hrRecords':
+      return <FolderOpen {...p} />;
     default: {
       const _x: never = name;
       return _x;
