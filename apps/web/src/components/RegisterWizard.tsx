@@ -7,11 +7,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { uploadUserAvatar } from '@/lib/storage/uploadUserAvatar';
 import {
-  registrationChannelsBody,
-  registrationChannelsTitle,
-  registrationWizardChannelsStep,
-} from '@/lib/broadcasts/channelCopy';
-import {
   isValidWorkspaceSlug,
   normalizeWorkspaceSlugInput,
   suggestSlugFromOrganisationName,
@@ -19,14 +14,11 @@ import {
 
 type Org = { id: string; name: string; slug: string; logo_url: string | null };
 type Dept = { id: string; name: string; type: 'department' | 'society' | 'club' };
-type Cat = { id: string; dept_id: string; name: string };
-
 const JOIN_STEP_LABELS = [
   'Account',
   'Organisation',
   'Profile (optional)',
   'Teams',
-  registrationWizardChannelsStep,
   'Review',
 ] as const;
 const CREATE_ORG_STEP_LABELS = ['Account', 'Organisation', 'Profile (optional)'] as const;
@@ -139,9 +131,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
   /** Once true, organisation name changes no longer overwrite the short-name field. */
   const [orgSlugUserEdited, setOrgSlugUserEdited] = useState(false);
   const [depts, setDepts] = useState<Dept[]>([]);
-  const [cats, setCats] = useState<Cat[]>([]);
   const [selectedDeptIds, setSelectedDeptIds] = useState<Set<string>>(new Set());
-  const [subscribed, setSubscribed] = useState<Record<string, boolean>>({});
   /** Uploaded after sign-up when a session exists; URL is written to auth metadata for profile creation. */
   const [optionalAvatarFile, setOptionalAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
@@ -184,26 +174,6 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       return;
     }
     setDepts((data ?? []) as Dept[]);
-    const deptIds = (data ?? []).map((d) => d.id);
-    if (deptIds.length) {
-      const { data: catRows, error: ce } = await supabase
-        .from('broadcast_channels')
-        .select('id,dept_id,name')
-        .in('dept_id', deptIds);
-      if (ce) {
-        setError(ce.message);
-        return;
-      }
-      setCats(catRows ?? []);
-      const next: Record<string, boolean> = {};
-      (catRows ?? []).forEach((c) => {
-        next[c.id] = true;
-      });
-      setSubscribed(next);
-    } else {
-      setCats([]);
-      setSubscribed({});
-    }
   }, []);
 
   useEffect(() => {
@@ -243,10 +213,6 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       else n.add(id);
       return n;
     });
-  }
-
-  function toggleSub(catId: string) {
-    setSubscribed((prev) => ({ ...prev, [catId]: !prev[catId] }));
   }
 
   async function submit() {
@@ -318,17 +284,10 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       }
 
       setLoading(true);
-      const registerSubscriptions = cats
-        .filter((c) => selectedDeptIds.has(c.dept_id))
-        .map((c) => ({
-          channel_id: c.id,
-          subscribed: subscribed[c.id] ?? true,
-        }));
       const joinMeta: Record<string, string> = {
         full_name: fullName,
         register_org_id: orgId,
         register_dept_ids: JSON.stringify([...selectedDeptIds]),
-        register_subscriptions: JSON.stringify(registerSubscriptions),
       };
       const { data, error: signErr } = await supabase.auth.signUp({
         email,
@@ -832,8 +791,8 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         <div>
           <h2 className="auth-title">Select teams</h2>
           <p className="auth-sub mb-6">
-            Choose every department, society, or club you belong to. You&apos;ll pick broadcast channels
-            next.
+            Choose every department, society, or club you belong to. After you&apos;re in Campsite, choose
+            which broadcast channels to follow in Settings or from any post.
           </p>
           {(['department', 'society', 'club'] as const).map((t) =>
             groupedDepts[t].length ? (
@@ -897,53 +856,6 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
 
       {step === 5 && inviteFlow ? (
         <div>
-          <h2 className="auth-title">{registrationChannelsTitle}</h2>
-          <p className="auth-sub mb-6">{registrationChannelsBody}</p>
-          {Array.from(
-            new Set(cats.filter((c) => selectedDeptIds.has(c.dept_id)).map((c) => c.dept_id))
-          ).map((deptId) => {
-            const deptName = depts.find((d) => d.id === deptId)?.name ?? 'Team';
-            const deptCats = cats.filter((c) => c.dept_id === deptId);
-            return (
-              <div key={deptId} className="mb-6">
-                <p className="mb-2 text-[12px] font-medium text-[#9b9b9b]">{deptName}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {deptCats.map((c) => {
-                    const on = subscribed[c.id] ?? true;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => toggleSub(c.id)}
-                        className={[
-                          'flex h-7 items-center gap-1 rounded-full border px-3 text-xs transition-colors',
-                          on
-                            ? 'border-[#121212] bg-[#121212] text-white'
-                            : 'border-[#d8d8d8] bg-white text-[#6b6b6b] hover:border-[#121212]',
-                        ].join(' ')}
-                      >
-                        {on ? '✓ ' : ''}
-                        {c.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-          <div className="mt-4 flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(4)}>
-              ← Back
-            </button>
-            <button type="button" className="auth-btn-primary flex-[2]" onClick={() => setStep(6)}>
-              Continue →
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {step === 6 && inviteFlow ? (
-        <div>
           <h2 className="auth-title">Review & submit</h2>
           <p className="auth-sub mb-6">
             Check your details before sending your registration for approval
@@ -998,7 +910,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
             usually within one working day.
           </div>
           <div className="flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(5)}>
+            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(4)}>
               ← Back
             </button>
             <button

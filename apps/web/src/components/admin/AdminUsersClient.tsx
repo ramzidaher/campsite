@@ -12,6 +12,7 @@ export type UserRow = {
   role: string;
   status: string;
   created_at: string;
+  reports_to_user_id: string | null;
   departments: string[];
 };
 
@@ -77,6 +78,7 @@ function initials(name: string) {
 export function AdminUsersClient({
   currentUserId,
   assignableRoles,
+  managerChoices,
   initialRows,
   departments,
   defaultFilters,
@@ -86,6 +88,7 @@ export function AdminUsersClient({
 }: {
   currentUserId: string;
   assignableRoles: { id: string; key: string; label: string; is_archived: boolean }[];
+  managerChoices: { id: string; full_name: string }[];
   initialRows: UserRow[];
   departments: { id: string; name: string; type: string; is_archived: boolean }[];
   defaultFilters: { q?: string; dept?: string; status?: string; role?: string };
@@ -112,6 +115,7 @@ export function AdminUsersClient({
   const [edit, setEdit] = useState<UserRow | null>(null);
   const [editRole, setEditRole] = useState<string>('');
   const [editDepts, setEditDepts] = useState<Set<string>>(new Set());
+  const [editReportsTo, setEditReportsTo] = useState<string>('');
 
   const [qInput, setQInput] = useState(defaultFilters.q ?? '');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -256,6 +260,7 @@ export function AdminUsersClient({
   function openEdit(r: UserRow) {
     setEdit(r);
     setEditRole(r.role);
+    setEditReportsTo(r.reports_to_user_id ?? '');
     setEditDepts(new Set());
     void (async () => {
       const { data } = await supabase.from('user_departments').select('dept_id').eq('user_id', r.id);
@@ -284,7 +289,13 @@ export function AdminUsersClient({
       setBusy(null);
       return;
     }
-    const { error: e1 } = await supabase.from('profiles').update({ role: editRole }).eq('id', edit.id);
+    const { error: e1 } = await supabase
+      .from('profiles')
+      .update({
+        role: editRole,
+        reports_to_user_id: editReportsTo.trim() ? editReportsTo.trim() : null,
+      })
+      .eq('id', edit.id);
     if (e1) {
       setMsg(e1.message);
       setBusy(null);
@@ -904,6 +915,23 @@ export function AdminUsersClient({
                       {role.label}
                     </option>
                   ))}
+                </select>
+              </label>
+              <label className="mt-4 block text-[12.5px] font-medium text-[#6b6b6b]">
+                Line manager (leave approval)
+                <select
+                  className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                  value={editReportsTo}
+                  onChange={(e) => setEditReportsTo(e.target.value)}
+                >
+                  <option value="">None (only org admins can approve leave)</option>
+                  {managerChoices
+                    .filter((m) => m.id !== edit.id)
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name}
+                      </option>
+                    ))}
                 </select>
               </label>
               <fieldset className="mt-4">

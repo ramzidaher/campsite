@@ -113,6 +113,8 @@ export function AppShell({
   rotaPendingPeerCount,
   recruitmentPendingReviewCount = 0,
   topBarNotifications,
+  showLeaveNav = false,
+  leaveNavBadge = 0,
   managerNavItems = null,
   managerNavSectionLabel = 'Manager',
   adminNavItems = null,
@@ -138,6 +140,8 @@ export function AppShell({
   /** Open recruitment requests in `pending_review` (org admins only; layout passes 0 for others). */
   recruitmentPendingReviewCount?: number;
   topBarNotifications: TopBarNotificationItem[];
+  showLeaveNav?: boolean;
+  leaveNavBadge?: number;
   /** Collapsible “Manager” links (same pattern as `adminNavItems`). */
   managerNavItems?: MainShellAdminNavItem[] | null;
   /** Sidebar group title (e.g. “Department” for coordinators). */
@@ -265,6 +269,15 @@ export function AppShell({
               onNavigate={closeMobile}
             />
             <NavLink href="/discount" icon="discount" label="Discount Card" onNavigate={closeMobile} />
+            {showLeaveNav ? (
+              <NavLink
+                href="/leave"
+                icon="leave"
+                label="Leave"
+                badge={leaveNavBadge > 0 ? leaveNavBadge : undefined}
+                onNavigate={closeMobile}
+              />
+            ) : null}
           </div>
 
           {adminNavItems && adminNavItems.length > 0 ? (

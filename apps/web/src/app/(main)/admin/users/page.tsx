@@ -42,7 +42,7 @@ export default async function AdminUsersPage({
 
   let q = supabase
     .from('profiles')
-    .select('id, full_name, email, role, status, created_at')
+    .select('id, full_name, email, role, status, created_at, reports_to_user_id')
     .eq('org_id', profile.org_id)
     .order('created_at', { ascending: false })
     .limit(500);
@@ -107,10 +107,18 @@ export default async function AdminUsersPage({
     .eq('is_archived', false)
     .order('label');
 
+  const { data: managerChoicesRows } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('org_id', profile.org_id)
+    .eq('status', 'active')
+    .order('full_name');
+
   return (
     <AdminUsersClient
       currentUserId={user.id}
       assignableRoles={(orgRoles ?? []) as { id: string; key: string; label: string; is_archived: boolean }[]}
+      managerChoices={(managerChoicesRows ?? []) as { id: string; full_name: string }[]}
       initialRows={filtered.map((p) => ({
         id: p.id as string,
         full_name: p.full_name as string,
@@ -118,6 +126,7 @@ export default async function AdminUsersPage({
         role: p.role as string,
         status: p.status as string,
         created_at: p.created_at as string,
+        reports_to_user_id: (p.reports_to_user_id as string | null) ?? null,
         departments: deptByUser[p.id as string] ?? [],
       }))}
       departments={(departments ?? []) as { id: string; name: string; type: string; is_archived: boolean }[]}

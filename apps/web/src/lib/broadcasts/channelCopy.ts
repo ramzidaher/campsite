@@ -33,13 +33,6 @@ export const adminDepartmentsChannelsHeading = 'Broadcast channels';
 export const adminDepartmentsChannelsHint =
   'Channels define who can receive targeted posts, not just labels on the feed.';
 
-export const registrationWizardChannelsStep = 'Channels';
-
-export const registrationChannelsTitle = 'Broadcast channels';
-
-export const registrationChannelsBody =
-  'Choose channels you want to follow under each team or department. You can change these later in Settings.';
-
 export const channelPillAccessibleName = (channelName: string) => `Broadcast channel: ${channelName}`;
 
 export const adminBroadcastsFilterChannelAria = 'Channel';

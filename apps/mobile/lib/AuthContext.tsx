@@ -12,6 +12,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -105,6 +106,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+    };
+  }, [configured]);
+
+  // Supabase JS relies on timers for refresh; React Native throttles them in the background.
+  // Without start/stop around foreground, tokens can expire and the client emits SIGNED_OUT.
+  useEffect(() => {
+    if (!configured) return;
+    const supabase = getSupabase();
+    const syncAutoRefresh = (state: AppStateStatus) => {
+      if (state === 'active') {
+        void supabase.auth.startAutoRefresh();
+      } else {
+        void supabase.auth.stopAutoRefresh();
+      }
+    };
+    const sub = AppState.addEventListener('change', syncAutoRefresh);
+    syncAutoRefresh(AppState.currentState);
+    return () => {
+      sub.remove();
+      void supabase.auth.stopAutoRefresh();
     };
   }, [configured]);
 

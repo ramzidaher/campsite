@@ -57,23 +57,27 @@ function AuthNavigationShell() {
             <View style={{ flex: 1 }}>
               <NavThemeBridge>
                 <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="index" options={{ headerShown: false, title: 'Campsite' }} />
+                  {/* iOS uses this as the back button label when pushing onto the root stack (e.g. compose).
+                      Without a title, React Navigation shows the raw group name "(tabs)". */}
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Campsite' }} />
                   <Stack.Screen
                     name="broadcast/[id]"
                     options={{
                       headerShown: false,
+                      title: 'Broadcast',
                       animation: 'slide_from_right',
                       gestureEnabled: true,
                       fullScreenGestureEnabled: true,
                     }}
                   />
                   <Stack.Screen name="broadcast-compose" options={{ headerShown: true, title: 'Broadcast' }} />
-                  <Stack.Screen name="settings" />
-                  <Stack.Screen name="pending-approvals" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="pending" />
-                  <Stack.Screen name="auth/callback" />
+                  <Stack.Screen name="settings" options={{ headerShown: false, title: 'Settings' }} />
+                  <Stack.Screen name="pending-approvals" options={{ headerShown: false, title: 'Approvals' }} />
+                  {/* Same rationale as (tabs): avoid raw "(auth)" as the iOS back label. */}
+                  <Stack.Screen name="(auth)" options={{ headerShown: false, title: 'Campsite' }} />
+                  <Stack.Screen name="pending" options={{ headerShown: false, title: 'Pending' }} />
+                  <Stack.Screen name="auth/callback" options={{ headerShown: false, title: 'Campsite' }} />
                   <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
                 </Stack>
               </NavThemeBridge>

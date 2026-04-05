@@ -53,6 +53,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let hasAdminAreaAccess = false;
   let canApproveRecruitment = false;
   let permissionKeys: PermissionKey[] = [];
+  let showLeaveNav = false;
+  let leaveNavBadge = 0;
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
@@ -131,6 +133,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         permissionKeys = (perms as Array<{ permission_key?: string }>).map((p) =>
           String(p.permission_key ?? '')
         ) as PermissionKey[];
+      }
+      showLeaveNav =
+        permissionKeys.includes('leave.view_own') ||
+        permissionKeys.includes('leave.approve_direct_reports') ||
+        permissionKeys.includes('leave.manage_org');
+      if (
+        showLeaveNav &&
+        (permissionKeys.includes('leave.approve_direct_reports') ||
+          permissionKeys.includes('leave.manage_org'))
+      ) {
+        const { data: lc } = await supabase.rpc('leave_pending_approval_count_for_me');
+        if (typeof lc === 'number') leaveNavBadge = Math.max(0, lc);
+        else if (lc !== null && lc !== undefined) leaveNavBadge = Math.max(0, Number(lc));
       }
     }
     hasAdminAreaAccess = permissionKeys.some(
@@ -231,6 +246,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       href: '/admin/recruitment',
       count: canApproveRecruitment ? recruitmentPendingReviewCount : 0,
     },
+    {
+      id: 'leave-pending',
+      label: 'Leave requests to approve',
+      href: '/leave',
+      count: leaveNavBadge,
+    },
   ].filter((item) => item.count > 0);
 
   return (
@@ -258,6 +279,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           }
           adminNavItems={adminNavItems}
           showStandaloneApprovals={showStandaloneApprovals}
+          showLeaveNav={showLeaveNav}
+          leaveNavBadge={leaveNavBadge}
         >
           {children}
         </AppShell>

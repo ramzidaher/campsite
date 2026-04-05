@@ -74,7 +74,8 @@ export type ShellNavIconId =
   | 'jobs'
   | 'applications'
   | 'offerTemplates'
-  | 'interviews';
+  | 'interviews'
+  | 'leave';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -246,6 +247,8 @@ export function getMainShellAdminNavItemsByPermissions(
     });
   if (p.includes('interviews.view'))
     items.push({ href: '/admin/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' });
+  if (p.includes('leave.manage_org'))
+    items.push({ href: '/admin/leave', label: 'Leave & allowances', icon: 'leave', section: 'HR' });
   if (p.includes('discounts.view'))
     items.push({ href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' });
   if (p.includes('members.view'))

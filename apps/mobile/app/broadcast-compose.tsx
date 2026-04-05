@@ -761,7 +761,7 @@ export default function BroadcastComposeScreen() {
             </Button>
           ) : scheduleMode ? (
             <Button loading={saving} onPress={() => void submit('schedule')}>
-              Schedule broadcast
+              Schedule
             </Button>
           ) : (
             <Button loading={saving} onPress={() => void submit('send')}>

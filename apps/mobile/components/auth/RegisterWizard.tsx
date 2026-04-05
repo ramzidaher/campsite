@@ -18,9 +18,7 @@ import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type Org = { id: string; name: string; slug: string; logo_url: string | null };
 type Dept = { id: string; name: string; type: 'department' | 'society' | 'club' };
-type Cat = { id: string; dept_id: string; name: string };
-
-const STEP_LABELS = ['Account', 'Organisation', 'Teams', 'Channels', 'Review'] as const;
+const STEP_LABELS = ['Account', 'Organisation', 'Teams', 'Review'] as const;
 
 function passwordStrength(pw: string): 'weak' | 'ok' | 'strong' {
   if (pw.length < 8) return 'weak';
@@ -102,9 +100,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgModal, setOrgModal] = useState(false);
   const [depts, setDepts] = useState<Dept[]>([]);
-  const [cats, setCats] = useState<Cat[]>([]);
   const [selectedDeptIds, setSelectedDeptIds] = useState<Set<string>>(new Set());
-  const [subscribed, setSubscribed] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -141,26 +137,6 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       return;
     }
     setDepts((data as Dept[]) ?? []);
-    const deptIds = (data ?? []).map((d) => d.id);
-    if (deptIds.length) {
-      const { data: catRows, error: ce } = await supabase
-        .from('broadcast_channels')
-        .select('id,dept_id,name')
-        .in('dept_id', deptIds);
-      if (ce) {
-        setError(ce.message);
-        return;
-      }
-      setCats((catRows as Cat[]) ?? []);
-      const next: Record<string, boolean> = {};
-      (catRows ?? []).forEach((c: Cat) => {
-        next[c.id] = true;
-      });
-      setSubscribed(next);
-    } else {
-      setCats([]);
-      setSubscribed({});
-    }
   }, [configured]);
 
   useEffect(() => {
@@ -183,10 +159,6 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       else n.add(id);
       return n;
     });
-  }
-
-  function toggleSub(catId: string) {
-    setSubscribed((prev) => ({ ...prev, [catId]: !prev[catId] }));
   }
 
   async function submit() {
@@ -248,22 +220,6 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       setLoading(false);
       setError(udErr.message);
       return;
-    }
-
-    const subRows = cats
-      .filter((c) => selectedDeptIds.has(c.dept_id))
-      .map((c) => ({
-        user_id: userId,
-        channel_id: c.id,
-        subscribed: subscribed[c.id] ?? true,
-      }));
-    if (subRows.length) {
-      const { error: sErr } = await supabase.from('user_subscriptions').insert(subRows);
-      if (sErr) {
-        setLoading(false);
-        setError(sErr.message);
-        return;
-      }
     }
 
     setLoading(false);
@@ -440,8 +396,8 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         <ScrollView style={styles.stepScroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>Select teams</Text>
           <Text style={styles.sub}>
-            Choose every department, society, or club you belong to. You&apos;ll pick broadcast channels
-            next.
+            Choose every department, society, or club you belong to. After you&apos;re approved, follow
+            broadcast channels in Settings.
           </Text>
           {(['department', 'society', 'club'] as const).map((t) =>
             groupedDepts[t].length ? (
@@ -486,52 +442,6 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       ) : null}
 
       {step === 4 ? (
-        <ScrollView style={styles.stepScroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Broadcast channels</Text>
-          <Text style={styles.sub}>
-            Choose channels you want to follow under each team or department. You can change these later in
-            Settings.
-          </Text>
-          {Array.from(new Set(cats.filter((c) => selectedDeptIds.has(c.dept_id)).map((c) => c.dept_id))).map(
-            (deptId) => {
-              const deptName = depts.find((d) => d.id === deptId)?.name ?? 'Team';
-              const deptCats = cats.filter((c) => c.dept_id === deptId);
-              return (
-                <View key={deptId} style={styles.subBlock}>
-                  <Text style={styles.subDept}>{deptName}</Text>
-                  <View style={styles.pillWrap}>
-                    {deptCats.map((c) => {
-                      const on = subscribed[c.id] ?? true;
-                      return (
-                        <Pressable
-                          key={c.id}
-                          onPress={() => toggleSub(c.id)}
-                          style={[styles.catPill, on && styles.catPillOn]}
-                        >
-                          <Text style={[styles.catPillText, on && styles.catPillTextOn]}>
-                            {on ? '✓ ' : ''}
-                            {c.name}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              );
-            }
-          )}
-          <View style={styles.rowBtns}>
-            <Pressable style={[styles.btnGhost, styles.btnFlex]} onPress={() => setStep(3)}>
-              <Text style={styles.btnGhostText}>← Back</Text>
-            </Pressable>
-            <Pressable style={[styles.btnPrimary, styles.btnFlex2]} onPress={() => setStep(5)}>
-              <Text style={styles.btnPrimaryText}>Continue →</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      ) : null}
-
-      {step === 5 ? (
         <View>
           <Text style={styles.title}>Review & submit</Text>
           <Text style={styles.sub}>Check your details before sending your registration for approval</Text>
@@ -562,7 +472,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
             </Text>
           </View>
           <View style={styles.rowBtns}>
-            <Pressable style={[styles.btnGhost, styles.btnFlex]} onPress={() => setStep(4)}>
+            <Pressable style={[styles.btnGhost, styles.btnFlex]} onPress={() => setStep(3)}>
               <Text style={styles.btnGhostText}>← Back</Text>
             </Pressable>
             <Pressable
@@ -746,20 +656,7 @@ const styles = StyleSheet.create({
   teamCheck: { color: authColors.cream, fontSize: 10, fontWeight: '700' },
   teamName: { flex: 1, fontSize: 15, fontWeight: '600', color: authColors.panelText },
   teamMeta: { fontSize: 12, color: authColors.muted },
-  subBlock: { marginBottom: 20 },
-  subDept: { fontSize: 12, fontWeight: '600', color: authColors.muted, marginBottom: 8 },
   pillWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  catPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: authRadii.pill,
-    borderWidth: 1,
-    borderColor: authColors.border,
-    backgroundColor: authColors.white,
-  },
-  catPillOn: { borderColor: authColors.marketingBg, backgroundColor: authColors.marketingBg },
-  catPillText: { fontSize: 12, color: authColors.subText },
-  catPillTextOn: { color: authColors.cream },
   reviewBox: {
     backgroundColor: authColors.surface,
     borderRadius: 12,

@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Link2,
   Megaphone,
+  Palmtree,
   Puzzle,
   Settings,
   Tag,
@@ -76,6 +77,8 @@ export function ShellNavIcon({ name }: { name: ShellNavIconId }) {
       return <FileSignature {...p} />;
     case 'interviews':
       return <CalendarClock {...p} />;
+    case 'leave':
+      return <Palmtree {...p} />;
     default: {
       const _x: never = name;
       return _x;

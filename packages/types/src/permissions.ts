@@ -70,6 +70,12 @@ export const PERMISSION_KEYS = [
   'interviews.book_slot',
   'interviews.complete_slot',
   'interviews.manage',
+  // Leave & sickness absence scoring
+  'leave.submit',
+  'leave.view_own',
+  'leave.view_direct_reports',
+  'leave.approve_direct_reports',
+  'leave.manage_org',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
