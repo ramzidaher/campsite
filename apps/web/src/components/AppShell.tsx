@@ -115,6 +115,9 @@ export function AppShell({
   topBarNotifications,
   showLeaveNav = false,
   leaveNavBadge = 0,
+  showPerformanceNav = false,
+  performanceNavBadge = 0,
+  showOnboardingNav = false,
   managerNavItems = null,
   managerNavSectionLabel = 'Manager',
   adminNavItems = null,
@@ -142,6 +145,10 @@ export function AppShell({
   topBarNotifications: TopBarNotificationItem[];
   showLeaveNav?: boolean;
   leaveNavBadge?: number;
+  showPerformanceNav?: boolean;
+  /** Pending manager assessments count badge on the performance nav link. */
+  performanceNavBadge?: number;
+  showOnboardingNav?: boolean;
   /** Collapsible “Manager” links (same pattern as `adminNavItems`). */
   managerNavItems?: MainShellAdminNavItem[] | null;
   /** Sidebar group title (e.g. “Department” for coordinators). */
@@ -275,6 +282,23 @@ export function AppShell({
                 icon="leave"
                 label="Leave"
                 badge={leaveNavBadge > 0 ? leaveNavBadge : undefined}
+                onNavigate={closeMobile}
+              />
+            ) : null}
+            {showPerformanceNav ? (
+              <NavLink
+                href="/performance"
+                icon="performance"
+                label="Performance"
+                badge={performanceNavBadge > 0 ? performanceNavBadge : undefined}
+                onNavigate={closeMobile}
+              />
+            ) : null}
+            {showOnboardingNav ? (
+              <NavLink
+                href="/onboarding"
+                icon="onboarding"
+                label="Onboarding"
                 onNavigate={closeMobile}
               />
             ) : null}

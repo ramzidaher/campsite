@@ -36,13 +36,17 @@ export default async function HRDirectoryPage() {
     })
     .then(({ data }) => !!data);
 
-  const { data: rows } = await supabase.rpc('hr_directory_list');
+  const [{ data: rows }, { data: dashStats }] = await Promise.all([
+    supabase.rpc('hr_directory_list'),
+    supabase.rpc('hr_dashboard_stats'),
+  ]);
 
   return (
     <HRDirectoryClient
       orgId={orgId}
       canManage={canManage}
       initialRows={(rows ?? []) as Parameters<typeof HRDirectoryClient>[0]['initialRows']}
+      dashStats={(dashStats ?? null) as Record<string, unknown> | null}
     />
   );
 }

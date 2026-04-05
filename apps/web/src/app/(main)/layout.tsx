@@ -55,6 +55,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let permissionKeys: PermissionKey[] = [];
   let showLeaveNav = false;
   let leaveNavBadge = 0;
+  let showPerformanceNav = false;
+  let performanceNavBadge = 0;
+  let showOnboardingNav = false;
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
@@ -146,6 +149,36 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         const { data: lc } = await supabase.rpc('leave_pending_approval_count_for_me');
         if (typeof lc === 'number') leaveNavBadge = Math.max(0, lc);
         else if (lc !== null && lc !== undefined) leaveNavBadge = Math.max(0, Number(lc));
+      }
+
+      // Performance nav: show if user has any review (as reviewee or reviewer)
+      if (permissionKeys.includes('performance.view_own') || permissionKeys.includes('performance.review_direct_reports')) {
+        const { count: reviewCount } = await supabase
+          .from('performance_reviews')
+          .select('id', { count: 'exact', head: true })
+          .or(`reviewee_id.eq.${user.id},reviewer_id.eq.${user.id}`);
+        if ((reviewCount ?? 0) > 0) {
+          showPerformanceNav = true;
+          // badge = reviews where I'm the reviewer and status = self_submitted (awaiting my assessment)
+          if (permissionKeys.includes('performance.review_direct_reports')) {
+            const { count: pendingCount } = await supabase
+              .from('performance_reviews')
+              .select('id', { count: 'exact', head: true })
+              .eq('reviewer_id', user.id)
+              .eq('status', 'self_submitted');
+            performanceNavBadge = Math.max(0, Number(pendingCount ?? 0));
+          }
+        }
+      }
+
+      // Onboarding nav: show if user has an active onboarding run
+      if (permissionKeys.includes('onboarding.complete_own_tasks')) {
+        const { count: runCount } = await supabase
+          .from('onboarding_runs')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'active');
+        if ((runCount ?? 0) > 0) showOnboardingNav = true;
       }
     }
     hasAdminAreaAccess = permissionKeys.some(
@@ -281,6 +314,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           showStandaloneApprovals={showStandaloneApprovals}
           showLeaveNav={showLeaveNav}
           leaveNavBadge={leaveNavBadge}
+          showPerformanceNav={showPerformanceNav}
+          performanceNavBadge={performanceNavBadge}
+          showOnboardingNav={showOnboardingNav}
         >
           {children}
         </AppShell>
