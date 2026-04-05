@@ -83,6 +83,11 @@ export const PERMISSION_KEYS = [
   'onboarding.manage_templates',
   'onboarding.manage_runs',
   'onboarding.complete_own_tasks',
+  // Performance reviews
+  'performance.manage_cycles',
+  'performance.view_reports',
+  'performance.review_direct_reports',
+  'performance.view_own',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];

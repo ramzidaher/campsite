@@ -17,6 +17,7 @@ import {
   Megaphone,
   ClipboardCheck,
   FolderOpen,
+  Star,
   Palmtree,
   Puzzle,
   Settings,
@@ -85,6 +86,8 @@ export function ShellNavIcon({ name }: { name: ShellNavIconId }) {
       return <FolderOpen {...p} />;
     case 'onboarding':
       return <ClipboardCheck {...p} />;
+    case 'performance':
+      return <Star {...p} />;
     default: {
       const _x: never = name;
       return _x;
