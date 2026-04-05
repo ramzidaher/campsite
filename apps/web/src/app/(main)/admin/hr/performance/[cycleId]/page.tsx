@@ -43,7 +43,7 @@ export default async function PerformanceCycleDetailPage({ params }: { params: P
 
   if (!cycle) redirect('/admin/hr/performance');
 
-  const enrolledIds = new Set((reviews ?? []).map((r) => r.reviewee_id as string));
+  const enrolledIds = new Set((reviews ?? []).map((r: { reviewee_id: unknown }) => r.reviewee_id as string));
 
   return (
     <PerformanceCycleDetailClient
@@ -58,7 +58,7 @@ export default async function PerformanceCycleDetailPage({ params }: { params: P
         self_assessment_due: (cycle.self_assessment_due as string | null) ?? null,
         manager_assessment_due: (cycle.manager_assessment_due as string | null) ?? null,
       }}
-      reviews={(reviews ?? []).map((r) => ({
+      reviews={(reviews ?? []).map((r: Record<string, unknown>) => ({
         review_id: r.review_id as string,
         reviewee_id: r.reviewee_id as string,
         reviewee_name: r.reviewee_name as string,
