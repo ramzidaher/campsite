@@ -146,13 +146,13 @@ export function OnboardingHubClient({
 
       {/* Start run form */}
       {showStartForm ? (
-        <div className="mb-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
+        <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-5">
           <h2 className="text-[15px] font-semibold text-[#121212]">Start onboarding run</h2>
           <form className="mt-4 grid gap-4 sm:grid-cols-3" onSubmit={(e) => void startRun(e)}>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Employee
               <select
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
                 value={startUserId}
                 onChange={(e) => setStartUserId(e.target.value)}
                 required
@@ -165,7 +165,7 @@ export function OnboardingHubClient({
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Template
               <select
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
                 value={startTemplateId}
                 onChange={(e) => setStartTemplateId(e.target.value)}
                 required
@@ -182,16 +182,16 @@ export function OnboardingHubClient({
               <input
                 type="date"
                 required
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
             </label>
             <div className="flex gap-2 sm:col-span-3">
-              <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50">
+              <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">
                 {busy ? 'Starting…' : 'Start'}
               </button>
-              <button type="button" onClick={() => setShowStartForm(false)} className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]">
+              <button type="button" onClick={() => setShowStartForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]">
                 Cancel
               </button>
             </div>
@@ -201,24 +201,24 @@ export function OnboardingHubClient({
 
       {/* Create template form */}
       {showTemplateForm ? (
-        <div className="mb-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
+        <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-5">
           <h2 className="text-[15px] font-semibold text-[#121212]">New template</h2>
           <form className="mt-4 space-y-3" onSubmit={(e) => void createTemplate(e)}>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Name
-              <input type="text" required value={tplName} onChange={(e) => setTplName(e.target.value)} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]" placeholder="e.g. Standard Onboarding" />
+              <input type="text" required value={tplName} onChange={(e) => setTplName(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none" placeholder="e.g. Standard Onboarding" />
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Description (optional)
-              <input type="text" value={tplDesc} onChange={(e) => setTplDesc(e.target.value)} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]" />
+              <input type="text" value={tplDesc} onChange={(e) => setTplDesc(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none" />
             </label>
             <label className="flex items-center gap-2 text-[13px] text-[#4a4a4a]">
               <input type="checkbox" checked={tplDefault} onChange={(e) => setTplDefault(e.target.checked)} />
               Set as default template
             </label>
             <div className="flex gap-2">
-              <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50">{busy ? 'Creating…' : 'Create'}</button>
-              <button type="button" onClick={() => setShowTemplateForm(false)} className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]">Cancel</button>
+              <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">{busy ? 'Creating…' : 'Create'}</button>
+              <button type="button" onClick={() => setShowTemplateForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]">Cancel</button>
             </div>
           </form>
         </div>
@@ -247,7 +247,7 @@ export function OnboardingHubClient({
               <ul className="space-y-2">
                 {activeRuns.map((r) => (
                   <li key={r.id}>
-                    <Link href={`/admin/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#d8d8d8] bg-white p-4 hover:bg-[#faf9f6]">
+                    <Link href={`/admin/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
                       <div>
                         <p className="font-medium text-[#121212]">{r.full_name}</p>
                         <p className="text-[12px] text-[#9b9b9b]">
@@ -264,9 +264,10 @@ export function OnboardingHubClient({
               </ul>
             </section>
           ) : (
-            <p className="rounded-xl border border-[#ececec] bg-[#faf9f6] px-4 py-6 text-center text-[13px] text-[#9b9b9b]">
-              No active onboarding runs. Use &ldquo;Start onboarding&rdquo; to begin one.
-            </p>
+            <div className="rounded-2xl border border-[#e8e8e8] bg-white px-4 py-8 text-center">
+              <p className="text-[14px] font-medium text-[#121212]">No active onboarding runs</p>
+              <p className="mt-1 text-[13px] text-[#9b9b9b]">Use &ldquo;Start onboarding&rdquo; to begin one.</p>
+            </div>
           )}
           {pastRuns.length > 0 ? (
             <section>
@@ -274,7 +275,7 @@ export function OnboardingHubClient({
               <ul className="space-y-2">
                 {pastRuns.map((r) => (
                   <li key={r.id}>
-                    <Link href={`/admin/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#ececec] bg-[#faf9f6] p-4 hover:bg-[#f0ede8]">
+                    <Link href={`/admin/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4 hover:bg-[#f0efe9] transition-colors">
                       <div>
                         <p className="text-[13px] font-medium text-[#4a4a4a]">{r.full_name}</p>
                         <p className="text-[12px] text-[#9b9b9b]">{r.template_name} · started {new Date(r.created_at).toLocaleDateString()}</p>
@@ -293,14 +294,15 @@ export function OnboardingHubClient({
       {tab === 'templates' && canTemplates ? (
         <div>
           {activeTemplates.length === 0 ? (
-            <p className="rounded-xl border border-[#ececec] bg-[#faf9f6] px-4 py-6 text-center text-[13px] text-[#9b9b9b]">
-              No templates yet. Create one to get started.
-            </p>
+            <div className="rounded-2xl border border-[#e8e8e8] bg-white px-4 py-8 text-center">
+              <p className="text-[14px] font-medium text-[#121212]">No templates yet</p>
+              <p className="mt-1 text-[13px] text-[#9b9b9b]">Create a template to get started.</p>
+            </div>
           ) : (
             <ul className="space-y-2">
               {activeTemplates.map((t) => (
                 <li key={t.id}>
-                  <Link href={`/admin/hr/onboarding?template=${t.id}`} className="flex items-center justify-between rounded-xl border border-[#d8d8d8] bg-white p-4 hover:bg-[#faf9f6]">
+                  <Link href={`/admin/hr/onboarding?template=${t.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
                     <div>
                       <p className="font-medium text-[#121212]">
                         {t.name}

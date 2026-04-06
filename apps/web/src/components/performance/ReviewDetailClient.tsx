@@ -16,11 +16,11 @@ type Goal = {
 };
 
 const RATING_OPTIONS = [
-  { value: 'exceptional', label: 'Exceptional' },
-  { value: 'strong', label: 'Strong' },
-  { value: 'meets_expectations', label: 'Meets expectations' },
-  { value: 'developing', label: 'Developing' },
-  { value: 'unsatisfactory', label: 'Unsatisfactory' },
+  { value: 'exceptional', label: 'Exceptional', color: 'bg-[#dcfce7] text-[#166534] border-[#bbf7d0]' },
+  { value: 'strong', label: 'Strong', color: 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]' },
+  { value: 'meets_expectations', label: 'Meets expectations', color: 'bg-[#f5f4f1] text-[#4a4a4a] border-[#e8e8e8]' },
+  { value: 'developing', label: 'Developing', color: 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]' },
+  { value: 'unsatisfactory', label: 'Unsatisfactory', color: 'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]' },
 ] as const;
 
 const GOAL_STATUS_OPTIONS = [
@@ -47,10 +47,14 @@ const RATING_LABELS: Record<string, string> = {
   developing: 'Developing', unsatisfactory: 'Unsatisfactory',
 };
 
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 function ratingBadge(r: string | null) {
   if (!r) return null;
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${RATING_COLORS[r] ?? 'bg-[#f5f4f1] text-[#6b6b6b]'}`}>
+    <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-medium ${RATING_COLORS[r] ?? 'bg-[#f5f4f1] text-[#6b6b6b]'}`}>
       {RATING_LABELS[r] ?? r}
     </span>
   );
@@ -170,11 +174,9 @@ export function ReviewDetailClient({
   const canEditManager = isReviewer && isOpen && cycleOpen;
   const canAddGoals = (isReviewee || isReviewer) && isOpen && cycleOpen;
 
-  // Smart back link: employees go to /performance, admins/managers go to admin
   const backHref = (isReviewee && !isReviewer && !canHR) ? '/performance' : '/admin/hr/performance';
   const backLabel = (isReviewee && !isReviewer && !canHR) ? '← My reviews' : '← Performance reviews';
 
-  // Call-to-action banner
   const today = new Date().toISOString().slice(0, 10);
   const selfDue = cycle?.self_assessment_due;
   const managerDue = cycle?.manager_assessment_due;
@@ -183,16 +185,16 @@ export function ReviewDetailClient({
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
-      <Link href={backHref} className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
+      <Link href={backHref} className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] hover:text-[#121212]">
         {backLabel}
       </Link>
 
       {/* Header */}
-      <div className="mt-4">
-        <h1 className="font-authSerif text-[24px] leading-tight tracking-[-0.03em] text-[#121212]">
+      <div className="mt-5 mb-6">
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           {isReviewee ? (cycle?.name ?? 'Review') : review.reviewee_name}
         </h1>
-        <p className="mt-0.5 text-[13px] text-[#6b6b6b]">
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">
           {cycle ? `${TYPE_LABELS[cycle.type] ?? cycle.type} · ${cycle.period_start} – ${cycle.period_end}` : ''}
           {!isReviewee && isReviewer ? ` · ${review.reviewee_name}` : ''}
           {isReviewee && review.reviewer_name ? ` · Reviewed by ${review.reviewer_name}` : ''}
@@ -202,71 +204,90 @@ export function ReviewDetailClient({
         ) : null}
       </div>
 
+      {/* Completed banner */}
+      {review.status === 'completed' ? (
+        <div className="mb-6 rounded-2xl border border-[#bbf7d0] bg-[#f0fdf4] p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#dcfce7]">
+              <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#16a34a]" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-[#166534]">Review complete</p>
+              {review.completed_at ? (
+                <p className="text-[12px] text-[#4ade80]">Finalised {fmtDate(review.completed_at)}</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Action needed banners */}
       {canEditSelf && !review.self_submitted_at ? (
-        <div className={`mt-4 rounded-xl border p-4 ${selfOverdue ? 'border-[#fecaca] bg-[#fef2f2]' : 'border-[#fde68a] bg-[#fffbeb]'}`}>
+        <div className={`mb-4 rounded-xl border p-4 ${selfOverdue ? 'border-[#fecaca] bg-[#fef2f2]' : 'border-[#fde68a] bg-[#fffbeb]'}`}>
           <p className={`text-[13px] font-semibold ${selfOverdue ? 'text-[#b91c1c]' : 'text-[#92400e]'}`}>
             {selfOverdue ? 'Your self-assessment is overdue' : 'Action needed: complete your self-assessment'}
           </p>
-          <p className="mt-0.5 text-[12px] text-[#78350f]">
+          <p className={`mt-0.5 text-[12px] ${selfOverdue ? 'text-[#b91c1c]' : 'text-[#78350f]'}`}>
             Write about your achievements and challenges during this review period.
-            {selfDue ? ` Due by ${selfDue}.` : ''}
+            {selfDue ? ` Due by ${fmtDate(selfDue)}.` : ''}
           </p>
         </div>
       ) : null}
 
       {canEditManager && review.status === 'self_submitted' ? (
-        <div className={`mt-4 rounded-xl border p-4 ${managerOverdue ? 'border-[#fecaca] bg-[#fef2f2]' : 'border-[#fde68a] bg-[#fffbeb]'}`}>
+        <div className={`mb-4 rounded-xl border p-4 ${managerOverdue ? 'border-[#fecaca] bg-[#fef2f2]' : 'border-[#fde68a] bg-[#fffbeb]'}`}>
           <p className={`text-[13px] font-semibold ${managerOverdue ? 'text-[#b91c1c]' : 'text-[#92400e]'}`}>
             {managerOverdue ? `${review.reviewee_name}'s review is overdue` : `${review.reviewee_name} has submitted their self-assessment`}
           </p>
-          <p className="mt-0.5 text-[12px] text-[#78350f]">
+          <p className={`mt-0.5 text-[12px] ${managerOverdue ? 'text-[#b91c1c]' : 'text-[#78350f]'}`}>
             Complete your manager assessment and overall rating to finalise the review.
-            {managerDue ? ` Due by ${managerDue}.` : ''}
+            {managerDue ? ` Due by ${fmtDate(managerDue)}.` : ''}
           </p>
         </div>
       ) : null}
 
-      {msg ? <p className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p> : null}
+      {msg ? <p className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p> : null}
 
       {/* Self-assessment */}
-      <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <div className="flex items-center justify-between">
+      <section className="mb-4 rounded-2xl border border-[#e8e8e8] bg-white p-5">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-[15px] font-semibold text-[#121212]">
             {isReviewee ? 'Your self-assessment' : 'Self-assessment'}
           </h2>
           {review.self_submitted_at ? (
-            <span className="text-[11.5px] text-[#9b9b9b]">
-              Submitted {new Date(review.self_submitted_at).toLocaleDateString()}
+            <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[11px] font-medium text-[#166534]">
+              Submitted {fmtDate(review.self_submitted_at)}
             </span>
           ) : null}
         </div>
         {!isReviewee && !review.self_submitted_at ? (
-          <p className="mt-2 text-[13px] text-[#9b9b9b]">
+          <p className="text-[13px] text-[#9b9b9b]">
             Waiting for {review.reviewee_name} to complete their self-assessment.
           </p>
         ) : canEditSelf ? (
-          <form className="mt-3" onSubmit={(e) => void submitSelf(e)}>
+          <form onSubmit={(e) => void submitSelf(e)}>
             <textarea
               rows={6}
               value={selfText}
               onChange={(e) => setSelfText(e.target.value)}
               placeholder="Describe your achievements, any challenges you faced, and where you'd like to grow…"
-              className="w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] leading-relaxed"
+              className="w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2.5 text-[13px] leading-relaxed focus:border-[#121212] focus:outline-none"
             />
             {selfDue ? (
-              <p className="mt-1 text-[11.5px] text-[#9b9b9b]">Due by {selfDue}</p>
+              <p className="mt-1.5 text-[11.5px] text-[#9b9b9b]">Due by {fmtDate(selfDue)}</p>
             ) : null}
             <button
               type="submit"
               disabled={busy}
-              className="mt-3 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+              className="mt-3 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50"
             >
               {busy ? 'Saving…' : review.self_submitted_at ? 'Update self-assessment' : 'Submit self-assessment'}
             </button>
           </form>
         ) : (
-          <div className="mt-3">
+          <div>
             {review.self_assessment ? (
               <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#4a4a4a]">{review.self_assessment}</p>
             ) : (
@@ -277,14 +298,14 @@ export function ReviewDetailClient({
       </section>
 
       {/* Goals */}
-      <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <div className="flex items-center justify-between">
+      <section className="mb-4 rounded-2xl border border-[#e8e8e8] bg-white p-5">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-[15px] font-semibold text-[#121212]">Goals</h2>
           {canAddGoals && !showGoalForm ? (
             <button
               type="button"
               onClick={() => openGoalForm()}
-              className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              className="rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#f0efe9] transition-colors"
             >
               + Add goal
             </button>
@@ -292,7 +313,7 @@ export function ReviewDetailClient({
         </div>
 
         {showGoalForm ? (
-          <form className="mt-4 space-y-3" onSubmit={(e) => void saveGoal(e)}>
+          <form className="mt-1 space-y-3" onSubmit={(e) => void saveGoal(e)}>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Goal
               <input
@@ -300,7 +321,7 @@ export function ReviewDetailClient({
                 required
                 value={goalTitle}
                 onChange={(e) => setGoalTitle(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
                 placeholder="e.g. Improve code review turnaround"
               />
             </label>
@@ -310,7 +331,7 @@ export function ReviewDetailClient({
                 rows={2}
                 value={goalDesc}
                 onChange={(e) => setGoalDesc(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
               />
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -319,7 +340,7 @@ export function ReviewDetailClient({
                 <select
                   value={goalStatus}
                   onChange={(e) => setGoalStatus(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                  className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
                 >
                   {GOAL_STATUS_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -331,7 +352,7 @@ export function ReviewDetailClient({
                 <select
                   value={goalRating}
                   onChange={(e) => setGoalRating(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                  className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
                 >
                   <option value="">No rating</option>
                   {RATING_OPTIONS.map((o) => (
@@ -344,14 +365,14 @@ export function ReviewDetailClient({
               <button
                 type="submit"
                 disabled={busy}
-                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50"
               >
                 {busy ? 'Saving…' : 'Save goal'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowGoalForm(false)}
-                className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
               >
                 Cancel
               </button>
@@ -360,11 +381,11 @@ export function ReviewDetailClient({
         ) : null}
 
         {goals.length === 0 && !showGoalForm ? (
-          <p className="mt-3 text-[13px] text-[#9b9b9b]">No goals added yet.</p>
+          <p className="text-[13px] text-[#9b9b9b]">No goals added yet.</p>
         ) : null}
 
         {goals.length > 0 ? (
-          <ul className="mt-4 divide-y divide-[#ececec]">
+          <ul className="divide-y divide-[#f0efe9]">
             {goals.map((g) => (
               <li key={g.id} className="py-3">
                 <div className="flex items-start justify-between gap-3">
@@ -375,6 +396,7 @@ export function ReviewDetailClient({
                         'rounded-full px-2 py-0.5 text-[10.5px] font-medium',
                         g.status === 'completed' ? 'bg-[#dcfce7] text-[#166534]' :
                         g.status === 'carried_forward' ? 'bg-[#fff7ed] text-[#c2410c]' :
+                        g.status === 'in_progress' ? 'bg-[#eff6ff] text-[#1d4ed8]' :
                         'bg-[#f5f4f1] text-[#6b6b6b]'
                       ].join(' ')}>
                         {GOAL_STATUS_OPTIONS.find((o) => o.value === g.status)?.label ?? g.status}
@@ -406,55 +428,74 @@ export function ReviewDetailClient({
 
       {/* Manager assessment */}
       {(isReviewer || canHR || review.manager_assessment) ? (
-        <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
-          <div className="flex items-center justify-between">
+        <section className="mb-4 rounded-2xl border border-[#e8e8e8] bg-white p-5">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-[15px] font-semibold text-[#121212]">
               {isReviewer && !isReviewee ? 'Your assessment' : 'Manager assessment'}
             </h2>
             {review.manager_submitted_at ? (
-              <span className="text-[11.5px] text-[#9b9b9b]">
-                Submitted {new Date(review.manager_submitted_at).toLocaleDateString()}
+              <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[11px] font-medium text-[#166534]">
+                Submitted {fmtDate(review.manager_submitted_at)}
               </span>
             ) : null}
           </div>
           {canEditManager && review.status !== 'completed' ? (
-            <form className="mt-3 space-y-3" onSubmit={(e) => void submitManager(e)}>
+            <form className="space-y-4" onSubmit={(e) => void submitManager(e)}>
               <textarea
                 rows={6}
                 value={managerText}
                 onChange={(e) => setManagerText(e.target.value)}
                 placeholder="Summarise their performance, key contributions, and areas to develop…"
-                className="w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] leading-relaxed"
+                className="w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2.5 text-[13px] leading-relaxed focus:border-[#121212] focus:outline-none"
               />
-              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                Overall rating <span className="text-[#b91c1c]">*</span>
-                <select
-                  required
-                  value={overallRating}
-                  onChange={(e) => setOverallRating(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                >
-                  <option value="">Choose a rating…</option>
+
+              {/* Rating pill buttons */}
+              <div>
+                <p className="mb-2 text-[12.5px] font-medium text-[#6b6b6b]">
+                  Overall rating <span className="text-[#b91c1c]">*</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
                   {RATING_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setOverallRating(o.value)}
+                      className={[
+                        'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-all',
+                        overallRating === o.value
+                          ? `${o.color} ring-2 ring-offset-1 ring-current`
+                          : 'border-[#e8e8e8] bg-white text-[#6b6b6b] hover:border-[#c8c8c8]',
+                      ].join(' ')}
+                    >
+                      {o.label}
+                    </button>
                   ))}
-                </select>
-              </label>
+                </div>
+              </div>
+
               {managerDue ? (
-                <p className="text-[11.5px] text-[#9b9b9b]">Due by {managerDue}</p>
+                <p className="text-[11.5px] text-[#9b9b9b]">Due by {fmtDate(managerDue)}</p>
               ) : null}
               <button
                 type="submit"
                 disabled={busy}
-                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50"
               >
                 {busy ? 'Submitting…' : 'Submit & complete review'}
               </button>
             </form>
           ) : (
-            <div className="mt-3">
+            <div>
               {review.manager_assessment ? (
-                <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#4a4a4a]">{review.manager_assessment}</p>
+                <>
+                  <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#4a4a4a]">{review.manager_assessment}</p>
+                  {review.overall_rating ? (
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-[12px] text-[#9b9b9b]">Overall rating:</span>
+                      {ratingBadge(review.overall_rating)}
+                    </div>
+                  ) : null}
+                </>
               ) : (
                 <p className="text-[13px] text-[#9b9b9b]">
                   {isReviewee ? 'Waiting for your manager to complete their assessment.' : 'No assessment submitted yet.'}
@@ -463,17 +504,6 @@ export function ReviewDetailClient({
             </div>
           )}
         </section>
-      ) : null}
-
-      {review.status === 'completed' ? (
-        <div className="mt-6 rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] p-5 text-center">
-          <p className="text-[14px] font-semibold text-[#166534]">Review complete</p>
-          {review.completed_at ? (
-            <p className="mt-0.5 text-[12px] text-[#4ade80]">
-              Finalised {new Date(review.completed_at).toLocaleDateString()}
-            </p>
-          ) : null}
-        </div>
       ) : null}
     </div>
   );

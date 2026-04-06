@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { HrNav } from '@/components/hr/HrNav';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -30,6 +31,10 @@ const ASSIGNEE_LABELS: Record<string, string> = {
   employee: 'You',
 };
 
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function EmployeeOnboardingClient({
   runId,
   runStatus,
@@ -55,6 +60,7 @@ export function EmployeeOnboardingClient({
   const myDone = myTasks.filter((t) => t.status !== 'pending').length;
   const totalDone = tasks.filter((t) => t.status !== 'pending').length;
   const progress = tasks.length > 0 ? Math.round((totalDone / tasks.length) * 100) : 0;
+  const myProgress = myTasks.length > 0 ? Math.round((myDone / myTasks.length) * 100) : 0;
 
   const overdueMyTasks = myTasks.filter(
     (t) => t.due_date && t.due_date < today && t.status === 'pending',
@@ -85,31 +91,36 @@ export function EmployeeOnboardingClient({
 
   if (runStatus === 'completed') {
     return (
-      <div className="mx-auto max-w-2xl px-5 py-16 sm:px-7 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#dcfce7]">
-          <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#16a34a]" fill="none" stroke="currentColor" strokeWidth={2.5}>
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+      <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
+        <HrNav />
+        <div className="py-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#dcfce7]">
+            <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#16a34a]" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+            Onboarding complete
+          </h1>
+          <p className="mt-2 text-[14px] text-[#6b6b6b]">
+            All tasks are done. You&apos;re all set — welcome to the team!
+          </p>
+          <p className="mt-1 text-[12px] text-[#9b9b9b]">Started {fmtDate(employmentStartDate)}</p>
         </div>
-        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
-          Onboarding complete
-        </h1>
-        <p className="mt-2 text-[14px] text-[#6b6b6b]">
-          All tasks are done. You&apos;re all set — welcome to the team!
-        </p>
-        <p className="mt-1 text-[12px] text-[#9b9b9b]">Started {employmentStartDate}</p>
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
+      <HrNav />
+
       <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           Getting started
         </h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Your onboarding checklist · Start date: {employmentStartDate}
+          Your onboarding checklist · Start date: {fmtDate(employmentStartDate)}
         </p>
       </div>
 
@@ -128,24 +139,31 @@ export function EmployeeOnboardingClient({
         </div>
       ) : null}
 
-      {/* Progress */}
-      <div className="mb-6 rounded-xl border border-[#d8d8d8] bg-white p-4">
-        <div className="flex items-center justify-between text-[13px]">
+      {/* Progress hero */}
+      <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-5">
+        <div className="mb-4 grid grid-cols-3 gap-4 text-center">
           <div>
-            <span className="font-semibold text-[#121212]">{myDone} of {myTasks.length}</span>
-            <span className="text-[#6b6b6b]"> of your tasks done</span>
+            <p className="text-[22px] font-bold text-[#121212]">{myProgress}%</p>
+            <p className="text-[11.5px] text-[#6b6b6b]">Your tasks</p>
           </div>
-          <span className="text-[12px] text-[#9b9b9b]">{progress}% overall</span>
+          <div>
+            <p className="text-[22px] font-bold text-[#121212]">{myDone}/{myTasks.length}</p>
+            <p className="text-[11.5px] text-[#6b6b6b]">Tasks done</p>
+          </div>
+          <div>
+            <p className="text-[22px] font-bold text-[#121212]">{progress}%</p>
+            <p className="text-[11.5px] text-[#6b6b6b]">Overall</p>
+          </div>
         </div>
-        <div className="mt-2 h-2 w-full rounded-full bg-[#ececec]">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ececec]">
           <div
             className="h-2 rounded-full bg-[#121212] transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
         {otherTasks.length > 0 ? (
-          <p className="mt-2 text-[11px] text-[#9b9b9b]">
-            {otherTasks.filter((t) => t.status !== 'pending').length} of {otherTasks.length} tasks for your manager/HR also done
+          <p className="mt-2.5 text-[11.5px] text-[#9b9b9b]">
+            {otherTasks.filter((t) => t.status !== 'pending').length} of {otherTasks.length} tasks for your manager/HR also completed
           </p>
         ) : null}
       </div>
@@ -164,7 +182,7 @@ export function EmployeeOnboardingClient({
                 return (
                   <li
                     key={t.id}
-                    className={`rounded-xl border p-4 ${isDone ? 'border-[#d8d8d8] bg-[#f9fafb]' : overdue ? 'border-[#fecaca] bg-white' : 'border-[#d8d8d8] bg-white'}`}
+                    className={`rounded-xl border p-4 transition-colors ${isDone ? 'border-[#e8e8e8] bg-[#faf9f6]' : overdue ? 'border-[#fca5a5] bg-white' : 'border-[#e8e8e8] bg-white'}`}
                   >
                     <div className="flex items-start gap-3">
                       <button
@@ -195,8 +213,11 @@ export function EmployeeOnboardingClient({
                         ) : null}
                         {t.due_date && !isDone ? (
                           <p className={`mt-1 text-[11.5px] ${overdue ? 'font-medium text-[#b91c1c]' : 'text-[#9b9b9b]'}`}>
-                            {overdue ? `Overdue since ${t.due_date}` : `Due ${t.due_date}`}
+                            {overdue ? `Overdue since ${fmtDate(t.due_date)}` : `Due ${fmtDate(t.due_date)}`}
                           </p>
+                        ) : null}
+                        {isDone && t.completed_at ? (
+                          <p className="mt-1 text-[11.5px] text-[#9b9b9b]">Done {fmtDate(t.completed_at)}</p>
                         ) : null}
                       </div>
                     </div>
@@ -210,7 +231,7 @@ export function EmployeeOnboardingClient({
                 return (
                   <li
                     key={t.id}
-                    className="flex items-center gap-3 rounded-xl border border-[#ececec] bg-[#faf9f6] px-4 py-3"
+                    className="flex items-center gap-3 rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-4 py-3"
                   >
                     <span
                       className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 ${isDone ? 'border-[#16a34a] bg-[#16a34a]' : 'border-[#d8d8d8]'}`}

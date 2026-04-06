@@ -249,7 +249,7 @@ export function AppShell({
         </div>
 
         <nav
-          className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-3 pt-2 [scrollbar-gutter:stable]"
+          className="shell-sidebar-scroll relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-3 pt-2 [scrollbar-gutter:stable]"
           aria-label="Main"
         >
           <div className="space-y-0.5">
