@@ -1,0 +1,15 @@
+---
+description: Always add and apply Supabase SQL migrations for schema/RPC/RLS changes
+alwaysApply: true
+---
+
+# Supabase migrations
+
+When changing the database (tables, columns, constraints, RLS policies, functions, triggers, grants):
+
+1. **Add a new file** under `supabase/migrations/` with a timestamp prefix after the latest existing migration (e.g. `20260406120000_short_description.sql`). Do not edit already-applied migrations in place unless the team explicitly resets local DBs.
+2. **Keep migrations idempotent where reasonable** (`drop … if exists`, `create or replace`) so pushes are repeatable.
+3. **Apply locally** after adding migrations: from repo root run `npm run supabase:db:push` (or `npx supabase@latest db push`) when a Supabase project is linked. If push fails (no link, offline), say so and leave the migration file committed.
+4. **Do not** rely on manual SQL in the dashboard alone for changes that belong in the repo.
+
+RPCs and security-definer functions used by the app **must** ship in migrations so every environment stays aligned.
