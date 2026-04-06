@@ -1,44 +1,24 @@
 import { HOST_RESOLUTION_CONSTANTS } from '@/lib/middleware/resolveHostRequestContext';
 
+function withOrg(path: string, orgSlug: string): string {
+  const join = path.includes('?') ? '&' : '?';
+  return `${path}${join}org=${encodeURIComponent(orgSlug)}`;
+}
+
 /** Tenant org admin entry (web). Uses `*.localhost` in local dev when the shell host is platform or bare localhost. */
 export function tenantAdminDashboardUrl(orgSlug: string): string {
+  const path = withOrg('/admin', orgSlug);
   if (typeof window === 'undefined') {
-    return `https://${orgSlug}.${HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN}/admin`;
+    return `https://${HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN}${path}`;
   }
-  const { protocol, hostname, port } = window.location;
-  const p = port ? `:${port}` : '';
-  const root = HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN;
-  const platformAdminHost = HOST_RESOLUTION_CONSTANTS.PLATFORM_ADMIN_HOST;
-  if (hostname === 'localhost' || hostname === 'admin.localhost' || hostname.endsWith('.localhost')) {
-    return `${protocol}//${orgSlug}.localhost${p}/admin`;
-  }
-  if (hostname === root || hostname === platformAdminHost || hostname === `www.${root}`) {
-    return `${protocol}//${orgSlug}.${root}${p}/admin`;
-  }
-  if (hostname.endsWith(`.${root}`)) {
-    return `${protocol}//${orgSlug}.${root}${p}/admin`;
-  }
-  return `${protocol}//${orgSlug}.localhost${p}/admin`;
+  return `${window.location.origin}${path}`;
 }
 
 /** Public job posting URL for the tenant (share off-site). */
 export function tenantJobPublicUrl(orgSlug: string, jobSlug: string): string {
-  const path = `/jobs/${encodeURIComponent(jobSlug)}`;
+  const path = withOrg(`/jobs/${encodeURIComponent(jobSlug)}`, orgSlug);
   if (typeof window === 'undefined') {
-    return `https://${orgSlug}.${HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN}${path}`;
+    return `https://${HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN}${path}`;
   }
-  const { protocol, hostname, port } = window.location;
-  const p = port ? `:${port}` : '';
-  const root = HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN;
-  const platformAdminHost = HOST_RESOLUTION_CONSTANTS.PLATFORM_ADMIN_HOST;
-  if (hostname === 'localhost' || hostname === 'admin.localhost' || hostname.endsWith('.localhost')) {
-    return `${protocol}//${orgSlug}.localhost${p}${path}`;
-  }
-  if (hostname === root || hostname === platformAdminHost || hostname === `www.${root}`) {
-    return `${protocol}//${orgSlug}.${root}${p}${path}`;
-  }
-  if (hostname.endsWith(`.${root}`)) {
-    return `${protocol}//${orgSlug}.${root}${p}${path}`;
-  }
-  return `${protocol}//${orgSlug}.localhost${p}${path}`;
+  return `${window.location.origin}${path}`;
 }
