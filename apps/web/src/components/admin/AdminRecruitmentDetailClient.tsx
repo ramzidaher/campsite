@@ -45,6 +45,36 @@ export type StatusEventRow = {
   profiles: { full_name: string } | { full_name: string }[] | null;
 };
 
+const STATUS_STYLE: Record<string, string> = {
+  pending_review: 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]',
+  approved:       'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]',
+  in_progress:    'bg-[#faf5ff] text-[#7c3aed] border-[#ddd6fe]',
+  filled:         'bg-[#dcfce7] text-[#166534] border-[#bbf7d0]',
+  rejected:       'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]',
+};
+
+const STATUS_DOT: Record<string, string> = {
+  pending_review: 'bg-[#f97316]',
+  approved:       'bg-[#3b82f6]',
+  in_progress:    'bg-[#8b5cf6]',
+  filled:         'bg-[#16a34a]',
+  rejected:       'bg-[#dc2626]',
+};
+
+const URGENCY_STYLE: Record<string, string> = {
+  high:   'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]',
+  normal: 'bg-[#f5f4f1] text-[#6b6b6b] border-[#e8e8e8]',
+  low:    'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]',
+};
+
+function fmtDate(iso: string) {
+  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function fmtDateTime(iso: string) {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 export function AdminRecruitmentDetailClient({
   request: req,
   events,
@@ -63,24 +93,19 @@ export function AdminRecruitmentDetailClient({
   const [statusNote, setStatusNote] = useState('');
   const [listingErr, setListingErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    setStatus(req.status);
-  }, [req.status]);
+  useEffect(() => { setStatus(req.status); }, [req.status]);
 
   const d = req.departments;
-  const deptName = Array.isArray(d) ? d[0]?.name : d?.name;
+  const deptName = (Array.isArray(d) ? d[0]?.name : d?.name) ?? '—';
   const sub = req.submitter;
-  const submitterName = Array.isArray(sub) ? sub[0]?.full_name : sub?.full_name;
+  const submitterName = ((Array.isArray(sub) ? sub[0]?.full_name : sub?.full_name) ?? '').trim() || '—';
 
   function applyStatus() {
     setError(null);
     if (status === req.status && !statusNote.trim()) return;
     startTransition(async () => {
       const res = await setRecruitmentRequestStatusAction(req.id, status, statusNote.trim() || null);
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
+      if (!res.ok) { setError(res.error); return; }
       setStatusNote('');
       router.refresh();
     });
@@ -89,59 +114,48 @@ export function AdminRecruitmentDetailClient({
   function openOrCreateListing() {
     setListingErr(null);
     startTransition(async () => {
-      if (jobListing?.id) {
-        router.push(`/admin/jobs/${jobListing.id}/edit`);
-        return;
-      }
+      if (jobListing?.id) { router.push(`/admin/jobs/${jobListing.id}/edit`); return; }
       const res = await createJobListingFromRequest(req.id);
-      if (!res.ok) {
-        setListingErr(res.error);
-        return;
-      }
+      if (!res.ok) { setListingErr(res.error); return; }
       router.push(`/admin/jobs/${res.jobId}/edit`);
     });
   }
 
-  const fieldClass =
-    'mt-0 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#008B60] focus:ring-1 focus:ring-[#008B60]';
-
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="mx-auto max-w-5xl px-5 py-8 sm:px-7">
+
+      {/* Back + header */}
+      <Link href="/admin/recruitment" className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] hover:text-[#121212]">
+        ← Recruitment requests
+      </Link>
+
+      <div className="mt-5 mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">
-            <Link href="/admin/recruitment" className="text-[#008B60] hover:underline">
-              Recruitment
-            </Link>
-            <span aria-hidden className="mx-1.5 text-[#cfcfcf]">
-              /
-            </span>
-            Request
-          </p>
-          <h1 className="mt-1 font-authSerif text-[22px] tracking-tight text-[#121212]">{req.job_title}</h1>
+          <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">{req.job_title}</h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            {deptName ?? 'Department'} · Requested by {submitterName?.trim() || '—'}
+            {deptName} · Submitted by {submitterName} · {fmtDate(req.created_at)}
           </p>
         </div>
-        <div className="rounded-lg border border-[#ececec] bg-[#fafafa] px-3 py-2 text-[12px] text-[#505050]">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium ${STATUS_STYLE[req.status] ?? 'bg-[#f5f4f1] text-[#6b6b6b] border-[#e8e8e8]'}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[req.status] ?? 'bg-[#9b9b9b]'}`} />
+            {recruitmentStatusLabel(req.status)}
+          </span>
+          <span className={`rounded-full border px-3 py-1 text-[12px] font-medium ${URGENCY_STYLE[req.urgency] ?? 'bg-[#f5f4f1] text-[#6b6b6b] border-[#e8e8e8]'}`}>
+            {recruitmentUrgencyLabel(req.urgency)} urgency
+          </span>
           {req.archived_at ? (
-            <span>
-              Archived · {recruitmentStatusLabel(req.status)}
-            </span>
-          ) : (
-            <span>Open · {recruitmentStatusLabel(req.status)}</span>
-          )}
+            <span className="rounded-full border border-[#e8e8e8] bg-[#f5f4f1] px-3 py-1 text-[12px] font-medium text-[#6b6b6b]">Archived</span>
+          ) : null}
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-5 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <h2 className="font-authSerif text-lg text-[#121212]">Brief</h2>
-          <dl className="grid gap-3 text-[13px] sm:grid-cols-2">
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Urgency</dt>
-              <dd className="mt-0.5 text-[#242424]">{recruitmentUrgencyLabel(req.urgency)}</dd>
-            </div>
+      <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+
+        {/* Brief card */}
+        <div className="rounded-2xl border border-[#e8e8e8] bg-white p-6">
+          <h2 className="mb-4 text-[15px] font-semibold text-[#121212]">Request details</h2>
+          <dl className="grid gap-4 text-[13px] sm:grid-cols-2">
             <div>
               <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Grade / level</dt>
               <dd className="mt-0.5 text-[#242424]">{req.grade_level}</dd>
@@ -151,61 +165,49 @@ export function AdminRecruitmentDetailClient({
               <dd className="mt-0.5 text-[#242424]">{req.salary_band}</dd>
             </div>
             <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Reason</dt>
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Reason for hire</dt>
               <dd className="mt-0.5 text-[#242424]">{recruitmentHireReasonLabel(req.reason_for_hire)}</dd>
             </div>
             <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Start date needed</dt>
-              <dd className="mt-0.5 text-[#242424]">
-                {new Date(`${req.start_date_needed}T12:00:00.000Z`).toLocaleDateString(undefined, {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Contract</dt>
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Contract type</dt>
               <dd className="mt-0.5 text-[#242424]">{recruitmentContractLabel(req.contract_type)}</dd>
             </div>
+            <div className="sm:col-span-2">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Start date needed</dt>
+              <dd className="mt-0.5 text-[#242424]">{fmtDate(req.start_date_needed)}</dd>
+            </div>
           </dl>
-          <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Ideal candidate</h3>
-            <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-[#242424]">
-              {req.ideal_candidate_profile}
-            </p>
+
+          <div className="mt-5 border-t border-[#f0efe9] pt-5">
+            <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Ideal candidate</h3>
+            <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#242424]">{req.ideal_candidate_profile}</p>
           </div>
+
           {req.specific_requirements?.trim() ? (
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-                Specific requirements
-              </h3>
-              <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-[#242424]">
-                {req.specific_requirements}
-              </p>
+            <div className="mt-4 border-t border-[#f0efe9] pt-4">
+              <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Specific requirements</h3>
+              <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#242424]">{req.specific_requirements}</p>
             </div>
           ) : null}
         </div>
 
-        <div className="space-y-5">
+        {/* Sidebar */}
+        <div className="space-y-4">
+
+          {/* Job listing */}
           {req.status === 'approved' ? (
-            <div className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-              <h2 className="font-authSerif text-lg text-[#121212]">Job listing</h2>
-              <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                Turn this approved request into a public vacancy with a shareable link.
+            <div className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+              <h2 className="mb-1 text-[15px] font-semibold text-[#121212]">Job listing</h2>
+              <p className="text-[12px] text-[#6b6b6b]">
+                Turn this request into a public vacancy with a shareable link.
               </p>
               {listingErr ? (
-                <div
-                  role="alert"
-                  className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-900"
-                >
-                  {listingErr}
-                </div>
+                <p className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{listingErr}</p>
               ) : null}
               {jobListing ? (
-                <div className="mt-3 space-y-2 text-[13px]">
-                  <p className="text-[#505050]">
-                    Current: <span className="font-medium">{jobListingStatusLabel(jobListing.status)}</span>
+                <div className="mt-3 space-y-1 text-[13px]">
+                  <p className="text-[#6b6b6b]">
+                    Status: <span className="font-medium text-[#121212]">{jobListingStatusLabel(jobListing.status)}</span>
                   </p>
                   {jobListing.status === 'live' && jobListing.slug && !jobListing.slug.startsWith('draft-') ? (
                     <button
@@ -222,91 +224,89 @@ export function AdminRecruitmentDetailClient({
                 type="button"
                 disabled={pending}
                 onClick={openOrCreateListing}
-                className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#008B60] px-3 text-[13px] font-medium text-white transition hover:bg-[#007a54] disabled:opacity-60 sm:w-auto"
+                className="mt-4 w-full rounded-xl bg-[#008B60] py-2 text-[13px] font-medium text-white transition hover:bg-[#007a54] disabled:opacity-60"
               >
-                {jobListing ? 'Open job editor' : 'Create job listing'}
+                {pending ? 'Opening…' : jobListing ? 'Open job editor' : 'Create job listing'}
               </button>
             </div>
           ) : null}
 
-          <div className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-            <h2 className="font-authSerif text-lg text-[#121212]">Status</h2>
+          {/* Status panel */}
+          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+            <h2 className="mb-3 text-[15px] font-semibold text-[#121212]">Update status</h2>
             {error ? (
-              <div
-                role="alert"
-                className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-900"
-              >
-                {error}
-              </div>
+              <p className="mb-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{error}</p>
             ) : null}
-            <label className="mb-1 block text-[12px] font-medium text-[#505050]" htmlFor="status">
-              Set status
-            </label>
-            <select
-              id="status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className={fieldClass}
-            >
-              {RECRUITMENT_REQUEST_STATUSES.map((s: RecruitmentRequestStatus) => (
-                <option key={s} value={s}>
+
+            {/* Status pill buttons */}
+            <div className="flex flex-wrap gap-2">
+              {(RECRUITMENT_REQUEST_STATUSES as readonly RecruitmentRequestStatus[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatus(s)}
+                  className={[
+                    'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-all',
+                    status === s
+                      ? `${STATUS_STYLE[s]} ring-2 ring-offset-1 ring-current`
+                      : 'border-[#e8e8e8] bg-white text-[#6b6b6b] hover:border-[#c8c8c8]',
+                  ].join(' ')}
+                >
+                  {status === s ? <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[s] ?? 'bg-[#9b9b9b]'}`} /> : null}
                   {recruitmentStatusLabel(s)}
-                </option>
+                </button>
               ))}
-            </select>
-            <label className="mb-1 mt-3 block text-[12px] font-medium text-[#505050]" htmlFor="statusNote">
-              Note with change <span className="font-normal text-[#9b9b9b]">(optional)</span>
+            </div>
+
+            <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
+              Note <span className="font-normal text-[#9b9b9b]">(optional)</span>
             </label>
             <textarea
-              id="statusNote"
               value={statusNote}
               onChange={(e) => setStatusNote(e.target.value)}
               rows={2}
-              className={fieldClass}
+              className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
               placeholder="Visible in history"
             />
             <button
               type="button"
               onClick={applyStatus}
               disabled={pending}
-              className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#008B60] px-3 text-[13px] font-medium text-white transition hover:bg-[#007a54] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008B60]"
+              className="mt-3 w-full rounded-xl bg-[#121212] py-2 text-[13px] font-medium text-white disabled:opacity-50 hover:bg-[#2a2a2a] transition-colors"
             >
-              {pending ? 'Saving…' : 'Update status'}
+              {pending ? 'Saving…' : 'Save status'}
             </button>
           </div>
 
-          <div className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-            <h2 className="font-authSerif text-lg text-[#121212]">History</h2>
-            <ol className="mt-3 space-y-4 border-l border-[#e8e8e8] pl-4">
-              {events.length === 0 ? (
-                <li className="text-[13px] text-[#6b6b6b]">No events yet.</li>
-              ) : (
-                events.map((ev) => {
+          {/* History */}
+          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+            <h2 className="mb-4 text-[15px] font-semibold text-[#121212]">History</h2>
+            {events.length === 0 ? (
+              <p className="text-[13px] text-[#9b9b9b]">No status changes yet.</p>
+            ) : (
+              <ol className="space-y-4 border-l border-[#e8e8e8] pl-4">
+                {events.map((ev) => {
                   const actor = ev.profiles;
-                  const actorName = Array.isArray(actor) ? actor[0]?.full_name : actor?.full_name;
-                  const from = ev.from_status ? recruitmentStatusLabel(ev.from_status) : '—';
+                  const actorName = ((Array.isArray(actor) ? actor[0]?.full_name : actor?.full_name) ?? '').trim() || '—';
+                  const from = ev.from_status ? recruitmentStatusLabel(ev.from_status) : null;
                   const to = recruitmentStatusLabel(ev.to_status);
                   return (
-                    <li key={ev.id} className="relative text-[13px] text-[#242424]">
-                      <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-[#008B60]" />
-                      <p className="font-medium">
-                        {from} → {to}
+                    <li key={ev.id} className="relative">
+                      <span className={`absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ${STATUS_DOT[ev.to_status] ?? 'bg-[#9b9b9b]'}`} />
+                      <p className="text-[13px] font-medium text-[#121212]">
+                        {from ? `${from} → ${to}` : to}
                       </p>
-                      <p className="text-[12px] text-[#6b6b6b]">
-                        {actorName?.trim() || '—'} ·{' '}
-                        {new Date(ev.created_at).toLocaleString(undefined, {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        })}
+                      <p className="mt-0.5 text-[11.5px] text-[#9b9b9b]">
+                        {actorName} · {fmtDateTime(ev.created_at)}
                       </p>
                       {ev.note?.trim() ? (
-                        <p className="mt-1 whitespace-pre-wrap text-[12px] text-[#505050]">{ev.note}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-[12px] text-[#6b6b6b]">{ev.note}</p>
                       ) : null}
                     </li>
                   );
-                })
-              )}
-            </ol>
+                })}
+              </ol>
+            )}
           </div>
         </div>
       </div>
