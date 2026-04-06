@@ -50,6 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let rotaPendingFinalCount = 0;
   let rotaPendingPeerCount = 0;
   let recruitmentPendingReviewCount = 0;
+  let recruitmentUnreadNotifications = 0;
   let hasAdminAreaAccess = false;
   let canApproveRecruitment = false;
   let permissionKeys: PermissionKey[] = [];
@@ -220,6 +221,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (typeof rc === 'number') recruitmentPendingReviewCount = rc;
     else if (rc !== null && rc !== undefined) recruitmentPendingReviewCount = Number(rc);
     recruitmentPendingReviewCount = Math.max(0, recruitmentPendingReviewCount);
+
+    // In-app recruitment notifications (unread count for bell)
+    const { data: rn } = await supabase.rpc('recruitment_notifications_unread_count');
+    if (typeof rn === 'number') recruitmentUnreadNotifications = Math.max(0, rn);
+    else if (rn !== null && rn !== undefined) recruitmentUnreadNotifications = Math.max(0, Number(rn));
   }
 
   const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
@@ -284,6 +290,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       label: 'Leave requests to approve',
       href: '/leave',
       count: leaveNavBadge,
+    },
+    {
+      id: 'recruitment-notifications',
+      label: 'Recruitment updates',
+      href: '/notifications/recruitment',
+      count: recruitmentUnreadNotifications,
     },
   ].filter((item) => item.count > 0);
 

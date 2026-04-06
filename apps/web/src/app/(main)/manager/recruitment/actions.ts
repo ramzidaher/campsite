@@ -2,6 +2,7 @@
 
 import { sendRecruitmentRequestHrEmail } from '@/lib/recruitment/sendRecruitmentRequestHrEmail';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   isRecruitmentContractType,
   isRecruitmentHireReason,
@@ -119,6 +120,17 @@ export async function createRecruitmentRequest(form: {
 
   revalidatePath('/manager/recruitment');
   revalidatePath('/admin/recruitment');
+
+  // In-app notification to HR approvers
+  try {
+    const admin = createServiceRoleClient();
+    void admin.rpc('recruitment_notify_new_request', {
+      p_request_id: requestId,
+      p_actor_name: submitterName,
+    });
+  } catch {
+    // Non-fatal — notifications are best-effort
+  }
 
   void sendRecruitmentRequestHrEmail({
     orgId,
