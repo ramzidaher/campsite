@@ -213,7 +213,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
-                    href={`/admin/recruitment/${r.id}`}
+                    href={`/hr/recruitment/${r.id}`}
                     className="text-[14px] font-semibold text-[#121212] hover:text-[#008B60] transition-colors"
                   >
                     {r.job_title}
@@ -236,7 +236,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
 
               {/* Arrow */}
               <Link
-                href={`/admin/recruitment/${r.id}`}
+                href={`/hr/recruitment/${r.id}`}
                 className="shrink-0 rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1.5 text-[12px] font-medium text-[#4a4a4a] hover:bg-[#f0efe9] transition-colors"
               >
                 Review →

@@ -17,6 +17,9 @@ function revalidateJobs(jobId?: string) {
   revalidatePath('/admin/jobs');
   if (jobId) revalidatePath(`/admin/jobs/${jobId}/edit`);
   revalidatePath('/admin/recruitment');
+  revalidatePath('/hr/jobs');
+  if (jobId) revalidatePath(`/hr/jobs/${jobId}/edit`);
+  revalidatePath('/hr/recruitment');
   revalidatePath('/jobs'); // public listing segment
 }
 

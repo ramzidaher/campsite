@@ -114,10 +114,10 @@ export function AdminRecruitmentDetailClient({
   function openOrCreateListing() {
     setListingErr(null);
     startTransition(async () => {
-      if (jobListing?.id) { router.push(`/admin/jobs/${jobListing.id}/edit`); return; }
+      if (jobListing?.id) { router.push(`/hr/jobs/${jobListing.id}/edit`); return; }
       const res = await createJobListingFromRequest(req.id);
       if (!res.ok) { setListingErr(res.error); return; }
-      router.push(`/admin/jobs/${res.jobId}/edit`);
+      router.push(`/hr/jobs/${res.jobId}/edit`);
     });
   }
 
@@ -125,7 +125,7 @@ export function AdminRecruitmentDetailClient({
     <div className="mx-auto max-w-5xl px-5 py-8 sm:px-7">
 
       {/* Back + header */}
-      <Link href="/admin/recruitment" className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] hover:text-[#121212]">
+      <Link href="/hr/recruitment" className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
         ← Recruitment requests
       </Link>
 
@@ -213,7 +213,7 @@ export function AdminRecruitmentDetailClient({
                     <button
                       type="button"
                       onClick={() => void navigator.clipboard.writeText(tenantJobPublicUrl(orgSlug, jobListing.slug))}
-                      className="text-[12px] font-medium text-[#008B60] hover:underline"
+                      className="text-[12px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                     >
                       Copy public link
                     </button>
@@ -224,7 +224,7 @@ export function AdminRecruitmentDetailClient({
                 type="button"
                 disabled={pending}
                 onClick={openOrCreateListing}
-                className="mt-4 w-full rounded-xl bg-[#008B60] py-2 text-[13px] font-medium text-white transition hover:bg-[#007a54] disabled:opacity-60"
+                className="mt-4 w-full rounded-xl bg-[#121212] py-2 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 {pending ? 'Opening…' : jobListing ? 'Open job editor' : 'Create job listing'}
               </button>

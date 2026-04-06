@@ -109,14 +109,14 @@ export function getMainShellAdminNavItems(
     { href: '/admin/teams', label: 'Teams', icon: 'teams', section: 'Content' },
     { href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' },
     { href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' },
-    { href: '/admin/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'HR' },
-    { href: '/admin/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' },
-    { href: '/admin/applications', label: 'Applications', icon: 'applications', section: 'HR' },
-    { href: '/admin/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'HR' },
-    { href: '/admin/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' },
-    { href: '/admin/hr', label: 'Employee records', icon: 'hrRecords', section: 'HR' },
-    { href: '/admin/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
-    { href: '/admin/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' },
+    { href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'HR' },
+    { href: '/hr/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' },
+    { href: '/hr/applications', label: 'Applications', icon: 'applications', section: 'HR' },
+    { href: '/hr/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'HR' },
+    { href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' },
+    { href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'HR' },
+    { href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
+    { href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' },
     { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
     { href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' },
     { href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' },
@@ -240,27 +240,27 @@ export function getMainShellAdminNavItemsByPermissions(
   if (p.includes('rota.view') || p.includes('rota.manage'))
     items.push({ href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' });
   if (p.includes('recruitment.view'))
-    items.push({ href: '/admin/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'HR' });
-  if (p.includes('jobs.view')) items.push({ href: '/admin/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' });
+    items.push({ href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'HR' });
+  if (p.includes('jobs.view')) items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' });
   if (p.includes('applications.view'))
-    items.push({ href: '/admin/applications', label: 'Applications', icon: 'applications', section: 'HR' });
+    items.push({ href: '/hr/applications', label: 'Applications', icon: 'applications', section: 'HR' });
   if (p.includes('offers.view'))
     items.push({
-      href: '/admin/offer-templates',
+      href: '/hr/offer-templates',
       label: 'Offer templates',
       icon: 'offerTemplates',
       section: 'HR',
     });
   if (p.includes('interviews.view'))
-    items.push({ href: '/admin/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' });
+    items.push({ href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' });
   if (p.includes('leave.manage_org'))
-    items.push({ href: '/admin/leave', label: 'Leave & allowances', icon: 'leave', section: 'HR' });
+    items.push({ href: '/hr/leave', label: 'Leave & allowances', icon: 'leave', section: 'HR' });
   if (p.includes('hr.view_records'))
-    items.push({ href: '/admin/hr', label: 'Employee records', icon: 'hrRecords', section: 'HR' });
+    items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'HR' });
   if (p.includes('onboarding.manage_runs') || p.includes('onboarding.manage_templates'))
-    items.push({ href: '/admin/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' });
+    items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' });
   if (p.includes('performance.manage_cycles') || p.includes('performance.view_reports'))
-    items.push({ href: '/admin/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' });
+    items.push({ href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' });
   if (p.includes('discounts.view'))
     items.push({ href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' });
   if (p.includes('members.view'))

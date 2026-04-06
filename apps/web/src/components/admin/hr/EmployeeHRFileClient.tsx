@@ -187,7 +187,7 @@ export function EmployeeHRFileClient({
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
       {/* Back */}
       <Link
-        href="/admin/hr"
+        href="/hr/records"
         className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
       >
         ← Employee records
@@ -459,7 +459,7 @@ export function EmployeeHRFileClient({
                 <p className="mt-3 text-[12px] text-[#6b6b6b]">
                   Hired via platform ·{' '}
                   <Link
-                    href={`/admin/applications`}
+                    href="/hr/applications"
                     className="underline underline-offset-2 hover:text-[#121212]"
                   >
                     View application
@@ -481,7 +481,7 @@ export function EmployeeHRFileClient({
             Leave ({new Date().getFullYear()})
           </h2>
           <Link
-            href="/admin/leave"
+            href="/hr/leave"
             className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
           >
             Manage allowances

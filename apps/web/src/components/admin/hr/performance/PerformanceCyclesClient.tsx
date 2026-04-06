@@ -172,7 +172,7 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
   const progress = cycle.review_total > 0 ? Math.round((cycle.review_completed / cycle.review_total) * 100) : 0;
   return (
     <li>
-      <Link href={`/admin/hr/performance/${cycle.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
+      <Link href={`/hr/performance/${cycle.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-[#121212]">{cycle.name}</span>

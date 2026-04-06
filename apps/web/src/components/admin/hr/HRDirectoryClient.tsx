@@ -142,7 +142,7 @@ export function HRDirectoryClient({
             <StatCard
               label="Active onboardings"
               value={stats.onboarding_active}
-              href="/admin/hr/onboarding"
+              href="/hr/onboarding"
             />
             <StatCard
               label="Probation ending soon"
@@ -210,7 +210,7 @@ export function HRDirectoryClient({
             <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-[13px] font-semibold text-[#121212]">Active review cycles</h2>
-                <Link href="/admin/hr/performance" className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">View all</Link>
+                <Link href="/hr/performance" className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">View all</Link>
               </div>
               <ul className="mt-3 space-y-3">
                 {stats.review_cycles_active.map((c) => {
@@ -218,7 +218,7 @@ export function HRDirectoryClient({
                   return (
                     <li key={c.id}>
                       <div className="flex items-center justify-between text-[12.5px]">
-                        <Link href={`/admin/hr/performance/${c.id}`} className="font-medium text-[#121212] hover:underline">{c.name}</Link>
+                        <Link href={`/hr/performance/${c.id}`} className="font-medium text-[#121212] hover:underline">{c.name}</Link>
                         <span className="text-[#9b9b9b]">{c.completed}/{c.total} done</span>
                       </div>
                       <div className="mt-1 h-1.5 w-full rounded-full bg-[#ececec]">
@@ -243,7 +243,7 @@ export function HRDirectoryClient({
                 <ul className="mt-3 divide-y divide-[#ececec]">
                   {stats.probation_ending_soon.map((p) => (
                     <li key={p.user_id} className="py-2">
-                      <Link href={`/admin/hr/${p.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{p.full_name}</Link>
+                      <Link href={`/hr/records/${p.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{p.full_name}</Link>
                       <p className="text-[11.5px] text-[#c2410c]">{p.probation_end_date}</p>
                     </li>
                   ))}
@@ -280,7 +280,7 @@ export function HRDirectoryClient({
                   {stats.bradford_alerts.map((b) => (
                     <li key={b.user_id} className="py-2">
                       <div className="flex items-center justify-between">
-                        <Link href={`/admin/hr/${b.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{b.full_name}</Link>
+                        <Link href={`/hr/records/${b.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{b.full_name}</Link>
                         <span className="text-[12px] font-bold text-[#b91c1c]">{b.bradford_score}</span>
                       </div>
                       <p className="text-[11px] text-[#9b9b9b]">{b.spell_count} spell{b.spell_count === 1 ? '' : 's'} · {b.total_days} day{b.total_days === 1 ? '' : 's'}</p>
@@ -390,7 +390,7 @@ export function HRDirectoryClient({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/admin/hr/${r.user_id}`} className="text-[12px] font-medium text-[#121212] underline underline-offset-2 opacity-0 group-hover:opacity-100">
+                        <Link href={`/hr/records/${r.user_id}`} className="text-[12px] font-medium text-[#121212] underline underline-offset-2 opacity-0 group-hover:opacity-100">
                           Open file →
                         </Link>
                       </td>

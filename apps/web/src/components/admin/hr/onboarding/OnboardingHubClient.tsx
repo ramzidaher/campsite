@@ -85,7 +85,7 @@ export function OnboardingHubClient({
     setBusy(false);
     if (error) { setMsg(error.message); return; }
     setShowStartForm(false);
-    router.push(`/admin/hr/onboarding/${runId as string}`);
+    router.push(`/hr/onboarding/${runId as string}`);
   }
 
   async function createTemplate(e: React.FormEvent) {
@@ -247,7 +247,7 @@ export function OnboardingHubClient({
               <ul className="space-y-2">
                 {activeRuns.map((r) => (
                   <li key={r.id}>
-                    <Link href={`/admin/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
+                    <Link href={`/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
                       <div>
                         <p className="font-medium text-[#121212]">{r.full_name}</p>
                         <p className="text-[12px] text-[#9b9b9b]">
@@ -275,7 +275,7 @@ export function OnboardingHubClient({
               <ul className="space-y-2">
                 {pastRuns.map((r) => (
                   <li key={r.id}>
-                    <Link href={`/admin/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4 hover:bg-[#f0efe9] transition-colors">
+                    <Link href={`/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4 hover:bg-[#f0efe9] transition-colors">
                       <div>
                         <p className="text-[13px] font-medium text-[#4a4a4a]">{r.full_name}</p>
                         <p className="text-[12px] text-[#9b9b9b]">{r.template_name} · started {new Date(r.created_at).toLocaleDateString()}</p>
@@ -302,7 +302,7 @@ export function OnboardingHubClient({
             <ul className="space-y-2">
               {activeTemplates.map((t) => (
                 <li key={t.id}>
-                  <Link href={`/admin/hr/onboarding?template=${t.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
+                  <Link href={`/hr/onboarding?template=${t.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
                     <div>
                       <p className="font-medium text-[#121212]">
                         {t.name}

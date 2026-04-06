@@ -214,7 +214,7 @@ export function LeaveHubClient({
             </select>
           </label>
           {canManage ? (
-            <Link href="/admin/leave" className="inline-flex h-8 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]">
+            <Link href="/hr/leave" className="inline-flex h-8 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]">
               Admin settings
             </Link>
           ) : null}

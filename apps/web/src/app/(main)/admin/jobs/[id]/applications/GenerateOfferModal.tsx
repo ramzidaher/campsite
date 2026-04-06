@@ -117,7 +117,7 @@ export function GenerateOfferModal({
         {templates.length === 0 ? (
           <p className="mt-4 text-[13px] text-amber-900">
             No templates yet.{' '}
-            <Link href="/admin/offer-templates/new" className="font-medium text-[#008B60] underline">
+            <Link href="/hr/offer-templates/new" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
               Create an offer template
             </Link>
             .
@@ -129,7 +129,7 @@ export function GenerateOfferModal({
             role={msg.type === 'err' ? 'alert' : 'status'}
             className={[
               'mt-3 rounded-lg border px-3 py-2 text-[13px]',
-              msg.type === 'err' ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50',
+              msg.type === 'err' ? 'border-red-200 bg-red-50 text-red-900' : 'border-[#d8d8d8] bg-[#f5f4f1] text-[#121212]',
             ].join(' ')}
           >
             {msg.text}
@@ -142,7 +142,7 @@ export function GenerateOfferModal({
             <select
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+              className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
             >
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -159,7 +159,7 @@ export function GenerateOfferModal({
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               placeholder="e.g. 1 September 2026"
-              className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+              className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
             />
           </div>
           <div>
@@ -168,7 +168,7 @@ export function GenerateOfferModal({
               value={salaryOverride}
               onChange={(e) => setSalaryOverride(e.target.value)}
               placeholder="Defaults from job listing"
-              className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+              className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
             />
           </div>
         </div>
@@ -182,7 +182,7 @@ export function GenerateOfferModal({
           >
             Merge fields
           </button>
-          <Link href="/admin/offer-templates" className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]">
+          <Link href="/hr/offer-templates" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]">
             Manage templates
           </Link>
         </div>
@@ -193,14 +193,14 @@ export function GenerateOfferModal({
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]" onClick={onClose}>
+          <button type="button" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]" onClick={onClose}>
             Cancel
           </button>
           <button
             type="button"
             disabled={pending || templates.length === 0}
             onClick={send}
-            className="rounded-lg bg-[#008B60] px-3 py-2 text-[13px] font-medium text-white disabled:opacity-50"
+            className="rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
           >
             {pending ? 'Sending…' : 'Send for e-signature'}
           </button>

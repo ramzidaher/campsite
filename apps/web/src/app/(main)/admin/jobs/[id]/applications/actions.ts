@@ -111,6 +111,8 @@ export async function updateJobApplicationStage(
 
   revalidatePath(`/admin/jobs/${opts.jobListingId}/applications`);
   revalidatePath('/admin/applications');
+  revalidatePath(`/hr/jobs/${opts.jobListingId}/applications`);
+  revalidatePath('/hr/applications');
   return { ok: true };
 }
 
@@ -135,6 +137,7 @@ export async function addJobApplicationNote(
 
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/admin/jobs/${jobListingId}/applications`);
+  revalidatePath(`/hr/jobs/${jobListingId}/applications`);
   return { ok: true };
 }
 
@@ -187,6 +190,8 @@ export async function sendCandidateOnlyMessage(
 
   revalidatePath(`/admin/jobs/${jobListingId}/applications`);
   revalidatePath('/admin/applications');
+  revalidatePath(`/hr/jobs/${jobListingId}/applications`);
+  revalidatePath('/hr/applications');
   return { ok: true };
 }
 

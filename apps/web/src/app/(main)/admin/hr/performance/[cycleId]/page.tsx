@@ -23,7 +23,7 @@ export default async function PerformanceCycleDetailPage({ params }: { params: P
     .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.manage_cycles', p_context: {} })
     .then(({ data }) => !!data);
 
-  if (!canManage) redirect('/admin/hr/performance');
+  if (!canManage) redirect('/hr/performance');
 
   const [{ data: cycle }, { data: reviews }, { data: members }] = await Promise.all([
     supabase
@@ -41,7 +41,7 @@ export default async function PerformanceCycleDetailPage({ params }: { params: P
       .order('full_name'),
   ]);
 
-  if (!cycle) redirect('/admin/hr/performance');
+  if (!cycle) redirect('/hr/performance');
 
   const enrolledIds = new Set((reviews ?? []).map((r: { reviewee_id: unknown }) => r.reviewee_id as string));
 

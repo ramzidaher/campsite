@@ -299,9 +299,8 @@ export function InterviewScheduleClient({
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-5 py-7 sm:px-7">
+    <div className="mx-auto max-w-6xl space-y-8 px-5 py-7 sm:px-7">
       <div>
-        <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">Recruitment</p>
         <h1 className="mt-1 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           Interview slots
         </h1>
@@ -327,7 +326,7 @@ export function InterviewScheduleClient({
       ) : null}
 
       {/* ── Prompt-based slot creation ───────────────────────────── */}
-      <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
         <h2 className="font-authSerif text-lg text-[#121212]">Create slots</h2>
         <p className="mt-0.5 text-[12px] text-[#9b9b9b]">
           Describe when you want interviews in plain English, then add panel members below.
@@ -339,7 +338,7 @@ export function InterviewScheduleClient({
             <div className="flex gap-2">
               <textarea
                 rows={2}
-                className="flex-1 rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] leading-relaxed placeholder:text-[#b0b0b0] focus:outline-none focus:ring-1 focus:ring-[#008B60]"
+                className="flex-1 rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] leading-relaxed placeholder:text-[#b0b0b0] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                 placeholder='e.g. "Monday at 2pm, Thursday at 4pm and Friday at 1pm" or "Tuesday and Wednesday at 10am and 2pm"'
                 value={prompt}
                 onChange={(e) => { setPrompt(e.target.value); setParsedSlots([]); setParseError(null); }}
@@ -349,7 +348,7 @@ export function InterviewScheduleClient({
                 type="button"
                 onClick={handleParse}
                 disabled={!prompt.trim()}
-                className="self-start rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white hover:bg-[#333] disabled:opacity-40"
+                className="self-start rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 Parse
               </button>
@@ -365,7 +364,7 @@ export function InterviewScheduleClient({
               <select
                 value={durationMin}
                 onChange={(e) => { setDurationMin(Number(e.target.value)); setParsedSlots([]); }}
-                className="ml-2 rounded-lg border border-[#d8d8d8] px-2 py-1.5 text-[12px]"
+                className="ml-2 rounded-lg border border-[#d8d8d8] px-2 py-1.5 text-[12px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
               >
                 <option value={30}>30 min</option>
                 <option value={45}>45 min</option>
@@ -379,7 +378,7 @@ export function InterviewScheduleClient({
               <input
                 value={slotTitle}
                 onChange={(e) => setSlotTitle(e.target.value)}
-                className="ml-2 rounded-lg border border-[#d8d8d8] px-2 py-1.5 text-[12px] w-36"
+                className="ml-2 w-36 rounded-lg border border-[#d8d8d8] px-2 py-1.5 text-[12px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                 placeholder="Interview"
               />
             </label>
@@ -428,13 +427,13 @@ export function InterviewScheduleClient({
           {jobs.length === 0 ? (
             <p className="text-[13px] text-[#9b9b9b]">
               No active job listings.{' '}
-              <Link href="/admin/jobs" className="text-[#008B60] hover:underline">Create one first</Link>.
+              <Link href="/hr/jobs" className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">Create one first</Link>.
             </p>
           ) : (
             <select
               value={jobId}
               onChange={(e) => setJobId(e.target.value)}
-              className="w-full max-w-sm rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+              className="w-full max-w-sm rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
             >
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
@@ -467,7 +466,7 @@ export function InterviewScheduleClient({
                         type="checkbox"
                         checked={!!selectedPanel[p.id]}
                         onChange={() => setSelectedPanel((s) => ({ ...s, [p.id]: !s[p.id] }))}
-                        className="h-4 w-4 rounded border-[#d8d8d8] accent-[#008B60]"
+                        className="h-4 w-4 rounded border-[#d8d8d8] accent-[#121212]"
                       />
                       <div className="min-w-0">
                         <p className="text-[13px] font-medium text-[#121212]">{p.full_name?.trim() || '—'}</p>
@@ -487,7 +486,7 @@ export function InterviewScheduleClient({
             type="button"
             disabled={pending || parsedSlots.length === 0 || selectedIds.length === 0 || !jobId}
             onClick={handleCreate}
-            className="rounded-lg bg-[#008B60] px-5 py-2.5 text-[13px] font-medium text-white hover:bg-[#007a54] disabled:opacity-40"
+            className="rounded-lg bg-[#121212] px-5 py-2.5 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             {pending
               ? 'Creating…'
@@ -504,7 +503,7 @@ export function InterviewScheduleClient({
       </section>
 
       {/* ── Upcoming slots ───────────────────────────────────────── */}
-      <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-authSerif text-lg text-[#121212]">Upcoming slots</h2>
           <div className="flex gap-1.5">
@@ -560,7 +559,7 @@ export function InterviewScheduleClient({
                         <td className="py-3 pr-4 align-top">
                           <span className="text-[#242424]">{jl?.title?.trim() || '—'}</span>
                           <div>
-                            <Link href={`/admin/jobs/${s.job_listing_id}/applications`} className="text-[11.5px] text-[#008B60] hover:underline">
+                            <Link href={`/hr/jobs/${s.job_listing_id}/applications`} className="text-[11.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
                               Pipeline →
                             </Link>
                           </div>

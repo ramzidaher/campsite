@@ -84,7 +84,7 @@ export function OnboardingRunClient({
     const { error } = await supabase.rpc('onboarding_run_cancel', { p_run_id: runId });
     setBusy(null);
     if (error) { setMsg(error.message); return; }
-    router.push('/admin/hr/onboarding');
+    router.push('/hr/onboarding');
   }
 
   async function addTask(e: React.FormEvent) {
@@ -122,7 +122,7 @@ export function OnboardingRunClient({
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
-      <Link href="/admin/hr/onboarding" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
+      <Link href="/hr/onboarding" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
         ← Onboarding
       </Link>
 

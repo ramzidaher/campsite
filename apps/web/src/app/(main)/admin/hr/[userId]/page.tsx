@@ -26,7 +26,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
     p_permission_key: 'hr.view_records',
     p_context: {},
   });
-  if (!allowed) redirect('/admin/hr');
+  if (!allowed) redirect('/hr/records');
 
   const canManage = await supabase
     .rpc('has_permission', {
@@ -61,7 +61,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
   ]);
 
   const fileRow = (fileRows ?? [])[0] ?? null;
-  if (!fileRow) redirect('/admin/hr');
+  if (!fileRow) redirect('/hr/records');
 
   // get names for audit events
   const changerIds = [...new Set((auditRows ?? []).map((e) => e.changed_by as string))];

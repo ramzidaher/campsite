@@ -56,27 +56,48 @@ function StageColumn({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
   const tone: Record<JobApplicationStage, string> = {
-    applied: 'bg-[#f8fafc]',
-    shortlisted: 'bg-[#f0fdf4]',
-    interview_scheduled: 'bg-[#eff6ff]',
-    offer_sent: 'bg-[#fff7ed]',
-    hired: 'bg-[#ecfdf3]',
-    rejected: 'bg-[#f8fafc]',
+    applied: 'bg-white',
+    shortlisted: 'bg-white',
+    interview_scheduled: 'bg-white',
+    offer_sent: 'bg-white',
+    hired: 'bg-white',
+    rejected: 'bg-white',
+  };
+  const accent: Record<JobApplicationStage, string> = {
+    applied: 'bg-[#9b9b9b]',
+    shortlisted: 'bg-[#0f766e]',
+    interview_scheduled: 'bg-[#2563eb]',
+    offer_sent: 'bg-[#b45309]',
+    hired: 'bg-[#15803d]',
+    rejected: 'bg-[#6b7280]',
   };
   return (
     <div
       ref={setNodeRef}
       className={[
-        'flex min-h-[280px] flex-1 flex-col rounded-xl border p-3 min-w-[210px]',
+        'flex min-h-[430px] flex-1 flex-col rounded-xl border p-3 min-w-[240px]',
         tone[stage],
-        isOver ? 'border-[#008B60] ring-2 ring-[#008B60]/20' : 'border-[#e8e8e8]',
+        isOver ? 'border-[#121212] ring-2 ring-[#121212]/10' : 'border-[#d8d8d8]',
       ].join(' ')}
     >
-      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-        {jobApplicationStageLabel(stage)}{' '}
-        <span className="font-normal text-[#b5b5b5]">({apps.length})</span>
-      </h3>
-      <div className="mt-3 flex flex-1 flex-col gap-2">{apps.map((app) => renderCard(app))}</div>
+      <div className="flex items-center justify-between">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]">
+          {jobApplicationStageLabel(stage)}
+        </h3>
+        <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-[#f5f4f1] px-1.5 py-0.5 text-[10px] font-medium text-[#6b6b6b]">
+          {apps.length}
+        </span>
+      </div>
+      <div className={`mt-2 h-1 w-full rounded-full ${accent[stage]} opacity-80`} />
+      <div className="mt-3 flex flex-1 flex-col gap-2">
+        {apps.length > 0 ? (
+          apps.map((app) => renderCard(app))
+        ) : (
+          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-[#e8e8e8] bg-[#faf9f6] px-3 text-center text-[12px] text-[#9b9b9b]">
+            Drop candidates here
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -100,7 +121,7 @@ function PipelineCard({
       ref={setNodeRef}
       style={style}
       className={[
-        'rounded-lg border border-[#e4e4e4] bg-white p-3 shadow-sm',
+        'rounded-lg border border-[#e4e4e4] bg-white p-3',
         isDragging ? 'opacity-80' : '',
       ].join(' ')}
     >
@@ -154,7 +175,7 @@ function PipelineCard({
         Stage
       </label>
       <select
-        className="mt-0.5 w-full rounded-md border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] outline-none focus:border-[#008B60]"
+        className="mt-0.5 w-full rounded-md border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
         value={app.stage}
         onChange={(e) => {
           const v = e.target.value;
@@ -340,16 +361,16 @@ export function JobPipelineClient({
   const [generateOfferFor, setGenerateOfferFor] = useState<PipelineApplicationRow | null>(null);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-5 py-7 sm:px-7">
       <div>
         <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">
-          <a href="/admin/jobs" className="text-[#008B60] hover:underline">
+          <a href="/hr/jobs" className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
             Job listings
           </a>
           <span className="mx-1.5 text-[#cfcfcf]">/</span>
           Pipeline
         </p>
-        <h1 className="mt-1 font-authSerif text-[22px] tracking-tight text-[#121212]">{jobTitle}</h1>
+        <h1 className="mt-1 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">{jobTitle}</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
           Drag cards between columns or use the stage menu on each card. Optional email to the candidate when you move
           stage.
@@ -358,14 +379,21 @@ export function JobPipelineClient({
           <span className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1">
             Total applications: {totalApplications}
           </span>
-          <a href="/admin/applications" className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 hover:bg-[#fafafa]">
+          <a href="/hr/applications" className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 transition-colors hover:bg-[#f5f4f1]">
             Open full application tracker
           </a>
         </div>
       </div>
 
+      {totalApplications === 0 ? (
+        <div className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-4 text-[13px] text-[#6b6b6b]">
+          No applications yet. Share the public job link from the job edit page, then applications will appear here.
+        </div>
+      ) : null}
+
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-[#fcfcfb] p-3">
+          <div className="grid min-w-[1500px] grid-cols-6 gap-3">
           {JOB_APPLICATION_STAGE_ORDER.map((stage) => (
             <StageColumn
               key={stage}
@@ -381,6 +409,7 @@ export function JobPipelineClient({
               )}
             />
           ))}
+          </div>
         </div>
       </DndContext>
 
@@ -389,7 +418,7 @@ export function JobPipelineClient({
           <div
             role="dialog"
             aria-modal
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-lg"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white p-5 shadow-lg"
           >
             <h2 className="font-authSerif text-lg text-[#121212]">
               Move to {jobApplicationStageLabel(stageDialog.toStage)}?
@@ -405,7 +434,7 @@ export function JobPipelineClient({
                   <select
                     value={interviewSlotId}
                     onChange={(e) => setInterviewSlotId(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   >
                     <option value="">Select a slot…</option>
                     {interviewSlots.map((s) => (
@@ -419,7 +448,7 @@ export function JobPipelineClient({
                 {interviewSlots.length === 0 ? (
                   <p className="text-[13px] text-amber-900">
                     No available slots for this job.{' '}
-                    <a href="/admin/interviews" className="font-medium text-[#008B60] underline">
+                    <a href="/hr/interviews" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
                       Create interview slots
                     </a>
                     .
@@ -432,7 +461,7 @@ export function JobPipelineClient({
                     onChange={(e) => setInterviewJoining(e.target.value)}
                     placeholder="e.g. video link, building access, parking…"
                     rows={4}
-                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none focus:border-[#008B60]"
+                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   />
                 </label>
               </div>
@@ -447,7 +476,7 @@ export function JobPipelineClient({
                   onChange={(e) => setMessageBody(e.target.value)}
                   placeholder="Message to candidate (required if notifying)"
                   rows={4}
-                  className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none focus:border-[#008B60]"
+                  className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                 />
               </>
             )}
@@ -462,7 +491,7 @@ export function JobPipelineClient({
               <button
                 type="button"
                 disabled={pending}
-                className="rounded-lg bg-[#008B60] px-3 py-2 text-[13px] font-medium text-white disabled:opacity-60"
+                className="rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-60"
                 onClick={() => submitStageChange()}
               >
                 {pending ? 'Saving…' : 'Confirm'}
@@ -515,7 +544,7 @@ export function JobPipelineClient({
                     {detail.application.cv_storage_path ? (
                       <a
                         href={`/api/admin/job-applications/${detail.application.id}/cv`}
-                        className="mt-2 inline-block text-[13px] text-[#008B60] hover:underline"
+                        className="mt-2 inline-block text-[13px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                       >
                         Download CV
                       </a>
@@ -528,7 +557,7 @@ export function JobPipelineClient({
                           href={detail.application.loom_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[#008B60] hover:underline"
+                          className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                         >
                           Loom video
                         </a>
@@ -569,7 +598,7 @@ export function JobPipelineClient({
                             </code>
                             <button
                               type="button"
-                              className="text-[12px] text-[#008B60] underline"
+                              className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                               onClick={() => {
                                 const u = `${window.location.origin}/jobs/offer-sign/${detail.latest_offer?.portal_token}`;
                                 void navigator.clipboard.writeText(u);
@@ -583,14 +612,14 @@ export function JobPipelineClient({
                       {detail.latest_offer?.signed_pdf_storage_path ? (
                         <a
                           href={`/api/admin/application-offers/${detail.latest_offer.id}/pdf`}
-                          className="mt-2 inline-block text-[13px] font-medium text-[#008B60] hover:underline"
+                          className="mt-2 inline-block text-[13px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                         >
                           Download signed PDF
                         </a>
                       ) : null}
                       <button
                         type="button"
-                        className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#008B60] px-3 text-[13px] font-medium text-white"
+                        className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#121212] px-3 text-[13px] font-medium text-[#faf9f6]"
                         onClick={() => {
                           setGenerateOfferFor({
                             id: detail.application.id,
@@ -638,7 +667,7 @@ export function JobPipelineClient({
                       onChange={(e) => setNoteBody(e.target.value)}
                       placeholder="Add internal note (not visible to candidate)"
                       rows={3}
-                      className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+                      className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                     />
                     <button
                       type="button"
@@ -669,11 +698,11 @@ export function JobPipelineClient({
                       onChange={(e) => setMsgOnlyBody(e.target.value)}
                       placeholder="Message…"
                       rows={3}
-                      className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+                      className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                     />
                     <button
                       type="button"
-                      className="mt-2 rounded-lg border border-[#008B60] bg-[#f0fdf9] px-3 py-2 text-[13px] font-medium text-[#008B60]"
+                      className="mt-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
                       onClick={() => {
                         startDetailTransition(async () => {
                           const res = await sendCandidateOnlyMessage(

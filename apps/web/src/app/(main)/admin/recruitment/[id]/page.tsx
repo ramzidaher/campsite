@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 export default async function AdminRecruitmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params;
   const id = rawId?.trim();
-  if (!id) redirect('/admin/recruitment');
+  if (!id) redirect('/hr/recruitment');
 
   const supabase = await createClient();
   const {
@@ -53,7 +53,7 @@ export default async function AdminRecruitmentDetailPage({ params }: { params: P
     .eq('org_id', orgId)
     .maybeSingle();
 
-  if (reqErr || !req) redirect('/admin/recruitment');
+  if (reqErr || !req) redirect('/hr/recruitment');
 
   const [{ data: evRows }, { data: orgRow }, { data: jobRows }] = await Promise.all([
     supabase

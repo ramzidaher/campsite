@@ -114,7 +114,7 @@ export function PerformanceCycleDetailClient({
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
-      <Link href="/admin/hr/performance" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
+      <Link href="/hr/performance" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
         ← Performance reviews
       </Link>
 

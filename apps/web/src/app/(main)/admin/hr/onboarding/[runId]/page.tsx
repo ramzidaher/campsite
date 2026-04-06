@@ -23,7 +23,7 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
     .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.manage_runs', p_context: {} })
     .then(({ data }) => !!data);
 
-  if (!canRuns) redirect('/admin/hr/onboarding');
+  if (!canRuns) redirect('/hr/onboarding');
 
   const [{ data: run }, { data: tasks }] = await Promise.all([
     supabase
@@ -40,7 +40,7 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
       .order('sort_order'),
   ]);
 
-  if (!run) redirect('/admin/hr/onboarding');
+  if (!run) redirect('/hr/onboarding');
 
   const { data: employee } = await supabase
     .from('profiles')

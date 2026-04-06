@@ -191,5 +191,7 @@ export async function sendOfferLetterForApplication(args: {
 
   revalidatePath(`/admin/jobs/${jid}/applications`);
   revalidatePath('/admin/applications');
+  revalidatePath(`/hr/jobs/${jid}/applications`);
+  revalidatePath('/hr/applications');
   return { ok: true };
 }

@@ -82,11 +82,15 @@ export default async function AdminApplicationsPage({
 
   const rows = apps ?? [];
 
+  const controlClass =
+    'h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
+
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
       <div>
-        <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">Operations</p>
-        <h1 className="mt-1 font-authSerif text-[22px] tracking-tight text-[#121212]">Application Tracker</h1>
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+          Application tracker
+        </h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
           Flat database view across all jobs. Filter by job, stage, department, and date applied.
         </p>
@@ -94,7 +98,7 @@ export default async function AdminApplicationsPage({
 
       <form
         method="get"
-        className="flex flex-wrap items-end gap-3 rounded-xl border border-[#e8e8e8] bg-white p-4 shadow-sm"
+        className="mb-5 mt-5 flex flex-wrap items-end gap-3 rounded-xl border border-[#d8d8d8] bg-white p-4"
       >
         <div>
           <label className="mb-1 block text-[11px] font-medium text-[#6b6b6b]" htmlFor="f-job">
@@ -104,7 +108,7 @@ export default async function AdminApplicationsPage({
             id="f-job"
             name="job"
             defaultValue={filterJobId}
-            className="min-w-[180px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            className={`min-w-[180px] ${controlClass}`}
           >
             <option value="">All jobs</option>
             {(jobs ?? []).map((j) => (
@@ -123,7 +127,7 @@ export default async function AdminApplicationsPage({
             id="f-stage"
             name="stage"
             defaultValue={filterStage}
-            className="min-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            className={`min-w-[160px] ${controlClass}`}
           >
             <option value="">All stages</option>
             {JOB_APPLICATION_STAGES.map((s) => (
@@ -141,7 +145,7 @@ export default async function AdminApplicationsPage({
             id="f-dept"
             name="dept"
             defaultValue={filterDept}
-            className="min-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            className={`min-w-[160px] ${controlClass}`}
           >
             <option value="">All departments</option>
             {(departments ?? []).map((d) => (
@@ -160,7 +164,7 @@ export default async function AdminApplicationsPage({
             name="from"
             type="date"
             defaultValue={filterFrom}
-            className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            className={controlClass}
           />
         </div>
         <div>
@@ -172,26 +176,27 @@ export default async function AdminApplicationsPage({
             name="to"
             type="date"
             defaultValue={filterTo}
-            className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            className={controlClass}
           />
         </div>
         <button
           type="submit"
-          className="inline-flex h-[38px] items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white hover:bg-[#007a54]"
+          className="inline-flex h-9 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
         >
           Apply filters
         </button>
         <Link
-          href="/admin/applications"
-          className="inline-flex h-[38px] items-center justify-center rounded-lg border border-[#d8d8d8] px-4 text-[13px] text-[#121212] hover:bg-[#fafafa]"
+          href="/hr/applications"
+          className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
         >
           Clear
         </Link>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-[#e8e8e8] bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+        <div className="overflow-x-auto">
         <table className="min-w-full text-left text-[13px]">
-          <thead className="border-b border-[#f0f0f0] bg-[#fafafa] text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+          <thead className="border-b border-[#ececec] bg-[#fafafa] text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
             <tr>
               <th className="px-4 py-3">Candidate</th>
               <th className="px-4 py-3">Job</th>
@@ -204,8 +209,8 @@ export default async function AdminApplicationsPage({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-[#6b6b6b]">
-                  No applications match these filters.
+                <td colSpan={6} className="px-4 py-10 text-center text-[#9b9b9b]">
+                  No applications match these filters. Try broadening your search.
                 </td>
               </tr>
             ) : (
@@ -216,7 +221,7 @@ export default async function AdminApplicationsPage({
                 const deptName = dep?.name?.trim() || '—';
                 const jid = r.job_listing_id as string;
                 return (
-                  <tr key={r.id as string} className="border-b border-[#f5f5f5] last:border-0">
+                  <tr key={r.id as string} className="border-b border-[#f5f5f5] transition-colors hover:bg-[#f5f4f1] last:border-0">
                     <td className="px-4 py-3">
                       <p className="font-medium text-[#121212]">{String(r.candidate_name)}</p>
                       <p className="text-[12px] text-[#6b6b6b]">{String(r.candidate_email)}</p>
@@ -234,7 +239,7 @@ export default async function AdminApplicationsPage({
                         : '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/admin/jobs/${jid}/applications`} className="text-[#008B60] hover:underline">
+                      <Link href={`/hr/jobs/${jid}/applications`} className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
                         Pipeline
                       </Link>
                     </td>
@@ -244,6 +249,7 @@ export default async function AdminApplicationsPage({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

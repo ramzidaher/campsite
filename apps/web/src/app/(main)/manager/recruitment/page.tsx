@@ -47,7 +47,7 @@ export default async function ManagerRecruitmentPage() {
     .select('dept_id, departments(id, name)')
     .eq('user_id', user.id);
 
-  const managedDepartments =
+  let managedDepartments =
     (dmRows ?? [])
       .map((row) => {
         const dept = row.departments as { id: string; name: string } | { id: string; name: string }[] | null;
@@ -56,6 +56,19 @@ export default async function ManagerRecruitmentPage() {
         return { id: d.id, name: String(d.name ?? 'Department') };
       })
       .filter((x): x is { id: string; name: string } => x !== null) ?? [];
+
+  // Org admins / HR approvers can raise recruitment requests even if they are
+  // not explicitly assigned as department managers. Offer all active departments.
+  if (canRaise && managedDepartments.length === 0 && canApproveRequest) {
+    const { data: allDeptRows } = await supabase
+      .from('departments')
+      .select('id, name, is_archived')
+      .eq('org_id', profile.org_id)
+      .order('name', { ascending: true });
+    managedDepartments = (allDeptRows ?? [])
+      .filter((d) => !Boolean(d.is_archived))
+      .map((d) => ({ id: String(d.id), name: String(d.name ?? 'Department') }));
+  }
 
   let initialRequests: Parameters<typeof ManagerRecruitmentClient>[0]['initialRequests'] = [];
   if (canRaise) {

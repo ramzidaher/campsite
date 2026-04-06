@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { DEFAULT_PERMISSION_SEED } from '@/lib/authz/defaultPermissions';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET() {
@@ -48,6 +49,14 @@ export async function GET() {
     });
     try {
       const admin = createServiceRoleClient();
+      // Self-heal empty permission catalog so role/permission checks work reliably.
+      const { error: seedErr } = await admin.from('permission_catalog').upsert(DEFAULT_PERMISSION_SEED, {
+        onConflict: 'key',
+        ignoreDuplicates: false,
+      });
+      if (seedErr) {
+        console.warn('[admin/roles] permission catalog seed failed', seedErr.message);
+      }
       const { data: allPermissionsAdmin, error: permsErrAdmin } = await admin
         .from('permission_catalog')
         .select('key, label, description, is_founder_only')

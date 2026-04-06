@@ -77,7 +77,10 @@ export async function submitOfferSignature(
 
     if (d2) return { ok: false, error: d2.message };
 
-    if (listingId) revalidatePath(`/admin/jobs/${listingId}/applications`);
+    if (listingId) {
+      revalidatePath(`/admin/jobs/${listingId}/applications`);
+      revalidatePath(`/hr/jobs/${listingId}/applications`);
+    }
     return { ok: true };
   }
 
@@ -175,7 +178,11 @@ export async function submitOfferSignature(
     filename: `signed-offer-${offerId.slice(0, 8)}.pdf`,
   });
 
-  if (listingId) revalidatePath(`/admin/jobs/${listingId}/applications`);
+  if (listingId) {
+    revalidatePath(`/admin/jobs/${listingId}/applications`);
+    revalidatePath(`/hr/jobs/${listingId}/applications`);
+  }
   revalidatePath('/admin/applications');
+  revalidatePath('/hr/applications');
   return { ok: true };
 }

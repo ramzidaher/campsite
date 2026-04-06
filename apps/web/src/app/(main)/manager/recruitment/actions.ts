@@ -52,13 +52,40 @@ export async function createRecruitmentRequest(form: {
   const deptId = form.departmentId?.trim();
   if (!deptId) return { ok: false, error: 'Choose a department.' };
 
+  const [{ data: canApproveRequest }, { data: canManageRecruitment }] = await Promise.all([
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'recruitment.approve_request',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'recruitment.manage',
+      p_context: {},
+    }),
+  ]);
+  const canCreateForAnyDepartment = Boolean(canApproveRequest || canManageRecruitment);
+
+  const { data: deptScope } = await supabase
+    .from('departments')
+    .select('id')
+    .eq('id', deptId)
+    .eq('org_id', profile.org_id)
+    .eq('is_archived', false)
+    .maybeSingle();
+  if (!deptScope) return { ok: false, error: 'Department not found in your organisation.' };
+
   const { data: dm } = await supabase
     .from('dept_managers')
     .select('dept_id')
     .eq('user_id', user.id)
     .eq('dept_id', deptId)
     .maybeSingle();
-  if (!dm) return { ok: false, error: 'You are not a manager for that department.' };
+  if (!dm && !canCreateForAnyDepartment) {
+    return { ok: false, error: 'You are not a manager for that department.' };
+  }
 
   const jobTitle = form.jobTitle?.trim() ?? '';
   const gradeLevel = form.gradeLevel?.trim() ?? '';
@@ -83,7 +110,16 @@ export async function createRecruitmentRequest(form: {
 
   const orgId = profile.org_id as string;
 
-  const { data: inserted, error } = await supabase
+  let admin;
+  try {
+    admin = createServiceRoleClient();
+  } catch {
+    return { ok: false, error: 'Server misconfigured (service role missing).' };
+  }
+
+  // Insert via service-role after explicit authz checks above; this avoids
+  // org-admin submissions being blocked by stricter table RLS manager-only rules.
+  const { data: inserted, error } = await admin
     .from('recruitment_requests')
     .insert({
       org_id: orgId,
@@ -120,10 +156,10 @@ export async function createRecruitmentRequest(form: {
 
   revalidatePath('/manager/recruitment');
   revalidatePath('/admin/recruitment');
+  revalidatePath('/hr/recruitment');
 
   // In-app notification to HR approvers
   try {
-    const admin = createServiceRoleClient();
     void admin.rpc('recruitment_notify_new_request', {
       p_request_id: requestId,
       p_actor_name: submitterName,

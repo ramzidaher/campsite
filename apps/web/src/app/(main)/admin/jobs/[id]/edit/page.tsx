@@ -46,7 +46,7 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
     <AdminJobEditClient
       job={job as Parameters<typeof AdminJobEditClient>[0]['job']}
       orgSlug={orgSlug}
-      requestHref={`/admin/recruitment/${reqId}`}
+      requestHref={`/hr/recruitment/${reqId}`}
     />
   );
 }

@@ -66,25 +66,30 @@ export function AdminJobsListClient({
   }, [rows, status, deptId, grade, salary, contract, year, search]);
 
   const sel =
-    'rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[13px] text-[#121212]';
+    'h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Job listings</h1>
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+      <header className="mb-6">
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Job listings</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
           HR publishes approved requests as shareable public job URLs. Filter by department, grade, contract,
           salary band, and year posted.
         </p>
       </header>
 
-      <div className="flex flex-wrap gap-2">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search title or department..."
-          className="min-w-[220px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[13px] text-[#121212]"
-        />
+      <div className="mb-5 flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex h-9 w-full max-w-[260px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 transition-[box-shadow,border-color] focus-within:border-[#121212] focus-within:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]">
+          <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
+            🔍
+          </span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search title or department..."
+            className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
+          />
+        </div>
         <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All states</option>
           <option value="live">Live</option>
@@ -132,9 +137,13 @@ export function AdminJobsListClient({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-[13px] text-[#6b6b6b]">No listings match these filters.</p>
+        <div className="rounded-xl border border-[#d8d8d8] bg-white px-6 py-14 text-center">
+          <p className="text-[15px] font-medium text-[#6b6b6b]">No listings match these filters.</p>
+          <p className="mt-1 text-[13px] text-[#9b9b9b]">Try adjusting one or more filters to broaden results.</p>
+        </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[#e8e8e8] bg-white">
+        <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+          <div className="overflow-x-auto">
           <table className="min-w-full text-left text-[13px]">
             <thead className="border-b border-[#ececec] bg-[#fafafa] text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]">
               <tr>
@@ -153,10 +162,10 @@ export function AdminJobsListClient({
                 const showPublic = r.status === 'live' && r.slug && !r.slug.startsWith('draft-');
                 const publicUrl = showPublic ? tenantJobPublicUrl(orgSlug, r.slug) : '';
                 return (
-                  <tr key={r.id}>
+                  <tr key={r.id} className="transition-colors hover:bg-[#f5f4f1]">
                     <td className="px-4 py-3 font-medium">
                       <Link
-                        href={`/admin/jobs/${r.id}/edit`}
+                        href={`/hr/jobs/${r.id}/edit`}
                         className="text-[#008B60] underline decoration-[#008B60]/25 hover:decoration-[#008B60]"
                       >
                         {r.title}
@@ -209,6 +218,7 @@ export function AdminJobsListClient({
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

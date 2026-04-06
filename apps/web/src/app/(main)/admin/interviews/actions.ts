@@ -155,6 +155,7 @@ export async function createInterviewSlot(fields: {
     admin = createServiceRoleClient();
   } catch {
     revalidatePath('/admin/interviews');
+    revalidatePath('/hr/interviews');
     return { ok: true, warnings: ['Google Calendar is not configured on the server; slot saved without calendar events.'] };
   }
 
@@ -192,7 +193,9 @@ export async function createInterviewSlot(fields: {
   }
 
   revalidatePath('/admin/interviews');
+  revalidatePath('/hr/interviews');
   revalidatePath(`/admin/jobs/${jobId}/applications`);
+  revalidatePath(`/hr/jobs/${jobId}/applications`);
   return warnings.length ? { ok: true, warnings } : { ok: true };
 }
 
@@ -286,6 +289,7 @@ export async function bulkCreateInterviewSlots(fields: {
   } catch { /* Google Calendar not configured — fine */ }
 
   revalidatePath('/admin/interviews');
+  revalidatePath('/hr/interviews');
   revalidatePath(`/admin/jobs/${jobId}/applications`);
   return { ok: true, created: inserted.length, warnings: warnings.length ? warnings : undefined };
 }
@@ -344,6 +348,7 @@ export async function completeInterviewSlot(slotId: string): Promise<InterviewAc
   if (upErr) return { ok: false, error: upErr.message };
 
   revalidatePath('/admin/interviews');
+  revalidatePath('/hr/interviews');
   return { ok: true };
 }
 
@@ -559,5 +564,8 @@ export async function bookInterviewForApplication(opts: {
   revalidatePath(`/admin/jobs/${jobListingId}/applications`);
   revalidatePath('/admin/applications');
   revalidatePath('/admin/interviews');
+  revalidatePath(`/hr/jobs/${jobListingId}/applications`);
+  revalidatePath('/hr/applications');
+  revalidatePath('/hr/interviews');
   return { ok: true };
 }

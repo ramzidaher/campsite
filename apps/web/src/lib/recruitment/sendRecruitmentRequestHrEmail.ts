@@ -87,7 +87,7 @@ export async function sendRecruitmentRequestHrEmail(payload: RecruitmentRequestE
   const orgName = (orgRow?.name as string | undefined)?.trim() || 'Your organisation';
 
   const site = trimBaseUrl(process.env.SITE_URL) ?? trimBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
-  const reviewPath = '/admin/recruitment';
+  const reviewPath = '/hr/recruitment';
   const reviewUrl = site ? `${site}${reviewPath}` : reviewPath;
 
   const subject = `[${orgName}] New recruitment request: ${payload.jobTitle}`;

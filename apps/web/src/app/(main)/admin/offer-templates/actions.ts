@@ -70,6 +70,7 @@ export async function createOfferTemplate(
 
   if (error || !data?.id) return { ok: false, error: error?.message ?? 'Could not save.' };
   revalidatePath('/admin/offer-templates');
+  revalidatePath('/hr/offer-templates');
   return { ok: true, id: data.id as string };
 }
 
@@ -100,6 +101,8 @@ export async function updateOfferTemplate(
   if (error) return { ok: false, error: error.message };
   revalidatePath('/admin/offer-templates');
   revalidatePath(`/admin/offer-templates/${tid}/edit`);
+  revalidatePath('/hr/offer-templates');
+  revalidatePath(`/hr/offer-templates/${tid}/edit`);
   return { ok: true };
 }
 
@@ -113,5 +116,6 @@ export async function deleteOfferTemplate(id: string): Promise<OfferTemplateActi
   const { error } = await supabase.from('offer_letter_templates').delete().eq('id', tid).eq('org_id', orgId);
   if (error) return { ok: false, error: error.message };
   revalidatePath('/admin/offer-templates');
+  revalidatePath('/hr/offer-templates');
   return { ok: true };
 }

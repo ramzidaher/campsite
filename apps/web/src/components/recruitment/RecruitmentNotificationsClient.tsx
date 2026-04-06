@@ -107,7 +107,7 @@ export function RecruitmentNotificationsClient({
             return (
               <li key={n.id}>
                 <Link
-                  href={`/admin/recruitment/${n.request_id}`}
+                  href={`/hr/recruitment/${n.request_id}`}
                   onClick={() => { if (isUnread) void markRead(n.id); }}
                   className={[
                     'flex items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-[#faf9f6]',
@@ -164,7 +164,7 @@ export function RecruitmentNotificationsClient({
 
       <div className="mt-8 text-center">
         <Link
-          href="/admin/recruitment"
+          href="/hr/recruitment"
           className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
         >
           View full recruitment queue →

@@ -57,7 +57,7 @@ export function AdminJobEditClient({
   const [allowStaffsavvy, setAllowStaffsavvy] = useState(job.allow_staffsavvy);
 
   const fieldClass =
-    'mt-0 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#008B60] focus:ring-1 focus:ring-[#008B60]';
+    'mt-0 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
   const labelClass = 'mb-1 block text-[12px] font-medium text-[#505050]';
 
   const showPublic = job.status === 'live' && job.slug && !job.slug.startsWith('draft-');
@@ -109,16 +109,16 @@ export function AdminJobEditClient({
         setMsg({ type: 'err', text: res.error });
         return;
       }
-      router.push('/admin/jobs');
+      router.push('/hr/jobs');
     });
   }
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-6xl space-y-8 px-5 py-7 sm:px-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">
-            <Link href="/admin/jobs" className="text-[#008B60] hover:underline">
+            <Link href="/hr/jobs" className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
               Job listings
             </Link>
             <span aria-hidden className="mx-1.5 text-[#cfcfcf]">
@@ -126,7 +126,9 @@ export function AdminJobEditClient({
             </span>
             Edit
           </p>
-          <h1 className="mt-1 font-authSerif text-[22px] tracking-tight text-[#121212]">{title || 'Job'}</h1>
+          <h1 className="mt-1 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+            {title || 'Job'}
+          </h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
             Status: {jobListingStatusLabel(job.status)}
             {job.status === 'draft' ? ' · Drafts use a temporary URL until you publish.' : null}
@@ -141,21 +143,21 @@ export function AdminJobEditClient({
             <button
               type="button"
               onClick={() => void navigator.clipboard.writeText(publicUrl)}
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#121212] hover:bg-[#fafafa]"
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
             >
               Copy public link
             </button>
           ) : null}
           <Link
             href={requestHref}
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#121212] hover:bg-[#fafafa]"
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
           >
             Recruitment request
           </Link>
           {job.status === 'live' ? (
             <Link
-              href={`/admin/jobs/${job.id}/applications`}
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-[#008B60] bg-[#f0fdf9] px-3 text-[13px] font-medium text-[#008B60] hover:bg-[#e6faf4]"
+              href={`/hr/jobs/${job.id}/applications`}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#f5f4f1]"
             >
               View pipeline
             </Link>
@@ -178,7 +180,7 @@ export function AdminJobEditClient({
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="space-y-4 rounded-xl border border-[#d8d8d8] bg-white p-5">
           <h2 className="font-authSerif text-lg text-[#121212]">Core details</h2>
           <div>
             <label className={labelClass} htmlFor="title">
@@ -238,14 +240,14 @@ export function AdminJobEditClient({
           </div>
         </div>
 
-        <div className="space-y-4 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="space-y-4 rounded-xl border border-[#d8d8d8] bg-white p-5">
           <h2 className="font-authSerif text-lg text-[#121212]">Application options</h2>
           <p className="text-[12px] text-[#6b6b6b]">
             Choose exactly how applicants apply for this job.
           </p>
           <div className="space-y-2">
             {JOB_APPLICATION_MODES.map((m) => (
-              <label key={m} className="flex cursor-pointer items-center gap-2 text-[13px]">
+              <label key={m} className="flex cursor-pointer items-center gap-2 rounded-lg border border-transparent px-2 py-1 text-[13px] transition-colors hover:border-[#ececec] hover:bg-[#faf9f6]">
                 <input
                   type="radio"
                   name="appMode"
@@ -272,7 +274,7 @@ export function AdminJobEditClient({
               </label>
             ))}
           </div>
-          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafafa] p-3 text-[12px] text-[#6b6b6b]">
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#faf9f6] p-3 text-[12px] text-[#6b6b6b]">
             Modes: CV upload, Loom 1-minute link, StaffSavvy score (out of 5), or Combination.
           </div>
           {applicationMode === 'combination' ? (
@@ -310,7 +312,7 @@ export function AdminJobEditClient({
         </div>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="space-y-4 rounded-xl border border-[#d8d8d8] bg-white p-5">
         <h2 className="font-authSerif text-lg text-[#121212]">Listing copy</h2>
         <div>
           <label className={labelClass} htmlFor="advert">
@@ -358,7 +360,7 @@ export function AdminJobEditClient({
           type="button"
           disabled={pending || isArchived}
           onClick={save}
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white transition hover:bg-[#007a54] disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {pending ? 'Saving…' : 'Save draft'}
         </button>
@@ -367,7 +369,7 @@ export function AdminJobEditClient({
             type="button"
             disabled={pending}
             onClick={publish}
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#008B60] bg-white px-4 text-[13px] font-medium text-[#008B60] hover:bg-[#f0fdf9] disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212] disabled:opacity-60"
           >
             Publish
           </button>

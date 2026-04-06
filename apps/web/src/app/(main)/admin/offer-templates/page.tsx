@@ -30,11 +30,12 @@ export default async function OfferTemplatesPage() {
   const templates = rows ?? [];
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-7">
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">Operations</p>
-          <h1 className="mt-1 font-authSerif text-[26px] text-[#121212]">Offer letter templates</h1>
+          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+            Offer letter templates
+          </h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
             Create and manage templates for Offer Sent stage. Merge fields auto-fill from candidate and job data.
           </p>
@@ -45,21 +46,21 @@ export default async function OfferTemplatesPage() {
           </p>
         </div>
         <Link
-          href="/admin/offer-templates/new"
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white"
+          href="/hr/offer-templates/new"
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
         >
           New template
         </Link>
       </div>
 
-      <ul className="mt-8 divide-y divide-[#f0f0f0] rounded-xl border border-[#e8e8e8] bg-white shadow-sm">
+      <ul className="mt-8 divide-y divide-[#f0f0f0] rounded-xl border border-[#d8d8d8] bg-white">
         {templates.length === 0 ? (
-          <li className="px-4 py-8 text-center text-[13px] text-[#6b6b6b]">
+          <li className="px-4 py-10 text-center text-[13px] text-[#9b9b9b]">
             No templates yet. Create one to start generating e-sign offer letters.
           </li>
         ) : (
           templates.map((t) => (
-            <li key={t.id as string} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <li key={t.id as string} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[#f5f4f1]">
               <div>
                 <p className="text-[14px] font-medium text-[#121212]">{t.name as string}</p>
                 <p className="text-[12px] text-[#9b9b9b]">
@@ -67,8 +68,8 @@ export default async function OfferTemplatesPage() {
                 </p>
               </div>
               <Link
-                href={`/admin/offer-templates/${t.id as string}/edit`}
-                className="rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-[13px]"
+                href={`/hr/offer-templates/${t.id as string}/edit`}
+                className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
               >
                 Edit
               </Link>
