@@ -1,6 +1,13 @@
 import type { NextRequest } from 'next/server';
 
+import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
+
 const LOCALHOST_SITE_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
+function isVercelDeploymentHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  return h.endsWith('.vercel.app') || h === 'vercel.app';
+}
 
 function trimBaseUrl(raw: string | undefined): string | null {
   const t = raw?.trim().replace(/\/$/, '');
@@ -37,6 +44,21 @@ export function inviteCallbackBaseUrl(req: NextRequest): string | null {
 
   if (forwardedBase) return forwardedBase;
   return null;
+}
+
+/**
+ * Base URL for Supabase `emailRedirectTo` from the browser (e.g. sign-up).
+ * Uses `window.location.origin` on real hosts; on Vercel project URLs (`*.vercel.app`) uses
+ * `NEXT_PUBLIC_SITE_URL` so verification emails use the canonical domain (not the deployment host).
+ */
+export function clientEmailRedirectBaseUrl(): string {
+  if (typeof window === 'undefined') return '';
+  if (!isVercelDeploymentHostname(window.location.hostname)) return window.location.origin;
+
+  const configured = trimBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
+  if (configured && !LOCALHOST_SITE_RE.test(configured)) return configured;
+
+  return `https://${getTenantRootDomain()}`;
 }
 
 export function inviteCallbackUrl(req: NextRequest, nextPath = '/dashboard'): string | null {

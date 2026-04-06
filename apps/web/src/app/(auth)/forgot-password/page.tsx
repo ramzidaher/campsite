@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { clientEmailRedirectBaseUrl } from '@/lib/auth/inviteCallbackBaseUrl';
 import { createClient } from '@/lib/supabase/client';
 
 export default function ForgotPasswordPage() {
@@ -15,7 +16,8 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setMessage(null);
     const supabase = createClient();
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const origin =
+      typeof window !== 'undefined' ? clientEmailRedirectBaseUrl() || window.location.origin : '';
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${origin}/auth/callback?next=/settings`,
     });

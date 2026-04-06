@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { uploadUserAvatar } from '@/lib/storage/uploadUserAvatar';
+import { clientEmailRedirectBaseUrl } from '@/lib/auth/inviteCallbackBaseUrl';
 import {
   isValidWorkspaceSlug,
   normalizeWorkspaceSlugInput,
@@ -227,7 +228,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
     }
 
     const supabase = createClient();
-    const origin = window.location.origin;
+    const origin = clientEmailRedirectBaseUrl() || window.location.origin;
     let signUpData: {
       user: { id: string } | null;
       session: unknown;
