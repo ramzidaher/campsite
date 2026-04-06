@@ -196,6 +196,100 @@ export async function createInterviewSlot(fields: {
   return warnings.length ? { ok: true, warnings } : { ok: true };
 }
 
+export async function bulkCreateInterviewSlots(fields: {
+  jobListingId: string;
+  title: string;
+  slots: Array<{ startsAtIso: string; endsAtIso: string }>;
+  panelistProfileIds: string[];
+}): Promise<InterviewActionResult & { created?: number; warnings?: string[] }> {
+  const { supabase, profile, orgId, user } = await requireOrgPermission('interviews.create_slot');
+  if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
+
+  const jobId = fields.jobListingId?.trim();
+  if (!jobId) return { ok: false, error: 'Choose a job listing.' };
+  if (!fields.slots.length) return { ok: false, error: 'No slots to create.' };
+
+  const title = fields.title?.trim() || 'Interview';
+  const panelists = [...new Set(fields.panelistProfileIds.map((id) => id.trim()).filter(Boolean))];
+  if (panelists.length === 0) return { ok: false, error: 'Select at least one panel member.' };
+
+  const { data: job } = await supabase
+    .from('job_listings').select('id, title').eq('id', jobId).eq('org_id', orgId).maybeSingle();
+  if (!job) return { ok: false, error: 'Job listing not found.' };
+
+  const { data: panelRows } = await supabase
+    .from('profiles').select('id').eq('org_id', orgId).eq('status', 'active').in('id', panelists);
+  const validIds = new Set((panelRows ?? []).map((r) => r.id as string));
+  for (const p of panelists) {
+    if (!validIds.has(p)) return { ok: false, error: 'One or more panelists are not in your organisation.' };
+  }
+
+  const slotInserts = fields.slots.map((s) => ({
+    org_id: orgId,
+    job_listing_id: jobId,
+    title,
+    starts_at: s.startsAtIso,
+    ends_at: s.endsAtIso,
+    status: 'available' as const,
+    created_by: user.id,
+  }));
+
+  const { data: inserted, error: insErr } = await supabase
+    .from('interview_slots').insert(slotInserts).select('id');
+  if (insErr || !inserted?.length) return { ok: false, error: insErr?.message ?? 'Could not create slots.' };
+
+  const panelistInserts = inserted.flatMap((s) =>
+    panelists.map((profile_id) => ({ slot_id: s.id as string, profile_id }))
+  );
+  const { error: panErr } = await supabase.from('interview_slot_panelists').insert(panelistInserts);
+  if (panErr) {
+    await supabase.from('interview_slots').delete().in('id', inserted.map((s) => s.id as string));
+    return { ok: false, error: panErr.message };
+  }
+
+  // Try Google Calendar sync (best-effort, non-blocking)
+  const warnings: string[] = [];
+  try {
+    const { data: orgRow } = await supabase.from('organisations').select('timezone, name').eq('id', orgId).single();
+    const timeZone = (orgRow?.timezone as string | null)?.trim() || 'UTC';
+    const orgName = (orgRow?.name as string | null)?.trim() || 'Organisation';
+    const jobTitle = (job.title as string)?.trim() || 'Role';
+    const admin = createServiceRoleClient();
+    let syncedCount = 0;
+    for (const slot of inserted) {
+      const slotData = fields.slots[inserted.indexOf(slot)];
+      if (!slotData) continue;
+      const summary = `[${orgName}] Interview slot (available): ${jobTitle}`;
+      const description = `CampSite interview panel slot — available for booking.\nJob: ${jobTitle}`;
+      try {
+        const events = await createInterviewSlotEventsForPanelists({
+          admin,
+          panelistUserIds: panelists,
+          timeZone,
+          startsAtIso: slotData.startsAtIso,
+          endsAtIso: slotData.endsAtIso,
+          summary,
+          description,
+        });
+        if (events.length) {
+          syncedCount += events.length;
+          await admin.from('interview_slot_google_events').insert(
+            events.map((e) => ({ slot_id: slot.id as string, profile_id: e.profileId, event_id: e.eventId, calendar_id: 'primary' }))
+          );
+        }
+      } catch { /* per-slot failure is non-fatal */ }
+    }
+    const expectedEvents = inserted.length * panelists.length;
+    if (syncedCount < expectedEvents) {
+      warnings.push(`${expectedEvents - syncedCount} calendar event(s) could not sync — panelists can add manually.`);
+    }
+  } catch { /* Google Calendar not configured — fine */ }
+
+  revalidatePath('/admin/interviews');
+  revalidatePath(`/admin/jobs/${jobId}/applications`);
+  return { ok: true, created: inserted.length, warnings: warnings.length ? warnings : undefined };
+}
+
 export async function completeInterviewSlot(slotId: string): Promise<InterviewActionResult> {
   const id = slotId?.trim();
   if (!id) return { ok: false, error: 'Missing slot.' };
