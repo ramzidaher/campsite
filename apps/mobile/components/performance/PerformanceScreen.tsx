@@ -2,7 +2,6 @@ import { useCampsiteTheme } from '@campsite/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { ReviewDetailScreen } from '@/components/performance/ReviewDetailScreen';
 import type { ProfileRow } from '@/lib/AuthContext';
 import { getSupabase } from '@/lib/supabase';
 
@@ -77,6 +77,7 @@ export function PerformanceScreen({ profile }: { profile: ProfileRow }) {
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
 
   const userId = profile.id;
   const orgId = profile.org_id ?? '';
@@ -148,6 +149,19 @@ export function PerformanceScreen({ profile }: { profile: ProfileRow }) {
   const textPrimary = isDark ? tokens.textPrimary : '#121212';
   const textSecondary = isDark ? tokens.textSecondary : '#6b6b6b';
 
+  if (selectedReviewId) {
+    return (
+      <ReviewDetailScreen
+        reviewId={selectedReviewId}
+        userId={profile.id}
+        onBack={() => {
+          setSelectedReviewId(null);
+          void load();
+        }}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: bg }}>
@@ -196,8 +210,6 @@ export function PerformanceScreen({ profile }: { profile: ProfileRow }) {
             const info = statusInfo(r.status, r.is_reviewee);
             const dueDate = r.is_reviewee ? r.self_assessment_due : r.manager_assessment_due;
             const isOverdue = dueDate && dueDate < today && r.status !== 'completed';
-            const webPath = r.is_reviewee ? `/performance/${r.id}` : `/admin/hr/performance/${r.id}`;
-
             return (
               <View key={r.id} style={[styles.card, { backgroundColor: cardBg, borderColor: isOverdue ? '#fca5a5' : border }]}>
                 <View style={styles.cardHeader}>
@@ -229,25 +241,18 @@ export function PerformanceScreen({ profile }: { profile: ProfileRow }) {
                   </Text>
                 ) : null}
 
-                {r.status !== 'completed' ? (
-                  <Pressable
-                    style={styles.openBtn}
-                    onPress={() => {
-                      // Open in system browser — this links to the web app
-                      void Linking.openURL(`campsite:///${webPath}`).catch(() => {
-                        // fallback — user may not have deep links configured
-                      });
-                    }}
-                  >
-                    <Text style={styles.openBtnText}>
-                      {r.is_reviewee && r.status === 'created'
-                        ? 'Complete self-assessment →'
-                        : !r.is_reviewee && r.status === 'self_submitted'
-                          ? 'Complete your assessment →'
-                          : 'View review →'}
-                    </Text>
-                  </Pressable>
-                ) : null}
+                <Pressable
+                  style={styles.openBtn}
+                  onPress={() => setSelectedReviewId(r.id)}
+                >
+                  <Text style={styles.openBtnText}>
+                    {r.is_reviewee && r.status === 'created'
+                      ? 'Complete self-assessment →'
+                      : !r.is_reviewee && r.status === 'self_submitted'
+                        ? 'Complete your assessment →'
+                        : 'View review →'}
+                  </Text>
+                </Pressable>
               </View>
             );
           })

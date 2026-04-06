@@ -27,22 +27,31 @@ export function AppMobileHeader() {
   const insets = useSafeAreaInsets();
   const { user, profile } = useAuth();
   const [hasNotifDot, setHasNotifDot] = useState(false);
+  const [hasRecruitmentDot, setHasRecruitmentDot] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       if (!isSupabaseConfigured() || !user) {
         setHasNotifDot(false);
+        setHasRecruitmentDot(false);
         return;
       }
       let cancelled = false;
       void (async () => {
         try {
-          const { data, error } = await getSupabase().rpc('broadcast_unread_count');
-          if (cancelled || error) return;
-          const n = typeof data === 'number' ? data : Number(data);
-          setHasNotifDot(!Number.isNaN(n) && n > 0);
+          const supabase = getSupabase();
+          const [{ data: bc }, { data: rn }] = await Promise.all([
+            supabase.rpc('broadcast_unread_count'),
+            supabase.rpc('recruitment_notifications_unread_count'),
+          ]);
+          if (cancelled) return;
+          const broadcastN = typeof bc === 'number' ? bc : Number(bc);
+          const recruitN = typeof rn === 'number' ? rn : Number(rn);
+          setHasNotifDot(!Number.isNaN(broadcastN) && broadcastN > 0);
+          setHasRecruitmentDot(!Number.isNaN(recruitN) && recruitN > 0);
         } catch {
           setHasNotifDot(false);
+          setHasRecruitmentDot(false);
         }
       })();
       return () => {
@@ -94,6 +103,16 @@ export function AppMobileHeader() {
           {title}
         </Text>
         <View style={styles.actions}>
+          {hasRecruitmentDot ? (
+            <Pressable
+              onPress={() => router.push('/(tabs)/hr')}
+              style={styles.iconBtn}
+              accessibilityLabel="Recruitment updates"
+            >
+              <Text style={styles.iconBtnGlyph}>💼</Text>
+              <View style={styles.notifDot} />
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={() => router.push('/(tabs)/broadcasts')}
             style={styles.iconBtn}
