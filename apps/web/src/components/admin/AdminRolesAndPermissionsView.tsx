@@ -191,6 +191,18 @@ export function AdminRolesAndPermissionsView() {
     await load();
   }
 
+  function duplicateRoleToDraft(role: RoleRow) {
+    setNewLabel(`${role.label} Copy`);
+    setNewDescription(role.description ?? '');
+    setNewPerms(new Set(role.org_role_permissions.map((x) => x.permission_key)));
+    setPermissionQuery('');
+    setSelectedPresetId('');
+    setActiveTab('create');
+    setMsg(
+      `Created draft from "${role.label}". Save it as a new custom role, then assign it to members from All members.`
+    );
+  }
+
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
   const selectedMeta = selectedRole
     ? roleDraftMeta[selectedRole.id] ?? { label: selectedRole.label, description: selectedRole.description ?? '' }
@@ -333,68 +345,62 @@ export function AdminRolesAndPermissionsView() {
                   <p className="text-[16px] font-medium text-[#1A1917]">{selectedRole.label}</p>
                   <p className="mt-0.5 text-[12px] text-[#A39E97]">Internal key: {selectedRole.key}</p>
                 </div>
-                {!selectedRole.is_system ? (
-                  <button
-                    type="button"
-                    className="text-[12px] text-[#6B6963] underline underline-offset-2"
-                    onClick={() =>
-                      {
-                        setRoleDraftPerms((curr) => ({
-                          ...curr,
-                          [selectedRole.id]: new Set(selectedRole.org_role_permissions.map((x) => x.permission_key)),
-                        }));
-                        setRoleDraftMeta((curr) => ({
-                          ...curr,
-                          [selectedRole.id]: { label: selectedRole.label, description: selectedRole.description ?? '' },
-                        }));
-                      }
-                    }
-                  >
-                    Reset changes
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  className="text-[12px] text-[#6B6963] underline underline-offset-2"
+                  onClick={() => {
+                    setRoleDraftPerms((curr) => ({
+                      ...curr,
+                      [selectedRole.id]: new Set(selectedRole.org_role_permissions.map((x) => x.permission_key)),
+                    }));
+                    setRoleDraftMeta((curr) => ({
+                      ...curr,
+                      [selectedRole.id]: { label: selectedRole.label, description: selectedRole.description ?? '' },
+                    }));
+                  }}
+                >
+                  Reset changes
+                </button>
               </div>
 
-              {!selectedRole.is_system ? (
-                <div className="mb-4 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#6B6963]">
-                      Role name
-                    </label>
-                    <input
-                      value={selectedMeta?.label ?? ''}
-                      onChange={(e) =>
-                        setRoleDraftMeta((curr) => ({
-                          ...curr,
-                          [selectedRole.id]: {
-                            label: e.target.value,
-                            description: selectedMeta?.description ?? '',
-                          },
-                        }))
-                      }
-                      className="w-full rounded-[10px] border border-black/15 bg-[#F7F6F2] px-3 py-2 text-[14px]"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#6B6963]">
-                      Description
-                    </label>
-                    <input
-                      value={selectedMeta?.description ?? ''}
-                      onChange={(e) =>
-                        setRoleDraftMeta((curr) => ({
-                          ...curr,
-                          [selectedRole.id]: {
-                            label: selectedMeta?.label ?? selectedRole.label,
-                            description: e.target.value,
-                          },
-                        }))
-                      }
-                      className="w-full rounded-[10px] border border-black/15 bg-[#F7F6F2] px-3 py-2 text-[14px]"
-                    />
-                  </div>
+              <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#6B6963]">
+                    Role name
+                  </label>
+                  <input
+                    value={selectedMeta?.label ?? ''}
+                    onChange={(e) =>
+                      setRoleDraftMeta((curr) => ({
+                        ...curr,
+                        [selectedRole.id]: {
+                          label: e.target.value,
+                          description: selectedMeta?.description ?? '',
+                        },
+                      }))
+                    }
+                    className="w-full rounded-[10px] border border-black/15 bg-[#F7F6F2] px-3 py-2 text-[14px]"
+                  />
                 </div>
-              ) : null}
+                <div>
+                  <label className="mb-1 block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#6B6963]">
+                    Description
+                  </label>
+                  <input
+                    value={selectedMeta?.description ?? ''}
+                    onChange={(e) =>
+                      setRoleDraftMeta((curr) => ({
+                        ...curr,
+                        [selectedRole.id]: {
+                          label: selectedMeta?.label ?? selectedRole.label,
+                          description: e.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full rounded-[10px] border border-black/15 bg-[#F7F6F2] px-3 py-2 text-[14px]"
+                  />
+                </div>
+              </div>
 
               <div className="mb-3">
                 <input
@@ -410,25 +416,23 @@ export function AdminRolesAndPermissionsView() {
                   <div key={`${selectedRole.id}-${group.title}`}>
                     <div className="mb-2 flex items-center justify-between">
                       <p className="text-[11px] uppercase tracking-[0.08em] text-[#A39E97]">{group.title}</p>
-                      {!selectedRole.is_system ? (
-                        <button
-                          type="button"
-                          className="text-[12px] text-[#1A5FA8] hover:underline"
-                          onClick={() =>
-                            setRoleDraftPerms((curr) => {
-                              const next = new Set(curr[selectedRole.id] ?? selectedChecked);
-                              const allSelected = group.items.every((p) => next.has(p.key));
-                              for (const p of group.items) {
-                                if (allSelected) next.delete(p.key);
-                                else next.add(p.key);
-                              }
-                              return { ...curr, [selectedRole.id]: next };
-                            })
-                          }
-                        >
-                          {group.items.every((p) => selectedChecked.has(p.key)) ? 'Clear all' : 'Select all'}
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="text-[12px] text-[#1A5FA8] hover:underline"
+                        onClick={() =>
+                          setRoleDraftPerms((curr) => {
+                            const next = new Set(curr[selectedRole.id] ?? selectedChecked);
+                            const allSelected = group.items.every((p) => next.has(p.key));
+                            for (const p of group.items) {
+                              if (allSelected) next.delete(p.key);
+                              else next.add(p.key);
+                            }
+                            return { ...curr, [selectedRole.id]: next };
+                          })
+                        }
+                      >
+                        {group.items.every((p) => selectedChecked.has(p.key)) ? 'Clear all' : 'Select all'}
+                      </button>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {group.items.map((p) => (
@@ -444,7 +448,6 @@ export function AdminRolesAndPermissionsView() {
                           <input
                             type="checkbox"
                             checked={selectedChecked.has(p.key)}
-                            disabled={selectedRole.is_system}
                             onChange={(e) =>
                               setRoleDraftPerms((curr) => {
                                 const next = new Set(curr[selectedRole.id] ?? selectedChecked);
@@ -465,11 +468,20 @@ export function AdminRolesAndPermissionsView() {
                 ))}
               </div>
 
-              {!selectedRole.is_system ? (
-                <div className="mt-4 flex items-center justify-between border-t border-black/10 pt-3">
-                  <p className="text-[13px] text-[#6B6963]">
-                    <strong className="font-medium text-[#1A1917]">{selectedChecked.size}</strong> permissions selected
-                  </p>
+              <div className="mt-4 flex items-center justify-between border-t border-black/10 pt-3">
+                <p className="text-[13px] text-[#6B6963]">
+                  <strong className="font-medium text-[#1A1917]">{selectedChecked.size}</strong> permissions selected
+                </p>
+                <div className="flex items-center gap-2">
+                  {selectedRole.is_system ? (
+                    <button
+                      type="button"
+                      onClick={() => duplicateRoleToDraft(selectedRole)}
+                      className="rounded-[10px] border border-black/15 px-3 py-2 text-[13px] text-[#1A1917] hover:bg-[#F2F1ED]"
+                    >
+                      Duplicate
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     disabled={busy || !selectedDirty || !(selectedMeta?.label ?? '').trim()}
@@ -486,9 +498,7 @@ export function AdminRolesAndPermissionsView() {
                     Save changes
                   </button>
                 </div>
-              ) : (
-                <p className="mt-3 text-[12px] text-[#A39E97]">System role (read only)</p>
-              )}
+              </div>
             </div>
           ) : null}
         </div>
