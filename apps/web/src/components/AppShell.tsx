@@ -8,11 +8,13 @@ import { AppTopBar } from '@/components/shell/AppTopBar';
 import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
 import type { MainShellAdminNavItem, ShellNavIconId } from '@/lib/adminGates';
+import { useUiSound } from '@/lib/sound/useUiSound';
 import { ChevronDown } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
 const MANAGER_NAV_EXPANDED_KEY = 'campsite_nav_manager_expanded';
+const HR_NAV_EXPANDED_KEY = 'campsite_nav_hr_expanded';
 
 function initials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -120,6 +122,7 @@ export function AppShell({
   showOnboardingNav = false,
   managerNavItems = null,
   managerNavSectionLabel = 'Manager',
+  hrNavItems = null,
   adminNavItems = null,
   showStandaloneApprovals = true,
 }: {
@@ -153,6 +156,8 @@ export function AppShell({
   managerNavItems?: MainShellAdminNavItem[] | null;
   /** Sidebar group title (e.g. “Department” for coordinators). */
   managerNavSectionLabel?: string;
+  /** Collapsible HR links (separate from Admin and Manager). */
+  hrNavItems?: MainShellAdminNavItem[] | null;
   adminNavItems?: MainShellAdminNavItem[] | null;
   /** Managers use the Manager section; other approvers use this standalone link. */
   showStandaloneApprovals?: boolean;
@@ -160,8 +165,10 @@ export function AppShell({
   const [mobileNav, setMobileNav] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
   const [managerNavExpanded, setManagerNavExpanded] = useState(true);
+  const [hrNavExpanded, setHrNavExpanded] = useState(true);
   const [orgLogoFailed, setOrgLogoFailed] = useState(false);
   const [userAvatarFailed, setUserAvatarFailed] = useState(false);
+  const playUiSound = useUiSound();
 
   useEffect(() => {
     try {
@@ -171,6 +178,9 @@ export function AppShell({
       const mgr = localStorage.getItem(MANAGER_NAV_EXPANDED_KEY);
       if (mgr === '0') setManagerNavExpanded(false);
       else if (mgr === '1') setManagerNavExpanded(true);
+      const hr = localStorage.getItem(HR_NAV_EXPANDED_KEY);
+      if (hr === '0') setHrNavExpanded(false);
+      else if (hr === '1') setHrNavExpanded(true);
     } catch {
       /* ignore */
     }
@@ -199,7 +209,10 @@ export function AppShell({
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
   const showUserAvatar = Boolean(safeUserAvatar) && !userAvatarFailed;
 
-  const closeMobile = () => setMobileNav(false);
+  const closeMobile = () => {
+    setMobileNav(false);
+    playUiSound('menu_close');
+  };
 
   return (
     <div className="campsite-paper flex min-h-screen bg-[#faf9f6] text-[#121212]">
@@ -305,7 +318,10 @@ export function AppShell({
           </div>
 
           {adminNavItems && adminNavItems.length > 0 ? (
-            <div className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+            <div
+              className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+              style={{ order: 30 }}
+            >
               <button
                 type="button"
                 className={[
@@ -320,6 +336,7 @@ export function AppShell({
                 onClick={() => {
                   setAdminNavExpanded((open) => {
                     const next = !open;
+                    playUiSound(next ? 'dropdown_open' : 'dropdown_close');
                     try {
                       localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, next ? '1' : '0');
                     } catch {
@@ -387,7 +404,10 @@ export function AppShell({
           ) : null}
 
           {managerNavItems && managerNavItems.length > 0 ? (
-            <div className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+            <div
+              className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+              style={{ order: 10 }}
+            >
               <button
                 type="button"
                 className={[
@@ -402,6 +422,7 @@ export function AppShell({
                 onClick={() => {
                   setManagerNavExpanded((open) => {
                     const next = !open;
+                    playUiSound(next ? 'dropdown_open' : 'dropdown_close');
                     try {
                       localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, next ? '1' : '0');
                     } catch {
@@ -468,8 +489,83 @@ export function AppShell({
             </div>
           ) : null}
 
+          {hrNavItems && hrNavItems.length > 0 ? (
+            <div
+              className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+              style={{ order: 20 }}
+            >
+              <button
+                type="button"
+                className={[
+                  'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors',
+                  hrNavExpanded
+                    ? 'bg-white/[0.08] text-white/80'
+                    : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                ].join(' ')}
+                aria-expanded={hrNavExpanded}
+                aria-controls="hr-shell-nav-items"
+                id="hr-shell-nav-trigger"
+                onClick={() => {
+                  setHrNavExpanded((open) => {
+                    const next = !open;
+                    playUiSound(next ? 'dropdown_open' : 'dropdown_close');
+                    try {
+                      localStorage.setItem(HR_NAV_EXPANDED_KEY, next ? '1' : '0');
+                    } catch {
+                      /* ignore */
+                    }
+                    return next;
+                  });
+                }}
+              >
+                <span className="flex w-5 shrink-0 items-center justify-center text-current">
+                  <ShellNavIcon name="hrRecords" />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
+                  HR
+                </span>
+                <ChevronDown
+                  className={[
+                    'shrink-0 text-white/45 transition-transform duration-200',
+                    hrNavExpanded ? 'rotate-0' : '-rotate-90',
+                  ].join(' ')}
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </button>
+              <div
+                id="hr-shell-nav-items"
+                role="region"
+                aria-labelledby="hr-shell-nav-trigger"
+                className={[
+                  'grid transition-[grid-template-rows] duration-200 ease-out',
+                  hrNavExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+                ].join(' ')}
+              >
+                <div className="min-h-0 overflow-hidden" inert={!hrNavExpanded ? true : undefined}>
+                  <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
+                    {hrNavItems.map((item) => (
+                      <NavLink
+                        key={item.href}
+                        href={item.href}
+                        icon={item.icon}
+                        label={item.label}
+                        badge={item.badge}
+                        secondaryBadge={item.secondaryBadge}
+                        secondaryBadgeTitle={item.secondaryBadgeTitle}
+                        exact={item.exact}
+                        onNavigate={closeMobile}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {showApprovals && showStandaloneApprovals ? (
-            <div className="mt-3 space-y-0.5">
+            <div className="mt-3 space-y-0.5" style={{ order: 40 }}>
               <NavLink
                 href="/pending-approvals"
                 icon="pending"
@@ -522,7 +618,10 @@ export function AppShell({
           <button
             type="button"
             className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white"
-            onClick={() => setMobileNav(true)}
+            onClick={() => {
+              setMobileNav(true);
+              playUiSound('menu_open');
+            }}
           >
             Menu
           </button>

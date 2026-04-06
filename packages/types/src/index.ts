@@ -109,3 +109,5 @@ export {
   type ApplicationOfferRowStatus,
   isOfferLetterWorkflowStatus,
 } from './offerLetters';
+
+export { UI_SOUND_EVENTS, type UiSoundEvent, type UiSoundPreset, type UiSoundToneSpec } from './uiSounds';

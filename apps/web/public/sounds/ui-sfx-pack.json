@@ -1,0 +1,20 @@
+{
+  "pack": "campsite-ui-sfx",
+  "version": 1,
+  "notes": "Parameter-based UI sound definitions used by runtime synthesis.",
+  "events": [
+    "menu_open",
+    "menu_close",
+    "dropdown_open",
+    "dropdown_close",
+    "toggle_on",
+    "toggle_off",
+    "broadcast_draft_saved",
+    "broadcast_submitted",
+    "broadcast_sent",
+    "broadcast_scheduled",
+    "recruitment_read",
+    "recruitment_mark_all_read",
+    "error_soft"
+  ]
+}

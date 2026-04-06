@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppMobileHeader } from '@/components/shell/AppMobileHeader';
 import { mainShell } from '@/constants/mainShell';
+import { useUiSound } from '@/lib/sound/useUiSound';
 
 type TabIconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -33,6 +34,7 @@ function TabBarIcon({
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { tokens, scheme } = useCampsiteTheme();
+  const playUiSound = useUiSound();
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 6);
   const tabBarHeight = 48 + bottomInset;
 
@@ -89,6 +91,9 @@ export default function TabLayout() {
           tabBarLabel: 'Home',
           tabBarIcon: icon('home', 'home-outline'),
         }}
+        listeners={{
+          tabPress: () => playUiSound('menu_open'),
+        }}
       />
       <Tabs.Screen
         name="broadcasts"
@@ -96,6 +101,9 @@ export default function TabLayout() {
           title: 'Broadcasts',
           tabBarLabel: 'Broadcasts',
           tabBarIcon: icon('bullhorn', 'bullhorn-outline'),
+        }}
+        listeners={{
+          tabPress: () => playUiSound('menu_open'),
         }}
       />
       <Tabs.Screen
@@ -105,6 +113,9 @@ export default function TabLayout() {
           tabBarLabel: 'Calendar',
           tabBarIcon: icon('calendar-month', 'calendar-month-outline'),
         }}
+        listeners={{
+          tabPress: () => playUiSound('menu_open'),
+        }}
       />
       <Tabs.Screen
         name="rota"
@@ -112,6 +123,9 @@ export default function TabLayout() {
           title: 'Rota',
           tabBarLabel: 'Rota',
           tabBarIcon: icon('calendar-clock', 'calendar-clock-outline'),
+        }}
+        listeners={{
+          tabPress: () => playUiSound('menu_open'),
         }}
       />
       <Tabs.Screen
@@ -121,6 +135,9 @@ export default function TabLayout() {
           tabBarLabel: 'Discount',
           tabBarIcon: icon('ticket-percent', 'ticket-percent-outline'),
         }}
+        listeners={{
+          tabPress: () => playUiSound('menu_open'),
+        }}
       />
       <Tabs.Screen
         name="hr"
@@ -128,6 +145,9 @@ export default function TabLayout() {
           title: 'My HR',
           tabBarLabel: 'My HR',
           tabBarIcon: icon('briefcase', 'briefcase-outline'),
+        }}
+        listeners={{
+          tabPress: () => playUiSound('menu_open'),
         }}
       />
     </Tabs>

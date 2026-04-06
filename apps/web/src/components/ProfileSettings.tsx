@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { createClient } from '@/lib/supabase/client';
+import { useUiSound, useUiSoundPreferences } from '@/lib/sound/useUiSound';
 
 type Profile = {
   full_name: string;
@@ -130,6 +131,9 @@ export function ProfileSettings({
   const [avatarPreviewFailed, setAvatarPreviewFailed] = useState(false);
   const [channelPrefs, setChannelPrefs] = useState<BroadcastChannelPref[]>(initialBroadcastChannels);
   const [channelBusyId, setChannelBusyId] = useState<string | null>(null);
+  const { prefs: uiSoundPrefs, setEnabled: setUiSoundEnabled, setVolume: setUiSoundVolume } =
+    useUiSoundPreferences();
+  const playUiSound = useUiSound();
 
   const safeAvatar = useMemo(() => safeHttpImageUrl(avatarUrl), [avatarUrl]);
 
@@ -493,6 +497,41 @@ export function ProfileSettings({
               </span>
             </span>
           </label>
+          <div className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={uiSoundPrefs.enabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setUiSoundEnabled(enabled);
+                  playUiSound(enabled ? 'toggle_on' : 'toggle_off');
+                }}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+              />
+              <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="font-medium">UI sound effects</span>
+                <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  Play subtle sounds for menus, toggles, sends, and notification actions.
+                </span>
+              </span>
+            </label>
+            <label className={`${fieldLabel} mt-3`}>
+              UI sound volume: {uiSoundPrefs.volume}%
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={uiSoundPrefs.volume}
+                onChange={(e) => setUiSoundVolume(Number.parseInt(e.target.value, 10))}
+                onMouseUp={() => playUiSound('toggle_on')}
+                onTouchEnd={() => playUiSound('toggle_on')}
+                disabled={!uiSoundPrefs.enabled}
+                className="mt-2 w-full accent-[#121212] disabled:opacity-50"
+              />
+            </label>
+          </div>
           <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnSecondary}>
             Save notification preferences
           </button>

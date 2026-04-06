@@ -1,4 +1,5 @@
 import { isApproverRole } from '@campsite/types';
+import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -14,6 +15,7 @@ import {
 import { AppMobileHeader } from '@/components/shell/AppMobileHeader';
 import { mainShell } from '@/constants/mainShell';
 import { useAuth } from '@/lib/AuthContext';
+import { useUiSound, useUiSoundPreferences } from '@/lib/sound/useUiSound';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type ChannelPref = {
@@ -43,6 +45,9 @@ export default function SettingsScreen() {
   const { user, profile, signOut } = useAuth();
   const showApprovals = profile?.role ? isApproverRole(profile.role) : false;
   const configured = isSupabaseConfigured();
+  const playUiSound = useUiSound();
+  const { prefs: uiSoundPrefs, setEnabled: setUiSoundEnabled, setVolume: setUiSoundVolume } =
+    useUiSoundPreferences();
 
   const [channelPrefs, setChannelPrefs] = useState<ChannelPref[]>([]);
   const [channelsLoading, setChannelsLoading] = useState(false);
@@ -157,7 +162,10 @@ export default function SettingsScreen() {
         {showApprovals ? (
           <Pressable
             style={styles.row}
-            onPress={() => router.push('/pending-approvals')}
+            onPress={() => {
+              playUiSound('menu_open');
+              router.push('/pending-approvals');
+            }}
           >
             <Text style={styles.rowIcon}>⏳</Text>
             <Text style={styles.rowText}>Pending approvals</Text>
@@ -199,6 +207,39 @@ export default function SettingsScreen() {
             ))}
           </View>
         ))}
+
+        <Text style={styles.section}>UI sounds</Text>
+        <Text style={styles.hint}>
+          Play subtle sounds for navigation, dropdowns, and action confirmations.
+        </Text>
+        <View style={styles.channelRow}>
+          <View style={styles.channelRowText}>
+            <Text style={styles.channelName}>Enable UI sounds</Text>
+            <Text style={styles.channelSub}>Turn all interaction sounds on or off.</Text>
+          </View>
+          <Switch
+            value={uiSoundPrefs.enabled}
+            onValueChange={(value) => {
+              setUiSoundEnabled(value);
+              playUiSound(value ? 'toggle_on' : 'toggle_off');
+            }}
+          />
+        </View>
+        <View style={styles.sliderWrap}>
+          <Text style={styles.channelName}>Volume: {uiSoundPrefs.volume}%</Text>
+          <Slider
+            minimumValue={0}
+            maximumValue={100}
+            step={1}
+            value={uiSoundPrefs.volume}
+            onValueChange={(value) => setUiSoundVolume(value)}
+            onSlidingComplete={() => playUiSound('toggle_on')}
+            minimumTrackTintColor={mainShell.pageText}
+            maximumTrackTintColor={mainShell.border}
+            thumbTintColor={mainShell.pageText}
+            disabled={!uiSoundPrefs.enabled}
+          />
+        </View>
 
         <Text style={styles.section}>Account</Text>
         <Text style={styles.hint}>Additional notification preferences match web Settings where available.</Text>
@@ -286,6 +327,10 @@ const styles = StyleSheet.create({
   channelRowText: { flex: 1, minWidth: 0 },
   channelName: { fontSize: 15, fontWeight: '500', color: mainShell.pageText },
   channelSub: { fontSize: 12, color: mainShell.textSecondary, marginTop: 2 },
+  sliderWrap: {
+    paddingHorizontal: 6,
+    marginBottom: 18,
+  },
   signOut: {
     marginTop: 8,
     alignSelf: 'flex-start',

@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { type DeptRow, departmentsForBroadcast } from '@/lib/broadcastDeptScope';
 import { useAuth } from '@/lib/AuthContext';
+import { useUiSound } from '@/lib/sound/useUiSound';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type CatRow = { id: string; name: string; dept_id: string };
@@ -64,6 +65,7 @@ const TITLE_MAX = 120;
 export default function BroadcastComposeScreen() {
   const { tokens, scheme } = useCampsiteTheme();
   const { show: showToast } = useToast();
+  const playUiSound = useUiSound();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ draftId?: string }>();
@@ -387,26 +389,31 @@ export default function BroadcastComposeScreen() {
     if (draftOnly) {
       if (!displayDeptId || !displayCatId || !title.trim()) {
         setError('Title, department, and channel are required.');
+        playUiSound('error_soft');
         return;
       }
       const catRow = cats.find((c) => c.id === displayCatId);
       if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
         setError('Channel does not match department.');
+        playUiSound('error_soft');
         return;
       }
     } else if (isOrgWideActive) {
       if (!displayAuthorityDeptId || !title.trim()) {
         setError('Title and permission department are required for org-wide.');
+        playUiSound('error_soft');
         return;
       }
     } else {
       if (!displayDeptId || !displayCatId || !title.trim()) {
         setError('Title, department, and channel are required.');
+        playUiSound('error_soft');
         return;
       }
       const catRow = cats.find((c) => c.id === displayCatId);
       if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
         setError('Channel does not match department.');
+        playUiSound('error_soft');
         return;
       }
     }
@@ -418,7 +425,10 @@ export default function BroadcastComposeScreen() {
 
       if (mode === 'draft') {
         const ok = await persistDraft();
-        if (ok) showToast('Draft saved');
+        if (ok) {
+          playUiSound('broadcast_draft_saved');
+          showToast('Draft saved');
+        }
         return;
       }
 
@@ -438,6 +448,7 @@ export default function BroadcastComposeScreen() {
         };
         const { error: e } = await supabase.from('broadcasts').insert(row);
         if (e) throw e;
+        playUiSound('broadcast_submitted');
         showToast('Submitted for approval');
         router.back();
         return;
@@ -457,6 +468,7 @@ export default function BroadcastComposeScreen() {
         const when = scheduledAt;
         if (when.getTime() < Date.now() + 5 * 60 * 1000) {
           setError('Schedule at least 5 minutes from now.');
+          playUiSound('error_soft');
           return;
         }
         const row = {
@@ -472,6 +484,7 @@ export default function BroadcastComposeScreen() {
         };
         const { error: e } = await supabase.from('broadcasts').insert(row);
         if (e) throw e;
+        playUiSound('broadcast_scheduled');
         showToast('Broadcast scheduled');
         router.back();
         return;
@@ -490,10 +503,12 @@ export default function BroadcastComposeScreen() {
       };
       const { error: e } = await supabase.from('broadcasts').insert(row);
       if (e) throw e;
+      playUiSound('broadcast_sent');
       showToast('Broadcast sent');
       router.back();
     } catch (e: unknown) {
       setError(formatSupabaseWriteError(e));
+      playUiSound('error_soft');
     } finally {
       setSaving(false);
     }

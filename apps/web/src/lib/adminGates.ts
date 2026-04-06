@@ -212,11 +212,7 @@ export function getMainShellAdminNavItemsByPermissions(
     (k) =>
       k.startsWith('members.') ||
       k.startsWith('roles.') ||
-      k.startsWith('recruitment.') ||
-      k.startsWith('jobs.') ||
-      k.startsWith('applications.') ||
-      k.startsWith('offers.') ||
-      k.startsWith('interviews.') ||
+      k.startsWith('approvals.') ||
       k.startsWith('departments.') ||
       k.startsWith('teams.') ||
       k.startsWith('broadcasts.') ||
@@ -239,28 +235,6 @@ export function getMainShellAdminNavItemsByPermissions(
   items.push({ href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' });
   if (p.includes('rota.view') || p.includes('rota.manage'))
     items.push({ href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' });
-  if (p.includes('recruitment.view'))
-    items.push({ href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'HR' });
-  if (p.includes('jobs.view')) items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' });
-  if (p.includes('applications.view'))
-    items.push({ href: '/hr/applications', label: 'Applications', icon: 'applications', section: 'HR' });
-  if (p.includes('offers.view'))
-    items.push({
-      href: '/hr/offer-templates',
-      label: 'Offer templates',
-      icon: 'offerTemplates',
-      section: 'HR',
-    });
-  if (p.includes('interviews.view'))
-    items.push({ href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' });
-  if (p.includes('leave.manage_org'))
-    items.push({ href: '/hr/leave', label: 'Leave & allowances', icon: 'leave', section: 'HR' });
-  if (p.includes('hr.view_records'))
-    items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'HR' });
-  if (p.includes('onboarding.manage_runs') || p.includes('onboarding.manage_templates'))
-    items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' });
-  if (p.includes('performance.manage_cycles') || p.includes('performance.view_reports'))
-    items.push({ href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' });
   if (p.includes('discounts.view'))
     items.push({ href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' });
   if (p.includes('members.view'))
@@ -274,6 +248,45 @@ export function getMainShellAdminNavItemsByPermissions(
   });
   items.push({ href: '/admin/integrations', label: 'Integrations', icon: 'integrations', section: 'Configuration' });
   return items;
+}
+
+export function getMainShellHrNavItemsByPermissions(
+  permissions: readonly string[] | null | undefined
+): MainShellAdminNavItem[] | null {
+  const p = permissions ?? [];
+  const canSeeAnyHr = p.some(
+    (k) =>
+      k.startsWith('recruitment.') ||
+      k.startsWith('jobs.') ||
+      k.startsWith('applications.') ||
+      k.startsWith('offers.') ||
+      k.startsWith('interviews.') ||
+      k.startsWith('leave.') ||
+      k.startsWith('hr.') ||
+      k.startsWith('onboarding.') ||
+      k.startsWith('performance.')
+  );
+  if (!canSeeAnyHr) return null;
+
+  const items: MainShellAdminNavItem[] = [];
+  if (p.includes('recruitment.view'))
+    items.push({ href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment' });
+  if (p.includes('jobs.view')) items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs' });
+  if (p.includes('applications.view'))
+    items.push({ href: '/hr/applications', label: 'Applications', icon: 'applications' });
+  if (p.includes('offers.view'))
+    items.push({ href: '/hr/offer-templates', label: 'Offer templates', icon: 'offerTemplates' });
+  if (p.includes('interviews.view'))
+    items.push({ href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews' });
+  if (p.includes('leave.manage_org'))
+    items.push({ href: '/hr/leave', label: 'Leave & allowances', icon: 'leave' });
+  if (p.includes('hr.view_records'))
+    items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords' });
+  if (p.includes('onboarding.manage_runs') || p.includes('onboarding.manage_templates'))
+    items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding' });
+  if (p.includes('performance.manage_cycles') || p.includes('performance.view_reports'))
+    items.push({ href: '/hr/performance', label: 'Performance reviews', icon: 'performance' });
+  return items.length ? items : null;
 }
 
 export function getMainShellManagerNavItemsByPermissions(

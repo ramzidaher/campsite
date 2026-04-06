@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { homeHeaderTitle, isHomeTabPathname, mainShell, mainScreenTitle } from '@/constants/mainShell';
 import { useAuth } from '@/lib/AuthContext';
+import { useUiSound } from '@/lib/sound/useUiSound';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 function initials(name: string) {
@@ -26,6 +27,7 @@ export function AppMobileHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, profile } = useAuth();
+  const playUiSound = useUiSound();
   const [hasNotifDot, setHasNotifDot] = useState(false);
   const [hasRecruitmentDot, setHasRecruitmentDot] = useState(false);
 
@@ -75,12 +77,13 @@ export function AppMobileHeader() {
     pathname?.endsWith('/pending-approvals');
 
   const onBack = useCallback(() => {
+    playUiSound('menu_close');
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/(tabs)');
     }
-  }, [router]);
+  }, [playUiSound, router]);
   const userInitials = useMemo(
     () => initials((profile?.full_name ?? user?.email ?? '?').trim() || '?'),
     [profile?.full_name, user?.email]
@@ -105,7 +108,10 @@ export function AppMobileHeader() {
         <View style={styles.actions}>
           {hasRecruitmentDot ? (
             <Pressable
-              onPress={() => router.push('/(tabs)/hr')}
+              onPress={() => {
+                playUiSound('menu_open');
+                router.push('/(tabs)/hr');
+              }}
               style={styles.iconBtn}
               accessibilityLabel="Recruitment updates"
             >
@@ -114,7 +120,10 @@ export function AppMobileHeader() {
             </Pressable>
           ) : null}
           <Pressable
-            onPress={() => router.push('/(tabs)/broadcasts')}
+            onPress={() => {
+              playUiSound('menu_open');
+              router.push('/(tabs)/broadcasts');
+            }}
             style={styles.iconBtn}
             accessibilityLabel="Broadcasts"
           >
@@ -122,7 +131,10 @@ export function AppMobileHeader() {
             {hasNotifDot ? <View style={styles.notifDot} /> : null}
           </Pressable>
           <Pressable
-            onPress={() => router.push('/settings')}
+            onPress={() => {
+              playUiSound('menu_open');
+              router.push('/settings');
+            }}
             style={styles.avatarBtn}
             accessibilityLabel="Settings"
           >

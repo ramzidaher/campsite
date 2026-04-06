@@ -4,6 +4,7 @@ import { MainProviders } from '@/components/providers/MainProviders';
 import { ThemeRoot } from '@/components/ThemeRoot';
 import {
   getMainShellAdminNavItemsByPermissions,
+  getMainShellHrNavItemsByPermissions,
   getMainShellManagerNavItemsByPermissions,
   getMainShellManagerNavSectionLabel,
 } from '@/lib/adminGates';
@@ -234,8 +235,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
 
   const adminNavItemsRaw = getMainShellAdminNavItemsByPermissions(permissionKeys);
-  const adminNavItems =
-    adminNavItemsRaw?.map((item) => {
+  const hrNavItemsRaw = getMainShellHrNavItemsByPermissions(permissionKeys);
+  const mapHrBadges = <T extends { href: string }>(items: T[] | null) =>
+    items?.map((item) => {
       if (item.href === '/admin/pending' && pendingApprovalCount > 0) {
         return { ...item, badge: pendingApprovalCount };
       }
@@ -244,6 +246,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }
       return item;
     }) ?? null;
+  const adminNavItems = mapHrBadges(adminNavItemsRaw);
+  const hrNavItems = mapHrBadges(hrNavItemsRaw);
 
   const showStandaloneApprovals =
     permissionKeys.includes('approvals.members.review') && !hasAdminAreaAccess && !managerNavItems;
@@ -322,6 +326,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           managerNavSectionLabel={
             managerNavItems && profileRole ? getMainShellManagerNavSectionLabel(profileRole) : 'Manager'
           }
+          hrNavItems={hrNavItems}
           adminNavItems={adminNavItems}
           showStandaloneApprovals={showStandaloneApprovals}
           showLeaveNav={showLeaveNav}

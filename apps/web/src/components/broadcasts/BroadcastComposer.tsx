@@ -12,6 +12,7 @@ import type { DeptRow } from './dept-scope';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { useUiSound } from '@/lib/sound/useUiSound';
 
 import {
   BroadcastBodyEditor,
@@ -155,6 +156,7 @@ export function BroadcastComposer({
   categoriesByDept,
   onCreated,
 }: Props) {
+  const playUiSound = useUiSound();
   const [deptId, setDeptId] = useState<string>('');
   const [catId, setCatId] = useState<string>('');
   const [authorityDeptId, setAuthorityDeptId] = useState<string>('');
@@ -426,26 +428,31 @@ export function BroadcastComposer({
     if (draftOnly) {
       if (!displayDeptId || !displayCatId || !title.trim()) {
         setError('Title, department, and channel are required.');
+        playUiSound('error_soft');
         return;
       }
       const catRow = cats.find((c) => c.id === displayCatId);
       if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
         setError('This channel does not belong to the selected department. Refresh the page or pick the channel again.');
+        playUiSound('error_soft');
         return;
       }
     } else if (isOrgWideActive) {
       if (!displayAuthorityDeptId || !title.trim()) {
         setError('Title and permission department are required for an org-wide broadcast.');
+        playUiSound('error_soft');
         return;
       }
     } else {
       if (!displayDeptId || !displayCatId || !title.trim()) {
         setError('Title, department, and channel are required.');
+        playUiSound('error_soft');
         return;
       }
       const catRow = cats.find((c) => c.id === displayCatId);
       if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
         setError('This channel does not belong to the selected department. Refresh the page or pick the channel again.');
+        playUiSound('error_soft');
         return;
       }
     }
@@ -455,7 +462,10 @@ export function BroadcastComposer({
     try {
       if (mode === 'draft') {
         const saved = await persistDraft();
-        if (saved) onCreated?.('draft_saved');
+        if (saved) {
+          playUiSound('broadcast_draft_saved');
+          onCreated?.('draft_saved');
+        }
         return;
       }
 
@@ -478,6 +488,7 @@ export function BroadcastComposer({
         setTitle('');
         setBody('');
         setDraftId(null);
+        playUiSound('broadcast_submitted');
         onCreated?.('submitted_for_approval');
         return;
       }
@@ -495,11 +506,13 @@ export function BroadcastComposer({
       if (mode === 'schedule') {
         if (!scheduledAt) {
           setError('Pick a scheduled date and time.');
+          playUiSound('error_soft');
           return;
         }
         const when = new Date(scheduledAt);
         if (when.getTime() < Date.now() + 5 * 60 * 1000) {
           setError('Schedule at least 5 minutes from now.');
+          playUiSound('error_soft');
           return;
         }
         const row = {
@@ -525,6 +538,7 @@ export function BroadcastComposer({
         setIsPinned(false);
         setTeamId('');
         setCollabDeptIds([]);
+        playUiSound('broadcast_scheduled');
         onCreated?.('scheduled');
         return;
       }
@@ -550,9 +564,11 @@ export function BroadcastComposer({
       setIsPinned(false);
       setTeamId('');
       setCollabDeptIds([]);
+      playUiSound('broadcast_sent');
       onCreated?.('sent');
     } catch (e: unknown) {
       setError(formatSupabaseWriteError(e));
+      playUiSound('error_soft');
     } finally {
       setSaving(false);
     }

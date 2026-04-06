@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { useUiSound } from '@/lib/sound/useUiSound';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -52,6 +53,7 @@ export function RecruitmentNotificationsClient({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const playUiSound = useUiSound();
   const [busy, setBusy] = useState(false);
   const [localRead, setLocalRead] = useState<Set<string>>(new Set());
 
@@ -62,12 +64,14 @@ export function RecruitmentNotificationsClient({
     await supabase.rpc('recruitment_notifications_mark_all_read');
     setBusy(false);
     setLocalRead(new Set(notifications.map((n) => n.id)));
+    playUiSound('recruitment_mark_all_read');
     router.refresh();
   }
 
   async function markRead(id: string) {
     setLocalRead((prev) => new Set([...prev, id]));
     await supabase.rpc('recruitment_notification_mark_read', { p_notification_id: id });
+    playUiSound('recruitment_read');
   }
 
   return (
@@ -108,7 +112,10 @@ export function RecruitmentNotificationsClient({
               <li key={n.id}>
                 <Link
                   href={`/hr/recruitment/${n.request_id}`}
-                  onClick={() => { if (isUnread) void markRead(n.id); }}
+                  onClick={() => {
+                    if (isUnread) void markRead(n.id);
+                    else playUiSound('recruitment_read');
+                  }}
                   className={[
                     'flex items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-[#faf9f6]',
                     isUnread ? 'border-[#fde68a] bg-[#fffbeb]' : 'border-[#d8d8d8] bg-white',
