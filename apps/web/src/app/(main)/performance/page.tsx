@@ -33,11 +33,11 @@ export default async function EmployeePerformancePage() {
   const cycleIds = [...new Set((reviews ?? []).map((r) => r.cycle_id as string))];
   const { data: cycles } = await supabase
     .from('review_cycles')
-    .select('id, name, type, period_start, period_end, status')
+    .select('id, name, type, period_start, period_end, status, self_assessment_due, manager_assessment_due')
     .in('id', cycleIds);
 
-  const cycleMap: Record<string, { name: string; type: string; period_start: string; period_end: string; status: string }> = {};
-  for (const c of cycles ?? []) cycleMap[c.id as string] = { name: c.name as string, type: c.type as string, period_start: c.period_start as string, period_end: c.period_end as string, status: c.status as string };
+  const cycleMap: Record<string, { name: string; type: string; period_start: string; period_end: string; status: string; self_assessment_due: string | null; manager_assessment_due: string | null }> = {};
+  for (const c of cycles ?? []) cycleMap[c.id as string] = { name: c.name as string, type: c.type as string, period_start: c.period_start as string, period_end: c.period_end as string, status: c.status as string, self_assessment_due: (c.self_assessment_due as string | null) ?? null, manager_assessment_due: (c.manager_assessment_due as string | null) ?? null };
 
   // get reviewee names (for manager view)
   const revieweeIds = [...new Set((reviews ?? []).filter((r) => r.reviewer_id === user.id).map((r) => r.reviewee_id as string))];

@@ -21,7 +21,6 @@ type SicknessRow = {
   start_date: string;
   end_date: string;
   notes: string | null;
-  user_id?: string;
 };
 
 type AllowanceRow = {
@@ -30,17 +29,40 @@ type AllowanceRow = {
   toil_balance_days: number;
 };
 
-function daysLabel(start: string, end: string): string {
+function daysBetween(start: string, end: string): number {
   const a = new Date(`${start}T12:00:00Z`);
   const b = new Date(`${end}T12:00:00Z`);
-  const n = Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
+  return Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
+}
+
+function daysLabel(start: string, end: string): string {
+  const n = daysBetween(start, end);
   return `${n} day${n === 1 ? '' : 's'}`;
 }
 
 function displayName(p: LeaveRequest): string {
   const raw = p.profiles;
   const row = Array.isArray(raw) ? raw[0] : raw;
-  return row?.full_name?.trim() || 'Member';
+  return row?.full_name?.trim() || 'Team member';
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    pending:  { label: 'Awaiting approval', className: 'bg-[#fff7ed] text-[#c2410c]' },
+    approved: { label: 'Approved',          className: 'bg-[#dcfce7] text-[#166534]' },
+    rejected: { label: 'Declined',          className: 'bg-[#fef2f2] text-[#b91c1c]' },
+    cancelled:{ label: 'Cancelled',         className: 'bg-[#f5f4f1] text-[#9b9b9b]' },
+  };
+  const { label, className } = map[status] ?? { label: status, className: 'bg-[#f5f4f1] text-[#6b6b6b]' };
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${className}`}>
+      {label}
+    </span>
+  );
+}
+
+function KindLabel({ kind }: { kind: string }) {
+  return kind === 'toil' ? 'Time off in lieu (TOIL)' : 'Annual leave';
 }
 
 export function LeaveHubClient({
@@ -80,6 +102,9 @@ export function LeaveHubClient({
   const [sickStart, setSickStart] = useState('');
   const [sickEnd, setSickEnd] = useState('');
   const [sickNotes, setSickNotes] = useState('');
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [currentYear - 1, currentYear, currentYear + 1].map(String);
 
   const load = useCallback(async () => {
     setMsg(null);
@@ -176,9 +201,7 @@ export function LeaveHubClient({
     }
   }, [supabase, orgId, userId, year, canApprove, canManage]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   async function submitLeave(e: React.FormEvent) {
     e.preventDefault();
@@ -192,13 +215,8 @@ export function LeaveHubClient({
       p_note: formNote.trim() || null,
     });
     setBusy(false);
-    if (error) {
-      setMsg(error.message);
-      return;
-    }
-    setFormStart('');
-    setFormEnd('');
-    setFormNote('');
+    if (error) { setMsg(error.message); return; }
+    setFormStart(''); setFormEnd(''); setFormNote('');
     await load();
   }
 
@@ -214,13 +232,8 @@ export function LeaveHubClient({
       p_notes: sickNotes.trim() || null,
     });
     setBusy(false);
-    if (error) {
-      setMsg(error.message);
-      return;
-    }
-    setSickStart('');
-    setSickEnd('');
-    setSickNotes('');
+    if (error) { setMsg(error.message); return; }
+    setSickStart(''); setSickEnd(''); setSickNotes('');
     await load();
   }
 
@@ -248,148 +261,143 @@ export function LeaveHubClient({
     return myRequests
       .filter((r) => r.kind === 'annual' && (r.status === 'approved' || r.status === 'pending'))
       .filter((r) => r.start_date.startsWith(year) || r.end_date.startsWith(year))
-      .reduce((acc, r) => {
-        const a = new Date(`${r.start_date}T12:00:00Z`);
-        const b = new Date(`${r.end_date}T12:00:00Z`);
-        return acc + Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
-      }, 0);
+      .reduce((acc, r) => acc + daysBetween(r.start_date, r.end_date), 0);
   }, [myRequests, year]);
+
+  const entitlement = allowance?.annual_entitlement_days ?? 0;
+  const remaining = Math.max(0, entitlement - usedAnnual);
+  const toilBalance = allowance?.toil_balance_days ?? 0;
+  const usedPct = entitlement > 0 ? Math.min(100, Math.round((usedAnnual / entitlement) * 100)) : 0;
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Leave</h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Annual leave and TOIL (with line-manager approval), sickness logging, and a rolling sickness absence
-            score.
-          </p>
+          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Time off</h1>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">Book leave, log sick days, and see your balances.</p>
         </div>
-        {canManage ? (
-          <Link
-            href="/admin/leave"
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
-          >
-            Org leave admin
-          </Link>
-        ) : null}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-[12.5px] text-[#6b6b6b]">
+            Year
+            <select
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12.5px] text-[#121212]"
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </label>
+          {canManage ? (
+            <Link
+              href="/admin/leave"
+              className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+            >
+              Admin settings
+            </Link>
+          ) : null}
+        </div>
       </div>
 
-      {msg ? <p className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p> : null}
+      {msg ? (
+        <p className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p>
+      ) : null}
 
-      <aside className="mb-6 rounded-xl border border-[#e8e4dc] bg-[#f7f5f0] p-4 text-[12px] leading-relaxed text-[#4a4a4a]">
-        <p className="font-semibold text-[#121212]">How this works</p>
-        <ul className="mt-2 list-inside list-disc space-y-1">
-          <li>
-            <strong>Annual leave</strong> is checked against the entitlement your organisation sets. The system uses
-            your <strong>approved and pending</strong> annual requests for this leave year (calendar year for now) when
-            you book — there is no separate “used days” counter.
-          </li>
-          <li>
-            <strong>TOIL</strong> uses a days balance your admin maintains; when TOIL leave is <strong>approved</strong>
-            , that balance goes down.
-          </li>
-          <li>
-            <strong>Sickness</strong> is logged separately: it does not reduce annual leave or TOIL, but it feeds the
-            sickness absence score below.
-          </li>
-          <li>
-            Your <strong>line manager</strong> (for approvals) is chosen under Admin → All members → Edit. If none is
-            set, only org admins can approve leave.
-          </li>
-          {canManage ? (
-            <li>
-              <strong>Custom roles</strong> do not get leave access automatically — grant the right leave permissions
-              under Admin → Roles & permissions.
-            </li>
+      {/* Balances */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-2">
+        {/* Annual leave balance */}
+        <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">Annual leave remaining</p>
+          <p className="mt-1 text-[32px] font-bold leading-none tracking-tight text-[#121212]">
+            {remaining}
+            <span className="ml-1 text-[16px] font-normal text-[#9b9b9b]">days</span>
+          </p>
+          <p className="mt-2 text-[11.5px] text-[#9b9b9b]">{usedAnnual} booked of {entitlement} day entitlement</p>
+          {entitlement > 0 ? (
+            <div className="mt-3 h-1.5 w-full rounded-full bg-[#ececec]">
+              <div
+                className={`h-1.5 rounded-full transition-all ${usedPct >= 90 ? 'bg-[#f59e0b]' : 'bg-[#121212]'}`}
+                style={{ width: `${usedPct}%` }}
+              />
+            </div>
           ) : null}
-        </ul>
-      </aside>
-
-      <section className="mb-8 rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <h2 className="text-[15px] font-semibold text-[#121212]">Balances ({year})</h2>
-        <p className="mt-1 text-[12px] text-[#9b9b9b]">
-          Figures are for planning; booking rules are enforced when you submit (annual vs entitlement, TOIL vs balance).
-        </p>
-        <div className="mt-3 flex flex-wrap gap-4 text-[13px]">
-          <label className="flex items-center gap-2 text-[#6b6b6b]">
-            Leave year
-            <input
-              type="text"
-              value={year}
-              onChange={(e) => setYear(e.target.value.trim() || initialYear)}
-              className="w-24 rounded-md border border-[#d8d8d8] px-2 py-1 text-[#121212]"
-              aria-label="Leave year"
-            />
-          </label>
-          <div>
-            <span className="text-[#9b9b9b]">Annual entitlement</span>{' '}
-            <span className="font-medium text-[#121212]">{allowance?.annual_entitlement_days ?? 0} days</span>
-          </div>
-          <div>
-            <span className="text-[#9b9b9b]">Annual booked this year (pending + approved)</span>{' '}
-            <span className="font-medium text-[#121212]">{usedAnnual} days</span>
-          </div>
-          <div>
-            <span className="text-[#9b9b9b]">TOIL balance (reduced when TOIL leave is approved)</span>{' '}
-            <span className="font-medium text-[#121212]">{allowance?.toil_balance_days ?? 0} days</span>
-          </div>
         </div>
-      </section>
 
-      {canApprove || canManage ? (
-        <section className="mb-8 rounded-xl border border-[#d8d8d8] bg-white p-5">
-          <h2 className="text-[15px] font-semibold text-[#121212]">Pending approvals</h2>
-          {pendingForMe.length === 0 ? (
-            <p className="mt-2 text-[13px] text-[#9b9b9b]">No pending leave requests.</p>
-          ) : (
-            <ul className="mt-3 space-y-3">
-              {pendingForMe.map((r) => (
-                <li
-                  key={r.id}
-                  className="flex flex-col gap-2 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="text-[13px]">
-                    <div className="font-medium text-[#121212]">{displayName(r)}</div>
-                    <div className="text-[#6b6b6b]">
-                      {r.kind === 'annual' ? 'Annual leave' : 'TOIL'} · {r.start_date} → {r.end_date} (
-                      {daysLabel(r.start_date, r.end_date)})
-                    </div>
-                    {r.note ? <div className="text-[12px] text-[#9b9b9b]">{r.note}</div> : null}
+        {/* TOIL balance */}
+        <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">
+            Time off in lieu (TOIL)
+          </p>
+          <p className="mt-1 text-[32px] font-bold leading-none tracking-tight text-[#121212]">
+            {toilBalance}
+            <span className="ml-1 text-[16px] font-normal text-[#9b9b9b]">days</span>
+          </p>
+          <p className="mt-2 text-[11.5px] text-[#9b9b9b]">
+            TOIL is earned overtime you can take back as paid time off.
+          </p>
+        </div>
+      </div>
+
+      {/* Pending approvals (manager/admin) */}
+      {(canApprove || canManage) && pendingForMe.length > 0 ? (
+        <section className="mb-6 rounded-xl border border-[#fde68a] bg-[#fffbeb] p-5">
+          <h2 className="text-[14px] font-semibold text-[#92400e]">
+            {pendingForMe.length} request{pendingForMe.length === 1 ? '' : 's'} waiting for your decision
+          </h2>
+          <ul className="mt-3 space-y-3">
+            {pendingForMe.map((r) => (
+              <li
+                key={r.id}
+                className="flex flex-col gap-2 rounded-lg border border-[#fde68a] bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="text-[13px]">
+                  <div className="font-medium text-[#121212]">{displayName(r)}</div>
+                  <div className="text-[#6b6b6b]">
+                    <KindLabel kind={r.kind} /> · {r.start_date} to {r.end_date} ({daysLabel(r.start_date, r.end_date)})
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      className="rounded-lg bg-[#14532d] px-3 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50"
-                      onClick={() => void decideRequest(r.id, true)}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50"
-                      onClick={() => void decideRequest(r.id, false)}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                  {r.note ? <div className="mt-0.5 text-[12px] text-[#9b9b9b]">&ldquo;{r.note}&rdquo;</div> : null}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="rounded-lg bg-[#14532d] px-3 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50"
+                    onClick={() => void decideRequest(r.id, true)}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50"
+                    onClick={() => void decideRequest(r.id, false)}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
+      {/* No pending approvals notice */}
+      {(canApprove || canManage) && pendingForMe.length === 0 ? (
+        <section className="mb-6 rounded-xl border border-[#d8d8d8] bg-white p-4">
+          <p className="text-[13px] text-[#9b9b9b]">No leave requests waiting for your approval.</p>
+        </section>
+      ) : null}
+
+      {/* Request leave form */}
       {canSubmit ? (
-        <>
-          <section className="mb-8 rounded-xl border border-[#d8d8d8] bg-white p-5">
-            <h2 className="text-[15px] font-semibold text-[#121212]">Request leave</h2>
-            <p className="mt-1 text-[12px] text-[#9b9b9b]">
-              Your line manager (set under Admin → All members → Edit) approves TOIL and annual leave.
-            </p>
-            <form className="mt-4 space-y-3" onSubmit={(e) => void submitLeave(e)}>
+        <section className="mb-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
+          <h2 className="text-[15px] font-semibold text-[#121212]">Book time off</h2>
+          <p className="mt-1 text-[12px] text-[#9b9b9b]">Your request will go to your line manager for approval.</p>
+          <form className="mt-4 space-y-3" onSubmit={(e) => void submitLeave(e)}>
+            <div className="grid gap-3 sm:grid-cols-3">
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Type
                 <select
@@ -398,181 +406,195 @@ export function LeaveHubClient({
                   onChange={(e) => setFormKind(e.target.value as 'annual' | 'toil')}
                 >
                   <option value="annual">Annual leave</option>
-                  <option value="toil">TOIL</option>
+                  <option value="toil">Time off in lieu (TOIL)</option>
                 </select>
               </label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                  Start
-                  <input
-                    type="date"
-                    required
-                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                    value={formStart}
-                    onChange={(e) => setFormStart(e.target.value)}
-                  />
-                </label>
-                <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                  End
-                  <input
-                    type="date"
-                    required
-                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                    value={formEnd}
-                    onChange={(e) => setFormEnd(e.target.value)}
-                  />
-                </label>
-              </div>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                Note (optional)
+                First day off
                 <input
-                  type="text"
+                  type="date"
+                  required
                   className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                  value={formNote}
-                  onChange={(e) => setFormNote(e.target.value)}
+                  value={formStart}
+                  onChange={(e) => setFormStart(e.target.value)}
                 />
               </label>
-              <button
-                type="submit"
-                disabled={busy}
-                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
-              >
-                Submit request
-              </button>
-            </form>
-          </section>
-
-          <section className="mb-8 rounded-xl border border-[#d8d8d8] bg-white p-5">
-            <h2 className="text-[15px] font-semibold text-[#121212]">Log sickness</h2>
-            <p className="mt-1 text-[12px] text-[#9b9b9b]">
-              Sickness is separate from paid leave: it does not use your annual entitlement or TOIL balance, but it
-              counts toward your rolling sickness absence score below.
-            </p>
-            <form className="mt-4 space-y-3" onSubmit={(e) => void submitSickness(e)}>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                  Start
-                  <input
-                    type="date"
-                    required
-                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                    value={sickStart}
-                    onChange={(e) => setSickStart(e.target.value)}
-                  />
-                </label>
-                <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                  End
-                  <input
-                    type="date"
-                    required
-                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                    value={sickEnd}
-                    onChange={(e) => setSickEnd(e.target.value)}
-                  />
-                </label>
-              </div>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                Notes (optional)
+                Last day off
                 <input
-                  type="text"
+                  type="date"
+                  required
+                  min={formStart}
                   className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                  value={sickNotes}
-                  onChange={(e) => setSickNotes(e.target.value)}
+                  value={formEnd}
+                  onChange={(e) => setFormEnd(e.target.value)}
                 />
               </label>
-              <button
-                type="submit"
-                disabled={busy}
-                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
-              >
-                Log sickness
-              </button>
-            </form>
-          </section>
-        </>
+            </div>
+            {formStart && formEnd && formEnd >= formStart ? (
+              <p className="text-[12px] text-[#6b6b6b]">
+                That&apos;s <strong>{daysLabel(formStart, formEnd)}</strong>
+                {formKind === 'annual' && ` — you have ${remaining} day${remaining === 1 ? '' : 's'} remaining`}
+                {formKind === 'toil' && ` — you have ${toilBalance} TOIL day${toilBalance === 1 ? '' : 's'} available`}
+              </p>
+            ) : null}
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Add a note (optional)
+              <input
+                type="text"
+                placeholder="e.g. family holiday"
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                value={formNote}
+                onChange={(e) => setFormNote(e.target.value)}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={busy || !formStart || !formEnd}
+              className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+            >
+              {busy ? 'Sending…' : 'Send request'}
+            </button>
+          </form>
+        </section>
       ) : null}
 
-      <section className="mb-8 rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <h2 className="text-[15px] font-semibold text-[#121212]">Sickness absence score</h2>
-        <p className="mt-1 text-[12px] text-[#9b9b9b]">
-          Based only on sickness you have logged. Many UK employers track a number from{' '}
-          <strong>how many separate absences</strong> you have had and <strong>how many days</strong> you were off in a
-          rolling period (here: separate absences squared × total days). Overlapping or back-to-back sick days usually
-          count as one absence. This is not legal advice — use it alongside your own HR policies.
-        </p>
-        {absenceScore ? (
-          <dl className="mt-3 grid gap-2 text-[13px] sm:grid-cols-3">
-            <div>
-              <dt className="text-[#9b9b9b]">Separate absences</dt>
-              <dd className="font-medium text-[#121212]">{absenceScore.spell_count}</dd>
-            </div>
-            <div>
-              <dt className="text-[#9b9b9b]">Total days off (sickness)</dt>
-              <dd className="font-medium text-[#121212]">{absenceScore.total_days}</dd>
-            </div>
-            <div>
-              <dt className="text-[#9b9b9b]">Combined score</dt>
-              <dd className="font-medium text-[#121212]">{absenceScore.bradford_score}</dd>
-            </div>
-          </dl>
-        ) : (
-          <p className="mt-2 text-[13px] text-[#9b9b9b]">Could not load sickness absence score.</p>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <h2 className="text-[15px] font-semibold text-[#121212]">My leave requests</h2>
-        <ul className="mt-3 divide-y divide-[#ececec] text-[13px]">
-          {myRequests.length === 0 ? <li className="py-2 text-[#9b9b9b]">No requests yet.</li> : null}
-          {myRequests.map((r) => (
-            <li key={r.id} className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <span className="font-medium capitalize text-[#121212]">{r.kind}</span>{' '}
-                <span className="text-[#6b6b6b]">
-                  {r.start_date} → {r.end_date} ({daysLabel(r.start_date, r.end_date)})
-                </span>
-                <span
-                  className={[
-                    'ml-2 rounded-full px-2 py-0.5 text-[11px] font-medium',
-                    r.status === 'approved'
-                      ? 'bg-[#dcfce7] text-[#166534]'
-                      : r.status === 'pending'
-                        ? 'bg-[#fff7ed] text-[#c2410c]'
-                        : r.status === 'rejected'
-                          ? 'bg-[#fef2f2] text-[#b91c1c]'
-                          : 'bg-[#f5f4f1] text-[#6b6b6b]',
-                  ].join(' ')}
-                >
-                  {r.status}
-                </span>
-              </div>
-              {r.status === 'pending' ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="text-[12px] text-[#b91c1c] underline disabled:opacity-50"
-                  onClick={() => void cancelRequest(r.id)}
-                >
-                  Cancel
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      </section>
-
+      {/* Log sick day */}
       {canSubmit ? (
-        <section className="mt-8 rounded-xl border border-[#d8d8d8] bg-white p-5">
-          <h2 className="text-[15px] font-semibold text-[#121212]">Sickness history</h2>
-          <ul className="mt-3 divide-y divide-[#ececec] text-[13px]">
-            {sickness.length === 0 ? <li className="py-2 text-[#9b9b9b]">No sickness logged.</li> : null}
-            {sickness.map((s) => (
-              <li key={s.id} className="py-2 text-[#6b6b6b]">
-                {s.start_date} → {s.end_date} ({daysLabel(s.start_date, s.end_date)})
-                {s.notes ? <span className="ml-2 text-[12px] text-[#9b9b9b]">{s.notes}</span> : null}
+        <section className="mb-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
+          <h2 className="text-[15px] font-semibold text-[#121212]">Log sick days</h2>
+          <p className="mt-1 text-[12px] text-[#9b9b9b]">
+            Sick days don&apos;t use your annual leave — they&apos;re tracked separately. No approval needed.
+          </p>
+          <form className="mt-4 space-y-3" onSubmit={(e) => void submitSickness(e)}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                First day sick
+                <input
+                  type="date"
+                  required
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                  value={sickStart}
+                  onChange={(e) => setSickStart(e.target.value)}
+                />
+              </label>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Last day sick
+                <input
+                  type="date"
+                  required
+                  min={sickStart}
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                  value={sickEnd}
+                  onChange={(e) => setSickEnd(e.target.value)}
+                />
+              </label>
+            </div>
+            {sickStart && sickEnd && sickEnd >= sickStart ? (
+              <p className="text-[12px] text-[#6b6b6b]">
+                That&apos;s <strong>{daysLabel(sickStart, sickEnd)}</strong>
+              </p>
+            ) : null}
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Notes (optional)
+              <input
+                type="text"
+                placeholder="e.g. flu, GP appointment"
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                value={sickNotes}
+                onChange={(e) => setSickNotes(e.target.value)}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={busy || !sickStart || !sickEnd}
+              className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+            >
+              {busy ? 'Saving…' : 'Save'}
+            </button>
+          </form>
+        </section>
+      ) : null}
+
+      {/* My requests */}
+      <section className="mb-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
+        <h2 className="mb-3 text-[15px] font-semibold text-[#121212]">My leave requests</h2>
+        {myRequests.length === 0 ? (
+          <p className="text-[13px] text-[#9b9b9b]">No requests yet.</p>
+        ) : (
+          <ul className="divide-y divide-[#ececec] text-[13px]">
+            {myRequests.map((r) => (
+              <li key={r.id} className="flex flex-col gap-1.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-[#121212]"><KindLabel kind={r.kind} /></span>
+                    <StatusBadge status={r.status} />
+                  </div>
+                  <div className="mt-0.5 text-[#6b6b6b]">
+                    {r.start_date} to {r.end_date} · {daysLabel(r.start_date, r.end_date)}
+                  </div>
+                  {r.note ? <div className="text-[12px] text-[#9b9b9b]">&ldquo;{r.note}&rdquo;</div> : null}
+                </div>
+                {r.status === 'pending' ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="text-[12px] text-[#b91c1c] underline underline-offset-2 disabled:opacity-50 sm:shrink-0"
+                    onClick={() => void cancelRequest(r.id)}
+                  >
+                    Cancel request
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      {/* Sick day history */}
+      {canSubmit && sickness.length > 0 ? (
+        <section className="mb-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
+          <h2 className="mb-3 text-[15px] font-semibold text-[#121212]">Sick day history</h2>
+          <ul className="divide-y divide-[#ececec] text-[13px]">
+            {sickness.map((s) => (
+              <li key={s.id} className="py-2.5 text-[#6b6b6b]">
+                {s.start_date} to {s.end_date} ({daysLabel(s.start_date, s.end_date)})
+                {s.notes ? <span className="ml-2 text-[12px] text-[#9b9b9b]">&ldquo;{s.notes}&rdquo;</span> : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* Sickness absence score */}
+      {absenceScore ? (
+        <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
+          <h2 className="text-[15px] font-semibold text-[#121212]">Sickness absence score</h2>
+          <p className="mt-1 text-[12px] text-[#9b9b9b]">
+            A score your organisation uses to spot patterns in sickness — based on the number of separate absences and
+            total days off. Higher scores may prompt a conversation with HR.
+          </p>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg bg-[#faf9f6] p-3">
+              <dt className="text-[11.5px] font-medium text-[#9b9b9b]">Separate absences</dt>
+              <dd className="mt-1 text-[24px] font-bold text-[#121212]">{absenceScore.spell_count}</dd>
+            </div>
+            <div className="rounded-lg bg-[#faf9f6] p-3">
+              <dt className="text-[11.5px] font-medium text-[#9b9b9b]">Total sick days</dt>
+              <dd className="mt-1 text-[24px] font-bold text-[#121212]">{absenceScore.total_days}</dd>
+            </div>
+            <div className={`rounded-lg p-3 ${absenceScore.bradford_score >= 200 ? 'bg-[#fef2f2]' : 'bg-[#faf9f6]'}`}>
+              <dt className="text-[11.5px] font-medium text-[#9b9b9b]">Absence score</dt>
+              <dd className={`mt-1 text-[24px] font-bold ${absenceScore.bradford_score >= 200 ? 'text-[#b91c1c]' : 'text-[#121212]'}`}>
+                {absenceScore.bradford_score}
+              </dd>
+            </div>
+          </dl>
+          {absenceScore.bradford_score >= 200 ? (
+            <p className="mt-3 text-[12px] text-[#b91c1c]">
+              Your score is above the typical review threshold. Your HR team may be in touch.
+            </p>
+          ) : null}
         </section>
       ) : null}
     </div>
