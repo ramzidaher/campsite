@@ -8,8 +8,12 @@ export function tenantAdminDashboardUrl(orgSlug: string): string {
   const { protocol, hostname, port } = window.location;
   const p = port ? `:${port}` : '';
   const root = HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN;
+  const platformAdminHost = HOST_RESOLUTION_CONSTANTS.PLATFORM_ADMIN_HOST;
   if (hostname === 'localhost' || hostname === 'admin.localhost' || hostname.endsWith('.localhost')) {
     return `${protocol}//${orgSlug}.localhost${p}/admin`;
+  }
+  if (hostname === root || hostname === platformAdminHost || hostname === `www.${root}`) {
+    return `${protocol}//${orgSlug}.${root}${p}/admin`;
   }
   if (hostname.endsWith(`.${root}`)) {
     return `${protocol}//${orgSlug}.${root}${p}/admin`;
@@ -26,8 +30,12 @@ export function tenantJobPublicUrl(orgSlug: string, jobSlug: string): string {
   const { protocol, hostname, port } = window.location;
   const p = port ? `:${port}` : '';
   const root = HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN;
+  const platformAdminHost = HOST_RESOLUTION_CONSTANTS.PLATFORM_ADMIN_HOST;
   if (hostname === 'localhost' || hostname === 'admin.localhost' || hostname.endsWith('.localhost')) {
     return `${protocol}//${orgSlug}.localhost${p}${path}`;
+  }
+  if (hostname === root || hostname === platformAdminHost || hostname === `www.${root}`) {
+    return `${protocol}//${orgSlug}.${root}${p}${path}`;
   }
   if (hostname.endsWith(`.${root}`)) {
     return `${protocol}//${orgSlug}.${root}${p}${path}`;
