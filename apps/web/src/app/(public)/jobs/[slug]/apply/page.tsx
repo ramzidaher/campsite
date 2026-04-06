@@ -34,5 +34,5 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
 
   const job = data[0] as PublicJobRow;
 
-  return <ApplyJobFormClient jobSlug={jobSlug} listing={job} />;
+  return <ApplyJobFormClient jobSlug={jobSlug} listing={job} orgSlug={orgSlug} />;
 }

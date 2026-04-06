@@ -8,6 +8,13 @@ describe('resolveHostRequestContext', () => {
     });
   });
 
+  it('treats platform admin host case-insensitively', () => {
+    expect(resolveHostRequestContext('ADMIN.camp-site.co.uk', null)).toEqual({
+      orgSlug: null,
+      isPlatformAdmin: true,
+    });
+  });
+
   it('ignores ?org= on admin.localhost (no accidental tenant header)', () => {
     expect(resolveHostRequestContext('admin.localhost:3000', 'demo')).toEqual({
       orgSlug: null,

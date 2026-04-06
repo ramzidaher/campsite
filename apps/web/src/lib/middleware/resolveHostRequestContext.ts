@@ -1,5 +1,4 @@
-const PLATFORM_ADMIN_HOST = 'admin.camp-site.co.uk';
-const ROOT_DOMAIN = 'camp-site.co.uk';
+import { getPlatformAdminHost, getTenantRootDomain } from '@/lib/tenant/hostConfig';
 
 export type HostRequestContext = {
   orgSlug: string | null;
@@ -15,15 +14,19 @@ export function resolveHostRequestContext(
   orgQueryParam: string | null
 ): HostRequestContext {
   const host = hostHeader ?? '';
+  const hostLower = host.toLowerCase();
   let orgSlug: string | null = null;
   let isPlatformAdmin = false;
 
-  if (host === PLATFORM_ADMIN_HOST || host.startsWith('admin.localhost')) {
+  const platformAdminHost = getPlatformAdminHost().toLowerCase();
+
+  if (hostLower.split(':')[0] === platformAdminHost || hostLower.startsWith('admin.localhost')) {
     isPlatformAdmin = true;
   } else {
-    const hostname = host.split(':')[0] ?? '';
-    if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
-      orgSlug = hostname.replace(`.${ROOT_DOMAIN}`, '');
+    const hostname = host.split(':')[0]?.toLowerCase() ?? '';
+    const root = getTenantRootDomain().toLowerCase();
+    if (hostname.endsWith(`.${root}`)) {
+      orgSlug = hostname.replace(`.${root}`, '');
     } else if (hostname.endsWith('.localhost')) {
       orgSlug = hostname.replace('.localhost', '');
     }
@@ -35,8 +38,3 @@ export function resolveHostRequestContext(
 
   return { orgSlug, isPlatformAdmin };
 }
-
-export const HOST_RESOLUTION_CONSTANTS = {
-  PLATFORM_ADMIN_HOST,
-  ROOT_DOMAIN,
-} as const;

@@ -538,6 +538,36 @@ export function JobPipelineClient({
                     {detail.application.candidate_phone ? (
                       <p className="text-[12px] text-[#6b6b6b]">{detail.application.candidate_phone}</p>
                     ) : null}
+                    {detail.application.candidate_location ? (
+                      <p className="text-[12px] text-[#6b6b6b]">Location: {detail.application.candidate_location}</p>
+                    ) : null}
+                    {detail.application.current_title ? (
+                      <p className="text-[12px] text-[#6b6b6b]">Current role: {detail.application.current_title}</p>
+                    ) : null}
+                    {detail.application.linkedin_url ? (
+                      <p className="mt-1 text-[13px]">
+                        <a
+                          href={detail.application.linkedin_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+                        >
+                          LinkedIn profile
+                        </a>
+                      </p>
+                    ) : null}
+                    {detail.application.portfolio_url ? (
+                      <p className="mt-1 text-[13px]">
+                        <a
+                          href={detail.application.portfolio_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+                        >
+                          Portfolio / website
+                        </a>
+                      </p>
+                    ) : null}
                     <p className="mt-2 text-[12px] text-[#9b9b9b]">
                       Stage: {jobApplicationStageLabel(detail.application.stage)}
                     </p>
@@ -567,6 +597,16 @@ export function JobPipelineClient({
                       <p className="mt-2 text-[13px] text-[#505050]">
                         StaffSavvy: {detail.application.staffsavvy_score}/5
                       </p>
+                    ) : null}
+                    {detail.application.motivation_text ? (
+                      <div className="mt-3 rounded-md border border-[#eaeaea] bg-[#fafafa] p-2.5">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-[#8a8a8a]">
+                          Candidate motivation
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-[13px] text-[#303030]">
+                          {detail.application.motivation_text}
+                        </p>
+                      </div>
                     ) : null}
                   </section>
 

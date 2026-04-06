@@ -77,6 +77,8 @@ export function LeaveHubClient({
   canApprove,
   canManage,
   initialYear,
+  showPerformanceTab,
+  showOnboardingTab,
 }: {
   orgId: string;
   userId: string;
@@ -84,6 +86,8 @@ export function LeaveHubClient({
   canApprove: boolean;
   canManage: boolean;
   initialYear: string;
+  showPerformanceTab: boolean;
+  showOnboardingTab: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [year, setYear] = useState(initialYear);
@@ -198,7 +202,7 @@ export function LeaveHubClient({
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
-      <HrNav />
+      <HrNav showLeave showPerformance={showPerformanceTab} showOnboarding={showOnboardingTab} />
 
       {/* Page header */}
       <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

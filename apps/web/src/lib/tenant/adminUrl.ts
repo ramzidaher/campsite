@@ -1,24 +1,66 @@
-import { HOST_RESOLUTION_CONSTANTS } from '@/lib/middleware/resolveHostRequestContext';
+import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
 
-function withOrg(path: string, orgSlug: string): string {
+function tenantSubdomainOrigin(orgSlug: string): string {
+  const root = getTenantRootDomain();
+  return `https://${orgSlug}.${root}`;
+}
+
+function isBrowserOnTenantHost(orgSlug: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname.toLowerCase();
+  const root = getTenantRootDomain().toLowerCase();
+  return host === `${orgSlug.toLowerCase()}.${root}` || host === `${orgSlug.toLowerCase()}.localhost`;
+}
+
+/** True when the request host already identifies this org (subdomain); else callers should add `?org=`. */
+export function tenantHostMatchesOrg(orgSlug: string, hostHeader: string | null): boolean {
+  const hostname = (hostHeader ?? '').split(':')[0]?.toLowerCase() ?? '';
+  const root = getTenantRootDomain().toLowerCase();
+  return hostname === `${orgSlug.toLowerCase()}.${root}` || hostname === `${orgSlug.toLowerCase()}.localhost`;
+}
+
+export function tenantJobListingRelativePath(jobSlug: string, orgSlug: string, hostHeader: string | null): string {
+  const path = `/jobs/${encodeURIComponent(jobSlug)}`;
+  if (tenantHostMatchesOrg(orgSlug, hostHeader)) return path;
   const join = path.includes('?') ? '&' : '?';
   return `${path}${join}org=${encodeURIComponent(orgSlug)}`;
 }
 
-/** Tenant org admin entry (web). Uses `*.localhost` in local dev when the shell host is platform or bare localhost. */
+export function tenantJobApplyRelativePath(jobSlug: string, orgSlug: string, hostHeader: string | null): string {
+  const path = `/jobs/${encodeURIComponent(jobSlug)}/apply`;
+  if (tenantHostMatchesOrg(orgSlug, hostHeader)) return path;
+  const join = path.includes('?') ? '&' : '?';
+  return `${path}${join}org=${encodeURIComponent(orgSlug)}`;
+}
+
+/** Client-only helper for relative links when `hostHeader` is unavailable. */
+export function tenantJobListingRelativePathClient(jobSlug: string, orgSlug: string): string {
+  const path = `/jobs/${encodeURIComponent(jobSlug)}`;
+  if (isBrowserOnTenantHost(orgSlug)) return path;
+  const join = path.includes('?') ? '&' : '?';
+  return `${path}${join}org=${encodeURIComponent(orgSlug)}`;
+}
+
+/** Tenant org admin entry (web). Canonical URL uses the org subdomain in production. */
 export function tenantAdminDashboardUrl(orgSlug: string): string {
-  const path = withOrg('/admin', orgSlug);
-  if (typeof window === 'undefined') {
-    return `https://${HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN}${path}`;
+  const path = '/admin';
+  if (typeof window !== 'undefined') {
+    if (isBrowserOnTenantHost(orgSlug)) {
+      return `${window.location.origin}${path}`;
+    }
+    return `${tenantSubdomainOrigin(orgSlug)}${path}`;
   }
-  return `${window.location.origin}${path}`;
+  return `${tenantSubdomainOrigin(orgSlug)}${path}`;
 }
 
 /** Public job posting URL for the tenant (share off-site). */
 export function tenantJobPublicUrl(orgSlug: string, jobSlug: string): string {
-  const path = withOrg(`/jobs/${encodeURIComponent(jobSlug)}`, orgSlug);
-  if (typeof window === 'undefined') {
-    return `https://${HOST_RESOLUTION_CONSTANTS.ROOT_DOMAIN}${path}`;
+  const path = `/jobs/${encodeURIComponent(jobSlug)}`;
+  if (typeof window !== 'undefined') {
+    if (isBrowserOnTenantHost(orgSlug)) {
+      return `${window.location.origin}${path}`;
+    }
+    return `${tenantSubdomainOrigin(orgSlug)}${path}`;
   }
-  return `${window.location.origin}${path}`;
+  return `${tenantSubdomainOrigin(orgSlug)}${path}`;
 }

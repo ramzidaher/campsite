@@ -9,13 +9,31 @@ const TABS = [
   { href: '/onboarding',  label: 'Onboarding',  icon: '✅' },
 ] as const;
 
-export function HrNav() {
+type HrNavProps = {
+  showLeave?: boolean;
+  showPerformance?: boolean;
+  showOnboarding?: boolean;
+};
+
+export function HrNav({
+  showLeave = true,
+  showPerformance = true,
+  showOnboarding = true,
+}: HrNavProps) {
   const pathname = usePathname() ?? '';
-  const active = TABS.find((t) => pathname === t.href || pathname.startsWith(t.href + '/'));
+  const tabs = TABS.filter((tab) => {
+    if (tab.href === '/leave') return showLeave;
+    if (tab.href === '/performance') return showPerformance;
+    if (tab.href === '/onboarding') return showOnboarding;
+    return true;
+  });
+  const active = tabs.find((t) => pathname === t.href || pathname.startsWith(t.href + '/'));
+
+  if (tabs.length <= 1) return null;
 
   return (
     <nav className="mb-8 flex gap-1 rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-1">
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = active?.href === tab.href;
         return (
           <Link

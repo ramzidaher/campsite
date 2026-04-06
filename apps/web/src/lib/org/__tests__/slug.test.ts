@@ -11,6 +11,8 @@ describe('workspace slug helpers', () => {
     expect(isValidWorkspaceSlug('a')).toBe(false);
     expect(isValidWorkspaceSlug('hello-world')).toBe(true);
     expect(isValidWorkspaceSlug('hello--world')).toBe(false);
+    expect(isValidWorkspaceSlug('admin')).toBe(false);
+    expect(isValidWorkspaceSlug('www')).toBe(false);
   });
 
   it('suggests slug from org name', () => {

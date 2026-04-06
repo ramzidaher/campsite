@@ -1,6 +1,7 @@
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { createClient } from '@/lib/supabase/server';
+import { tenantJobApplyRelativePath } from '@/lib/tenant/adminUrl';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -29,6 +30,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   if (!jobSlug) notFound();
 
   const h = await headers();
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? '';
   const orgSlug = h.get('x-campsite-org-slug')?.trim();
   if (!orgSlug) notFound();
 
@@ -50,6 +52,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   if (job.allow_staffsavvy) applyBits.push(jobApplicationModeLabel('staffsavvy'));
   const applySummary =
     applyBits.length > 0 ? applyBits.join(', ') : jobApplicationModeLabel(job.application_mode);
+  const applyHref = tenantJobApplyRelativePath(jobSlug, orgSlug, host);
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#121212]">
@@ -99,7 +102,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
             status.
           </p>
           <Link
-            href={`/jobs/${encodeURIComponent(jobSlug)}/apply`}
+            href={applyHref}
             className="mt-3 inline-flex h-10 items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white hover:bg-[#007a54]"
           >
             Apply now

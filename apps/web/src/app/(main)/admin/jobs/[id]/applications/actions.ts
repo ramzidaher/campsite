@@ -201,6 +201,11 @@ export type JobApplicationDetail = {
     candidate_name: string;
     candidate_email: string;
     candidate_phone: string | null;
+    candidate_location: string | null;
+    current_title: string | null;
+    linkedin_url: string | null;
+    portfolio_url: string | null;
+    motivation_text: string | null;
     stage: string;
     submitted_at: string;
     cv_storage_path: string | null;
@@ -238,6 +243,11 @@ export async function loadJobApplicationDetail(
       candidate_name,
       candidate_email,
       candidate_phone,
+      candidate_location,
+      current_title,
+      linkedin_url,
+      portfolio_url,
+      motivation_text,
       stage,
       submitted_at,
       cv_storage_path,
@@ -276,6 +286,11 @@ export async function loadJobApplicationDetail(
     candidate_name: String(raw.candidate_name),
     candidate_email: String(raw.candidate_email),
     candidate_phone: (raw.candidate_phone as string | null) ?? null,
+    candidate_location: (raw.candidate_location as string | null) ?? null,
+    current_title: (raw.current_title as string | null) ?? null,
+    linkedin_url: (raw.linkedin_url as string | null) ?? null,
+    portfolio_url: (raw.portfolio_url as string | null) ?? null,
+    motivation_text: (raw.motivation_text as string | null) ?? null,
     stage: String(raw.stage),
     submitted_at: String(raw.submitted_at),
     cv_storage_path: (raw.cv_storage_path as string | null) ?? null,

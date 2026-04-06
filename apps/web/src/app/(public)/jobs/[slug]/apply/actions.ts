@@ -42,6 +42,11 @@ export async function submitPublicJobApplication(
   const phone = String(formData.get('candidate_phone') ?? '').trim();
   const loomRaw = String(formData.get('loom_url') ?? '').trim();
   const scoreRaw = String(formData.get('staffsavvy_score') ?? '').trim();
+  const location = String(formData.get('candidate_location') ?? '').trim();
+  const currentTitle = String(formData.get('current_title') ?? '').trim();
+  const linkedInUrl = String(formData.get('linkedin_url') ?? '').trim();
+  const portfolioUrl = String(formData.get('portfolio_url') ?? '').trim();
+  const motivationText = String(formData.get('motivation_text') ?? '').trim();
   const cvFile = formData.get('cv');
 
   if (!name) return { ok: false, error: 'Please enter your name.' };
@@ -80,6 +85,11 @@ export async function submitPublicJobApplication(
     p_loom_url: loomRaw || null,
     p_staffsavvy_score: staffsavvyScore,
     p_expect_cv_upload: expectCvUpload,
+    p_candidate_location: location || null,
+    p_current_title: currentTitle || null,
+    p_linkedin_url: linkedInUrl || null,
+    p_portfolio_url: portfolioUrl || null,
+    p_motivation_text: motivationText || null,
   });
 
   if (submitErr || !submitRows?.length) {
