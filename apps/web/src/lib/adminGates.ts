@@ -269,7 +269,7 @@ export function getMainShellHrNavItemsByPermissions(
   if (!canSeeAnyHr) return null;
 
   const items: MainShellAdminNavItem[] = [];
-  if (p.includes('recruitment.view'))
+  if (p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request'))
     items.push({ href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment' });
   if (p.includes('jobs.view')) items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs' });
   if (p.includes('applications.view'))
@@ -312,7 +312,7 @@ export function getMainShellManagerNavItemsByPermissions(
       section: 'People',
     });
   }
-  if (p.includes('recruitment.view'))
+  if (p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request'))
     items.push({ href: '/manager/recruitment', label: 'Recruitment requests', icon: 'recruitment', section: 'People' });
   if (canViewDepts)
     items.push({ href: '/manager/departments', label: 'Departments', icon: 'departments', section: 'Your departments' });

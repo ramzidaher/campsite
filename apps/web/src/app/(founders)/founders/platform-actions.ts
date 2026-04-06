@@ -169,10 +169,14 @@ export async function upsertRolePreset(input: {
 export async function updateOrganisationGovernance(input: {
   orgId: string;
   planTier: string;
-  subscriptionStatus: 'active' | 'limited' | 'suspended';
+  subscriptionStatus: 'trial' | 'active' | 'limited' | 'suspended';
   isLocked: boolean;
   maintenanceMode: boolean;
   forceLogout: boolean;
+  /** ISO 8601; omit or null to leave unchanged (RPC applies trial defaults when switching to trial) */
+  trialEndsAt?: string | null;
+  /** When true, clears trial start/end timestamps */
+  clearTrial?: boolean;
 }): Promise<PlatformActionResult> {
   const ctx = await getPlatformFounderContext();
   if (!ctx.ok) return ctx;
@@ -183,6 +187,8 @@ export async function updateOrganisationGovernance(input: {
     p_is_locked: input.isLocked,
     p_maintenance_mode: input.maintenanceMode,
     p_force_logout: input.forceLogout,
+    p_trial_ends_at: input.trialEndsAt ?? null,
+    p_clear_trial: input.clearTrial ?? false,
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true };

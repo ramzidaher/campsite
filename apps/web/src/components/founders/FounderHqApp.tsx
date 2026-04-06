@@ -122,6 +122,28 @@ function formatJoined(iso: string) {
   }
 }
 
+function isoToDatetimeLocalValue(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function datetimeLocalToIso(local: string): string | null {
+  if (!local.trim()) return null;
+  const d = new Date(local);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+function trialDaysRemaining(trialEndsAt: string | null | undefined): number | null {
+  if (!trialEndsAt) return null;
+  const end = new Date(trialEndsAt).getTime();
+  if (Number.isNaN(end)) return null;
+  return Math.ceil((end - Date.now()) / 86400000);
+}
+
 export function FounderHqApp({
   user,
   initialOrgs,
@@ -700,15 +722,18 @@ export function FounderHqApp({
     router.refresh();
   };
 
-  const saveGovernance = async (org: FounderOrg, forceLogout: boolean) => {
+  const saveGovernance = async (org: FounderOrg, forceLogout: boolean, opts?: { clearTrial?: boolean }) => {
     setBusy(true);
     const result = await updateOrganisationGovernance({
       orgId: org.id,
       planTier: org.plan_tier ?? 'starter',
-      subscriptionStatus: (org.subscription_status as 'active' | 'limited' | 'suspended') ?? 'active',
+      subscriptionStatus:
+        (org.subscription_status as 'trial' | 'active' | 'limited' | 'suspended') ?? 'active',
       isLocked: Boolean(org.is_locked),
       maintenanceMode: Boolean(org.maintenance_mode),
       forceLogout,
+      trialEndsAt: opts?.clearTrial ? null : org.subscription_trial_ends_at ?? null,
+      clearTrial: opts?.clearTrial ?? false,
     });
     setBusy(false);
     if (!result.ok) {
@@ -1347,6 +1372,7 @@ export function FounderHqApp({
                       <th>Organisation</th>
                       <th>Plan</th>
                       <th>Subscription</th>
+                      <th>Trial</th>
                       <th>Security</th>
                       <th>Actions</th>
                     </tr>
@@ -1354,11 +1380,115 @@ export function FounderHqApp({
                   <tbody>
                     {orgs.map((org) => {
                       const firstMemberId = allMembers.find((m) => m.org_id === org.id)?.id;
+                      const daysLeft = trialDaysRemaining(org.subscription_trial_ends_at);
+                      const trialLabel =
+                        org.subscription_trial_ends_at == null
+                          ? '—'
+                          : daysLeft === null
+                            ? '—'
+                            : daysLeft < 0
+                              ? `Ended ${Math.abs(daysLeft)}d ago`
+                              : `${daysLeft}d left`;
                       return (
                         <tr key={org.id}>
                           <td>{org.name}</td>
                           <td>{org.plan_tier ?? 'starter'}</td>
-                          <td>{org.subscription_status ?? 'active'}</td>
+                          <td>
+                            <select
+                              className="btn btn-ghost btn-sm"
+                              style={{ maxWidth: 140 }}
+                              value={org.subscription_status ?? 'active'}
+                              disabled={busy}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setOrgs((prev) =>
+                                  prev.map((p) => {
+                                    if (p.id !== org.id) return p;
+                                    if (v === 'trial' && !p.subscription_trial_ends_at) {
+                                      const end = new Date();
+                                      end.setDate(end.getDate() + 14);
+                                      return {
+                                        ...p,
+                                        subscription_status: v,
+                                        subscription_trial_started_at:
+                                          p.subscription_trial_started_at ?? new Date().toISOString(),
+                                        subscription_trial_ends_at: end.toISOString(),
+                                      };
+                                    }
+                                    return { ...p, subscription_status: v };
+                                  })
+                                );
+                              }}
+                              aria-label={`Subscription for ${org.name}`}
+                            >
+                              <option value="trial">trial</option>
+                              <option value="active">active</option>
+                              <option value="limited">limited</option>
+                              <option value="suspended">suspended</option>
+                            </select>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 200 }}>
+                              <span style={{ fontSize: 12, color: 'var(--text2)' }}>{trialLabel}</span>
+                              <input
+                                type="datetime-local"
+                                className="btn btn-ghost btn-sm"
+                                style={{ width: '100%', fontSize: 12 }}
+                                value={isoToDatetimeLocalValue(org.subscription_trial_ends_at)}
+                                disabled={busy}
+                                onChange={(e) => {
+                                  const iso = datetimeLocalToIso(e.target.value);
+                                  setOrgs((prev) =>
+                                    prev.map((p) =>
+                                      p.id === org.id
+                                        ? {
+                                            ...p,
+                                            subscription_trial_ends_at: iso,
+                                            subscription_trial_started_at:
+                                              iso && !p.subscription_trial_started_at
+                                                ? new Date().toISOString()
+                                                : p.subscription_trial_started_at ?? null,
+                                          }
+                                        : p
+                                    )
+                                  );
+                                }}
+                                aria-label={`Trial ends for ${org.name}`}
+                              />
+                              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost btn-sm"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    setOrgs((prev) =>
+                                      prev.map((p) => {
+                                        if (p.id !== org.id) return p;
+                                        const end = new Date();
+                                        end.setDate(end.getDate() + 14);
+                                        return {
+                                          ...p,
+                                          subscription_status: 'trial',
+                                          subscription_trial_started_at: p.subscription_trial_started_at ?? new Date().toISOString(),
+                                          subscription_trial_ends_at: end.toISOString(),
+                                        };
+                                      })
+                                    )
+                                  }
+                                >
+                                  +14 days
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost btn-sm"
+                                  disabled={busy}
+                                  onClick={() => void saveGovernance(org, false, { clearTrial: true })}
+                                >
+                                  Clear trial
+                                </button>
+                              </div>
+                            </div>
+                          </td>
                           <td>
                             {org.is_locked ? 'Locked' : 'Unlocked'} · {org.maintenance_mode ? 'Maintenance' : 'Live'}
                           </td>
@@ -2036,15 +2166,17 @@ export function FounderHqApp({
                 <div className="section-title" style={{ marginBottom: 16 }}>
                   Billing & Plan
                 </div>
-                <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 9, padding: 16, marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--gold)', fontWeight: 600, marginBottom: 6 }}>Enterprise Plan</div>
-                  <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--accent)' }}>
-                    £2,400<span style={{ fontSize: 14, color: 'var(--text3)' }}>/mo</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 5 }}>12 sites · Unlimited members · Priority support</div>
-                </div>
-                <button type="button" className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'center' }} onClick={() => showToast('Billing')}>
-                  Manage billing →
+                <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 12 }}>
+                  Organisation trials (14 days for new workspaces), subscription status, and trial end dates are managed in{' '}
+                  <strong>Revenue &amp; Finance</strong> → Billing table. Payment providers can be wired later.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  style={{ width: '100%', justifyContent: 'center' }}
+                  onClick={() => navTo('revenue')}
+                >
+                  Open Revenue &amp; Finance →
                 </button>
               </div>
             </div>

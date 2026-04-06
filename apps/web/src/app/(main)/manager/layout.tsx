@@ -24,6 +24,8 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     (k) =>
       k === 'recruitment.view' ||
       k === 'recruitment.create_request' ||
+      k === 'recruitment.manage' ||
+      k === 'recruitment.approve_request' ||
       k === 'departments.view' ||
       k === 'teams.view' ||
       k === 'approvals.members.review'

@@ -1,5 +1,5 @@
 import { AdminRecruitmentListClient } from '@/components/admin/AdminRecruitmentListClient';
-import { viewerHasPermission } from '@/lib/authz/serverGuards';
+import { viewerHasRecruitmentQueueAccess } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -17,7 +17,7 @@ export default async function AdminRecruitmentPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('recruitment.view'))) redirect('/broadcasts');
+  if (!(await viewerHasRecruitmentQueueAccess())) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
 

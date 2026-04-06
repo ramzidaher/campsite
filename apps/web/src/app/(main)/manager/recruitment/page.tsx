@@ -18,29 +18,41 @@ export default async function ManagerRecruitmentPage() {
   if (!profile?.org_id || profile.status !== 'active') {
     redirect('/broadcasts');
   }
-  const [{ data: canCreateRequest }, { data: canViewRecruitment }, { data: canApproveRequest }] =
-    await Promise.all([
-      supabase.rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: profile.org_id,
-        p_permission_key: 'recruitment.create_request',
-        p_context: {},
-      }),
-      supabase.rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: profile.org_id,
-        p_permission_key: 'recruitment.view',
-        p_context: {},
-      }),
-      supabase.rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: profile.org_id,
-        p_permission_key: 'recruitment.approve_request',
-        p_context: {},
-      }),
-    ]);
+  const [
+    { data: canCreateRequest },
+    { data: canViewRecruitment },
+    { data: canApproveRequest },
+    { data: canManageRecruitment },
+  ] = await Promise.all([
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'recruitment.create_request',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'recruitment.view',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'recruitment.approve_request',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'recruitment.manage',
+      p_context: {},
+    }),
+  ]);
   const canRaise = Boolean(canCreateRequest);
-  if (!canRaise && !canViewRecruitment) redirect('/broadcasts');
+  const canUseRecruitmentWorkspace =
+    canRaise || canViewRecruitment || canApproveRequest || canManageRecruitment;
+  if (!canUseRecruitmentWorkspace) redirect('/broadcasts');
 
   const { data: dmRows } = await supabase
     .from('dept_managers')

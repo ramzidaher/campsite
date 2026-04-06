@@ -8,6 +8,10 @@ export type FounderOrg = {
   is_locked?: boolean;
   maintenance_mode?: boolean;
   force_logout_after?: string | null;
+  /** Set when subscription is or was in trial; ISO timestamp */
+  subscription_trial_started_at?: string | null;
+  /** Trial access ends at; ISO timestamp */
+  subscription_trial_ends_at?: string | null;
   created_at: string;
   logo_url: string | null;
   user_count: number;
@@ -92,6 +96,10 @@ export function parseFounderOrgs(json: unknown): FounderOrg[] {
       is_locked: Boolean(row.is_locked),
       maintenance_mode: Boolean(row.maintenance_mode),
       force_logout_after: typeof row.force_logout_after === 'string' ? row.force_logout_after : null,
+      subscription_trial_started_at:
+        typeof row.subscription_trial_started_at === 'string' ? row.subscription_trial_started_at : null,
+      subscription_trial_ends_at:
+        typeof row.subscription_trial_ends_at === 'string' ? row.subscription_trial_ends_at : null,
       created_at: typeof row.created_at === 'string' ? row.created_at : '',
       logo_url: typeof row.logo_url === 'string' ? row.logo_url : null,
       user_count: typeof row.user_count === 'number' ? row.user_count : 0,

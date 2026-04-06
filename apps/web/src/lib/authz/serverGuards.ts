@@ -36,6 +36,29 @@ export async function viewerHasPermission(permission: PermissionKey): Promise<bo
   return Boolean(data);
 }
 
+/** True if the viewer may open the org-wide recruitment request queue (RLS still applies). */
+export async function viewerHasRecruitmentQueueAccess(): Promise<boolean> {
+  const context = await getViewerContext();
+  if (!context) return false;
+  const supabase = await createClient();
+  const keys: PermissionKey[] = [
+    'recruitment.view',
+    'recruitment.manage',
+    'recruitment.approve_request',
+  ];
+  const results = await Promise.all(
+    keys.map((p_permission_key) =>
+      supabase.rpc('has_permission', {
+        p_user_id: context.userId,
+        p_org_id: context.orgId,
+        p_permission_key,
+        p_context: {},
+      })
+    )
+  );
+  return results.some((r) => Boolean(r.data));
+}
+
 export async function viewerHasAnyAdminAccess(): Promise<boolean> {
   const supabase = await createClient();
   const context = await getViewerContext();
