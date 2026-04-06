@@ -63,6 +63,7 @@ export function AdminRolesAndPermissionsView() {
   const [newPerms, setNewPerms] = useState<Set<string>>(new Set());
   const [permissionQuery, setPermissionQuery] = useState('');
   const [roleDraftPerms, setRoleDraftPerms] = useState<Record<string, Set<string>>>({});
+  const [roleDraftMeta, setRoleDraftMeta] = useState<Record<string, { label: string; description: string }>>({});
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
 
   const matrixPermissions = useMemo(
@@ -121,6 +122,9 @@ export function AdminRolesAndPermissionsView() {
       Object.fromEntries(
         (data.roles ?? []).map((r) => [r.id, new Set(r.org_role_permissions.map((x) => x.permission_key))])
       )
+    );
+    setRoleDraftMeta(
+      Object.fromEntries((data.roles ?? []).map((r) => [r.id, { label: r.label, description: r.description ?? '' }]))
     );
   }
 
@@ -188,6 +192,9 @@ export function AdminRolesAndPermissionsView() {
   }
 
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
+  const selectedMeta = selectedRole
+    ? roleDraftMeta[selectedRole.id] ?? { label: selectedRole.label, description: selectedRole.description ?? '' }
+    : null;
   const selectedChecked =
     selectedRole && roleDraftPerms[selectedRole.id]
       ? roleDraftPerms[selectedRole.id]
@@ -196,11 +203,14 @@ export function AdminRolesAndPermissionsView() {
         : new Set<string>();
   const selectedDirty = selectedRole
     ? (() => {
+        const metaChanged =
+          (selectedMeta?.label ?? selectedRole.label) !== selectedRole.label ||
+          (selectedMeta?.description ?? selectedRole.description ?? '') !== (selectedRole.description ?? '');
         const original = new Set(selectedRole.org_role_permissions.map((x) => x.permission_key));
-        return (
+        const permissionsChanged =
           selectedChecked.size !== original.size ||
-          [...selectedChecked].some((key) => !original.has(key))
-        );
+          [...selectedChecked].some((key) => !original.has(key));
+        return metaChanged || permissionsChanged;
       })()
     : false;
 
@@ -299,7 +309,7 @@ export function AdminRolesAndPermissionsView() {
                       onClick={() => setSelectedRoleId(role.id)}
                       className="rounded-md border border-black/10 px-2.5 py-1 text-[12px] text-[#6B6963] hover:bg-[#F2F1ED]"
                     >
-                      {selectedRoleId === role.id ? 'Editing' : 'View'}
+                      {selectedRoleId === role.id ? 'Editing' : 'Edit'}
                     </button>
                   </div>
                 </div>
@@ -328,16 +338,63 @@ export function AdminRolesAndPermissionsView() {
                     type="button"
                     className="text-[12px] text-[#6B6963] underline underline-offset-2"
                     onClick={() =>
-                      setRoleDraftPerms((curr) => ({
-                        ...curr,
-                        [selectedRole.id]: new Set(selectedRole.org_role_permissions.map((x) => x.permission_key)),
-                      }))
+                      {
+                        setRoleDraftPerms((curr) => ({
+                          ...curr,
+                          [selectedRole.id]: new Set(selectedRole.org_role_permissions.map((x) => x.permission_key)),
+                        }));
+                        setRoleDraftMeta((curr) => ({
+                          ...curr,
+                          [selectedRole.id]: { label: selectedRole.label, description: selectedRole.description ?? '' },
+                        }));
+                      }
                     }
                   >
                     Reset changes
                   </button>
                 ) : null}
               </div>
+
+              {!selectedRole.is_system ? (
+                <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#6B6963]">
+                      Role name
+                    </label>
+                    <input
+                      value={selectedMeta?.label ?? ''}
+                      onChange={(e) =>
+                        setRoleDraftMeta((curr) => ({
+                          ...curr,
+                          [selectedRole.id]: {
+                            label: e.target.value,
+                            description: selectedMeta?.description ?? '',
+                          },
+                        }))
+                      }
+                      className="w-full rounded-[10px] border border-black/15 bg-[#F7F6F2] px-3 py-2 text-[14px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#6B6963]">
+                      Description
+                    </label>
+                    <input
+                      value={selectedMeta?.description ?? ''}
+                      onChange={(e) =>
+                        setRoleDraftMeta((curr) => ({
+                          ...curr,
+                          [selectedRole.id]: {
+                            label: selectedMeta?.label ?? selectedRole.label,
+                            description: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-full rounded-[10px] border border-black/15 bg-[#F7F6F2] px-3 py-2 text-[14px]"
+                    />
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mb-3">
                 <input
@@ -415,9 +472,14 @@ export function AdminRolesAndPermissionsView() {
                   </p>
                   <button
                     type="button"
-                    disabled={busy || !selectedDirty}
+                    disabled={busy || !selectedDirty || !(selectedMeta?.label ?? '').trim()}
                     onClick={() =>
-                      void saveRole(selectedRole.id, selectedRole.label, selectedRole.description, [...selectedChecked].sort())
+                      void saveRole(
+                        selectedRole.id,
+                        (selectedMeta?.label ?? '').trim(),
+                        selectedMeta?.description ?? '',
+                        [...selectedChecked].sort()
+                      )
                     }
                     className="rounded-[10px] bg-[#1A1917] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
                   >
