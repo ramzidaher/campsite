@@ -36,6 +36,7 @@ export default function TabLayout() {
       <Tabs.Screen name="calendar" options={{ title: 'Calendar', tabBarLabel: 'Calendar' }} />
       <Tabs.Screen name="rota" options={{ title: 'Rota', tabBarLabel: 'Rota' }} />
       <Tabs.Screen name="discount" options={{ title: 'Discount', tabBarLabel: 'Discount' }} />
+      <Tabs.Screen name="hr" options={{ title: 'My HR', tabBarLabel: 'My HR' }} />
     </Tabs>
   );
 }

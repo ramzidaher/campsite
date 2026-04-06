@@ -36,6 +36,10 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Label>Discount</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'ticket', selected: 'ticket.fill' }} />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="hr">
+        <NativeTabs.Trigger.Label>My HR</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'briefcase', selected: 'briefcase.fill' }} />
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }

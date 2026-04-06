@@ -122,6 +122,14 @@ export default function TabLayout() {
           tabBarIcon: icon('ticket-percent', 'ticket-percent-outline'),
         }}
       />
+      <Tabs.Screen
+        name="hr"
+        options={{
+          title: 'My HR',
+          tabBarLabel: 'My HR',
+          tabBarIcon: icon('briefcase', 'briefcase-outline'),
+        }}
+      />
     </Tabs>
   );
 }

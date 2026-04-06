@@ -30,6 +30,7 @@ const TABS: TabSpec[] = [
   { name: 'calendar', label: 'Calendar', icon: 'calendar-outline', iconFilled: 'calendar' },
   { name: 'rota', label: 'Rota', icon: 'clipboard-outline', iconFilled: 'clipboard' },
   { name: 'discount', label: 'Discount', icon: 'pricetag-outline', iconFilled: 'pricetag' },
+  { name: 'hr', label: 'My HR', icon: 'briefcase-outline', iconFilled: 'briefcase' },
 ];
 
 /** Tab bar region height (navigator reserves this; no extra screen padding needed). */
