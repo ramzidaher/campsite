@@ -16,6 +16,8 @@ android
 .env
 .env.local
 .env.*.local
+scripts/qa-seed-output.json
+scripts/qa-login-import.csv
 supabase/.branches
 supabase/.temp
 .DS_Store

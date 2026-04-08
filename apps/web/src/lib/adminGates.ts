@@ -78,7 +78,9 @@ export type ShellNavIconId =
   | 'leave'
   | 'hrRecords'
   | 'onboarding'
-  | 'performance';
+  | 'performance'
+  | 'orgChart'
+  | 'systemOverview';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -101,6 +103,7 @@ export function getMainShellAdminNavItems(
   if (!canAccessOrgAdminArea(r)) return null;
   return [
     { href: '/admin', label: 'Overview', icon: 'home' },
+    { href: '/admin/system-overview', label: 'System overview', icon: 'systemOverview' },
     { href: '/admin/users', label: 'All members', icon: 'members' },
     { href: '/admin/pending', label: 'Pending approval', icon: 'pending' },
     { href: '/admin/roles', label: 'Roles & permissions', icon: 'roles' },
@@ -115,6 +118,7 @@ export function getMainShellAdminNavItems(
     { href: '/hr/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'HR' },
     { href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' },
     { href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'HR' },
+    { href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'HR' },
     { href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
     { href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' },
     { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
@@ -223,6 +227,26 @@ export function getMainShellAdminNavItemsByPermissions(
 
   const items: MainShellAdminNavItem[] = [{ href: '/admin', label: 'Overview', icon: 'home' }];
   if (p.includes('members.view')) items.push({ href: '/admin/users', label: 'All members', icon: 'members' });
+  if (
+    p.some(
+      (k) =>
+        k.startsWith('members.') ||
+        k.startsWith('roles.') ||
+        k.startsWith('approvals.') ||
+        k.startsWith('departments.') ||
+        k.startsWith('teams.') ||
+        k.startsWith('broadcasts.') ||
+        k.startsWith('discounts.') ||
+        k.startsWith('rota.') ||
+        k.startsWith('recruitment.') ||
+        k.startsWith('jobs.') ||
+        k.startsWith('applications.') ||
+        k.startsWith('offers.') ||
+        k.startsWith('interviews.')
+    )
+  ) {
+    items.push({ href: '/admin/system-overview', label: 'System overview', icon: 'systemOverview' });
+  }
   if (p.includes('approvals.members.review'))
     items.push({ href: '/admin/pending', label: 'Pending approval', icon: 'pending' });
   if (p.includes('roles.view')) items.push({ href: '/admin/roles', label: 'Roles & permissions', icon: 'roles' });
@@ -282,6 +306,8 @@ export function getMainShellHrNavItemsByPermissions(
     items.push({ href: '/hr/leave', label: 'Leave & allowances', icon: 'leave' });
   if (p.includes('hr.view_records'))
     items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords' });
+  if (p.includes('hr.view_records'))
+    items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart' });
   if (p.includes('onboarding.manage_runs') || p.includes('onboarding.manage_templates'))
     items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding' });
   if (p.includes('performance.manage_cycles') || p.includes('performance.view_reports'))
@@ -303,6 +329,14 @@ export function getMainShellManagerNavItemsByPermissions(
   if (!canManageWorkspace && !canViewDepts && !canViewTeams && !canReviewMembers) return null;
 
   if (canManageWorkspace) items.push({ href: '/manager', label: 'Overview', icon: 'home', exact: true });
+  if (canManageWorkspace || canViewDepts || canViewTeams || canReviewMembers) {
+    items.push({
+      href: '/manager/system-overview',
+      label: 'System overview',
+      icon: 'systemOverview',
+      section: 'People',
+    });
+  }
   if (canReviewMembers) {
     items.push({
       href: '/pending-approvals',

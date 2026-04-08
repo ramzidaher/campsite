@@ -29,6 +29,33 @@ export default async function AdminUsersPage({
   });
   if (!canViewMembers) redirect('/admin');
 
+  const { data: canEditRoles } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'members.edit_roles',
+    p_context: {},
+  });
+
+  const { data: assignableRows, error: assignableErr } = await supabase.rpc('list_assignable_org_roles', {
+    p_org_id: profile.org_id,
+  });
+  if (assignableErr) {
+    return <p className="text-sm text-red-300">{assignableErr.message}</p>;
+  }
+  const assignableRoles = (assignableRows ?? []) as {
+    id: string;
+    key: string;
+    label: string;
+    is_system: boolean;
+  }[];
+
+  const { data: orgRolesForFilter } = await supabase
+    .from('org_roles')
+    .select('key, label')
+    .eq('org_id', profile.org_id)
+    .eq('is_archived', false)
+    .order('label');
+
   const [{ data: orgRow }, { count: totalMemberCount }] = await Promise.all([
     supabase.from('organisations').select('name, slug').eq('id', profile.org_id).single(),
     supabase
@@ -100,13 +127,6 @@ export default async function AdminUsersPage({
     }
   }
 
-  const { data: orgRoles } = await supabase
-    .from('org_roles')
-    .select('id, key, label, is_archived')
-    .eq('org_id', profile.org_id)
-    .eq('is_archived', false)
-    .order('label');
-
   const { data: managerChoicesRows } = await supabase
     .from('profiles')
     .select('id, full_name')
@@ -117,7 +137,9 @@ export default async function AdminUsersPage({
   return (
     <AdminUsersClient
       currentUserId={user.id}
-      assignableRoles={(orgRoles ?? []) as { id: string; key: string; label: string; is_archived: boolean }[]}
+      canEditRoles={Boolean(canEditRoles)}
+      assignableRoles={assignableRoles}
+      roleFilterOptions={(orgRolesForFilter ?? []) as { key: string; label: string }[]}
       managerChoices={(managerChoicesRows ?? []) as { id: string; full_name: string }[]}
       initialRows={filtered.map((p) => ({
         id: p.id as string,

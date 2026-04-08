@@ -1,5 +1,6 @@
 'use client';
 
+import { MemberPermissionOverridesPanel } from '@/components/admin/MemberPermissionOverridesPanel';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -77,7 +78,9 @@ function initials(name: string) {
 
 export function AdminUsersClient({
   currentUserId,
+  canEditRoles,
   assignableRoles,
+  roleFilterOptions,
   managerChoices,
   initialRows,
   departments,
@@ -87,7 +90,10 @@ export function AdminUsersClient({
   totalMemberCount,
 }: {
   currentUserId: string;
-  assignableRoles: { id: string; key: string; label: string; is_archived: boolean }[];
+  canEditRoles: boolean;
+  assignableRoles: { id: string; key: string; label: string; is_system?: boolean }[];
+  /** All tenant roles for URL filter (may include roles you cannot assign). */
+  roleFilterOptions: { key: string; label: string }[];
   managerChoices: { id: string; full_name: string }[];
   initialRows: UserRow[];
   departments: { id: string; name: string; type: string; is_archived: boolean }[];
@@ -270,6 +276,7 @@ export function AdminUsersClient({
 
   async function saveEdit() {
     if (!edit) return;
+    if (!canEditRoles) return;
     setBusy(edit.id);
     setMsg(null);
     const roleId = assignableRoles.find((r) => r.key === editRole)?.id;
@@ -289,15 +296,15 @@ export function AdminUsersClient({
       setBusy(null);
       return;
     }
-    const { error: e1 } = await supabase
-      .from('profiles')
-      .update({
-        role: editRole,
-        reports_to_user_id: editReportsTo.trim() ? editReportsTo.trim() : null,
-      })
-      .eq('id', edit.id);
-    if (e1) {
-      setMsg(e1.message);
+    const reportsPayload = editReportsTo.trim() ? editReportsTo.trim() : null;
+    const reportsRes = await fetch('/api/admin/members/update-reports-to', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: edit.id, reports_to_user_id: reportsPayload }),
+    });
+    const reportsData = (await reportsRes.json().catch(() => ({}))) as { error?: string };
+    if (!reportsRes.ok) {
+      setMsg(reportsData.error ?? 'Could not update line manager');
       setBusy(null);
       return;
     }
@@ -498,8 +505,8 @@ export function AdminUsersClient({
         >
           <option value="all">All roles</option>
           <option value="unassigned">{ROLE_OPTION_LABEL.unassigned}</option>
-          {assignableRoles.map((r) => (
-            <option key={r.id} value={r.key}>
+          {roleFilterOptions.map((r) => (
+            <option key={r.key} value={r.key}>
               {r.label}
             </option>
           ))}
@@ -669,13 +676,15 @@ export function AdminUsersClient({
                   </td>
                   <td className="px-3 py-3 align-middle">
                     <div className="flex flex-wrap gap-1.5">
-                      <button
-                        type="button"
-                        className="rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
-                        onClick={() => openEdit(r)}
-                      >
-                        Edit
-                      </button>
+                      {canEditRoles ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                          onClick={() => openEdit(r)}
+                        >
+                          Edit
+                        </button>
+                      ) : null}
                       {r.id !== currentUserId && r.email?.trim() ? (
                         <button
                           type="button"
@@ -813,6 +822,7 @@ export function AdminUsersClient({
                   {assignableRoles.map((r) => (
                     <option key={r.id} value={r.key}>
                       {r.label}
+                      {r.is_system ? ' (predefined)' : ''}
                     </option>
                   ))}
                 </select>
@@ -909,10 +919,12 @@ export function AdminUsersClient({
                   className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value)}
+                  disabled={!canEditRoles}
                 >
                   {assignableRoles.map((role) => (
                     <option key={role.id} value={role.key}>
                       {role.label}
+                      {role.is_system ? ' (predefined)' : ''}
                     </option>
                   ))}
                 </select>
@@ -923,6 +935,7 @@ export function AdminUsersClient({
                   className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   value={editReportsTo}
                   onChange={(e) => setEditReportsTo(e.target.value)}
+                  disabled={!canEditRoles}
                 >
                   <option value="">None (only org admins can approve leave)</option>
                   {managerChoices
@@ -951,12 +964,16 @@ export function AdminUsersClient({
                             return n;
                           });
                         }}
+                        disabled={!canEditRoles}
                       />
                       {d.name}
                     </label>
                   ))}
                 </div>
               </fieldset>
+              {canEditRoles && edit.id !== currentUserId ? (
+                <MemberPermissionOverridesPanel targetUserId={edit.id} />
+              ) : null}
             </div>
             <div className="flex justify-end gap-2 border-t border-[#d8d8d8] bg-white px-6 py-4">
               <button
@@ -968,7 +985,7 @@ export function AdminUsersClient({
               </button>
               <button
                 type="button"
-                disabled={busy === edit.id}
+                disabled={busy === edit.id || !canEditRoles}
                 className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
                 onClick={() => void saveEdit()}
               >

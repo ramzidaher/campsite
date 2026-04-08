@@ -1,6 +1,6 @@
 'use client';
 
-import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
+import { rolesAssignableOnApprove } from '@campsite/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -52,14 +52,43 @@ export function PendingApprovalsClient({
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [note, setNote] = useState<Record<string, string>>({});
-  const [approveRoleById, setApproveRoleById] = useState<Record<string, ProfileRole>>({});
+  const [approveRoleById, setApproveRoleById] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [apiAssignable, setApiAssignable] = useState<{ key: string; label: string; is_system: boolean }[] | null>(
+    null,
+  );
 
-  const assignableRoles = useMemo(() => rolesAssignableOnApprove(viewerRole), [viewerRole]);
-  const defaultApproveRole = useMemo((): ProfileRole => {
+  useEffect(() => {
+    void (async () => {
+      const res = await fetch('/api/admin/members/assignable-roles', { cache: 'no-store' });
+      const data = (await res.json().catch(() => ({}))) as {
+        roles?: { key: string; label: string; is_system: boolean }[];
+      };
+      if (res.ok && Array.isArray(data.roles)) setApiAssignable(data.roles);
+    })();
+  }, []);
+
+  const legacyAssignable = useMemo(() => rolesAssignableOnApprove(viewerRole), [viewerRole]);
+
+  const assignableRoles = useMemo(() => {
+    if (apiAssignable?.length) return apiAssignable.map((r) => r.key);
+    return legacyAssignable;
+  }, [apiAssignable, legacyAssignable]);
+
+  const assignableOptions = useMemo(() => {
+    if (apiAssignable?.length) {
+      return apiAssignable.map((r) => ({
+        key: r.key,
+        label: `${r.label}${r.is_system ? ' (predefined)' : ''}`,
+      }));
+    }
+    return legacyAssignable.map((key) => ({ key, label: ROLE_LABEL[key] ?? key }));
+  }, [apiAssignable, legacyAssignable]);
+
+  const defaultApproveRole = useMemo((): string => {
     if (assignableRoles.includes('csa')) return 'csa';
     return assignableRoles[0] ?? 'csa';
   }, [assignableRoles]);
@@ -264,13 +293,13 @@ export function PendingApprovalsClient({
                         id={`approve-role-${p.id}`}
                         value={approveRoleById[p.id] ?? defaultApproveRole}
                         onChange={(e) =>
-                          setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value as ProfileRole }))
+                          setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value }))
                         }
                         className="h-9 min-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[12px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
                       >
-                        {assignableRoles.map((r) => (
-                          <option key={r} value={r}>
-                            {ROLE_LABEL[r] ?? r}
+                        {assignableOptions.map((r) => (
+                          <option key={r.key} value={r.key}>
+                            {r.label}
                           </option>
                         ))}
                       </select>

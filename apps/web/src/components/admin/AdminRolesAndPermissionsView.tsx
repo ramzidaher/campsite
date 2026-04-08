@@ -1,5 +1,7 @@
 'use client';
 
+import type { PermissionPickerItem } from '@/lib/authz/customRolePickerContract';
+import { validateCustomRolePermissionKeys } from '@/lib/authz/validateCustomRolePermissions';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -50,8 +52,9 @@ const PERMISSION_GROUPS: { key: string; title: string }[] = [
   { key: 'interviews', title: 'Interviews' },
 ];
 
-export function AdminRolesAndPermissionsView() {
+export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRoles: boolean }) {
   const [activeTab, setActiveTab] = useState<'roles' | 'create'>('roles');
+  const [createPickerItems, setCreatePickerItems] = useState<PermissionPickerItem[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [permissions, setPermissions] = useState<PermissionRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
@@ -70,6 +73,38 @@ export function AdminRolesAndPermissionsView() {
     () => permissions.filter((p) => !p.is_founder_only),
     [permissions]
   );
+  const createAssignable = useMemo(
+    () => createPickerItems.filter((p) => p.assignable_into_custom_role),
+    [createPickerItems],
+  );
+
+  const groupedCreatePermissions = useMemo(() => {
+    const q = permissionQuery.trim().toLowerCase();
+    const groups: Array<{ title: string; items: PermissionPickerItem[] }> = [];
+    for (const g of PERMISSION_GROUPS) {
+      const items = createAssignable.filter((p) => {
+        if (!p.key.startsWith(`${g.key}.`)) return false;
+        if (!q) return true;
+        return (
+          p.label.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.key.toLowerCase().includes(q)
+        );
+      });
+      if (items.length) groups.push({ title: g.title, items });
+    }
+    const remaining = createAssignable.filter(
+      (p) =>
+        !PERMISSION_GROUPS.some((g) => p.key.startsWith(`${g.key}.`)) &&
+        (!q ||
+          p.label.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.key.toLowerCase().includes(q)),
+    );
+    if (remaining.length) groups.push({ title: 'Other', items: remaining });
+    return groups;
+  }, [createAssignable, permissionQuery]);
+
   const groupedPermissions = useMemo(() => {
     const q = permissionQuery.trim().toLowerCase();
     const groups: Array<{ title: string; items: PermissionRow[] }> = [];
@@ -132,22 +167,48 @@ export function AdminRolesAndPermissionsView() {
     void load();
   }, []);
 
+  useEffect(() => {
+    if (!canManageRoles) return;
+    void (async () => {
+      const res = await fetch('/api/admin/custom-roles', { cache: 'no-store' });
+      const data = (await res.json().catch(() => ({}))) as {
+        permission_picker?: { items?: PermissionPickerItem[] };
+        error?: string;
+      };
+      if (!res.ok) {
+        if (res.status !== 403) setMsg(data.error ?? 'Could not load permission picker for new roles');
+        return;
+      }
+      setCreatePickerItems(data.permission_picker?.items ?? []);
+    })();
+  }, [canManageRoles]);
+
+  useEffect(() => {
+    if (!canManageRoles && activeTab === 'create') setActiveTab('roles');
+  }, [canManageRoles, activeTab]);
+
   async function createRole() {
+    if (!canManageRoles) return;
     setBusy(true);
     setMsg(null);
-    const res = await fetch('/api/admin/roles', {
+    const keys = [...newPerms];
+    const v = validateCustomRolePermissionKeys(keys, createPickerItems);
+    if (!v.ok) {
+      setBusy(false);
+      setMsg(v.error ?? 'Invalid permission selection');
+      return;
+    }
+    const res = await fetch('/api/admin/custom-roles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         key: roleKeyFromLabel(newLabel),
         label: newLabel.trim(),
         description: newDescription.trim(),
-        permission_keys: [...newPerms],
-        source_preset_id: selectedPresetId || null,
-        source_catalog_version_no: presets.find((p) => p.id === selectedPresetId)?.source_version_no ?? null,
+        permission_keys: keys,
       }),
     });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    const data = (await res.json().catch(() => ({}))) as { error?: string; role_id?: string };
     setBusy(false);
     if (!res.ok) {
       setMsg(data.error ?? 'Could not create role');
@@ -192,14 +253,17 @@ export function AdminRolesAndPermissionsView() {
   }
 
   function duplicateRoleToDraft(role: RoleRow) {
+    if (!canManageRoles) return;
     setNewLabel(`${role.label} Copy`);
     setNewDescription(role.description ?? '');
-    setNewPerms(new Set(role.org_role_permissions.map((x) => x.permission_key)));
+    const allowed = new Set(createAssignable.map((p) => p.key));
+    const keys = role.org_role_permissions.map((x) => x.permission_key).filter((k) => allowed.has(k));
+    setNewPerms(new Set(keys));
     setPermissionQuery('');
     setSelectedPresetId('');
     setActiveTab('create');
     setMsg(
-      `Created draft from "${role.label}". Save it as a new custom role, then assign it to members from All members.`
+      `Created draft from "${role.label}". Permissions you cannot grant were removed. Save as a new custom role, then assign from All members.`
     );
   }
 
@@ -258,18 +322,20 @@ export function AdminRolesAndPermissionsView() {
         >
           Roles
         </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('create')}
-          className={[
-            'rounded-[8px] px-4 py-1.5 text-[13.5px] transition',
-            activeTab === 'create'
-              ? 'bg-white font-medium text-[#1A1917] shadow-sm'
-              : 'text-[#6B6963] hover:text-[#1A1917]',
-          ].join(' ')}
-        >
-          Create new role
-        </button>
+        {canManageRoles ? (
+          <button
+            type="button"
+            onClick={() => setActiveTab('create')}
+            className={[
+              'rounded-[8px] px-4 py-1.5 text-[13.5px] transition',
+              activeTab === 'create'
+                ? 'bg-white font-medium text-[#1A1917] shadow-sm'
+                : 'text-[#6B6963] hover:text-[#1A1917]',
+            ].join(' ')}
+          >
+            Create custom role
+          </button>
+        ) : null}
       </div>
 
       {activeTab === 'roles' ? (
@@ -329,14 +395,16 @@ export function AdminRolesAndPermissionsView() {
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('create')}
-            className="flex w-full items-center gap-3 rounded-[14px] border-[1.5px] border-dashed border-black/20 px-4 py-4 text-left text-[14px] text-[#6B6963] hover:bg-white hover:text-[#1A1917]"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-current text-[18px]">+</span>
-            Create a new role
-          </button>
+          {canManageRoles ? (
+            <button
+              type="button"
+              onClick={() => setActiveTab('create')}
+              className="flex w-full items-center gap-3 rounded-[14px] border-[1.5px] border-dashed border-black/20 px-4 py-4 text-left text-[14px] text-[#6B6963] hover:bg-white hover:text-[#1A1917]"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-current text-[18px]">+</span>
+              Create a custom role
+            </button>
+          ) : null}
 
           {selectedRole ? (
             <div className="rounded-[18px] border border-black/10 bg-white p-5">
@@ -473,13 +541,13 @@ export function AdminRolesAndPermissionsView() {
                   <strong className="font-medium text-[#1A1917]">{selectedChecked.size}</strong> permissions selected
                 </p>
                 <div className="flex items-center gap-2">
-                  {selectedRole.is_system ? (
+                  {canManageRoles ? (
                     <button
                       type="button"
                       onClick={() => duplicateRoleToDraft(selectedRole)}
                       className="rounded-[10px] border border-black/15 px-3 py-2 text-[13px] text-[#1A1917] hover:bg-[#F2F1ED]"
                     >
-                      Duplicate
+                      Duplicate as custom
                     </button>
                   ) : null}
                   <button
@@ -502,10 +570,13 @@ export function AdminRolesAndPermissionsView() {
             </div>
           ) : null}
         </div>
-      ) : (
+      ) : canManageRoles ? (
         <div className="max-w-4xl rounded-[18px] border border-black/10 bg-white p-6">
           <div className="mb-4 border-b border-black/10 pb-3">
-            <p className="text-[13px] font-medium text-[#1A1917]">Role details</p>
+            <p className="text-[13px] font-medium text-[#1A1917]">Custom role (permission ceiling: your access)</p>
+            <p className="mt-1 text-[12px] text-[#6B6963]">
+              Only permissions you already have can be included. Predefined (system) roles are created by the platform seed — use this form for tenant-specific roles.
+            </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -521,7 +592,14 @@ export function AdminRolesAndPermissionsView() {
                   if (!preset) return;
                   setNewLabel(preset.name);
                   setNewDescription(preset.description || preset.target_use_case);
-                  setNewPerms(new Set(preset.recommended_permission_keys));
+                  const allowed = new Set(createAssignable.map((p) => p.key));
+                  setNewPerms(
+                    new Set(
+                      createAssignable.length === 0
+                        ? preset.recommended_permission_keys
+                        : preset.recommended_permission_keys.filter((k) => allowed.has(k)),
+                    ),
+                  );
                 }}
                 className="w-full rounded-[10px] border border-black/15 bg-[#F7F6F2] px-3 py-2 text-[14px]"
               >
@@ -573,9 +651,9 @@ export function AdminRolesAndPermissionsView() {
           </div>
 
           <div className="mt-4 max-h-[520px] space-y-4 overflow-y-auto pr-1">
-            {matrixPermissions.length === 0 ? (
+            {createAssignable.length === 0 ? (
               <div className="rounded-md border border-[#1A5FA8]/20 bg-[#EBF3FF] p-3 text-[13px] text-[#1A5FA8]">
-                No permissions loaded yet.
+                Loading permissions you may grant… If this persists, ensure the permission catalog is initialized.
                 <button
                   type="button"
                   disabled={busy}
@@ -586,7 +664,7 @@ export function AdminRolesAndPermissionsView() {
                 </button>
               </div>
             ) : (
-              groupedPermissions.map((group) => (
+              groupedCreatePermissions.map((group) => (
                 <div key={`create-${group.title}`}>
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-[11px] uppercase tracking-[0.08em] text-[#A39E97]">{group.title}</p>
@@ -666,7 +744,7 @@ export function AdminRolesAndPermissionsView() {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

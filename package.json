@@ -9,6 +9,7 @@
   "scripts": {
     "create-super-admin": "node scripts/create-super-admin.mjs",
     "seed-demo-org": "node scripts/seed-demo-org.mjs",
+    "seed-qa-full": "node scripts/seed-qa-full.mjs",
     "add-platform-founder": "node scripts/add-platform-founder.mjs",
     "build": "turbo run build",
     "dev": "turbo run dev",

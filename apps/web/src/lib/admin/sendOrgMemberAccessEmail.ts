@@ -1,5 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+function withForceSetPasswordParam(redirectTo: string): string {
+  const url = new URL(redirectTo);
+  url.searchParams.set('force_set_password', '1');
+  return url.toString();
+}
+
 export function isAuthUserAlreadyExistsError(message: string): boolean {
   const m = message.toLowerCase();
   return (
@@ -26,7 +32,7 @@ export async function sendOrgMemberAccessEmail(
   inviteUserMetadata?: Record<string, unknown>
 ): Promise<SendOrgMemberAccessEmailResult> {
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo,
+    redirectTo: withForceSetPasswordParam(redirectTo),
     data: { must_set_password: true, ...inviteUserMetadata },
   });
 

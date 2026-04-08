@@ -347,7 +347,7 @@ export function AppShell({
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="settings" />
+                  <ShellNavIcon name="settings" open={adminNavExpanded} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
                   Admin
@@ -433,7 +433,7 @@ export function AppShell({
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="manager" />
+                  <ShellNavIcon name="manager" open={managerNavExpanded} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
                   {managerNavSectionLabel}
@@ -519,7 +519,7 @@ export function AppShell({
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="hrRecords" />
+                  <ShellNavIcon name="hrRecords" open={hrNavExpanded} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
                   HR

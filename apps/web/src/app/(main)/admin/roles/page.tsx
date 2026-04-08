@@ -24,5 +24,12 @@ export default async function AdminRolesPage() {
   });
   if (!canViewRoles) redirect('/admin');
 
-  return <AdminRolesAndPermissionsView />;
+  const { data: canManageRoles } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'roles.manage',
+    p_context: {},
+  });
+
+  return <AdminRolesAndPermissionsView canManageRoles={Boolean(canManageRoles)} />;
 }

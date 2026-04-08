@@ -48,6 +48,7 @@ export function AuthCallbackClient() {
       }
 
       const next = safeNextPath(full.searchParams.get('next'));
+      const forceSetPassword = full.searchParams.get('force_set_password') === '1';
       const token_hash = full.searchParams.get('token_hash');
       const typeInQuery = full.searchParams.get('type');
       const code = full.searchParams.get('code');
@@ -102,8 +103,8 @@ export function AuthCallbackClient() {
       const isInviteType = typeInQuery === 'invite' || typeInHash === 'invite';
 
       let to = next;
-      if (mustSetPassword || isInviteType) {
-        const inviteHint = isInviteType && !mustSetPassword ? '&from_invite=1' : '';
+      if (forceSetPassword || mustSetPassword || isInviteType) {
+        const inviteHint = forceSetPassword || (isInviteType && !mustSetPassword) ? '&from_invite=1' : '';
         to = `/auth/set-password?next=${encodeURIComponent(next)}${inviteHint}`;
       }
 

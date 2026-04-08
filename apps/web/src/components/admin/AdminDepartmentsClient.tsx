@@ -229,6 +229,29 @@ export function AdminDepartmentsClient({
     else void refresh();
   }
 
+  async function mergeDeptInto(sourceId: string, targetId: string) {
+    if (sourceId === targetId) {
+      setMsg('Pick a different department to merge into.');
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase.rpc('merge_org_departments', {
+      p_source_dept_id: sourceId,
+      p_target_dept_id: targetId,
+    });
+    setBusy(false);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setDetailDept(null);
+    if (openDeptIdFromUrl) {
+      router.replace(pathname);
+    }
+    void refresh();
+  }
+
   async function addCategory(deptId: string, name: string) {
     if (!name.trim()) return;
     const { error } = await supabase.from('broadcast_channels').insert({ dept_id: deptId, name: name.trim() });
@@ -553,6 +576,8 @@ export function AdminDepartmentsClient({
             onRevokeBroadcastPerm={(perm) => void revokeBroadcastPerm(detailDept.id, perm)}
             onAddMember={(uid) => void addDeptMember(detailDept.id, uid)}
             onRemoveMember={(uid) => void removeDeptMember(detailDept.id, uid)}
+            mergeTargetOptions={initialDepartments.filter((d) => d.id !== detailDept.id && !d.is_archived)}
+            onMergeInto={(targetId) => void mergeDeptInto(detailDept.id, targetId)}
           />
         </ModalOverlay>
       ) : null}
@@ -734,6 +759,8 @@ function DeptDetailForm({
   onRevokeBroadcastPerm,
   onAddMember,
   onRemoveMember,
+  mergeTargetOptions,
+  onMergeInto,
 }: {
   isOrgAdmin: boolean;
   /** True when opened from Manager → Departments (assigned dept manager, not org admin). */
@@ -762,6 +789,8 @@ function DeptDetailForm({
   onRevokeBroadcastPerm: (permission: string) => void;
   onAddMember: (userId: string) => void;
   onRemoveMember: (userId: string) => void;
+  mergeTargetOptions: Dept[];
+  onMergeInto: (targetDeptId: string) => void;
 }) {
   const [edit, setEdit] = useState(dept);
   const [catName, setCatName] = useState('');
@@ -771,6 +800,7 @@ function DeptDetailForm({
   const [memberPick, setMemberPick] = useState('');
   const [teamMemberPick, setTeamMemberPick] = useState<Record<string, string>>({});
   const [teamNameDrafts, setTeamNameDrafts] = useState<Record<string, string>>({});
+  const [mergeTargetId, setMergeTargetId] = useState('');
 
   const canSetTeamOwner = isOrgAdmin || isDeptManager;
   const canManageTeamRoster = useCallback(
@@ -849,6 +879,51 @@ function DeptDetailForm({
           >
             Save department
           </button>
+
+          {mergeTargetOptions.length > 0 ? (
+            <div className="mt-8 rounded-lg border border-[#f5d0d0] bg-[#fffafa] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#991b1b]">Merge department</p>
+              <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
+                Moves members, managers, teams, channels, broadcast links, recruitment rows, and rotas into the
+                department you choose, then removes <span className="font-medium text-[#121212]">{dept.name}</span>.
+                Same-named channels and teams in the target are combined.
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                <label className="flex-1 text-[13px] text-[#121212]">
+                  Merge into
+                  <select
+                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
+                    value={mergeTargetId}
+                    onChange={(e) => setMergeTargetId(e.target.value)}
+                  >
+                    <option value="">Select department…</option>
+                    {mergeTargetOptions.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  disabled={busy || !mergeTargetId}
+                  className="shrink-0 rounded-lg border border-[#b91c1c] bg-white px-4 py-2 text-[13px] font-medium text-[#b91c1c] transition-colors hover:bg-[#fef2f2] disabled:opacity-50"
+                  onClick={() => {
+                    if (
+                      !mergeTargetId ||
+                      !confirm(`Merge “${dept.name}” into the selected department? This cannot be undone.`)
+                    ) {
+                      return;
+                    }
+                    onMergeInto(mergeTargetId);
+                    setMergeTargetId('');
+                  }}
+                >
+                  Merge…
+                </button>
+              </div>
+            </div>
+          ) : null}
         </>
       ) : null}
 

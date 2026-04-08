@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { PendingApprovalRow } from '@/lib/admin/loadPendingApprovals';
-import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
+import { rolesAssignableOnApprove } from '@campsite/types';
 
 const ROLE_LABEL: Record<string, string> = {
   unassigned: 'Unassigned',
@@ -55,14 +55,43 @@ export function AdminPendingApprovalsClient({
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [bulkAllBusy, setBulkAllBusy] = useState(false);
-  const [approveRoleById, setApproveRoleById] = useState<Record<string, ProfileRole>>({});
-  const [bulkApproveRole, setBulkApproveRole] = useState<ProfileRole>('csa');
+  const [approveRoleById, setApproveRoleById] = useState<Record<string, string>>({});
+  const [bulkApproveRole, setBulkApproveRole] = useState<string>('csa');
+  const [apiAssignable, setApiAssignable] = useState<{ key: string; label: string; is_system: boolean }[] | null>(
+    null,
+  );
 
-  const assignableRoles = useMemo(() => rolesAssignableOnApprove(viewerRole), [viewerRole]);
-  const defaultApproveRole = useMemo((): ProfileRole => {
+  const legacyAssignable = useMemo(() => rolesAssignableOnApprove(viewerRole), [viewerRole]);
+
+  const assignableRoles = useMemo(() => {
+    if (apiAssignable?.length) return apiAssignable.map((r) => r.key);
+    return legacyAssignable;
+  }, [apiAssignable, legacyAssignable]);
+
+  const assignableOptions = useMemo(() => {
+    if (apiAssignable?.length) {
+      return apiAssignable.map((r) => ({
+        key: r.key,
+        label: `${r.label}${r.is_system ? ' (predefined)' : ''}`,
+      }));
+    }
+    return legacyAssignable.map((key) => ({ key, label: ROLE_LABEL[key] ?? key }));
+  }, [apiAssignable, legacyAssignable]);
+
+  const defaultApproveRole = useMemo((): string => {
     if (assignableRoles.includes('csa')) return 'csa';
     return assignableRoles[0] ?? 'csa';
   }, [assignableRoles]);
+
+  useEffect(() => {
+    void (async () => {
+      const res = await fetch('/api/admin/members/assignable-roles', { cache: 'no-store' });
+      const data = (await res.json().catch(() => ({}))) as {
+        roles?: { key: string; label: string; is_system: boolean }[];
+      };
+      if (res.ok && Array.isArray(data.roles)) setApiAssignable(data.roles);
+    })();
+  }, []);
 
   useEffect(() => {
     setRows(initialRows);
@@ -197,12 +226,12 @@ export function AdminPendingApprovalsClient({
               Role for all
               <select
                 value={bulkApproveRole}
-                onChange={(e) => setBulkApproveRole(e.target.value as ProfileRole)}
+                onChange={(e) => setBulkApproveRole(e.target.value)}
                 className="h-9 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-2 text-[13px] text-[#121212]"
               >
-                {assignableRoles.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABEL[r] ?? r}
+                {assignableOptions.map((r) => (
+                  <option key={r.key} value={r.key}>
+                    {r.label}
                   </option>
                 ))}
               </select>
@@ -309,14 +338,14 @@ export function AdminPendingApprovalsClient({
                       <select
                         value={approveRoleById[p.id] ?? defaultApproveRole}
                         onChange={(e) =>
-                          setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value as ProfileRole }))
+                          setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value }))
                         }
                         className="h-9 min-w-[140px] rounded-lg border border-[#d8d8d8] bg-white px-2 text-[12px] text-[#121212]"
                         aria-label="Role when approving"
                       >
-                        {assignableRoles.map((r) => (
-                          <option key={r} value={r}>
-                            {ROLE_LABEL[r] ?? r}
+                        {assignableOptions.map((r) => (
+                          <option key={r.key} value={r.key}>
+                            {r.label}
                           </option>
                         ))}
                       </select>
