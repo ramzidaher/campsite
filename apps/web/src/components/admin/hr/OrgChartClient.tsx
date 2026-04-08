@@ -200,6 +200,8 @@ function computeDisplayLevels(
 }
 
 const BEZIER_CIRCLE = 0.5522847498;
+const CARD_W = 150;
+const CARD_H = 74;
 
 /**
  * Same topology as an org-chart tree (drop → bus → drop) but fully curved — no polyline elbows.
@@ -257,6 +259,32 @@ function deptAccent(name: string): string {
   return `hsl(${hue} 52% 58%)`;
 }
 
+function escXml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function csvCell(value: string | null | undefined): string {
+  const s = value ?? '';
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
 function buildGraph(rows: OrgChartRow[]) {
   const byId = new Map(rows.map((r) => [r.user_id, r]));
   const children = new Map<string, string[]>();
@@ -308,7 +336,13 @@ function buildGraph(rows: OrgChartRow[]) {
   return { edges, levels };
 }
 
-export function OrgChartClient({ rows }: { rows: OrgChartRow[] }) {
+export function OrgChartClient({
+  rows,
+  chartTitle = 'Organisation Chart',
+}: {
+  rows: OrgChartRow[];
+  chartTitle?: string;
+}) {
   const [useDemoData, setUseDemoData] = useState(() => rows.length === 0);
   const activeRows = useMemo(() => (useDemoData ? DEMO_ROWS : rows), [rows, useDemoData]);
 
@@ -632,11 +666,13 @@ export function OrgChartClient({ rows }: { rows: OrgChartRow[] }) {
         const { id, sx, sy, ox, oy } = draggingRef.current;
         const scale = 1 / vpScale;
         const p = positionsRef.current[id];
-        p.x = ox + (e.clientX - sx) * scale;
-        p.y = oy + (e.clientY - sy) * scale;
-        p.tx = p.x;
-        p.ty = p.y;
-        bump();
+        if (p) {
+          p.x = ox + (e.clientX - sx) * scale;
+          p.y = oy + (e.clientY - sy) * scale;
+          p.tx = p.x;
+          p.ty = p.y;
+          bump();
+        }
       }
       if (panningRef.current) {
         const { sx, sy, ox, oy } = panningRef.current;
@@ -661,11 +697,13 @@ export function OrgChartClient({ rows }: { rows: OrgChartRow[] }) {
       const { id, sx, sy, ox, oy } = draggingRef.current;
       const scale = 1 / vpScale;
       const p = positionsRef.current[id];
-      p.x = ox + (t.clientX - sx) * scale;
-      p.y = oy + (t.clientY - sy) * scale;
-      p.tx = p.x;
-      p.ty = p.y;
-      bump();
+      if (p) {
+        p.x = ox + (t.clientX - sx) * scale;
+        p.y = oy + (t.clientY - sy) * scale;
+        p.tx = p.x;
+        p.ty = p.y;
+        bump();
+      }
     };
     const onTouchEnd = () => {
       if (draggingRef.current) {
@@ -689,6 +727,28 @@ export function OrgChartClient({ rows }: { rows: OrgChartRow[] }) {
     if (settleFrameRef.current) window.cancelAnimationFrame(settleFrameRef.current);
   }, []);
 
+  const startNodeDrag = (
+    e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>,
+    id: string,
+  ) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'BUTTON') return;
+    const pos = positionsRef.current[id];
+    if (!pos) return;
+    if ('touches' in e) {
+      const t = e.touches[0];
+      if (!t) return;
+      e.preventDefault();
+      draggingRef.current = { id, sx: t.clientX, sy: t.clientY, ox: pos.x, oy: pos.y };
+      bump();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    draggingRef.current = { id, sx: e.clientX, sy: e.clientY, ox: pos.x, oy: pos.y };
+    bump();
+  };
+
   const resetLayout = () => {
     const snap = initialLayoutRef.current;
     for (const id of Object.keys(snap)) {
@@ -707,24 +767,6 @@ export function OrgChartClient({ rows }: { rows: OrgChartRow[] }) {
     bump();
   };
 
-  const startNodeDrag = (
-    e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>,
-    id: string,
-  ) => {
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'BUTTON') return;
-    if ('touches' in e) {
-      const t = e.touches[0];
-      if (!t) return;
-      e.preventDefault();
-      draggingRef.current = { id, sx: t.clientX, sy: t.clientY, ox: positionsRef.current[id].x, oy: positionsRef.current[id].y };
-      return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    draggingRef.current = { id, sx: e.clientX, sy: e.clientY, ox: positionsRef.current[id].x, oy: positionsRef.current[id].y };
-  };
-
   const startPan = (e: ReactMouseEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement;
     if (t.closest(`.${styles.nd}`) || t.closest(`.${styles.ndBtn}`)) return;
@@ -737,6 +779,192 @@ export function OrgChartClient({ rows }: { rows: OrgChartRow[] }) {
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setVpScale((s) => Math.max(0.3, Math.min(2, s * delta)));
   };
+
+  const zoomIn = () => setVpScale((s) => Math.min(2, s * 1.12));
+  const zoomOut = () => setVpScale((s) => Math.max(0.3, s * 0.9));
+  const resetView = () => {
+    setVpX(0);
+    setVpY(0);
+    setVpScale(1);
+  };
+  const fitToView = () => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const ids = Object.keys(positionsRef.current);
+    if (!ids.length) return;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const id of ids) {
+      const p = positionsRef.current[id];
+      if (!p) continue;
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x + CARD_W);
+      maxY = Math.max(maxY, p.y + CARD_H);
+    }
+    if (!Number.isFinite(minX) || !Number.isFinite(minY)) return;
+    const pad = 40;
+    const contentW = Math.max(1, maxX - minX + pad * 2);
+    const contentH = Math.max(1, maxY - minY + pad * 2);
+    const s = Math.max(0.3, Math.min(2, Math.min(scene.clientWidth / contentW, scene.clientHeight / contentH)));
+    setVpScale(s);
+    setVpX(minX - pad);
+    setVpY(minY - pad);
+  };
+  const buildFullChartSvg = useCallback((): { svg: string; vbW: number; vbH: number } | null => {
+    const ids = Object.keys(positionsRef.current);
+    if (!ids.length) return null;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const id of ids) {
+      const p = positionsRef.current[id];
+      if (!p) continue;
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x + CARD_W);
+      maxY = Math.max(maxY, p.y + CARD_H);
+    }
+    if (!Number.isFinite(minX)) return null;
+    const pad = 36;
+    const titleBand = chartTitle.trim() ? 44 : 0;
+    const vbX = Math.floor(minX - pad);
+    const vbY = Math.floor(minY - pad - titleBand);
+    const vbW = Math.ceil(maxX - minX + pad * 2);
+    const vbH = Math.ceil(maxY - minY + pad * 2 + titleBand);
+    const titleSvg = chartTitle.trim()
+      ? `<text x="${vbX + 14}" y="${vbY + 28}" fill="rgba(255,255,255,0.92)" font-size="15" font-weight="600">${escXml(chartTitle.trim())}</text>`
+      : '';
+    const edgesSvg = edgePaths
+      .map(
+        (e) =>
+          `<path d="${escXml(e.d)}" fill="none" stroke="${escXml(e.stroke)}" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round" opacity="0.28" />`,
+      )
+      .join('');
+    const headersSvg = laneHeaders
+      .map(
+        (h) =>
+          `<text x="${h.x}" y="${h.y}" fill="rgba(255,255,255,0.38)" font-size="9" font-weight="600" letter-spacing="0.06em">${escXml(h.label.toUpperCase())}</text>`,
+      )
+      .join('');
+    const nodeRects = nodes
+      .map((n) => {
+        const p = positionsRef.current[n.id];
+        if (!p) return '';
+        const fill = n.tc === 't-board' ? 'rgba(167,139,250,0.1)' :
+          n.tc === 't-csuite' ? 'rgba(56,189,248,0.09)' :
+          n.tc === 't-slt' ? 'rgba(52,211,153,0.09)' :
+          n.tc === 't-mid' ? 'rgba(251,191,36,0.09)' :
+          n.tc === 't-senior' ? 'rgba(110,231,183,0.09)' :
+          n.tc === 't-junior' ? 'rgba(148,163,184,0.08)' : 'rgba(244,114,182,0.09)';
+        const depts = n.row.department_names?.length ? n.row.department_names.join(', ') : '';
+        return `<g>
+  <rect x="${p.x}" y="${p.y}" width="${CARD_W}" height="${CARD_H}" rx="10" fill="${fill}" stroke="rgba(255,255,255,0.1)" />
+  <text x="${p.x + 10}" y="${p.y + 22}" fill="rgba(255,255,255,0.92)" font-size="10.5">${escXml(n.label)}</text>
+  <text x="${p.x + 10}" y="${p.y + 38}" fill="rgba(255,255,255,0.62)" font-size="9">${escXml(n.row.job_title?.trim() || tenantRoleLabel(n.row.role) || n.tier)}</text>
+  ${depts ? `<text x="${p.x + 10}" y="${p.y + 56}" fill="rgba(255,255,255,0.42)" font-size="8">${escXml(depts.slice(0, 80))}${depts.length > 80 ? '…' : ''}</text>` : ''}
+</g>`;
+      })
+      .join('');
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" width="${vbW}" height="${vbH}">
+  <rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="#0a0a0c" />
+  ${titleSvg}
+  ${edgesSvg}
+  ${headersSvg}
+  ${nodeRects}
+</svg>`;
+    return { svg, vbW, vbH };
+  }, [chartTitle, edgePaths, laneHeaders, nodes]);
+
+  const exportSvg = useCallback(() => {
+    const built = buildFullChartSvg();
+    if (!built) return;
+    downloadBlob(new Blob([built.svg], { type: 'image/svg+xml;charset=utf-8' }), 'org-chart-export.svg');
+  }, [buildFullChartSvg]);
+
+  const exportPng = useCallback(() => {
+    const built = buildFullChartSvg();
+    if (!built) return;
+    const { svg, vbW, vbH } = built;
+    const scale = 2;
+    const img = new Image();
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.ceil(vbW * scale));
+      canvas.height = Math.max(1, Math.ceil(vbH * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      ctx.fillStyle = '#0a0a0c';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        if (blob) downloadBlob(blob, 'org-chart-export.png');
+      }, 'image/png');
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  }, [buildFullChartSvg]);
+
+  const exportJson = useCallback(() => {
+    const payload = {
+      title: chartTitle,
+      exportedAt: new Date().toISOString(),
+      people: activeRows.map((r) => ({
+        user_id: r.user_id,
+        full_name: r.full_name,
+        email: r.email,
+        role: r.role,
+        job_title: r.job_title,
+        reports_to_user_id: r.reports_to_user_id,
+        reports_to_name: r.reports_to_name,
+        department_names: r.department_names,
+        work_location: r.work_location,
+      })),
+    };
+    downloadBlob(
+      new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }),
+      'org-chart-data.json',
+    );
+  }, [activeRows, chartTitle]);
+
+  const exportCsv = useCallback(() => {
+    const header = [
+      'full_name',
+      'job_title',
+      'role',
+      'manager',
+      'departments',
+      'email',
+      'work_location',
+      'user_id',
+    ];
+    const lines = [
+      header.join(','),
+      ...activeRows.map((r) =>
+        [
+          csvCell(r.full_name),
+          csvCell(r.job_title),
+          csvCell(r.role),
+          csvCell(r.reports_to_name),
+          csvCell(r.department_names?.join('; ') ?? ''),
+          csvCell(r.email),
+          csvCell(r.work_location),
+          csvCell(r.user_id),
+        ].join(','),
+      ),
+    ];
+    downloadBlob(new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' }), 'org-chart-data.csv');
+  }, [activeRows]);
 
   const transform = `translate(${-vpX}px,${-vpY}px) scale(${vpScale})`;
   const tierLegend = useMemo(() => {
@@ -762,10 +990,29 @@ export function OrgChartClient({ rows }: { rows: OrgChartRow[] }) {
         <button type="button" onClick={() => setShowEdges((v) => !v)}>
           {showEdges ? 'Hide connections' : 'Show connections'}
         </button>
+        <button type="button" onClick={zoomOut} aria-label="Zoom out">-</button>
+        <button type="button" onClick={zoomIn} aria-label="Zoom in">+</button>
+        <button type="button" onClick={fitToView}>Fit</button>
+        <button type="button" onClick={resetView}>Reset view</button>
+        <span className={styles.exportGroup} aria-label="Export options">
+          <span className={styles.exportLabel}>Export</span>
+          <button type="button" onClick={exportSvg} title="Scalable vector — best for print and design tools">
+            SVG
+          </button>
+          <button type="button" onClick={exportPng} title="Raster image — easy to share">
+            PNG
+          </button>
+          <button type="button" onClick={exportJson} title="Full directory snapshot as structured data">
+            JSON
+          </button>
+          <button type="button" onClick={exportCsv} title="Spreadsheet-friendly table">
+            CSV
+          </button>
+        </span>
         <span>
           {rows.length === 0 && useDemoData
             ? 'Sample hierarchy (no org data — set managers on All members to build your tree)'
-            : 'Reporting lines by manager; Senior Leadership members share one top row (CEO → deputies); other departments on lower tiers. Drag to rearrange; pan/zoom on background.'}
+            : 'Reporting lines by manager; Senior Leadership members share one top row (CEO → deputies); other departments on lower tiers. Drag cards to rearrange the layout (not saved); pan/zoom on the background.'}
         </span>
       </div>
       <div className={styles.legend}>
@@ -777,6 +1024,9 @@ export function OrgChartClient({ rows }: { rows: OrgChartRow[] }) {
         ))}
       </div>
       <div className={`${styles.scene} ${grabbing ? styles.grabbing : ''}`} ref={sceneRef} onMouseDown={startPan} onWheel={onWheel}>
+        <div className={styles.sceneTitle}>
+          <h2 className={styles.sceneTitleText}>{chartTitle}</h2>
+        </div>
         <canvas className={styles.bg} ref={canvasRef} />
         <svg className={styles.edges} style={{ transform }}>
           {edgePaths.map((edge) => (

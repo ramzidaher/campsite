@@ -30,10 +30,16 @@ export default async function HROrgChartPage() {
   if (!allowed) redirect('/admin');
 
   const { data: rows } = await supabase.rpc('hr_directory_list');
+  const { data: org } = await supabase
+    .from('organisations')
+    .select('name')
+    .eq('id', profile.org_id)
+    .maybeSingle();
+  const chartTitle = `${org?.name?.trim() || 'Organisation'} Chart`;
 
   return (
     <div style={{ height: 'calc(100dvh - 60px)', background: '#0a0a0c' }}>
-      <OrgChartClient rows={(rows ?? []) as HRDirectoryRow[]} />
+      <OrgChartClient rows={(rows ?? []) as HRDirectoryRow[]} chartTitle={chartTitle} />
     </div>
   );
 }
