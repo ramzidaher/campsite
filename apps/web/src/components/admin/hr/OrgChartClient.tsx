@@ -1024,9 +1024,6 @@ export function OrgChartClient({
         ))}
       </div>
       <div className={`${styles.scene} ${grabbing ? styles.grabbing : ''}`} ref={sceneRef} onMouseDown={startPan} onWheel={onWheel}>
-        <div className={styles.sceneTitle}>
-          <h2 className={styles.sceneTitleText}>{chartTitle}</h2>
-        </div>
         <canvas className={styles.bg} ref={canvasRef} />
         <svg className={styles.edges} style={{ transform }}>
           {edgePaths.map((edge) => (

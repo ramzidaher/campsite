@@ -9,26 +9,6 @@
 }
 .scene { position: relative; width: 100%; flex: 1; min-height: 0; overflow: hidden; cursor: grab; }
 .grabbing { cursor: grabbing; }
-.sceneTitle {
-  position: absolute;
-  left: 12px;
-  top: 10px;
-  z-index: 5;
-  pointer-events: none;
-  max-width: min(420px, 72vw);
-}
-.sceneTitleText {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.3;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; transform-origin: 0 0; }
 .nodesLayer { position: absolute; inset: 0; z-index: 2; transform-origin: 0 0; pointer-events: none; }
