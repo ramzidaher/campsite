@@ -204,6 +204,86 @@ export function parseFounderMembers(json: unknown): FounderMember[] {
   return out;
 }
 
+export type FounderBroadcast = {
+  id: string;
+  org_id: string;
+  org_name: string;
+  org_slug: string;
+  title: string;
+  body: string;
+  status: string;
+  sent_at: string | null;
+  scheduled_at: string | null;
+  created_at: string;
+  sender_name: string | null;
+  sender_email: string | null;
+};
+
+export type FounderRotaShift = {
+  id: string;
+  org_id: string;
+  org_name: string;
+  org_slug: string;
+  user_id: string | null;
+  staff_name: string | null;
+  role_label: string | null;
+  start_time: string;
+  end_time: string;
+  notes: string | null;
+  source: string;
+};
+
+export function parseFounderBroadcasts(json: unknown): FounderBroadcast[] {
+  if (!Array.isArray(json)) return [];
+  const out: FounderBroadcast[] = [];
+  for (const row of json) {
+    if (!isRecord(row)) continue;
+    const id = row.id;
+    const org_id = row.org_id;
+    if (typeof id !== 'string' || typeof org_id !== 'string') continue;
+    out.push({
+      id,
+      org_id,
+      org_name: typeof row.org_name === 'string' ? row.org_name : '',
+      org_slug: typeof row.org_slug === 'string' ? row.org_slug : '',
+      title: typeof row.title === 'string' ? row.title : '',
+      body: typeof row.body === 'string' ? row.body : '',
+      status: typeof row.status === 'string' ? row.status : '',
+      sent_at: typeof row.sent_at === 'string' ? row.sent_at : null,
+      scheduled_at: typeof row.scheduled_at === 'string' ? row.scheduled_at : null,
+      created_at: typeof row.created_at === 'string' ? row.created_at : '',
+      sender_name: typeof row.sender_name === 'string' ? row.sender_name : null,
+      sender_email: typeof row.sender_email === 'string' ? row.sender_email : null,
+    });
+  }
+  return out;
+}
+
+export function parseFounderRotaShifts(json: unknown): FounderRotaShift[] {
+  if (!Array.isArray(json)) return [];
+  const out: FounderRotaShift[] = [];
+  for (const row of json) {
+    if (!isRecord(row)) continue;
+    const id = row.id;
+    const org_id = row.org_id;
+    if (typeof id !== 'string' || typeof org_id !== 'string') continue;
+    out.push({
+      id,
+      org_id,
+      org_name: typeof row.org_name === 'string' ? row.org_name : '',
+      org_slug: typeof row.org_slug === 'string' ? row.org_slug : '',
+      user_id: typeof row.user_id === 'string' ? row.user_id : null,
+      staff_name: typeof row.staff_name === 'string' ? row.staff_name : null,
+      role_label: typeof row.role_label === 'string' ? row.role_label : null,
+      start_time: typeof row.start_time === 'string' ? row.start_time : '',
+      end_time: typeof row.end_time === 'string' ? row.end_time : '',
+      notes: typeof row.notes === 'string' ? row.notes : null,
+      source: typeof row.source === 'string' ? row.source : 'manual',
+    });
+  }
+  return out;
+}
+
 export function parseFounderOrgProfiles(json: unknown): FounderOrgProfile[] {
   if (!Array.isArray(json)) return [];
   const out: FounderOrgProfile[] = [];

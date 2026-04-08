@@ -8,6 +8,7 @@ import {
   deletePlatformOrgUser,
   permanentlyDeletePlatformOrg,
   publishPermissionCatalogVersion,
+  setFounderProfileStatus,
   startSupportViewAsSession,
   updateOrganisationGovernance,
   upsertPermissionDraftEntry,
@@ -15,14 +16,16 @@ import {
 } from '@/app/(founders)/founders/platform-actions';
 import {
   type FounderAuditEvent,
+  type FounderBroadcast,
   type FounderMember,
   type FounderOrg,
   type FounderPermissionCatalogEntry,
   type FounderOrgProfile,
   type FounderRolePreset,
+  type FounderRotaShift,
   parseFounderOrgProfiles,
 } from '@/components/founders/founderTypes';
-import { type BroadcastRow, escapeHtml, getBroadcasts, ROTA_GLOBAL } from '@/components/founders/mockData';
+import { escapeHtml } from '@/components/founders/mockData';
 import { relTime } from '@/lib/format/relTime';
 import {
   isValidWorkspaceSlug,
@@ -151,6 +154,8 @@ export function FounderHqApp({
   initialCatalogDraft,
   initialRolePresets,
   initialAuditEvents,
+  initialBroadcasts,
+  initialRotaShifts,
   loadError,
 }: {
   user: FounderHqUser;
@@ -159,6 +164,8 @@ export function FounderHqApp({
   initialCatalogDraft: FounderPermissionCatalogEntry[];
   initialRolePresets: FounderRolePreset[];
   initialAuditEvents: FounderAuditEvent[];
+  initialBroadcasts: FounderBroadcast[];
+  initialRotaShifts: FounderRotaShift[];
   loadError?: string;
 }) {
   const router = useRouter();
@@ -167,6 +174,8 @@ export function FounderHqApp({
   const [catalogDraft, setCatalogDraft] = useState<FounderPermissionCatalogEntry[]>(initialCatalogDraft);
   const [rolePresets, setRolePresets] = useState<FounderRolePreset[]>(initialRolePresets);
   const [auditEvents, setAuditEvents] = useState<FounderAuditEvent[]>(initialAuditEvents);
+  const [broadcasts, setBroadcasts] = useState<FounderBroadcast[]>(initialBroadcasts);
+  const [rotaShifts, setRotaShifts] = useState<FounderRotaShift[]>(initialRotaShifts);
 
   useEffect(() => {
     setOrgs(initialOrgs);
@@ -183,6 +192,12 @@ export function FounderHqApp({
   useEffect(() => {
     setAuditEvents(initialAuditEvents);
   }, [initialAuditEvents]);
+  useEffect(() => {
+    setBroadcasts(initialBroadcasts);
+  }, [initialBroadcasts]);
+  useEffect(() => {
+    setRotaShifts(initialRotaShifts);
+  }, [initialRotaShifts]);
 
   const [activePage, setActivePage] = useState<FounderPageKey>('overview');
   const [csFilter, setCsFilter] = useState<OrgStatusFilter>('all');
@@ -217,6 +232,7 @@ export function FounderHqApp({
   const [busyDeactivate, setBusyDeactivate] = useState(false);
   const [busyHardDelete, setBusyHardDelete] = useState(false);
   const [busyRemoveUserId, setBusyRemoveUserId] = useState<string | null>(null);
+  const [busyProfileId, setBusyProfileId] = useState<string | null>(null);
   const firstOrgId = orgs[0]?.id ?? '';
   const [broadcastDraft, setBroadcastDraft] = useState({
     title: '',
@@ -224,7 +240,6 @@ export function FounderHqApp({
     siteId: firstOrgId,
     body: '',
   });
-  const [sentBroadcasts, setSentBroadcasts] = useState<BroadcastRow[]>([]);
   const [catalogForm, setCatalogForm] = useState({
     key: '',
     label: '',
@@ -248,11 +263,6 @@ export function FounderHqApp({
     if (broadcastDraft.siteId || !orgs[0]?.id) return;
     setBroadcastDraft((d) => ({ ...d, siteId: orgs[0]!.id }));
   }, [orgs, broadcastDraft.siteId]);
-
-  const broadcasts = useMemo(() => {
-    const base = getBroadcasts(user.displayName);
-    return [...sentBroadcasts, ...base];
-  }, [sentBroadcasts, user.displayName]);
 
   const hour = new Date().getHours();
   const heroGreeting = `${greeting(hour, user.firstName)} ☀️`;
@@ -403,8 +413,49 @@ export function FounderHqApp({
     return { sites, max };
   }, [orgs]);
 
-  const revenueTrend = [58000, 63000, 71000, 62000, 74000, 87400];
-  const revenueTrendMax = Math.max(...revenueTrend);
+  // Real monthly member-registration trend for the last 6 months.
+  const memberTrend = useMemo(() => {
+    const now = new Date();
+    const months: { label: string; count: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString('en-GB', { month: 'short' });
+      const yr = d.getFullYear();
+      const mo = d.getMonth();
+      const count = allMembers.filter((m) => {
+        const t = new Date(m.created_at);
+        return t.getFullYear() === yr && t.getMonth() === mo;
+      }).length;
+      months.push({ label, count });
+    }
+    return months;
+  }, [allMembers]);
+  const memberTrendMax = Math.max(1, ...memberTrend.map((x) => x.count));
+
+  // Real computed growth stats
+  const growthStats = useMemo(() => {
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+    const thisMonthMembers = allMembers.filter((m) => Date.parse(m.created_at) >= startOfThisMonth).length;
+    const lastMonthMembers = allMembers.filter(
+      (m) => Date.parse(m.created_at) >= startOfLastMonth && Date.parse(m.created_at) < startOfThisMonth,
+    ).length;
+    const momPct = lastMonthMembers > 0 ? ((thisMonthMembers - lastMonthMembers) / lastMonthMembers) * 100 : null;
+    const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
+    const newOrgsThisYear = orgs.filter((o) => Date.parse(o.created_at) >= startOfYear).length;
+    const activeRate = totalMemberCount > 0 ? Math.round((activeMembersCount / totalMemberCount) * 100) : 0;
+    return { thisMonthMembers, lastMonthMembers, momPct, newOrgsThisYear, activeRate };
+  }, [allMembers, orgs, totalMemberCount, activeMembersCount]);
+
+  // Subscription summary for revenue page
+  const subscriptionSummary = useMemo(() => {
+    const trialCount = orgs.filter((o) => o.subscription_status === 'trial').length;
+    const activeCount = orgs.filter((o) => o.subscription_status === 'active').length;
+    const limitedCount = orgs.filter((o) => o.subscription_status === 'limited').length;
+    const suspendedCount = orgs.filter((o) => o.subscription_status === 'suspended').length;
+    return { trialCount, activeCount, limitedCount, suspendedCount };
+  }, [orgs]);
 
   const growthBarMax = useMemo(() => Math.max(1, ...growthSitesReal.map((x) => x.n), 1), [growthSitesReal]);
 
@@ -452,7 +503,14 @@ export function FounderHqApp({
     };
   }, [modal, selectedOrgId]);
 
-  const modalRota = useMemo(() => ROTA_GLOBAL.slice(0, 3), []);
+  const modalRota = useMemo(
+    () => rotaShifts.filter((s) => s.org_id === selectedOrgId).slice(0, 20),
+    [rotaShifts, selectedOrgId],
+  );
+  const modalBroadcasts = useMemo(
+    () => broadcasts.filter((b) => b.org_id === selectedOrgId).slice(0, 10),
+    [broadcasts, selectedOrgId],
+  );
 
   const openOrgDetail = (id: string) => {
     const o = orgs.find((x) => x.id === id);
@@ -584,35 +642,50 @@ export function FounderHqApp({
     setNewSite((s) => ({ ...s, slug: suggestSlugFromOrganisationName(s.name) }));
   }, [newSite.name, newSiteSlugTouched]);
 
+  async function handleApproveProfile(profileId: string) {
+    setBusyProfileId(profileId);
+    const r = await setFounderProfileStatus(profileId, 'active');
+    setBusyProfileId(null);
+    if (!r.ok) {
+      showToast(r.error);
+      return;
+    }
+    setAllMembers((prev) => prev.map((m) => (m.id === profileId ? { ...m, status: 'active' } : m)));
+    showToast('Member approved');
+    router.refresh();
+  }
+
+  async function handleRejectProfile(profileId: string) {
+    setBusyProfileId(profileId);
+    const r = await setFounderProfileStatus(profileId, 'inactive');
+    setBusyProfileId(null);
+    if (!r.ok) {
+      showToast(r.error);
+      return;
+    }
+    setAllMembers((prev) => prev.map((m) => (m.id === profileId ? { ...m, status: 'inactive' } : m)));
+    showToast('Member rejected');
+    router.refresh();
+  }
+
   const submitBroadcast = () => {
     const title = broadcastDraft.title.trim();
     if (!title) {
       showToast('Add a broadcast title');
       return;
     }
-    const site = orgs.find((c) => c.id === broadcastDraft.siteId);
-    const reach =
-      broadcastDraft.audience === 'all'
-        ? `All ${totalMemberCount} members`
-        : `${site?.name ?? 'Organisation'} · ${site?.user_count ?? 0} members`;
-    setSentBroadcasts((prev) => [
-      {
-        icon: '📡',
-        title,
-        by: `${user.displayName} (Founder)`,
-        sent: 'Just now',
-        reach,
-      },
-      ...prev,
-    ]);
-    setBroadcastDraft({
-      title: '',
-      audience: 'all',
-      siteId: orgs[0]?.id ?? '',
-      body: '',
-    });
+    // Broadcasts require dept_id / cat_id which are org-specific.
+    // Route the founder to the org admin dashboard to send through the proper flow.
+    const targetOrgId = broadcastDraft.audience === 'site' ? broadcastDraft.siteId : (orgs[0]?.id ?? '');
+    const targetOrg = orgs.find((c) => c.id === targetOrgId);
+    if (targetOrg) {
+      showToast(`Opening ${targetOrg.name} admin to send broadcast...`);
+      window.open(tenantAdminDashboardUrl(targetOrg.slug), '_blank');
+    } else {
+      showToast('Select an organisation to send the broadcast from');
+    }
+    setBroadcastDraft({ title: '', audience: 'all', siteId: orgs[0]?.id ?? '', body: '' });
     setModal(null);
-    showToast('📡 Broadcast sent');
   };
 
   const createNewSite = async () => {
@@ -1245,43 +1318,57 @@ export function FounderHqApp({
         <div className={`page${activePage === 'revenue' ? ' active' : ''}`}>
           <div className="page-inner">
             <div className="page-title">Revenue & Finance</div>
-            <div className="page-sub">Consolidated financials across all 12 campsites</div>
+            <div className="page-sub">
+              Subscription status and billing controls across {orgs.length} organisation{orgs.length === 1 ? '' : 's'}
+            </div>
 
-            <div className="stats-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div className="stats-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
               <div className="stat-card">
                 <div className="stat-label">
-                  Total Revenue (YTD) <span className="stat-icon">💷</span>
+                  Active subscriptions <span className="stat-icon">✅</span>
                 </div>
-                <div className="stat-value">£1.04M</div>
+                <div className="stat-value">{subscriptionSummary.activeCount}</div>
                 <div className="stat-sub">
-                  <span className="up">↑ 22%</span> &nbsp;vs 2025
+                  <span className="up">{orgs.length > 0 ? Math.round((subscriptionSummary.activeCount / orgs.length) * 100) : 0}%</span> of all orgs
                 </div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-gold" style={{ width: '72%' }} />
+                  <div className="stat-bar-fill fill-green" style={{ width: `${orgs.length > 0 ? Math.round((subscriptionSummary.activeCount / orgs.length) * 100) : 0}%` }} />
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">
-                  Monthly Recurring Revenue <span className="stat-icon">📈</span>
+                  On trial <span className="stat-icon">⏱</span>
                 </div>
-                <div className="stat-value">£87.4k</div>
-                <div className="stat-sub">
-                  <span className="up">↑ 18%</span> &nbsp;vs Feb 2026
-                </div>
+                <div className="stat-value">{subscriptionSummary.trialCount}</div>
+                <div className="stat-sub">14-day free trial period</div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-green" style={{ width: '67%' }} />
+                  <div className="stat-bar-fill fill-gold" style={{ width: `${orgs.length > 0 ? Math.min(100, Math.round((subscriptionSummary.trialCount / orgs.length) * 100)) : 0}%` }} />
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">
-                  Avg Revenue / Site <span className="stat-icon">⛺</span>
+                  Limited / Suspended <span className="stat-icon">⚠️</span>
                 </div>
-                <div className="stat-value">£7.3k</div>
+                <div className="stat-value">{subscriptionSummary.limitedCount + subscriptionSummary.suspendedCount}</div>
+                <div className="stat-sub">{subscriptionSummary.limitedCount} limited · {subscriptionSummary.suspendedCount} suspended</div>
+                <div className="stat-bar">
+                  <div className="stat-bar-fill fill-purple" style={{ width: `${orgs.length > 0 ? Math.min(100, Math.round(((subscriptionSummary.limitedCount + subscriptionSummary.suspendedCount) / orgs.length) * 100)) : 0}%` }} />
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">
+                  New members this month <span className="stat-icon">👤</span>
+                </div>
+                <div className="stat-value">{growthStats.thisMonthMembers}</div>
                 <div className="stat-sub">
-                  <span className="up">↑ 9%</span> &nbsp;vs last month
+                  {growthStats.momPct !== null
+                    ? growthStats.momPct >= 0
+                      ? <span className="up">↑ {Math.abs(Math.round(growthStats.momPct))}% vs last month</span>
+                      : <span>↓ {Math.abs(Math.round(growthStats.momPct))}% vs last month</span>
+                    : <span>First month of data</span>}
                 </div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-blue" style={{ width: '55%' }} />
+                  <div className="stat-bar-fill fill-blue" style={{ width: `${Math.min(100, Math.max(6, growthStats.thisMonthMembers > 0 ? 60 : 6))}%` }} />
                 </div>
               </div>
             </div>
@@ -1292,7 +1379,9 @@ export function FounderHqApp({
                   <div className="section-title">Members by organisation</div>
                 </div>
                 <div className="card-pad" style={{ paddingTop: 14 }}>
-                  {revenueSites.sites.map((c) => (
+                  {revenueSites.sites.length === 0 ? (
+                    <div style={{ fontSize: 13, color: 'var(--text2)' }}>No organisations with members yet.</div>
+                  ) : revenueSites.sites.map((c) => (
                     <div key={c.id} className="perf-row">
                       <div className="perf-label">
                         {c.name}
@@ -1308,12 +1397,12 @@ export function FounderHqApp({
               </div>
               <div className="card">
                 <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
-                  <div className="section-title">Monthly Trend (Oct-Mar)</div>
+                  <div className="section-title">New member registrations (last 6 months)</div>
                 </div>
                 <div className="card-pad">
                   <div style={{ height: 160, display: 'flex', alignItems: 'flex-end', gap: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, width: '100%', height: '100%' }}>
-                      {revenueTrend.map((v, i) => (
+                      {memberTrend.map((m, i) => (
                         <div
                           key={i}
                           style={{
@@ -1329,13 +1418,13 @@ export function FounderHqApp({
                             <div
                               style={{
                                 width: '100%',
-                                height: `${Math.max(8, Math.round((v / revenueTrendMax) * 100))}%`,
+                                height: `${Math.max(4, Math.round((m.count / memberTrendMax) * 100))}%`,
                                 borderRadius: '4px 4px 0 0',
                                 background:
                                   i === 5 ? 'linear-gradient(180deg, var(--gold2), var(--gold))' : 'var(--surface3)',
                                 transition: 'background var(--t)',
                               }}
-                              title={`£${(v / 1000).toFixed(0)}k`}
+                              title={`${m.count} new member${m.count === 1 ? '' : 's'}`}
                             />
                           </div>
                         </div>
@@ -1351,12 +1440,11 @@ export function FounderHqApp({
                       marginTop: 8,
                     }}
                   >
-                    <span>Oct</span>
-                    <span>Nov</span>
-                    <span>Dec</span>
-                    <span>Jan</span>
-                    <span>Feb</span>
-                    <span style={{ color: 'var(--gold2)', fontWeight: 600 }}>Mar</span>
+                    {memberTrend.map((m, i) => (
+                      <span key={i} style={{ color: i === 5 ? 'var(--gold2)' : undefined, fontWeight: i === 5 ? 600 : undefined }}>
+                        {m.label}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1567,53 +1655,61 @@ export function FounderHqApp({
         <div className={`page${activePage === 'growth' ? ' active' : ''}`}>
           <div className="page-inner">
             <div className="page-title">Growth & Analytics</div>
-            <div className="page-sub">Platform-wide engagement, retention and expansion data</div>
+            <div className="page-sub">Platform-wide member growth and organisation expansion</div>
 
             <div className="stats-row">
               <div className="stat-card">
                 <div className="stat-label">
                   Member Growth (MoM) <span className="stat-icon">↗</span>
                 </div>
-                <div className="stat-value">+12.4%</div>
+                <div className="stat-value">
+                  {growthStats.momPct !== null
+                    ? `${growthStats.momPct >= 0 ? '+' : ''}${growthStats.momPct.toFixed(1)}%`
+                    : '—'}
+                </div>
                 <div className="stat-sub">
-                  <span className="up">Best</span> &nbsp;month in 14 months
+                  {growthStats.lastMonthMembers > 0
+                    ? <><span className={growthStats.momPct !== null && growthStats.momPct >= 0 ? 'up' : ''}>{growthStats.thisMonthMembers} this month</span> vs {growthStats.lastMonthMembers} last month</>
+                    : 'Not enough data yet'}
                 </div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-green" style={{ width: '82%' }} />
+                  <div className="stat-bar-fill fill-green" style={{ width: `${Math.min(100, Math.max(6, growthStats.momPct !== null ? Math.abs(growthStats.momPct) : 6))}%` }} />
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">
-                  Retention Rate <span className="stat-icon">🔄</span>
+                  Active member rate <span className="stat-icon">✅</span>
                 </div>
-                <div className="stat-value">88.7%</div>
+                <div className="stat-value">{growthStats.activeRate}%</div>
                 <div className="stat-sub">
-                  <span className="up">↑ 2.1pts</span> &nbsp;vs last quarter
+                  <span className="up">{activeMembersCount} active</span> of {totalMemberCount} total
                 </div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-blue" style={{ width: '89%' }} />
+                  <div className="stat-bar-fill fill-blue" style={{ width: `${growthStats.activeRate}%` }} />
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">
-                  New Sites This Year <span className="stat-icon">⛺</span>
+                  New orgs this year <span className="stat-icon">⛺</span>
                 </div>
-                <div className="stat-value">3</div>
+                <div className="stat-value">{growthStats.newOrgsThisYear}</div>
                 <div className="stat-sub">
-                  Target: <span className="up">5 by Dec</span>
+                  {orgs.length} total organisations on platform
                 </div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-gold" style={{ width: '60%' }} />
+                  <div className="stat-bar-fill fill-gold" style={{ width: `${orgs.length > 0 ? Math.min(100, Math.round((growthStats.newOrgsThisYear / orgs.length) * 100)) : 0}%` }} />
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">
-                  Platform Uptime <span className="stat-icon">⚡</span>
+                  Total broadcasts sent <span className="stat-icon">📡</span>
                 </div>
-                <div className="stat-value">99.9%</div>
-                <div className="stat-sub">30-day rolling average</div>
+                <div className="stat-value">{broadcasts.filter((b) => b.status === 'sent').length}</div>
+                <div className="stat-sub">
+                  Across all organisations
+                </div>
                 <div className="stat-bar">
-                  <div className="stat-bar-fill fill-purple" style={{ width: '99%' }} />
+                  <div className="stat-bar-fill fill-purple" style={{ width: `${Math.min(100, Math.max(6, broadcasts.length > 0 ? 60 : 6))}%` }} />
                 </div>
               </div>
             </div>
@@ -1794,14 +1890,32 @@ export function FounderHqApp({
                           <td style={{ color: 'var(--text2)' }}>{p.org_name}</td>
                           <td style={{ color: 'var(--text2)' }}>{ROLE_LBL[p.role] ?? p.role}</td>
                           <td style={{ color: 'var(--text3)' }}>{relTime(p.created_at)}</td>
-                          <td style={{ paddingTop: 11 }}>
-                            <a
-                              className="btn btn-primary btn-sm"
-                              href={tenantAdminDashboardUrl(p.org_slug)}
-                              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
-                            >
-                              Open org admin →
-                            </a>
+                          <td>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                disabled={busyProfileId === p.id}
+                                onClick={() => void handleApproveProfile(p.id)}
+                              >
+                                {busyProfileId === p.id ? '...' : '✓ Approve'}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm"
+                                disabled={busyProfileId === p.id}
+                                onClick={() => void handleRejectProfile(p.id)}
+                              >
+                                {busyProfileId === p.id ? '...' : '✕ Reject'}
+                              </button>
+                              <a
+                                className="btn btn-ghost btn-sm"
+                                href={tenantAdminDashboardUrl(p.org_slug)}
+                                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+                              >
+                                View org →
+                              </a>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1819,36 +1933,49 @@ export function FounderHqApp({
             <div className="section-head" style={{ marginBottom: 20 }}>
               <div>
                 <div className="page-title">Broadcasts HQ</div>
-                <div className="page-sub">Send to one site, a group, or the entire company</div>
+                <div className="page-sub">
+                  {broadcasts.length} broadcast{broadcasts.length === 1 ? '' : 's'} across {orgs.length} organisation{orgs.length === 1 ? '' : 's'}
+                </div>
               </div>
               <button type="button" className="btn btn-primary" onClick={() => setModal('broadcast')}>
                 + New Broadcast
               </button>
             </div>
             <div className="card card-pad">
-              <div className="alert alert-info" style={{ marginBottom: 18 }}>
-                ℹ️ As a founder you can broadcast to all {totalMemberCount} members simultaneously, or target by organisation
-                (UI mock - sending is not wired to live broadcasts yet).
-              </div>
               <div className="section-title" style={{ marginBottom: 14 }}>
-                Recent Broadcasts
+                All broadcasts
               </div>
-              {broadcasts.map((b, i) => (
-                <div key={i} className="activity-item">
-                  <div className="activity-icon">{b.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div className="activity-text">
-                      <strong>{b.title}</strong>
-                    </div>
-                    <div className="activity-time">
-                      {b.by} · {b.sent} · {b.reach}
-                    </div>
-                  </div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => showToast('Opening broadcast...')}>
-                    View
-                  </button>
+              {broadcasts.length === 0 ? (
+                <div style={{ fontSize: 13, color: 'var(--text2)' }}>
+                  No broadcasts found. Broadcasts sent from tenant org dashboards will appear here.
                 </div>
-              ))}
+              ) : (
+                broadcasts.map((b) => (
+                  <div key={b.id} className="activity-item">
+                    <div className="activity-icon">📡</div>
+                    <div style={{ flex: 1 }}>
+                      <div className="activity-text">
+                        <strong>{b.title}</strong>
+                        {b.status !== 'sent' && (
+                          <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text3)', fontStyle: 'italic' }}>
+                            {b.status}
+                          </span>
+                        )}
+                      </div>
+                      <div className="activity-time">
+                        {b.sender_name ?? 'Unknown'} · {b.org_name} · {relTime(b.sent_at ?? b.created_at)}
+                      </div>
+                    </div>
+                    <a
+                      className="btn btn-ghost btn-sm"
+                      href={tenantAdminDashboardUrl(b.org_slug)}
+                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      View org →
+                    </a>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1857,31 +1984,48 @@ export function FounderHqApp({
         <div className={`page${activePage === 'rota-hq' ? ' active' : ''}`}>
           <div className="page-inner">
             <div className="page-title">Rota Overview</div>
-            <div className="page-sub">Upcoming shifts across all campsites - week of 24-28 Mar</div>
+            <div className="page-sub">
+              {rotaShifts.length > 0
+                ? `${rotaShifts.length} upcoming shift${rotaShifts.length === 1 ? '' : 's'} across all organisations (next 30 days)`
+                : 'No upcoming shifts scheduled in the next 30 days'}
+            </div>
             <div className="card">
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Staff Member</th>
-                      <th>Campsite</th>
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Role</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ROTA_GLOBAL.map((r, i) => (
-                      <tr key={`${r.name}-${i}`}>
-                        <td style={{ color: 'var(--text)' }}>{r.name}</td>
-                        <td style={{ color: 'var(--text2)' }}>{r.site}</td>
-                        <td style={{ color: 'var(--text2)' }}>{r.date}</td>
-                        <td style={{ color: 'var(--text2)' }}>{r.time}</td>
-                        <td style={{ color: 'var(--text3)' }}>{r.role}</td>
+                {rotaShifts.length === 0 ? (
+                  <div className="card-pad" style={{ color: 'var(--text2)', fontSize: 13 }}>
+                    No rota shifts found. Shifts added by org admins will appear here.
+                  </div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Staff Member</th>
+                        <th>Organisation</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Role</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {rotaShifts.map((s) => {
+                        const start = new Date(s.start_time);
+                        const end = new Date(s.end_time);
+                        const dateStr = start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                        const pad = (n: number) => String(n).padStart(2, '0');
+                        const timeStr = `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
+                        return (
+                          <tr key={s.id}>
+                            <td style={{ color: 'var(--text)' }}>{s.staff_name ?? 'Unassigned'}</td>
+                            <td style={{ color: 'var(--text2)' }}>{s.org_name}</td>
+                            <td style={{ color: 'var(--text2)' }}>{dateStr}</td>
+                            <td style={{ color: 'var(--text2)' }}>{timeStr}</td>
+                            <td style={{ color: 'var(--text3)' }}>{s.role_label ?? '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>
@@ -2318,47 +2462,63 @@ export function FounderHqApp({
                 )}
               </div>
               <div style={{ display: csTab === 'rota' ? 'block' : 'none' }}>
-                <div className="alert alert-info">
-                  📅 Rota for this site loads from Google Sheets integration.{' '}
-                  <button type="button" className="fh-link" onClick={() => showToast('Opening Google Sheets...')}>
-                    Open sheet →
-                  </button>
-                </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase' }}>Staff</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase' }}>Date</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase' }}>Time</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase' }}>Role</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modalRota.map((r, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', color: 'var(--text)' }}>{r.name}</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text2)' }}>{r.date}</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text2)' }}>{r.time}</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text3)' }}>{r.role}</td>
+                {modalRota.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text2)', padding: '12px 0' }}>
+                    No upcoming shifts for this organisation in the next 30 days.
+                  </p>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase' }}>Staff</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase' }}>Date</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase' }}>Time</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10.5, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase' }}>Role</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {modalRota.map((s) => {
+                        const start = new Date(s.start_time);
+                        const end = new Date(s.end_time);
+                        const dateStr = start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                        const pad = (n: number) => String(n).padStart(2, '0');
+                        const timeStr = `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
+                        return (
+                          <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '10px 12px', color: 'var(--text)' }}>{s.staff_name ?? 'Unassigned'}</td>
+                            <td style={{ padding: '10px 12px', color: 'var(--text2)' }}>{dateStr}</td>
+                            <td style={{ padding: '10px 12px', color: 'var(--text2)' }}>{timeStr}</td>
+                            <td style={{ padding: '10px 12px', color: 'var(--text3)' }}>{s.role_label ?? '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
               <div style={{ display: csTab === 'broadcasts' ? 'block' : 'none' }}>
-                {broadcasts.slice(0, 2).map((b, i) => (
-                  <div key={i} className="activity-item">
-                    <div className="activity-icon">{b.icon}</div>
-                    <div>
-                      <div className="activity-text">
-                        <strong>{b.title}</strong>
-                      </div>
-                      <div className="activity-time">
-                        {b.by} · {b.sent}
+                {modalBroadcasts.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text2)', padding: '12px 0' }}>
+                    No broadcasts found for this organisation.
+                  </p>
+                ) : (
+                  modalBroadcasts.map((b) => (
+                    <div key={b.id} className="activity-item">
+                      <div className="activity-icon">📡</div>
+                      <div>
+                        <div className="activity-text">
+                          <strong>{b.title}</strong>
+                          {b.status !== 'sent' && (
+                            <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text3)', fontStyle: 'italic' }}>{b.status}</span>
+                          )}
+                        </div>
+                        <div className="activity-time">
+                          {b.sender_name ?? 'Unknown'} · {relTime(b.sent_at ?? b.created_at)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
               <div style={{ display: csTab === 'settings' ? 'block' : 'none' }}>
                 <p style={{ fontSize: 12, color: '#b45309', marginBottom: 14 }}>

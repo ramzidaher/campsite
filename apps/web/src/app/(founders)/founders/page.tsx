@@ -1,10 +1,12 @@
 import { FounderHqApp } from '@/components/founders/FounderHqApp';
 import {
   parseFounderAuditEvents,
+  parseFounderBroadcasts,
   parseFounderMembers,
   parseFounderOrgs,
   parseFounderPermissionCatalogEntries,
   parseFounderRolePresets,
+  parseFounderRotaShifts,
 } from '@/components/founders/founderTypes';
 import { requirePlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
@@ -32,20 +34,26 @@ export default async function FoundersPage() {
     { data: draftCatalogRpc, error: draftCatalogError },
     { data: rolePresetsRpc, error: rolePresetsError },
     { data: auditRpc, error: auditError },
+    { data: broadcastsRpc, error: broadcastsError },
+    { data: rotaRpc, error: rotaError },
   ] = await Promise.all([
     supabase.rpc('platform_organisations_list'),
     supabase.rpc('platform_profiles_list_all'),
-    supabase.rpc('platform_founder_catalog_draft'),
+    supabase.rpc('platform_founder_catalog_draft_readonly'),
     supabase.rpc('platform_list_role_presets', { p_include_archived: true }),
     supabase.rpc('platform_list_audit_events', { p_org_id: null, p_event_type: null, p_days: 30 }),
+    supabase.rpc('platform_broadcasts_list', { p_org_id: null }),
+    supabase.rpc('platform_rota_shifts_list', { p_org_id: null, p_days: 30 }),
   ]);
   const initialOrgs = parseFounderOrgs(orgRpc);
   const initialAllMembers = parseFounderMembers(memRpc);
   const initialCatalogDraft = parseFounderPermissionCatalogEntries(draftCatalogRpc);
   const initialRolePresets = parseFounderRolePresets(rolePresetsRpc);
   const initialAuditEvents = parseFounderAuditEvents(auditRpc);
+  const initialBroadcasts = parseFounderBroadcasts(broadcastsRpc);
+  const initialRotaShifts = parseFounderRotaShifts(rotaRpc);
   const loadError =
-    [orgRpcError?.message, memRpcError?.message, draftCatalogError?.message, rolePresetsError?.message, auditError?.message]
+    [orgRpcError?.message, memRpcError?.message, draftCatalogError?.message, rolePresetsError?.message, auditError?.message, broadcastsError?.message, rotaError?.message]
       .filter(Boolean)
       .join(' - ') || undefined;
 
@@ -75,6 +83,8 @@ export default async function FoundersPage() {
       initialCatalogDraft={initialCatalogDraft}
       initialRolePresets={initialRolePresets}
       initialAuditEvents={initialAuditEvents}
+      initialBroadcasts={initialBroadcasts}
+      initialRotaShifts={initialRotaShifts}
       loadError={loadError}
       user={{
         displayName,

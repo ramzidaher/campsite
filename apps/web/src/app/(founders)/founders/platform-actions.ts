@@ -6,6 +6,35 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role';
 export type PlatformActionResult = { ok: true } | { ok: false; error: string };
 export type PlatformActionDataResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
+async function collectUserDeleteBlockers(admin: ReturnType<typeof createServiceRoleClient>, userId: string): Promise<string[]> {
+  const checks: Array<{ table: string; column: string }> = [
+    { table: 'onboarding_templates', column: 'created_by' },
+    { table: 'onboarding_runs', column: 'started_by' },
+    { table: 'recruitment_requests', column: 'created_by' },
+    { table: 'recruitment_request_history', column: 'changed_by' },
+    { table: 'interview_slots', column: 'created_by' },
+    { table: 'offer_letter_templates', column: 'created_by' },
+    { table: 'offer_letters', column: 'created_by' },
+    { table: 'job_listings', column: 'created_by' },
+    { table: 'job_application_notes', column: 'created_by' },
+    { table: 'job_application_status_history', column: 'created_by' },
+    { table: 'employee_hr_records', column: 'created_by' },
+    { table: 'employee_hr_audit_log', column: 'changed_by' },
+    { table: 'review_cycles', column: 'created_by' },
+  ];
+
+  const blockers: string[] = [];
+  for (const c of checks) {
+    const { count, error } = await admin.from(c.table).select('id', { count: 'exact', head: true }).eq(c.column, userId);
+    if (error) {
+      blockers.push(`${c.table}.${c.column}=query_error(${error.message})`);
+      continue;
+    }
+    if ((count ?? 0) > 0) blockers.push(`${c.table}.${c.column}=${count}`);
+  }
+  return blockers;
+}
+
 async function getPlatformFounderContext(): Promise<
   | { ok: true; userId: string; userSupabase: Awaited<ReturnType<typeof createClient>> }
   | { ok: false; error: string }
@@ -75,7 +104,12 @@ export async function deletePlatformOrgUser(orgId: string, userId: string): Prom
     }
   }
   const { error: de } = await admin.auth.admin.deleteUser(userId);
-  if (de) return { ok: false, error: de.message };
+  if (de) {
+    const blockers = await collectUserDeleteBlockers(admin, userId);
+    const blockerText = blockers.length ? ` Potential blockers: ${blockers.join(', ')}.` : '';
+    console.error('[platform] deletePlatformOrgUser failed', { orgId, userId, error: de.message, blockers });
+    return { ok: false, error: `${de.message}.${blockerText}` };
+  }
   return { ok: true };
 }
 
@@ -99,6 +133,7 @@ export async function permanentlyDeletePlatformOrg(orgId: string): Promise<Platf
   if (fe) return { ok: false, error: fe.message };
   const founderIds = new Set((founderRows ?? []).map((r) => r.user_id as string));
 
+  const nonFounderMemberIds: string[] = [];
   for (const m of members ?? []) {
     const uid = m.id as string;
     if (founderIds.has(uid)) {
@@ -106,11 +141,27 @@ export async function permanentlyDeletePlatformOrg(orgId: string): Promise<Platf
       if (ue) return { ok: false, error: `Could not detach platform founder from org: ${ue.message}` };
       continue;
     }
-    const { error: de } = await admin.auth.admin.deleteUser(uid);
-    if (de) return { ok: false, error: `Failed to delete user ${uid}: ${de.message}` };
+    // Detach first so org delete can proceed even if profile->org FK is restrictive.
+    const { error: ue } = await admin.from('profiles').update({ org_id: null }).eq('id', uid).eq('org_id', orgId);
+    if (ue) return { ok: false, error: `Could not detach user from org before deletion: ${ue.message}` };
+    nonFounderMemberIds.push(uid);
   }
   const { error: delOrg } = await admin.from('organisations').delete().eq('id', orgId);
   if (delOrg) return { ok: false, error: delOrg.message };
+  for (const uid of nonFounderMemberIds) {
+    const { error: de } = await admin.auth.admin.deleteUser(uid);
+    if (de) {
+      const blockers = await collectUserDeleteBlockers(admin, uid);
+      const blockerText = blockers.length ? ` Potential blockers: ${blockers.join(', ')}.` : '';
+      console.error('[platform] permanentlyDeletePlatformOrg user delete failed', {
+        orgId,
+        userId: uid,
+        error: de.message,
+        blockers,
+      });
+      return { ok: false, error: `Failed to delete user ${uid}: ${de.message}.${blockerText}` };
+    }
+  }
   return { ok: true };
 }
 
@@ -189,6 +240,20 @@ export async function updateOrganisationGovernance(input: {
     p_force_logout: input.forceLogout,
     p_trial_ends_at: input.trialEndsAt ?? null,
     p_clear_trial: input.clearTrial ?? false,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function setFounderProfileStatus(
+  profileId: string,
+  newStatus: 'active' | 'inactive' | 'pending',
+): Promise<PlatformActionResult> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { error } = await ctx.userSupabase.rpc('platform_founder_set_profile_status', {
+    p_profile_id: profileId,
+    p_new_status: newStatus,
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
