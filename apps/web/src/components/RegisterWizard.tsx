@@ -127,6 +127,8 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
   const [confirm, setConfirm] = useState('');
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [boundOrgId, setBoundOrgId] = useState<string | null>(null);
+  const [boundOrgName, setBoundOrgName] = useState<string | null>(null);
   const [newOrgName, setNewOrgName] = useState('');
   const [orgSlugInput, setOrgSlugInput] = useState('');
   /** Once true, organisation name changes no longer overwrite the short-name field. */
@@ -188,6 +190,8 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
     const match = orgs.find((o) => o.slug === initialOrgSlug);
     if (match) {
       setOrgId(match.id);
+      setBoundOrgId(match.id);
+      setBoundOrgName(match.name);
       void loadDepartments(match.id);
     }
   }, [inviteFlow, orgs, initialOrgSlug, orgId, loadDepartments]);
@@ -276,7 +280,11 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
       signUpData = data;
     } else {
       if (!orgId) {
-        setError('Select an organisation.');
+        setError('We could not match your organisation from this sign-up link. Ask your admin for a fresh link.');
+        return;
+      }
+      if (boundOrgId && orgId !== boundOrgId) {
+        setError('Organisation mismatch. Please use the original sign-up link from your organisation.');
         return;
       }
       if (selectedDeptIds.size === 0) {
@@ -546,33 +554,23 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
           <h2 className="auth-title">Your organisation</h2>
           <p className="auth-sub mb-8">
             {inviteFlow
-              ? 'We matched your workspace from the invite link. You can change the organisation below if needed.'
+              ? 'We matched your workspace from the sign-up link and locked it to your organisation.'
               : 'Tell us your organisation name. We’ll suggest a short identifier for shared links and invites — change it only if you want to.'}
           </p>
 
           {inviteFlow ? (
             <div className="mb-8">
-              <label className="auth-label" htmlFor="reg-org">
+              <label className="auth-label" htmlFor="reg-org-fixed">
                 Organisation
               </label>
-              <select
-                id="reg-org"
-                className="auth-input appearance-none bg-white"
-                value={orgId ?? ''}
-                onChange={(e) => {
-                  const id = e.target.value || null;
-                  setOrgId(id);
-                  if (id) void loadDepartments(id);
-                }}
-                required
+              <div
+                id="reg-org-fixed"
+                className="auth-input flex items-center justify-between bg-[#f5f4f1] text-[#121212]"
+                aria-live="polite"
               >
-                <option value="">Select...</option>
-                {orgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
+                <span>{boundOrgName ?? orgName ?? 'Resolving organisation...'}</span>
+                <span className="text-[11.5px] text-[#9b9b9b]">Locked</span>
+              </div>
             </div>
           ) : (
             <div className="mb-8 space-y-5">
@@ -653,7 +651,13 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
                 setError(null);
                 if (inviteFlow) {
                   if (!orgId) {
-                    setError('Select an organisation.');
+                    setError(
+                      'We could not match your organisation from this sign-up link. Ask your admin for a fresh link.'
+                    );
+                    return;
+                  }
+                  if (boundOrgId && orgId !== boundOrgId) {
+                    setError('Organisation mismatch. Please use the original sign-up link from your organisation.');
                     return;
                   }
                   setStep(3);

@@ -1,4 +1,4 @@
-import { isAuthUserAlreadyExistsError } from '@/lib/admin/sendOrgMemberAccessEmail';
+import { sendOrgMemberAccessEmail } from '@/lib/admin/sendOrgMemberAccessEmail';
 import { inviteCallbackUrl } from '@/lib/auth/inviteCallbackBaseUrl';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
@@ -134,17 +134,23 @@ export async function POST(req: NextRequest) {
   let sentInviteEmail = false;
 
   if (redirectTo) {
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName, must_set_password: true },
-      redirectTo,
+    const sent = await sendOrgMemberAccessEmail(admin, email, redirectTo, {
+      full_name: fullName,
     });
-
-    if (!inviteErr && invited?.user?.id) {
-      targetUserId = invited.user.id;
-      sentInviteEmail = true;
-      accessEmailChannel = 'invite';
-    } else if (inviteErr && !isAuthUserAlreadyExistsError(inviteErr.message)) {
-      return NextResponse.json({ error: inviteErr.message }, { status: 400 });
+    if (!sent.ok) {
+      return NextResponse.json({ error: sent.error }, { status: 400 });
+    }
+    accessEmailChannel = sent.channel;
+    sentInviteEmail = sent.channel === 'invite';
+    if (sent.channel === 'invite') {
+      const { data: existingId, error: lookErr } = await admin.rpc('admin_find_auth_user_id_by_email', {
+        p_email: email,
+      });
+      if (lookErr) {
+        return NextResponse.json({ error: lookErr.message }, { status: 500 });
+      }
+      const id = typeof existingId === 'string' ? existingId : null;
+      if (id && UUID_RE.test(id)) targetUserId = id;
     }
   }
 
@@ -199,19 +205,6 @@ export async function POST(req: NextRequest) {
     const lower = rpcErr.message.toLowerCase();
     const status = lower.includes('another organisation') ? 409 : 500;
     return NextResponse.json({ error: rpcErr.message || 'Could not finish setting up this member.' }, { status });
-  }
-
-  if (!sentInviteEmail && redirectTo) {
-    const { error: otpErr } = await admin.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: redirectTo,
-        shouldCreateUser: false,
-      },
-    });
-    if (!otpErr) {
-      accessEmailChannel = 'magiclink';
-    }
   }
 
   return NextResponse.json({

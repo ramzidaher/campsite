@@ -3,6 +3,7 @@ import {
   completeRegistrationProfileIfNeeded,
   syncRegistrationAvatarToProfileIfEmpty,
 } from '@/lib/auth/completeRegistrationProfile';
+import { sendPendingApprovalRequestEmail } from '@/lib/admin/sendPendingApprovalRequestEmail';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -119,6 +120,23 @@ export default async function PendingPage({
 
   const emailVerified = Boolean(user.email_confirmed_at);
   const registrationError = sp.registration_error?.trim();
+
+  if (profileRow.status === 'pending' && profileRow.id) {
+    const { data: requester } = await supabase
+      .from('profiles')
+      .select('full_name,email,org_id')
+      .eq('id', profileRow.id)
+      .maybeSingle();
+    const orgId = requester?.org_id as string | null | undefined;
+    if (orgId) {
+      await sendPendingApprovalRequestEmail({
+        profileId: profileRow.id,
+        orgId,
+        requesterName: (requester?.full_name as string | undefined)?.trim() || user.email || 'New member',
+        requesterEmail: (requester?.email as string | null | undefined) ?? user.email ?? null,
+      });
+    }
+  }
 
   return (
     <div className="mx-auto max-w-lg px-5 py-10 sm:px-[28px]">

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { RootAuthHashGuard } from '@/components/auth/RootAuthHashGuard';
 import { LandingPage } from '@/components/marketing/LandingPage';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
@@ -45,5 +46,10 @@ export default async function HomePage() {
     redirect('/dashboard');
   }
 
-  return <LandingPage />;
+  return (
+    <>
+      <RootAuthHashGuard />
+      <LandingPage />
+    </>
+  );
 }
