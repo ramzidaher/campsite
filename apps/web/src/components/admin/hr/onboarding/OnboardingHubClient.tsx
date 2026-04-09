@@ -26,6 +26,15 @@ type Run = {
 };
 
 type Member = { id: string; full_name: string; email: string | null };
+type TemplateTask = {
+  id: string;
+  template_id: string;
+  title: string;
+  category: string;
+  assignee_type: string;
+  due_offset_days: number;
+  sort_order: number;
+};
 
 function statusBadge(s: string) {
   const base = 'rounded-full px-2 py-0.5 text-[11px] font-medium';
@@ -41,16 +50,22 @@ export function OnboardingHubClient({
   orgId: _orgId,
   canTemplates,
   canRuns,
+  canManageRuns,
   templates,
   runs,
   members,
+  selectedTemplateId,
+  selectedTemplateTasks,
 }: {
   orgId: string;
   canTemplates: boolean;
   canRuns: boolean;
+  canManageRuns: boolean;
   templates: Template[];
   runs: Run[];
   members: Member[];
+  selectedTemplateId: string | null;
+  selectedTemplateTasks: TemplateTask[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -70,6 +85,13 @@ export function OnboardingHubClient({
   const [tplName, setTplName] = useState('');
   const [tplDesc, setTplDesc] = useState('');
   const [tplDefault, setTplDefault] = useState(false);
+  const [taskBusy, setTaskBusy] = useState(false);
+  const [taskMsg, setTaskMsg] = useState<string | null>(null);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskCategory, setTaskCategory] = useState('other');
+  const [taskAssignee, setTaskAssignee] = useState('hr');
+  const [taskDueOffset, setTaskDueOffset] = useState('1');
 
   async function startRun(e: React.FormEvent) {
     e.preventDefault();
@@ -108,6 +130,98 @@ export function OnboardingHubClient({
   const activeRuns = runs.filter((r) => r.status === 'active');
   const pastRuns = runs.filter((r) => r.status !== 'active');
   const activeTemplates = templates.filter((t) => !t.is_archived);
+  const currentTemplateId = selectedTemplateId && activeTemplates.some((t) => t.id === selectedTemplateId)
+    ? selectedTemplateId
+    : null;
+
+  async function upsertTask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentTemplateId || !taskTitle.trim()) return;
+    setTaskBusy(true);
+    setTaskMsg(null);
+    const { error } = await supabase.rpc('onboarding_template_task_upsert', {
+      p_template_id: currentTemplateId,
+      p_title: taskTitle.trim(),
+      p_category: taskCategory,
+      p_assignee_type: taskAssignee,
+      p_due_offset_days: Math.max(0, Number(taskDueOffset || '0')),
+      p_task_id: editTaskId,
+    });
+    setTaskBusy(false);
+    if (error) {
+      setTaskMsg(error.message);
+      return;
+    }
+    setEditTaskId(null);
+    setTaskTitle('');
+    setTaskCategory('other');
+    setTaskAssignee('hr');
+    setTaskDueOffset('1');
+    router.refresh();
+  }
+
+  function startEditTask(task: TemplateTask) {
+    setEditTaskId(task.id);
+    setTaskTitle(task.title);
+    setTaskCategory(task.category);
+    setTaskAssignee(task.assignee_type);
+    setTaskDueOffset(String(task.due_offset_days));
+    setTaskMsg(null);
+  }
+
+  async function deleteTask(taskId: string) {
+    setTaskBusy(true);
+    setTaskMsg(null);
+    const { error } = await supabase.rpc('onboarding_template_task_delete', { p_task_id: taskId });
+    setTaskBusy(false);
+    if (error) {
+      setTaskMsg(error.message);
+      return;
+    }
+    if (editTaskId === taskId) {
+      setEditTaskId(null);
+      setTaskTitle('');
+      setTaskCategory('other');
+      setTaskAssignee('hr');
+      setTaskDueOffset('1');
+    }
+    router.refresh();
+  }
+
+  async function moveTask(task: TemplateTask, direction: -1 | 1) {
+    const sorted = [...selectedTemplateTasks].sort((a, b) => a.sort_order - b.sort_order);
+    const idx = sorted.findIndex((t) => t.id === task.id);
+    if (idx < 0) return;
+    const other = sorted[idx + direction];
+    if (!other || !currentTemplateId) return;
+
+    setTaskBusy(true);
+    setTaskMsg(null);
+    const first = await supabase.rpc('onboarding_template_task_upsert', {
+      p_template_id: currentTemplateId,
+      p_title: task.title,
+      p_category: task.category,
+      p_assignee_type: task.assignee_type,
+      p_due_offset_days: task.due_offset_days,
+      p_sort_order: other.sort_order,
+      p_task_id: task.id,
+    });
+    const second = await supabase.rpc('onboarding_template_task_upsert', {
+      p_template_id: currentTemplateId,
+      p_title: other.title,
+      p_category: other.category,
+      p_assignee_type: other.assignee_type,
+      p_due_offset_days: other.due_offset_days,
+      p_sort_order: task.sort_order,
+      p_task_id: other.id,
+    });
+    setTaskBusy(false);
+    if (first.error || second.error) {
+      setTaskMsg(first.error?.message ?? second.error?.message ?? 'Could not reorder tasks');
+      return;
+    }
+    router.refresh();
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
@@ -128,7 +242,7 @@ export function OnboardingHubClient({
               New template
             </button>
           )}
-          {canRuns && activeTemplates.length > 0 && (
+          {canManageRuns && activeTemplates.length > 0 && (
             <button
               type="button"
               onClick={() => setShowStartForm(true)}
@@ -145,7 +259,7 @@ export function OnboardingHubClient({
       ) : null}
 
       {/* Start run form */}
-      {showStartForm ? (
+      {showStartForm && canManageRuns ? (
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-5">
           <h2 className="text-[15px] font-semibold text-[#121212]">Start onboarding run</h2>
           <form className="mt-4 grid gap-4 sm:grid-cols-3" onSubmit={(e) => void startRun(e)}>
@@ -292,7 +406,7 @@ export function OnboardingHubClient({
 
       {/* Templates tab */}
       {tab === 'templates' && canTemplates ? (
-        <div>
+        <div className="space-y-4">
           {activeTemplates.length === 0 ? (
             <div className="rounded-2xl border border-[#e8e8e8] bg-white px-4 py-8 text-center">
               <p className="text-[14px] font-medium text-[#121212]">No templates yet</p>
@@ -302,7 +416,7 @@ export function OnboardingHubClient({
             <ul className="space-y-2">
               {activeTemplates.map((t) => (
                 <li key={t.id}>
-                  <Link href={`/hr/onboarding?template=${t.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
+                  <Link href={`/hr/onboarding?template=${t.id}`} className={['flex items-center justify-between rounded-xl border bg-white p-4 hover:bg-[#faf9f6] transition-colors', currentTemplateId === t.id ? 'border-[#121212]' : 'border-[#e8e8e8]'].join(' ')}>
                     <div>
                       <p className="font-medium text-[#121212]">
                         {t.name}
@@ -318,6 +432,86 @@ export function OnboardingHubClient({
               ))}
             </ul>
           )}
+
+          {currentTemplateId ? (
+            <section className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[15px] font-semibold text-[#121212]">Template tasks</h2>
+                <span className="text-[12px] text-[#9b9b9b]">{selectedTemplateTasks.length} task(s)</span>
+              </div>
+              {taskMsg ? (
+                <p className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{taskMsg}</p>
+              ) : null}
+              <form className="mt-4 grid gap-3 sm:grid-cols-4" onSubmit={(e) => void upsertTask(e)}>
+                <label className="block text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">
+                  Title
+                  <input value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} required className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none" />
+                </label>
+                <label className="block text-[12px] font-medium text-[#6b6b6b]">
+                  Category
+                  <select value={taskCategory} onChange={(e) => setTaskCategory(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none">
+                    <option value="documents">Documents</option>
+                    <option value="it_setup">IT setup</option>
+                    <option value="introductions">Introductions</option>
+                    <option value="compliance">Compliance</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label className="block text-[12px] font-medium text-[#6b6b6b]">
+                  Assignee
+                  <select value={taskAssignee} onChange={(e) => setTaskAssignee(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none">
+                    <option value="employee">Employee</option>
+                    <option value="manager">Manager</option>
+                    <option value="hr">HR</option>
+                  </select>
+                </label>
+                <label className="block text-[12px] font-medium text-[#6b6b6b]">
+                  Due offset days
+                  <input type="number" min={0} value={taskDueOffset} onChange={(e) => setTaskDueOffset(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none" />
+                </label>
+                <div className="flex items-end gap-2 sm:col-span-3">
+                  <button type="submit" disabled={taskBusy} className="rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-white disabled:opacity-50">
+                    {editTaskId ? 'Update task' : 'Add task'}
+                  </button>
+                  {editTaskId ? (
+                    <button type="button" className="rounded-lg border border-[#e8e8e8] bg-white px-3 py-2 text-[13px] text-[#6b6b6b]" onClick={() => {
+                      setEditTaskId(null);
+                      setTaskTitle('');
+                      setTaskCategory('other');
+                      setTaskAssignee('hr');
+                      setTaskDueOffset('1');
+                    }}>
+                      Cancel edit
+                    </button>
+                  ) : null}
+                </div>
+              </form>
+
+              <ul className="mt-4 space-y-2">
+                {[...selectedTemplateTasks].sort((a, b) => a.sort_order - b.sort_order).map((task, idx, arr) => (
+                  <li key={task.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3">
+                    <div>
+                      <p className="text-[13px] font-medium text-[#121212]">{task.title}</p>
+                      <p className="text-[12px] text-[#6b6b6b]">
+                        {task.category} · {task.assignee_type} · due +{task.due_offset_days}d
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button type="button" disabled={taskBusy || idx === 0} onClick={() => void moveTask(task, -1)} className="rounded border border-[#d8d8d8] px-2 py-1 text-[12px] disabled:opacity-40">↑</button>
+                      <button type="button" disabled={taskBusy || idx === arr.length - 1} onClick={() => void moveTask(task, 1)} className="rounded border border-[#d8d8d8] px-2 py-1 text-[12px] disabled:opacity-40">↓</button>
+                      <button type="button" onClick={() => startEditTask(task)} className="rounded border border-[#d8d8d8] px-2 py-1 text-[12px]">Edit</button>
+                      <button type="button" disabled={taskBusy} onClick={() => void deleteTask(task.id)} className="rounded border border-[#fecaca] px-2 py-1 text-[12px] text-[#b91c1c] disabled:opacity-40">Delete</button>
+                    </div>
+                  </li>
+                ))}
+                {selectedTemplateTasks.length === 0 ? (
+                  <li className="rounded-lg border border-dashed border-[#e8e8e8] bg-white p-3 text-[12px] text-[#9b9b9b]">
+                    No tasks yet for this template.
+                  </li>
+                ) : null}
+              </ul>
+            </section>
+          ) : null}
         </div>
       ) : null}
     </div>

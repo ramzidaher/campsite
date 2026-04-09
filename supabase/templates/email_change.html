@@ -3,7 +3,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reset your Campsite password</title>
+    <title>Confirm email change</title>
   </head>
   <body style="margin:0;padding:0;background-color:#f5f4f1;color:#121212;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f5f4f1;">
@@ -23,17 +23,18 @@
             <tr>
               <td style="padding:28px 24px 12px 24px;font-family:Arial, Helvetica, sans-serif;">
                 <p style="margin:0 0 10px 0;font-size:24px;line-height:1.3;font-family:Georgia, 'Times New Roman', serif;color:#121212;">
-                  Reset your password
+                  Confirm your new email
                 </p>
                 <p style="margin:0;color:#4f4f4f;font-size:15px;line-height:1.6;">
-                  A request was made to reset your Campsite password. Use the button below to choose a new one.
+                  A change was requested for your Campsite account email{{ if .NewEmail }} to <strong style="color:#121212;">{{ .NewEmail }}</strong>{{ end }}.
+                  Use the button below to verify this address.
                 </p>
               </td>
             </tr>
             <tr>
               <td align="center" style="padding:14px 24px 8px 24px;">
                 <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:#121212;border-radius:10px;padding:12px 18px;color:#faf9f6;text-decoration:none;font-family:Arial, Helvetica, sans-serif;font-size:14px;font-weight:700;">
-                  Reset password
+                  Verify email
                 </a>
               </td>
             </tr>
@@ -61,7 +62,7 @@
               <td style="padding:12px 24px 28px 24px;font-family:Arial, Helvetica, sans-serif;">
                 <div style="background-color:#f5f4f1;border:1px solid #e3e2de;border-radius:10px;padding:12px;">
                   <p style="margin:0;color:#6b6b6b;font-size:12px;line-height:1.6;">
-                    If you did not request this, you can safely ignore this email.
+                    If you did not request this change, contact your organisation administrator or support immediately.
                   </p>
                 </div>
               </td>

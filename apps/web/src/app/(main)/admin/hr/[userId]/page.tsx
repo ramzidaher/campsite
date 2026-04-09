@@ -20,13 +20,21 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
 
   const orgId = profile.org_id as string;
 
-  const { data: allowed } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: orgId,
-    p_permission_key: 'hr.view_records',
-    p_context: {},
-  });
-  if (!allowed) redirect('/hr/records');
+  const [{ data: canViewAll }, { data: canViewTeam }] = await Promise.all([
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: orgId,
+      p_permission_key: 'hr.view_records',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: orgId,
+      p_permission_key: 'hr.view_direct_reports',
+      p_context: {},
+    }),
+  ]);
+  if (!canViewAll && !canViewTeam) redirect('/hr/records');
 
   const canManage = await supabase
     .rpc('has_permission', {
@@ -37,14 +45,8 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
     })
     .then(({ data }) => !!data);
 
-  const [{ data: fileRows }, { data: auditRows }, { data: leaveData }, { data: sickScore }] = await Promise.all([
+  const [{ data: fileRows }, { data: leaveData }, { data: sickScore }] = await Promise.all([
     supabase.rpc('hr_employee_file', { p_user_id: userId }),
-    supabase
-      .from('employee_hr_record_events')
-      .select('id, field_name, old_value, new_value, created_at, changed_by')
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(50),
     // current-year leave allowance
     supabase
       .from('leave_allowances')
@@ -62,6 +64,17 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
 
   const fileRow = (fileRows ?? [])[0] ?? null;
   if (!fileRow) redirect('/hr/records');
+
+  const hrRecordId = fileRow.hr_record_id as string | null;
+  const { data: auditRows } = hrRecordId
+    ? await supabase
+        .from('employee_hr_record_events')
+        .select('id, field_name, old_value, new_value, created_at, changed_by')
+        .eq('org_id', orgId)
+        .eq('record_id', hrRecordId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+    : { data: [] };
 
   // get names for audit events
   const changerIds = [...new Set((auditRows ?? []).map((e) => e.changed_by as string))];

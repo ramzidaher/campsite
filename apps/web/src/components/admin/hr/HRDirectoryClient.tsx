@@ -74,12 +74,18 @@ function StatCard({ label, value, sub, href, warn }: { label: string; value: str
 
 export function HRDirectoryClient({
   orgId: _orgId,
-  canManage: _canManage,
+  canManage,
+  canManagePerformanceCycles,
+  canViewAll,
   initialRows,
   dashStats,
 }: {
   orgId: string;
   canManage: boolean;
+  /** Opens `/hr/performance/[cycleId]` (requires `performance.manage_cycles` on the destination). */
+  canManagePerformanceCycles: boolean;
+  /** true = hr.view_records (HR admin). false = hr.view_direct_reports (manager, direct reports only). */
+  canViewAll: boolean;
   initialRows: HRDirectoryRow[];
   dashStats: Record<string, unknown> | null;
 }) {
@@ -111,8 +117,12 @@ export function HRDirectoryClient({
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-7">
       <div className="mb-6">
-        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Employee records</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">HR overview and employee directory.</p>
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+          {canViewAll ? 'Employee records' : 'Team records'}
+        </h1>
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">
+          {canViewAll ? 'HR overview and employee directory.' : 'HR records for your direct reports.'}
+        </p>
       </div>
 
       {/* Tabs */}
@@ -218,7 +228,11 @@ export function HRDirectoryClient({
                   return (
                     <li key={c.id}>
                       <div className="flex items-center justify-between text-[12.5px]">
-                        <Link href={`/hr/performance/${c.id}`} className="font-medium text-[#121212] hover:underline">{c.name}</Link>
+                        {canManagePerformanceCycles ? (
+                          <Link href={`/hr/performance/${c.id}`} className="font-medium text-[#121212] hover:underline">{c.name}</Link>
+                        ) : (
+                          <span className="font-medium text-[#121212]">{c.name}</span>
+                        )}
                         <span className="text-[#9b9b9b]">{c.completed}/{c.total} done</span>
                       </div>
                       <div className="mt-1 h-1.5 w-full rounded-full bg-[#ececec]">

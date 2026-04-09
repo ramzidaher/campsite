@@ -57,6 +57,17 @@ export async function updateJobApplicationStage(
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const notify = opts.notifyCandidate && opts.messageBody.trim().length > 0;
+  if (opts.notifyCandidate) {
+    const { data: canNotify } = await supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: orgId,
+      p_permission_key: 'applications.notify_candidate',
+      p_context: {},
+    });
+    if (!canNotify) {
+      return { ok: false, error: 'You do not have permission to notify candidates.' };
+    }
+  }
   if (opts.notifyCandidate && !opts.messageBody.trim()) {
     return { ok: false, error: 'Add a message for the candidate or turn off email notification.' };
   }
@@ -195,6 +206,28 @@ export async function sendCandidateOnlyMessage(
   return { ok: true };
 }
 
+export async function setInterviewJoiningInstructions(
+  applicationId: string,
+  joiningInstructions: string,
+  jobListingId: string
+): Promise<ApplicationActionResult> {
+  const id = applicationId?.trim();
+  if (!id) return { ok: false, error: 'Missing application.' };
+
+  const { supabase, profile } = await requireOrgPermission('interviews.manage');
+  if (!profile) return { ok: false, error: 'Not allowed.' };
+
+  const { error } = await supabase.rpc('interview_joining_instructions_set', {
+    p_application_id: id,
+    p_instructions: joiningInstructions?.trim() || null,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/admin/jobs/${jobListingId}/applications`);
+  revalidatePath(`/hr/jobs/${jobListingId}/applications`);
+  return { ok: true };
+}
+
 export type JobApplicationDetail = {
   application: {
     id: string;
@@ -213,6 +246,7 @@ export type JobApplicationDetail = {
     staffsavvy_score: number | null;
     portal_token: string;
     offer_letter_status: string | null;
+    interview_joining_instructions: string | null;
     job_listings: { title: string } | null;
   };
   latest_offer: {
@@ -255,6 +289,7 @@ export async function loadJobApplicationDetail(
       staffsavvy_score,
       portal_token,
       offer_letter_status,
+      interview_joining_instructions,
       job_listings ( title )
     `
     )
@@ -298,6 +333,7 @@ export async function loadJobApplicationDetail(
     staffsavvy_score: (raw.staffsavvy_score as number | null) ?? null,
     portal_token: String(raw.portal_token),
     offer_letter_status: (raw.offer_letter_status as string | null) ?? null,
+    interview_joining_instructions: (raw.interview_joining_instructions as string | null) ?? null,
     job_listings: jl ? { title: String(jl.title) } : null,
   };
 

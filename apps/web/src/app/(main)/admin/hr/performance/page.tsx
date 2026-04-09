@@ -50,8 +50,8 @@ export default async function PerformanceCyclesPage() {
 
   return (
     <PerformanceCyclesClient
-      orgId={orgId}
       canManage={canManage}
+      canViewCycleDetail={canManage}
       cycles={(cycles ?? []).map((c) => ({
         id: c.id as string,
         name: c.name as string,

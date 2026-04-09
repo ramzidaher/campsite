@@ -30,11 +30,21 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ r
 
   const isReviewee = review.reviewee_id === user.id;
   const isReviewer = review.reviewer_id === user.id;
-  const canHR = await supabase
-    .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.view_reports', p_context: {} })
-    .then(({ data }) => !!data);
+  const [canViewReports, canManageCycles, canReviewDirectReports] = await Promise.all([
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.view_reports', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.manage_cycles', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.review_direct_reports', p_context: {} })
+      .then(({ data }) => !!data),
+  ]);
+  const canHR = canViewReports || canManageCycles;
+  const canReviewerWrite = isReviewer && canReviewDirectReports;
 
-  if (!isReviewee && !isReviewer && !canHR) redirect('/broadcasts');
+  if (!isReviewee && !canReviewerWrite && !canHR) redirect('/broadcasts');
 
   const [{ data: cycle }, { data: goals }, { data: revieweeName }, { data: reviewerName }] = await Promise.all([
     supabase.from('review_cycles').select('id, name, type, period_start, period_end, self_assessment_due, manager_assessment_due, status').eq('id', review.cycle_id as string).maybeSingle(),
@@ -49,7 +59,7 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ r
     <ReviewDetailClient
       reviewId={reviewId}
       isReviewee={isReviewee}
-      isReviewer={isReviewer || canHR}
+      isReviewer={canReviewerWrite}
       canHR={canHR}
       review={{
         id: review.id as string,

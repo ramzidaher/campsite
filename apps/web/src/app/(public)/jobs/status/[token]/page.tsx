@@ -21,6 +21,7 @@ export default async function CandidatePortalPage({ params }: { params: Promise<
     job_title: string;
     stage: string;
     submitted_at: string;
+    interview_joining_instructions: string | null;
     messages: PortalMessage[] | null;
   };
 
@@ -74,6 +75,14 @@ export default async function CandidatePortalPage({ params }: { params: Promise<
             </ul>
           )}
         </section>
+        {row.interview_joining_instructions ? (
+          <section className="mt-4 rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-5 shadow-sm">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-[#1e40af]">Interview joining instructions</h2>
+            <p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#1f2937]">
+              {row.interview_joining_instructions}
+            </p>
+          </section>
+        ) : null}
         <p className="mt-6 text-center text-[11px] text-[#9b9b9b]">This page is private to you — keep the link safe.</p>
       </main>
     </div>

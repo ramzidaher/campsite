@@ -17,9 +17,17 @@ export default async function AdminInterviewsPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('interviews.view'))) redirect('/broadcasts');
+  const [canViewInterviews, canBookInterviewSlot] = await Promise.all([
+    viewerHasPermission('interviews.view'),
+    viewerHasPermission('interviews.book_slot'),
+  ]);
+  if (!canViewInterviews && !canBookInterviewSlot) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
+  const [canCreateSlot, canCompleteSlot] = await Promise.all([
+    viewerHasPermission('interviews.create_slot'),
+    viewerHasPermission('interviews.complete_slot'),
+  ]);
   const fromPast = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const [{ data: jobs }, { data: profiles }, { data: slots }] = await Promise.all([
@@ -56,6 +64,8 @@ export default async function AdminInterviewsPage() {
 
   return (
     <InterviewScheduleClient
+      canCreateSlot={canCreateSlot}
+      canCompleteSlot={canCompleteSlot}
       jobs={(jobs ?? []) as { id: string; title: string; status: string }[]}
       profiles={(profiles ?? []) as { id: string; full_name: string | null; email: string | null }[]}
       initialSlots={(slots ?? []) as Parameters<typeof InterviewScheduleClient>[0]['initialSlots']}

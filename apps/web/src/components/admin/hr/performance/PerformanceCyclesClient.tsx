@@ -36,12 +36,12 @@ function statusBadge(s: string) {
 }
 
 export function PerformanceCyclesClient({
-  orgId: _orgId,
   canManage,
+  canViewCycleDetail,
   cycles,
 }: {
-  orgId: string;
   canManage: boolean;
+  canViewCycleDetail: boolean;
   cycles: Cycle[];
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -59,17 +59,20 @@ export function PerformanceCyclesClient({
 
   async function createCycle(e: React.FormEvent) {
     e.preventDefault();
+    if (!canManage) {
+      setMsg('You do not have permission to create review cycles.');
+      return;
+    }
     if (!name.trim() || !periodStart || !periodEnd) return;
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.from('review_cycles').insert({
-      name: name.trim(),
-      type,
-      period_start: periodStart,
-      period_end: periodEnd,
-      self_assessment_due: selfDue || null,
-      manager_assessment_due: managerDue || null,
-      status: 'draft',
+    const { error } = await supabase.rpc('review_cycle_create', {
+      p_name: name.trim(),
+      p_type: type,
+      p_period_start: periodStart,
+      p_period_end: periodEnd,
+      p_self_assessment_due: selfDue || null,
+      p_manager_assessment_due: managerDue || null,
     });
     setBusy(false);
     if (error) { setMsg(error.message); return; }
@@ -101,7 +104,7 @@ export function PerformanceCyclesClient({
 
       {msg ? <p className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p> : null}
 
-      {showForm ? (
+      {showForm && canManage ? (
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-5">
           <h2 className="text-[15px] font-semibold text-[#121212]">New review cycle</h2>
           <form className="mt-4 grid gap-4 sm:grid-cols-2" onSubmit={(e) => void createCycle(e)}>
@@ -151,7 +154,7 @@ export function PerformanceCyclesClient({
         <section className="mb-6">
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Active</h2>
           <ul className="space-y-2">
-            {active.map((c) => <CycleRow key={c.id} cycle={c} />)}
+            {active.map((c) => <CycleRow key={c.id} cycle={c} canViewCycleDetail={canViewCycleDetail} />)}
           </ul>
         </section>
       ) : null}
@@ -160,7 +163,7 @@ export function PerformanceCyclesClient({
         <section>
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-[#9b9b9b]">All cycles</h2>
           <ul className="space-y-2">
-            {rest.map((c) => <CycleRow key={c.id} cycle={c} />)}
+            {rest.map((c) => <CycleRow key={c.id} cycle={c} canViewCycleDetail={canViewCycleDetail} />)}
           </ul>
         </section>
       ) : null}
@@ -168,28 +171,40 @@ export function PerformanceCyclesClient({
   );
 }
 
-function CycleRow({ cycle }: { cycle: Cycle }) {
+function CycleRow({ cycle, canViewCycleDetail }: { cycle: Cycle; canViewCycleDetail: boolean }) {
   const progress = cycle.review_total > 0 ? Math.round((cycle.review_completed / cycle.review_total) * 100) : 0;
+  const content = (
+    <>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium text-[#121212]">{cycle.name}</span>
+          {statusBadge(cycle.status)}
+          <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[10.5px] text-[#6b6b6b]">
+            {TYPE_LABELS[cycle.type] ?? cycle.type}
+          </span>
+        </div>
+        <p className="mt-0.5 text-[12px] text-[#9b9b9b]">
+          {cycle.period_start} → {cycle.period_end}
+          {cycle.review_total > 0
+            ? ` · ${cycle.review_completed}/${cycle.review_total} completed (${progress}%)`
+            : ' · No reviews yet'}
+        </p>
+      </div>
+      <span className="ml-4 shrink-0 text-[12px] text-[#9b9b9b]">{canViewCycleDetail ? 'Open →' : 'Read-only'}</span>
+    </>
+  );
+
   return (
     <li>
-      <Link href={`/hr/performance/${cycle.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-[#121212]">{cycle.name}</span>
-            {statusBadge(cycle.status)}
-            <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[10.5px] text-[#6b6b6b]">
-              {TYPE_LABELS[cycle.type] ?? cycle.type}
-            </span>
-          </div>
-          <p className="mt-0.5 text-[12px] text-[#9b9b9b]">
-            {cycle.period_start} → {cycle.period_end}
-            {cycle.review_total > 0
-              ? ` · ${cycle.review_completed}/${cycle.review_total} completed (${progress}%)`
-              : ' · No reviews yet'}
-          </p>
+      {canViewCycleDetail ? (
+        <Link href={`/hr/performance/${cycle.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 transition-colors hover:bg-[#faf9f6]">
+          {content}
+        </Link>
+      ) : (
+        <div className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4">
+          {content}
         </div>
-        <span className="ml-4 shrink-0 text-[12px] text-[#9b9b9b]">Open →</span>
-      </Link>
+      )}
     </li>
   );
 }

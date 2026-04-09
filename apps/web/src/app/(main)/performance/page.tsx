@@ -18,16 +18,27 @@ export default async function EmployeePerformancePage() {
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const orgId = profile.org_id as string;
 
+  const { data: canReviewDirectReports } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: orgId,
+    p_permission_key: 'performance.review_direct_reports',
+    p_context: {},
+  });
+
   // Employee sees reviews where they're the reviewee
   // Reviewer (manager) sees reviews where they're the reviewer
+  const reviewFilter = canReviewDirectReports
+    ? `reviewee_id.eq.${user.id},reviewer_id.eq.${user.id}`
+    : `reviewee_id.eq.${user.id}`;
+
   const { data: reviews } = await supabase
     .from('performance_reviews')
     .select('id, cycle_id, reviewee_id, reviewer_id, status, overall_rating, self_submitted_at, manager_submitted_at, completed_at')
     .eq('org_id', orgId)
-    .or(`reviewee_id.eq.${user.id},reviewer_id.eq.${user.id}`)
+    .or(reviewFilter)
     .order('created_at', { ascending: false });
 
-  if (!reviews?.length) redirect('/broadcasts');
+  if (!reviews?.length && !canReviewDirectReports) redirect('/broadcasts');
 
   // get cycle names
   const cycleIds = [...new Set((reviews ?? []).map((r) => r.cycle_id as string))];
@@ -50,6 +61,7 @@ export default async function EmployeePerformancePage() {
   return (
     <EmployeePerformanceIndexClient
       userId={user.id}
+      mayHaveTeamReviews={!!canReviewDirectReports}
       reviews={(reviews ?? []).map((r) => ({
         id: r.id as string,
         cycle: cycleMap[r.cycle_id as string] ?? null,

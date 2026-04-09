@@ -45,7 +45,7 @@ export function buildSystemOverviewGraph(params: {
   const canJobs = hasAny(p, ['jobs.view']);
   const canApplications = hasAny(p, ['applications.view']);
   const canOffers = hasAny(p, ['offers.view']);
-  const canInterviews = hasAny(p, ['interviews.view']);
+  const canInterviews = hasAny(p, ['interviews.view', 'interviews.book_slot']);
   const canLeave = hasAny(p, ['leave.view_own', 'leave.approve_direct_reports', 'leave.manage_org']);
   const canHrRecords = hasAny(p, ['hr.view_records']);
   const canOnboarding = hasAny(p, ['onboarding.manage_runs', 'onboarding.manage_templates', 'onboarding.complete_own_tasks']);

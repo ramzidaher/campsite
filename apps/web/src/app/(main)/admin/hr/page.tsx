@@ -19,32 +19,52 @@ export default async function HRDirectoryPage() {
 
   const orgId = profile.org_id as string;
 
-  const { data: allowed } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: orgId,
-    p_permission_key: 'hr.view_records',
-    p_context: {},
-  });
-  if (!allowed) redirect('/admin');
-
-  const canManage = await supabase
-    .rpc('has_permission', {
+  const [{ data: canViewAll }, { data: canViewTeam }] = await Promise.all([
+    supabase.rpc('has_permission', {
       p_user_id: user.id,
       p_org_id: orgId,
-      p_permission_key: 'hr.manage_records',
+      p_permission_key: 'hr.view_records',
       p_context: {},
-    })
-    .then(({ data }) => !!data);
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: orgId,
+      p_permission_key: 'hr.view_direct_reports',
+      p_context: {},
+    }),
+  ]);
 
-  const [{ data: rows }, { data: dashStats }] = await Promise.all([
-    supabase.rpc('hr_directory_list'),
-    supabase.rpc('hr_dashboard_stats'),
+  if (!canViewAll && !canViewTeam) redirect('/broadcasts');
+
+  const [canManage, canManagePerformanceCycles, rows, dashStats] = await Promise.all([
+    supabase
+      .rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: orgId,
+        p_permission_key: 'hr.manage_records',
+        p_context: {},
+      })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', {
+        p_user_id: user.id,
+        p_org_id: orgId,
+        p_permission_key: 'performance.manage_cycles',
+        p_context: {},
+      })
+      .then(({ data }) => !!data),
+    supabase.rpc('hr_directory_list').then(({ data }) => data ?? []),
+    canViewAll
+      ? supabase.rpc('hr_dashboard_stats').then(({ data }) => data ?? null)
+      : Promise.resolve(null),
   ]);
 
   return (
     <HRDirectoryClient
       orgId={orgId}
       canManage={canManage}
+      canManagePerformanceCycles={canManagePerformanceCycles}
+      canViewAll={!!canViewAll}
       initialRows={(rows ?? []) as Parameters<typeof HRDirectoryClient>[0]['initialRows']}
       dashStats={(dashStats ?? null) as Record<string, unknown> | null}
     />

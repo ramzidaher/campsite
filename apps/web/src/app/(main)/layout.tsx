@@ -60,6 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let showPerformanceNav = false;
   let performanceNavBadge = 0;
   let showOnboardingNav = false;
+  let showMyHrRecordNav = false;
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
@@ -182,6 +183,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           .eq('status', 'active');
         if ((runCount ?? 0) > 0) showOnboardingNav = true;
       }
+
+      showMyHrRecordNav = permissionKeys.includes('hr.view_own');
     }
     hasAdminAreaAccess = permissionKeys.some(
       (k) =>
@@ -334,6 +337,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           showPerformanceNav={showPerformanceNav}
           performanceNavBadge={performanceNavBadge}
           showOnboardingNav={showOnboardingNav}
+          showMyHrRecordNav={showMyHrRecordNav}
         >
           {children}
         </AppShell>

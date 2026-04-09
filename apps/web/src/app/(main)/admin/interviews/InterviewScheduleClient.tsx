@@ -216,10 +216,14 @@ function slotStatusPill(status: string) {
 // ---------------------------------------------------------------------------
 
 export function InterviewScheduleClient({
+  canCreateSlot,
+  canCompleteSlot,
   jobs,
   profiles,
   initialSlots,
 }: {
+  canCreateSlot: boolean;
+  canCompleteSlot: boolean;
   jobs: JobOption[];
   profiles: ProfileOption[];
   initialSlots: SlotListRow[];
@@ -269,6 +273,7 @@ export function InterviewScheduleClient({
   }
 
   function handleCreate() {
+    if (!canCreateSlot) { setMsg({ type: 'err', text: 'You do not have permission to create interview slots.' }); return; }
     if (!jobId) { setMsg({ type: 'err', text: 'Choose a job listing.' }); return; }
     if (parsedSlots.length === 0) { setMsg({ type: 'err', text: 'No slots to create.' }); return; }
     if (selectedIds.length === 0) { setMsg({ type: 'err', text: 'Select at least one panel member.' }); return; }
@@ -326,6 +331,7 @@ export function InterviewScheduleClient({
       ) : null}
 
       {/* ── Prompt-based slot creation ───────────────────────────── */}
+      {canCreateSlot ? (
       <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
         <h2 className="font-authSerif text-lg text-[#121212]">Create slots</h2>
         <p className="mt-0.5 text-[12px] text-[#9b9b9b]">
@@ -501,6 +507,14 @@ export function InterviewScheduleClient({
           ) : null}
         </div>
       </section>
+      ) : (
+        <section className="rounded-xl border border-[#e8e8e8] bg-white p-5">
+          <h2 className="font-authSerif text-lg text-[#121212]">Create slots</h2>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            You can view interview scheduling, but only users with slot-creation permission can create or cancel slots.
+          </p>
+        </section>
+      )}
 
       {/* ── Upcoming slots ───────────────────────────────────────── */}
       <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
@@ -568,7 +582,7 @@ export function InterviewScheduleClient({
                         <td className="py-3 pr-4 align-top">{slotStatusPill(s.status)}</td>
                         <td className="py-3 align-top">
                           <div className="flex flex-wrap gap-2">
-                            {s.status === 'available' ? (
+                            {s.status === 'available' && canCreateSlot ? (
                               <button
                                 type="button"
                                 disabled={pending}
@@ -585,7 +599,7 @@ export function InterviewScheduleClient({
                                 Cancel
                               </button>
                             ) : null}
-                            {s.status === 'booked' ? (
+                            {s.status === 'booked' && canCompleteSlot ? (
                               <button
                                 type="button"
                                 disabled={pending}

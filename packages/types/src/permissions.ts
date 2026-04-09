@@ -77,6 +77,8 @@ export const PERMISSION_KEYS = [
   'leave.approve_direct_reports',
   'leave.manage_org',
   // HR records
+  'hr.view_own',
+  'hr.view_direct_reports',
   'hr.view_records',
   'hr.manage_records',
   // Onboarding

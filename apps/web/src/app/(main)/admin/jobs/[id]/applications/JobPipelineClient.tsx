@@ -10,6 +10,7 @@ import {
   loadJobApplicationDetail,
   addJobApplicationNote,
   sendCandidateOnlyMessage,
+  setInterviewJoiningInstructions,
   updateJobApplicationStage,
   type JobApplicationDetail,
 } from '@/app/(main)/admin/jobs/[id]/applications/actions';
@@ -19,7 +20,6 @@ import {
   JOB_APPLICATION_STAGES,
   type JobApplicationStage,
   isJobApplicationStage,
-  isOfferLetterWorkflowStatus,
 } from '@campsite/types';
 import {
   DndContext,
@@ -106,10 +106,14 @@ function PipelineCard({
   app,
   onOpenDetail,
   onRequestStageChange,
+  canMoveStage,
+  canBookInterviewSlot,
 }: {
   app: PipelineApplicationRow;
   onOpenDetail: () => void;
   onRequestStageChange: (next: JobApplicationStage) => void;
+  canMoveStage: boolean;
+  canBookInterviewSlot: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: app.id });
   const style = transform
@@ -130,8 +134,9 @@ function PipelineCard({
           type="button"
           className="mt-0.5 cursor-grab touch-none text-[#b0b0b0] hover:text-[#808080]"
           aria-label="Drag to change stage"
-          {...listeners}
-          {...attributes}
+          {...(canMoveStage ? listeners : {})}
+          {...(canMoveStage ? attributes : {})}
+          disabled={!canMoveStage}
         >
           ⠿
         </button>
@@ -150,7 +155,7 @@ function PipelineCard({
                 })
               : '—'}
           </p>
-          {app.stage === 'offer_sent' && app.offer_letter_status && isOfferLetterWorkflowStatus(app.offer_letter_status) ? (
+          {app.offer_letter_status ? (
             <p
               className={[
                 'mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
@@ -158,7 +163,9 @@ function PipelineCard({
                   ? 'border-emerald-200 bg-emerald-50 text-[#0f5132]'
                   : app.offer_letter_status === 'declined'
                     ? 'border-red-200 bg-red-50 text-[#b91c1c]'
-                    : 'border-amber-200 bg-amber-50 text-[#b45309]',
+                    : app.offer_letter_status === 'superseded'
+                      ? 'border-slate-200 bg-slate-50 text-slate-700'
+                      : 'border-amber-200 bg-amber-50 text-[#b45309]',
               ].join(' ')}
             >
               Offer:{' '}
@@ -166,7 +173,9 @@ function PipelineCard({
                 ? 'Sent (awaiting sign)'
                 : app.offer_letter_status === 'signed'
                   ? 'Signed'
-                  : 'Declined'}
+                  : app.offer_letter_status === 'declined'
+                    ? 'Declined'
+                    : 'Superseded'}
             </p>
           ) : null}
         </button>
@@ -177,12 +186,13 @@ function PipelineCard({
       <select
         className="mt-0.5 w-full rounded-md border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
         value={app.stage}
+        disabled={!canMoveStage}
         onChange={(e) => {
           const v = e.target.value;
           if (isJobApplicationStage(v) && v !== app.stage) onRequestStageChange(v);
         }}
       >
-        {JOB_APPLICATION_STAGES.map((s) => (
+        {JOB_APPLICATION_STAGES.filter((s) => s !== 'interview_scheduled' || canBookInterviewSlot).map((s) => (
           <option key={s} value={s}>
             {jobApplicationStageLabel(s)}
           </option>
@@ -201,10 +211,22 @@ export function JobPipelineClient({
   jobListingId,
   jobTitle,
   initialApplications,
+  canMoveStage,
+  canBookInterviewSlot,
+  canManageInterviews,
+  canAddInternalNotes,
+  canNotifyCandidate,
+  canManageOffers,
 }: {
   jobListingId: string;
   jobTitle: string;
   initialApplications: PipelineApplicationRow[];
+  canMoveStage: boolean;
+  canBookInterviewSlot: boolean;
+  canManageInterviews: boolean;
+  canAddInternalNotes: boolean;
+  canNotifyCandidate: boolean;
+  canManageOffers: boolean;
 }) {
   const router = useRouter();
   const [applications, setApplications] = useState(initialApplications);
@@ -267,6 +289,7 @@ export function JobPipelineClient({
           return;
         }
         setDetail(res);
+        setJoiningDraft(res.application.interview_joining_instructions ?? '');
       });
     },
     [jobListingId]
@@ -335,6 +358,7 @@ export function JobPipelineClient({
   }
 
   function onDragEnd(event: DragEndEvent) {
+    if (!canMoveStage) return;
     const { active, over } = event;
     if (!over) return;
     const appId = String(active.id);
@@ -343,13 +367,16 @@ export function JobPipelineClient({
     if (!app) return;
     const target = resolveTargetStage(overId, appId);
     if (!target || target === app.stage) return;
+    if (target === 'interview_scheduled' && !canBookInterviewSlot) return;
     setStageDialog({ applicationId: appId, toStage: target });
     setNotify(false);
     setMessageBody('');
   }
 
   const onRequestStageChange = (app: PipelineApplicationRow, next: JobApplicationStage) => {
+    if (!canMoveStage) return;
     if (next === app.stage) return;
+    if (next === 'interview_scheduled' && !canBookInterviewSlot) return;
     setStageDialog({ applicationId: app.id, toStage: next });
     setNotify(false);
     setMessageBody('');
@@ -357,6 +384,7 @@ export function JobPipelineClient({
 
   const [noteBody, setNoteBody] = useState('');
   const [msgOnlyBody, setMsgOnlyBody] = useState('');
+  const [joiningDraft, setJoiningDraft] = useState('');
   const [detailBusy, startDetailTransition] = useTransition();
   const [generateOfferFor, setGenerateOfferFor] = useState<PipelineApplicationRow | null>(null);
 
@@ -405,6 +433,8 @@ export function JobPipelineClient({
                   app={app}
                   onOpenDetail={() => openDetail(app.id)}
                   onRequestStageChange={(next) => onRequestStageChange(app, next)}
+                  canMoveStage={canMoveStage}
+                  canBookInterviewSlot={canBookInterviewSlot}
                 />
               )}
             />
@@ -426,8 +456,28 @@ export function JobPipelineClient({
             {stageDialog.toStage === 'interview_scheduled' ? (
               <div className="mt-4 space-y-3">
                 <p className="text-[13px] text-[#505050]">
-                  Pick a slot for this job. The candidate will receive an email with the time and your joining notes;
-                  panel calendars will show the booking.
+                  Pick a slot for this job. Panel calendars will show the booking.
+                  {canManageInterviews ? (
+                    canNotifyCandidate ? (
+                      <>
+                        {' '}
+                        The candidate will receive an email with the time and your joining notes, and any notes below will
+                        appear in their portal message thread.
+                      </>
+                    ) : (
+                      <>
+                        {' '}
+                        Without permission to notify candidates, we will not send email or add a portal message; joining
+                        notes are still saved on the application and visible on their status page.
+                      </>
+                    )
+                  ) : (
+                    <>
+                      {' '}
+                      Only interview admins can add joining instructions here. You can still book the slot; ask an admin
+                      to add notes in the application detail if needed.
+                    </>
+                  )}
                 </p>
                 <label className="block text-[12px] font-medium text-[#505050]">
                   Available slot
@@ -455,27 +505,40 @@ export function JobPipelineClient({
                   </p>
                 ) : null}
                 <label className="block text-[12px] font-medium text-[#505050]">
-                  Joining instructions (email + candidate portal)
+                  Joining instructions
+                  {canManageInterviews
+                    ? canNotifyCandidate
+                      ? ' (email, portal message thread, and status page)'
+                      : ' (status page)'
+                    : ' (interview admin only)'}
                   <textarea
                     value={interviewJoining}
                     onChange={(e) => setInterviewJoining(e.target.value)}
                     placeholder="e.g. video link, building access, parking…"
                     rows={4}
-                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                    disabled={!canManageInterviews}
+                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)] disabled:cursor-not-allowed disabled:bg-[#f5f5f5]"
                   />
                 </label>
               </div>
             ) : (
               <>
-                <label className="mt-4 flex items-center gap-2 text-[13px]">
-                  <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-                  Email the candidate and show this text in their portal
-                </label>
+                {canNotifyCandidate ? (
+                  <label className="mt-4 flex items-center gap-2 text-[13px]">
+                    <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+                    Email the candidate and show this text in their portal
+                  </label>
+                ) : (
+                  <p className="mt-4 text-[12px] text-[#9b9b9b]">
+                    You can move stages but cannot notify candidates.
+                  </p>
+                )}
                 <textarea
                   value={messageBody}
                   onChange={(e) => setMessageBody(e.target.value)}
                   placeholder="Message to candidate (required if notifying)"
                   rows={4}
+                  disabled={!canNotifyCandidate}
                   className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                 />
               </>
@@ -657,25 +720,70 @@ export function JobPipelineClient({
                           Download signed PDF
                         </a>
                       ) : null}
-                      <button
-                        type="button"
-                        className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#121212] px-3 text-[13px] font-medium text-[#faf9f6]"
-                        onClick={() => {
-                          setGenerateOfferFor({
-                            id: detail.application.id,
-                            candidate_name: detail.application.candidate_name,
-                            candidate_email: detail.application.candidate_email,
-                            stage: detail.application.stage,
-                            submitted_at: detail.application.submitted_at,
-                            cv_storage_path: detail.application.cv_storage_path,
-                            loom_url: detail.application.loom_url,
-                            staffsavvy_score: detail.application.staffsavvy_score,
-                            offer_letter_status: detail.application.offer_letter_status,
-                          });
-                        }}
-                      >
-                        {detail.application.offer_letter_status ? 'Send / resend offer letter' : 'Generate offer letter'}
-                      </button>
+                      {canManageOffers ? (
+                        <button
+                          type="button"
+                          className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#121212] px-3 text-[13px] font-medium text-[#faf9f6]"
+                          onClick={() => {
+                            setGenerateOfferFor({
+                              id: detail.application.id,
+                              candidate_name: detail.application.candidate_name,
+                              candidate_email: detail.application.candidate_email,
+                              stage: detail.application.stage,
+                              submitted_at: detail.application.submitted_at,
+                              cv_storage_path: detail.application.cv_storage_path,
+                              loom_url: detail.application.loom_url,
+                              staffsavvy_score: detail.application.staffsavvy_score,
+                              offer_letter_status: detail.application.offer_letter_status,
+                            });
+                          }}
+                        >
+                          {detail.application.offer_letter_status ? 'Send / resend offer letter' : 'Generate offer letter'}
+                        </button>
+                      ) : null}
+                    </section>
+                  ) : null}
+
+                  {detail.application.stage === 'interview_scheduled' ? (
+                    <section className="rounded-lg border border-[#dbeafe] bg-[#f8fbff] p-3">
+                      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#1e40af]">
+                        Interview joining instructions
+                      </h3>
+                      <p className="mt-1 text-[12px] text-[#505050]">
+                        Shown in candidate portal and interview updates.
+                      </p>
+                      <textarea
+                        value={joiningDraft}
+                        onChange={(e) => setJoiningDraft(e.target.value)}
+                        placeholder="e.g. video link, building access, parking..."
+                        rows={4}
+                        disabled={!canManageInterviews}
+                        className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)] disabled:cursor-not-allowed disabled:bg-[#f5f5f5]"
+                      />
+                      {canManageInterviews ? (
+                        <button
+                          type="button"
+                          className="mt-2 rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-white"
+                          onClick={() => {
+                            startDetailTransition(async () => {
+                              const res = await setInterviewJoiningInstructions(
+                                detail.application.id,
+                                joiningDraft,
+                                jobListingId
+                              );
+                              if (!res.ok) {
+                                alert(res.error);
+                                return;
+                              }
+                              openDetail(detail.application.id);
+                            });
+                          }}
+                        >
+                          Save instructions
+                        </button>
+                      ) : (
+                        <p className="mt-2 text-[12px] text-[#6b6b6b]">You do not have permission to edit joining instructions.</p>
+                      )}
                     </section>
                   ) : null}
 
@@ -702,30 +810,36 @@ export function JobPipelineClient({
                         ))
                       )}
                     </ul>
-                    <textarea
-                      value={noteBody}
-                      onChange={(e) => setNoteBody(e.target.value)}
-                      placeholder="Add internal note (not visible to candidate)"
-                      rows={3}
-                      className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
-                    />
-                    <button
-                      type="button"
-                      className="mt-2 rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-white"
-                      onClick={() => {
-                        startDetailTransition(async () => {
-                          const res = await addJobApplicationNote(detail.application.id, noteBody, jobListingId);
-                          if (!res.ok) {
-                            alert(res.error);
-                            return;
-                          }
-                          setNoteBody('');
-                          openDetail(detail.application.id);
-                        });
-                      }}
-                    >
-                      Add note
-                    </button>
+                    {canAddInternalNotes ? (
+                      <>
+                        <textarea
+                          value={noteBody}
+                          onChange={(e) => setNoteBody(e.target.value)}
+                          placeholder="Add internal note (not visible to candidate)"
+                          rows={3}
+                          className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                        />
+                        <button
+                          type="button"
+                          className="mt-2 rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-white"
+                          onClick={() => {
+                            startDetailTransition(async () => {
+                              const res = await addJobApplicationNote(detail.application.id, noteBody, jobListingId);
+                              if (!res.ok) {
+                                alert(res.error);
+                                return;
+                              }
+                              setNoteBody('');
+                              openDetail(detail.application.id);
+                            });
+                          }}
+                        >
+                          Add note
+                        </button>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-[12px] text-[#9b9b9b]">You can view notes but cannot add new ones.</p>
+                    )}
                   </section>
 
                   <section>
@@ -733,34 +847,40 @@ export function JobPipelineClient({
                       Message candidate (portal + email)
                     </h3>
                     <p className="mt-1 text-[12px] text-[#6b6b6b]">Does not change application stage.</p>
-                    <textarea
-                      value={msgOnlyBody}
-                      onChange={(e) => setMsgOnlyBody(e.target.value)}
-                      placeholder="Message…"
-                      rows={3}
-                      className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
-                    />
-                    <button
-                      type="button"
-                      className="mt-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
-                      onClick={() => {
-                        startDetailTransition(async () => {
-                          const res = await sendCandidateOnlyMessage(
-                            detail.application.id,
-                            msgOnlyBody,
-                            jobListingId
-                          );
-                          if (!res.ok) {
-                            alert(res.error);
-                            return;
-                          }
-                          setMsgOnlyBody('');
-                          openDetail(detail.application.id);
-                        });
-                      }}
-                    >
-                      Send &amp; notify by email
-                    </button>
+                    {canNotifyCandidate ? (
+                      <>
+                        <textarea
+                          value={msgOnlyBody}
+                          onChange={(e) => setMsgOnlyBody(e.target.value)}
+                          placeholder="Message…"
+                          rows={3}
+                          className="mt-2 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                        />
+                        <button
+                          type="button"
+                          className="mt-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
+                          onClick={() => {
+                            startDetailTransition(async () => {
+                              const res = await sendCandidateOnlyMessage(
+                                detail.application.id,
+                                msgOnlyBody,
+                                jobListingId
+                              );
+                              if (!res.ok) {
+                                alert(res.error);
+                                return;
+                              }
+                              setMsgOnlyBody('');
+                              openDetail(detail.application.id);
+                            });
+                          }}
+                        >
+                          Send &amp; notify by email
+                        </button>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-[12px] text-[#9b9b9b]">You can view prior messages but cannot send candidate updates.</p>
+                    )}
 
                     <h4 className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                       Previous candidate messages

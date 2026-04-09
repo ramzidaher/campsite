@@ -25,6 +25,37 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
   if (!(await viewerHasPermission('applications.view'))) redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
+  const [
+    canMoveStage,
+    canBookInterviewSlot,
+    canManageInterviews,
+    canAddInternalNotes,
+    canNotifyCandidate,
+    canGenerateOffers,
+    canSendEsignOffers,
+  ] = await Promise.all([
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'applications.move_stage', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'interviews.book_slot', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'interviews.manage', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'applications.add_internal_notes', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'applications.notify_candidate', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'offers.generate', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'offers.send_esign', p_context: {} })
+      .then(({ data }) => !!data),
+  ]);
 
   const { data: job, error: jobErr } = await supabase
     .from('job_listings')
@@ -51,6 +82,12 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
       jobListingId={id}
       jobTitle={(job.title as string)?.trim() || 'Job'}
       initialApplications={(apps ?? []) as PipelineApplicationRow[]}
+      canMoveStage={canMoveStage}
+      canBookInterviewSlot={canBookInterviewSlot}
+      canManageInterviews={canManageInterviews}
+      canAddInternalNotes={canAddInternalNotes}
+      canNotifyCandidate={canNotifyCandidate}
+      canManageOffers={canGenerateOffers || canSendEsignOffers}
     />
   );
 }

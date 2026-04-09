@@ -74,6 +74,8 @@ export const DEFAULT_PERMISSION_SEED: DefaultPermissionSeed[] = [
   { key: 'leave.view_direct_reports', label: 'View team leave', description: 'View leave and sickness for direct reports.', is_founder_only: false },
   { key: 'leave.approve_direct_reports', label: 'Approve direct reports leave', description: 'Approve or reject leave for users who report to you.', is_founder_only: false },
   { key: 'leave.manage_org', label: 'Manage organisation leave', description: 'Set allowances, org leave settings, approve any request.', is_founder_only: false },
+  { key: 'hr.view_own', label: 'View own HR record', description: 'View your own HR record including job title, contract type, and employment dates.', is_founder_only: false },
+  { key: 'hr.view_direct_reports', label: 'View direct reports HR records', description: 'View HR records and employment details for employees who report directly to you.', is_founder_only: false },
   { key: 'hr.view_records', label: 'View HR records', description: 'View employee HR files including contract details and employment dates.', is_founder_only: false },
   { key: 'hr.manage_records', label: 'Manage HR records', description: 'Create and edit employee HR records, contract type, salary band, employment dates.', is_founder_only: false },
   { key: 'onboarding.manage_templates', label: 'Manage onboarding templates', description: 'Create and edit reusable onboarding checklist templates.', is_founder_only: false },

@@ -47,11 +47,19 @@ function initials(name: string) {
 
 export function OnboardingRunClient({
   runId,
+  orgId,
+  canManageRuns,
+  canActAsManager,
+  canActAsEmployeeSelf,
   run,
   employee,
   tasks,
 }: {
   runId: string;
+  orgId: string;
+  canManageRuns: boolean;
+  canActAsManager: boolean;
+  canActAsEmployeeSelf: boolean;
   run: { id: string; user_id: string; status: string; employment_start_date: string; created_at: string };
   employee: { id: string; full_name: string; email: string | null; avatar_url: string | null };
   tasks: RunTask[];
@@ -94,6 +102,7 @@ export function OnboardingRunClient({
     setMsg(null);
     const { error } = await supabase.from('onboarding_run_tasks').insert({
       run_id: runId,
+      org_id: orgId,
       title: addTitle.trim(),
       description: addDesc.trim() || null,
       assignee_type: addAssignee,
@@ -146,7 +155,7 @@ export function OnboardingRunClient({
             ) : null}
           </p>
         </div>
-        {run.status === 'active' ? (
+        {run.status === 'active' && canManageRuns ? (
           <button type="button" onClick={() => void cancelRun()} disabled={busy === 'cancel'} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] text-[#b91c1c] hover:bg-[#fef2f2] disabled:opacity-50">
             Cancel run
           </button>
@@ -179,12 +188,19 @@ export function OnboardingRunClient({
             <ul className="space-y-2">
               {g.tasks.map((t) => {
                 const overdue = t.due_date && t.due_date < today && t.status === 'pending';
+                const canUpdateTask =
+                  run.status === 'active' &&
+                  (
+                    canManageRuns ||
+                    (canActAsEmployeeSelf && t.assignee_type === 'employee') ||
+                    (canActAsManager && t.assignee_type === 'manager')
+                  );
                 return (
                   <li key={t.id} className="rounded-xl border border-[#d8d8d8] bg-white p-4">
                     <div className="flex items-start gap-3">
                       <button
                         type="button"
-                        disabled={!!busy || run.status !== 'active'}
+                        disabled={!!busy || !canUpdateTask}
                         onClick={() => void updateTask(t.id, t.status === 'completed' ? 'pending' : 'completed')}
                         className={[
                           'mt-0.5 h-5 w-5 shrink-0 rounded border-2 transition-colors',
@@ -225,7 +241,7 @@ export function OnboardingRunClient({
                           ) : null}
                         </div>
                       </div>
-                      {run.status === 'active' && t.status !== 'skipped' ? (
+                      {canUpdateTask && t.status !== 'skipped' ? (
                         <button
                           type="button"
                           disabled={!!busy}
@@ -245,7 +261,7 @@ export function OnboardingRunClient({
       </div>
 
       {/* Add task */}
-      {run.status === 'active' ? (
+      {run.status === 'active' && canManageRuns ? (
         <div className="mt-6">
           {!showAdd ? (
             <button

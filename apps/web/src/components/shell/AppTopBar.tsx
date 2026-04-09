@@ -15,13 +15,14 @@ export function AppTopBar({
   userInitials,
   avatarImageSrc = null,
   onAvatarImageError,
-  hasNotifDot,
+  notificationCount = 0,
   notifications = [],
 }: {
   userInitials: string;
   avatarImageSrc?: string | null;
   onAvatarImageError?: () => void;
-  hasNotifDot?: boolean;
+  /** Sum of items surfaced in the notifications menu (badge on bell). */
+  notificationCount?: number;
   notifications?: TopBarNotificationItem[];
 }) {
   const router = useRouter();
@@ -72,13 +73,22 @@ export function AppTopBar({
             type="button"
             className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white text-base text-[#6b6b6b] transition-colors hover:border-[#c5c5c5] hover:bg-[#f5f4f1]"
             title="Notifications"
-            aria-label="Notifications"
+            aria-label={
+              notificationCount > 0
+                ? `Notifications (${notificationCount} pending or unread)`
+                : 'Notifications'
+            }
             aria-expanded={notifOpen}
             onClick={() => setNotifOpen((v) => !v)}
           >
             🔔
-            {hasNotifDot ? (
-              <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full border-2 border-[#faf9f6] bg-[#E11D48]" />
+            {notificationCount > 0 ? (
+              <span
+                className="absolute -right-1 -top-1 flex min-h-[19px] min-w-[19px] items-center justify-center rounded-full bg-[#E11D48] px-1 text-[10px] font-bold leading-none tracking-tight text-white ring-[2.5px] ring-white shadow-[0_2px_8px_rgba(225,29,72,0.55)] motion-safe:animate-pulse"
+                aria-hidden
+              >
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </span>
             ) : null}
           </button>
           {notifOpen ? (

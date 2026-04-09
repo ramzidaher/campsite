@@ -120,6 +120,7 @@ export function AppShell({
   showPerformanceNav = false,
   performanceNavBadge = 0,
   showOnboardingNav = false,
+  showMyHrRecordNav = false,
   managerNavItems = null,
   managerNavSectionLabel = 'Manager',
   hrNavItems = null,
@@ -152,6 +153,7 @@ export function AppShell({
   /** Pending manager assessments count badge on the performance nav link. */
   performanceNavBadge?: number;
   showOnboardingNav?: boolean;
+  showMyHrRecordNav?: boolean;
   /** Collapsible “Manager” links (same pattern as `adminNavItems`). */
   managerNavItems?: MainShellAdminNavItem[] | null;
   /** Sidebar group title (e.g. “Department” for coordinators). */
@@ -197,13 +199,10 @@ export function AppShell({
   }, [safeUserAvatar]);
 
   const showApprovals = isApproverRole(profileRole);
-  const totalNotifCount =
-    unreadBroadcasts +
-    pendingBroadcastApprovals +
-    pendingApprovalCount +
-    rotaPendingFinalCount +
-    rotaPendingPeerCount +
-    recruitmentPendingReviewCount;
+  const totalNotifCount = useMemo(
+    () => topBarNotifications.reduce((sum, item) => sum + item.count, 0),
+    [topBarNotifications]
+  );
   const userInitials = useMemo(() => initials(userName), [userName]);
   const orgInitials = useMemo(() => initials(orgName), [orgName]);
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
@@ -312,6 +311,14 @@ export function AppShell({
                 href="/onboarding"
                 icon="onboarding"
                 label="Onboarding"
+                onNavigate={closeMobile}
+              />
+            ) : null}
+            {showMyHrRecordNav ? (
+              <NavLink
+                href="/profile/hr"
+                icon="hrRecords"
+                label="My HR record"
                 onNavigate={closeMobile}
               />
             ) : null}
@@ -631,7 +638,7 @@ export function AppShell({
           userInitials={userInitials}
           avatarImageSrc={showUserAvatar ? safeUserAvatar! : null}
           onAvatarImageError={() => setUserAvatarFailed(true)}
-          hasNotifDot={totalNotifCount > 0}
+          notificationCount={totalNotifCount}
           notifications={topBarNotifications}
         />
         <div className="flex-1 overflow-x-hidden overflow-y-auto">{children}</div>

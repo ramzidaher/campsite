@@ -57,7 +57,7 @@ export async function listAvailableInterviewSlotsForJob(jobListingId: string): P
   const jid = jobListingId?.trim();
   if (!jid) return { ok: false, error: 'Missing job.' };
 
-  const { supabase, orgId } = await requireOrgPermission('interviews.view');
+  const { supabase, orgId } = await requireOrgPermission('interviews.book_slot');
   if (!orgId) return { ok: false, error: 'Not allowed.' };
 
   const { data, error } = await supabase
@@ -419,6 +419,22 @@ export async function bookInterviewForApplication(opts: {
   const joining = opts.joiningInstructions?.trim() ?? '';
   const portalMsg = opts.portalMessage?.trim() ?? joining;
 
+  if (joining) {
+    const { data: canManageInterview } = await supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: orgId,
+      p_permission_key: 'interviews.manage',
+      p_context: {},
+    });
+    if (!canManageInterview) {
+      return {
+        ok: false,
+        error:
+          'You do not have permission to set joining instructions. Book the slot without notes, or ask someone with interview admin access.',
+      };
+    }
+  }
+
   const { data: slot, error: slotErr } = await supabase
     .from('interview_slots')
     .select('id, org_id, job_listing_id, title, starts_at, ends_at, status')
@@ -538,28 +554,41 @@ export async function bookInterviewForApplication(opts: {
     }
   }
 
-  if (portalMsg) {
-    await supabase.from('job_application_messages').insert({
+  const { data: canNotifyRow } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: orgId,
+    p_permission_key: 'applications.notify_candidate',
+    p_context: {},
+  });
+  const canNotifyCandidate = !!canNotifyRow;
+
+  if (portalMsg && canNotifyCandidate) {
+    const { error: msgErr } = await supabase.from('job_application_messages').insert({
       org_id: orgId,
       job_application_id: appId,
       body: portalMsg,
       created_by: user.id,
     });
+    if (msgErr) {
+      console.error('[interviews] book portal message', msgErr);
+    }
   }
 
   const startsLabel = startsAt.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
   const endsLabel = endsAt.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
 
-  await sendInterviewScheduledEmail({
-    candidateEmail: candEmail,
-    candidateName: candName,
-    orgName: String(orgName).trim() || 'Organisation',
-    jobTitle: String(jlTitle).trim(),
-    startsAtLabel: startsLabel,
-    endsAtLabel: endsLabel,
-    joiningInstructions: joining,
-    portalToken: app.portal_token as string,
-  });
+  if (canNotifyCandidate) {
+    await sendInterviewScheduledEmail({
+      candidateEmail: candEmail,
+      candidateName: candName,
+      orgName: String(orgName).trim() || 'Organisation',
+      jobTitle: String(jlTitle).trim(),
+      startsAtLabel: startsLabel,
+      endsAtLabel: endsLabel,
+      joiningInstructions: joining,
+      portalToken: app.portal_token as string,
+    });
+  }
 
   revalidatePath(`/admin/jobs/${jobListingId}/applications`);
   revalidatePath('/admin/applications');

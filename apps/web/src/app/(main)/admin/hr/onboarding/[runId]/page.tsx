@@ -19,13 +19,7 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const orgId = profile.org_id as string;
 
-  const canRuns = await supabase
-    .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.manage_runs', p_context: {} })
-    .then(({ data }) => !!data);
-
-  if (!canRuns) redirect('/hr/onboarding');
-
-  const [{ data: run }, { data: tasks }] = await Promise.all([
+  const [{ data: run }, canManageRuns, canCompleteOwnTasks, canViewDirectReports] = await Promise.all([
     supabase
       .from('onboarding_runs')
       .select('id, user_id, status, employment_start_date, created_at, template_id')
@@ -33,14 +27,40 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
       .eq('id', runId)
       .maybeSingle(),
     supabase
-      .from('onboarding_run_tasks')
-      .select('id, title, description, assignee_type, category, due_date, sort_order, status, completed_at, completed_by')
-      .eq('run_id', runId)
-      .eq('org_id', orgId)
-      .order('sort_order'),
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.manage_runs', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.complete_own_tasks', p_context: {} })
+      .then(({ data }) => !!data),
+    supabase
+      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.view_direct_reports', p_context: {} })
+      .then(({ data }) => !!data),
   ]);
 
   if (!run) redirect('/hr/onboarding');
+
+  const isSelfRun = (run.user_id as string) === user.id;
+  const managesEmployee = canViewDirectReports
+    ? await supabase
+        .from('employee_hr_records')
+        .select('id')
+        .eq('org_id', orgId)
+        .eq('user_id', run.user_id as string)
+        .eq('reports_to_user_id', user.id)
+        .limit(1)
+        .then(({ data }) => (data ?? []).length > 0)
+    : false;
+  const canActAsManager = canViewDirectReports && managesEmployee;
+  const canActAsEmployeeSelf = canCompleteOwnTasks && isSelfRun;
+
+  if (!canManageRuns && !canActAsManager && !canActAsEmployeeSelf) redirect('/hr/onboarding');
+
+  const { data: tasks } = await supabase
+    .from('onboarding_run_tasks')
+    .select('id, title, description, assignee_type, category, due_date, sort_order, status, completed_at, completed_by')
+    .eq('run_id', runId)
+    .eq('org_id', orgId)
+    .order('sort_order');
 
   const { data: employee } = await supabase
     .from('profiles')
@@ -58,6 +78,10 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
   return (
     <OnboardingRunClient
       runId={runId}
+      orgId={orgId}
+      canManageRuns={canManageRuns}
+      canActAsManager={canActAsManager}
+      canActAsEmployeeSelf={canActAsEmployeeSelf}
       run={{
         id: run.id as string,
         user_id: run.user_id as string,

@@ -111,9 +111,12 @@ function ReviewCard({ r }: { r: ReviewSummary }) {
 
 export function EmployeePerformanceIndexClient({
   userId: _userId,
+  mayHaveTeamReviews,
   reviews,
 }: {
   userId: string;
+  /** True when the viewer has manager review permission but may have zero assignments yet. */
+  mayHaveTeamReviews: boolean;
   reviews: ReviewSummary[];
 }) {
   const mine = reviews.filter((r) => r.is_reviewee);
@@ -194,7 +197,9 @@ export function EmployeePerformanceIndexClient({
         <div className="rounded-2xl border border-[#e8e8e8] bg-white p-8 text-center">
           <p className="text-[14px] font-medium text-[#121212]">No performance reviews yet</p>
           <p className="mt-1 text-[13px] text-[#9b9b9b]">
-            Reviews will appear here when your organisation starts a review cycle.
+            {mayHaveTeamReviews
+              ? 'You can review direct reports when HR enrolls them in an active cycle. Your own reviews will show under “My reviews” when you’re included in a cycle.'
+              : 'Reviews will appear here when your organisation starts a review cycle and you’re included.'}
           </p>
         </div>
       ) : null}
