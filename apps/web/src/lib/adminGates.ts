@@ -77,6 +77,7 @@ export type ShellNavIconId =
   | 'interviews'
   | 'leave'
   | 'hrRecords'
+  | 'userProfile'
   | 'onboarding'
   | 'performance'
   | 'orgChart'
@@ -309,7 +310,7 @@ export function getMainShellHrNavItemsByPermissions(
   else if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team records', icon: 'hrRecords' });
   if (p.includes('hr.view_own'))
-    items.push({ href: '/profile/hr', label: 'My HR record', icon: 'hrRecords' });
+    items.push({ href: '/profile', label: 'My profile', icon: 'userProfile' });
   if (p.includes('hr.view_records'))
     items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart' });
   if (

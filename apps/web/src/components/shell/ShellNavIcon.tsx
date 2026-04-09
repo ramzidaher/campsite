@@ -20,6 +20,7 @@ import {
   FolderOpen,
   GitBranch,
   Star,
+  UserCircle,
   Palmtree,
   Share2,
   Puzzle,
@@ -113,6 +114,8 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <CalendarClock {...p} />;
     case 'leave':
       return <Palmtree {...p} />;
+    case 'userProfile':
+      return <UserCircle {...p} />;
     case 'hrRecords':
       if (open !== undefined) {
         const iconCls = 'h-[18px] w-[18px] shrink-0 opacity-[0.92]';

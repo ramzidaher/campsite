@@ -288,6 +288,14 @@ export function AppShell({
               onNavigate={closeMobile}
             />
             <NavLink href="/discount" icon="discount" label="Discount Card" onNavigate={closeMobile} />
+            {showMyHrRecordNav ? (
+              <NavLink
+                href="/profile"
+                icon="userProfile"
+                label="My profile"
+                onNavigate={closeMobile}
+              />
+            ) : null}
             {showLeaveNav ? (
               <NavLink
                 href="/leave"
@@ -311,14 +319,6 @@ export function AppShell({
                 href="/onboarding"
                 icon="onboarding"
                 label="Onboarding"
-                onNavigate={closeMobile}
-              />
-            ) : null}
-            {showMyHrRecordNav ? (
-              <NavLink
-                href="/profile/hr"
-                icon="hrRecords"
-                label="My HR record"
                 onNavigate={closeMobile}
               />
             ) : null}

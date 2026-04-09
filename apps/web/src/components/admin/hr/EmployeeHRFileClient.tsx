@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Employee = {
   user_id: string;
@@ -29,6 +29,18 @@ type Employee = {
   notes: string | null;
   record_created_at: string | null;
   record_updated_at: string | null;
+  position_type?: string | null;
+  pay_grade?: string | null;
+  employment_basis?: string | null;
+  weekly_hours?: number | null;
+  positions_count?: number | null;
+  budget_amount?: number | null;
+  budget_currency?: string | null;
+  department_start_date?: string | null;
+  continuous_employment_start_date?: string | null;
+  custom_fields?: Record<string, unknown> | null;
+  length_of_service_years?: number | null;
+  length_of_service_months?: number | null;
 };
 
 type AuditEvent = {
@@ -73,8 +85,38 @@ function fieldLabel(f: string) {
     notice_period_weeks: 'Notice period',
     hired_from_application_id: 'Linked application',
     notes: 'Notes',
+    position_type: 'Position type',
+    pay_grade: 'Pay grade',
+    employment_basis: 'Employment basis',
+    weekly_hours: 'Weekly hours',
+    positions_count: 'Positions count',
+    budget_amount: 'Budget amount',
+    budget_currency: 'Budget currency',
+    department_start_date: 'Department start date',
+    continuous_employment_start_date: 'Continuous employment start',
+    custom_fields: 'Custom fields',
   };
   return map[f] ?? f;
+}
+
+type CustomFieldRow = { key: string; value: string };
+
+function customFieldRowsFromEmployee(cf: unknown): CustomFieldRow[] {
+  if (cf && typeof cf === 'object' && !Array.isArray(cf)) {
+    const entries = Object.entries(cf as Record<string, unknown>);
+    if (entries.length === 0) return [{ key: '', value: '' }];
+    return entries.map(([k, v]) => ({ key: k, value: v == null ? '' : String(v) }));
+  }
+  return [{ key: '', value: '' }];
+}
+
+function customFieldsToRecord(rows: CustomFieldRow[]): Record<string, string> {
+  const o: Record<string, string> = {};
+  for (const r of rows) {
+    const k = r.key.trim();
+    if (k) o[k] = r.value.trim();
+  }
+  return o;
 }
 
 function initials(name: string) {
@@ -132,6 +174,57 @@ export function EmployeeHRFileClient({
   );
   const [hiredFromApp, setHiredFromApp] = useState(employee.hired_from_application_id ?? '');
   const [notes, setNotes] = useState(employee.notes ?? '');
+  const [positionType, setPositionType] = useState(employee.position_type ?? '');
+  const [payGrade, setPayGrade] = useState(employee.pay_grade ?? '');
+  const [employmentBasis, setEmploymentBasis] = useState(employee.employment_basis ?? '');
+  const [weeklyHours, setWeeklyHours] = useState(
+    employee.weekly_hours != null ? String(employee.weekly_hours) : '',
+  );
+  const [positionsCount, setPositionsCount] = useState(
+    employee.positions_count != null ? String(employee.positions_count) : '1',
+  );
+  const [budgetAmount, setBudgetAmount] = useState(
+    employee.budget_amount != null ? String(employee.budget_amount) : '',
+  );
+  const [budgetCurrency, setBudgetCurrency] = useState(employee.budget_currency ?? '');
+  const [departmentStart, setDepartmentStart] = useState(employee.department_start_date ?? '');
+  const [continuousEmploymentStart, setContinuousEmploymentStart] = useState(
+    employee.continuous_employment_start_date ?? '',
+  );
+  const [customFieldRows, setCustomFieldRows] = useState<CustomFieldRow[]>(() =>
+    customFieldRowsFromEmployee(employee.custom_fields),
+  );
+
+  function resetFormFromEmployee(emp: Employee) {
+    setJobTitle(emp.job_title ?? '');
+    setGradeLevel(emp.grade_level ?? '');
+    setContractType(emp.contract_type ?? 'full_time');
+    setSalaryBand(emp.salary_band ?? '');
+    setFte(String(emp.fte ?? 1));
+    setWorkLocation(emp.work_location ?? 'office');
+    setStartDate(emp.employment_start_date ?? '');
+    setProbationEnd(emp.probation_end_date ?? '');
+    setNoticePeriod(
+      emp.notice_period_weeks !== null && emp.notice_period_weeks !== undefined ? String(emp.notice_period_weeks) : '',
+    );
+    setHiredFromApp(emp.hired_from_application_id ?? '');
+    setNotes(emp.notes ?? '');
+    setPositionType(emp.position_type ?? '');
+    setPayGrade(emp.pay_grade ?? '');
+    setEmploymentBasis(emp.employment_basis ?? '');
+    setWeeklyHours(emp.weekly_hours != null ? String(emp.weekly_hours) : '');
+    setPositionsCount(emp.positions_count != null ? String(emp.positions_count) : '1');
+    setBudgetAmount(emp.budget_amount != null ? String(emp.budget_amount) : '');
+    setBudgetCurrency(emp.budget_currency ?? '');
+    setDepartmentStart(emp.department_start_date ?? '');
+    setContinuousEmploymentStart(emp.continuous_employment_start_date ?? '');
+    setCustomFieldRows(customFieldRowsFromEmployee(emp.custom_fields));
+  }
+
+  useEffect(() => {
+    if (!editing) resetFormFromEmployee(employee);
+    // Sync flattened form when server record changes (after save / navigation).
+  }, [editing, employee.user_id, employee.record_updated_at]); // eslint-disable-line react-hooks/exhaustive-deps -- full `employee` would overwrite in-flight edits
 
   function cancelEdit() {
     setJobTitle(employee.job_title ?? '');
@@ -149,6 +242,16 @@ export function EmployeeHRFileClient({
     );
     setHiredFromApp(employee.hired_from_application_id ?? '');
     setNotes(employee.notes ?? '');
+    setPositionType(employee.position_type ?? '');
+    setPayGrade(employee.pay_grade ?? '');
+    setEmploymentBasis(employee.employment_basis ?? '');
+    setWeeklyHours(employee.weekly_hours != null ? String(employee.weekly_hours) : '');
+    setPositionsCount(employee.positions_count != null ? String(employee.positions_count) : '1');
+    setBudgetAmount(employee.budget_amount != null ? String(employee.budget_amount) : '');
+    setBudgetCurrency(employee.budget_currency ?? '');
+    setDepartmentStart(employee.department_start_date ?? '');
+    setContinuousEmploymentStart(employee.continuous_employment_start_date ?? '');
+    setCustomFieldRows(customFieldRowsFromEmployee(employee.custom_fields));
     setMsg(null);
     setEditing(false);
   }
@@ -157,6 +260,9 @@ export function EmployeeHRFileClient({
     e.preventDefault();
     setBusy(true);
     setMsg(null);
+    const posN = Number(positionsCount);
+    const budN = budgetAmount.trim() === '' ? null : Number(budgetAmount);
+    const whN = weeklyHours.trim() === '' ? null : Number(weeklyHours);
     const { error } = await supabase.rpc('employee_hr_record_upsert', {
       p_user_id: employee.user_id,
       p_job_title: jobTitle.trim(),
@@ -170,6 +276,16 @@ export function EmployeeHRFileClient({
       p_notice_period_weeks: noticePeriod !== '' ? Number(noticePeriod) : null,
       p_hired_from_application_id: hiredFromApp || null,
       p_notes: notes.trim() || null,
+      p_position_type: positionType.trim() || null,
+      p_pay_grade: payGrade.trim() || null,
+      p_employment_basis: employmentBasis.trim() || null,
+      p_weekly_hours: whN != null && !Number.isNaN(whN) ? whN : null,
+      p_positions_count: !Number.isNaN(posN) && posN >= 1 ? Math.floor(posN) : null,
+      p_budget_amount: budN != null && !Number.isNaN(budN) ? budN : null,
+      p_budget_currency: budgetCurrency.trim() || null,
+      p_department_start_date: departmentStart || null,
+      p_continuous_employment_start_date: continuousEmploymentStart || null,
+      p_custom_fields: customFieldsToRecord(customFieldRows),
     });
     setBusy(false);
     if (error) {
@@ -265,6 +381,36 @@ export function EmployeeHRFileClient({
               />
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Pay grade (e.g. after pay spine)
+              <input
+                type="text"
+                value={payGrade}
+                onChange={(e) => setPayGrade(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. spinal point, band"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Position type
+              <input
+                type="text"
+                value={positionType}
+                onChange={(e) => setPositionType(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. permanent, secondment"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Employment basis
+              <input
+                type="text"
+                value={employmentBasis}
+                onChange={(e) => setEmploymentBasis(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. permanent, fixed-term"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Contract type
               <select
                 value={contractType}
@@ -290,6 +436,30 @@ export function EmployeeHRFileClient({
               />
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Weekly hours (contracted)
+              <input
+                type="number"
+                min="0.5"
+                max="168"
+                step="0.5"
+                value={weeklyHours}
+                onChange={(e) => setWeeklyHours(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. 37.5"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              No. of positions (headcount lines)
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={positionsCount}
+                onChange={(e) => setPositionsCount(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Salary band
               <input
                 type="text"
@@ -297,6 +467,28 @@ export function EmployeeHRFileClient({
                 onChange={(e) => setSalaryBand(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
                 placeholder="e.g. Band C, £40–50k"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Budget amount
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={budgetAmount}
+                onChange={(e) => setBudgetAmount(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. annual FTE budget"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Budget currency
+              <input
+                type="text"
+                value={budgetCurrency}
+                onChange={(e) => setBudgetCurrency(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. GBP, USD"
               />
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
@@ -318,6 +510,25 @@ export function EmployeeHRFileClient({
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Start date in current department
+              <input
+                type="date"
+                value={departmentStart}
+                onChange={(e) => setDepartmentStart(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Continuous employment start
+              <input
+                type="date"
+                value={continuousEmploymentStart}
+                onChange={(e) => setContinuousEmploymentStart(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                title="Unbroken service date for leave / legacy HR, if different from employment start"
               />
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
@@ -355,6 +566,54 @@ export function EmployeeHRFileClient({
                 ))}
               </select>
             </label>
+          </div>
+          <div className="mt-6 border-t border-[#ececec] pt-4">
+            <h3 className="text-[13px] font-semibold text-[#121212]">Custom fields</h3>
+            <p className="mt-1 text-[12px] text-[#9b9b9b]">
+              Add any labels your organisation uses (e.g. cost centre, payroll ID). Stored as key–value pairs.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {customFieldRows.map((row, i) => (
+                <li key={i} className="flex flex-wrap gap-2 sm:flex-nowrap">
+                  <input
+                    type="text"
+                    value={row.key}
+                    onChange={(e) => {
+                      const next = [...customFieldRows];
+                      next[i] = { ...next[i]!, key: e.target.value };
+                      setCustomFieldRows(next);
+                    }}
+                    placeholder="Field name"
+                    className="min-w-[140px] flex-1 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                  />
+                  <input
+                    type="text"
+                    value={row.value}
+                    onChange={(e) => {
+                      const next = [...customFieldRows];
+                      next[i] = { ...next[i]!, value: e.target.value };
+                      setCustomFieldRows(next);
+                    }}
+                    placeholder="Value"
+                    className="min-w-[160px] flex-[2] rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                  />
+                  <button
+                    type="button"
+                    className="rounded-lg border border-[#d8d8d8] px-2 py-1 text-[12px] text-[#6b6b6b]"
+                    onClick={() => setCustomFieldRows(customFieldRows.filter((_, j) => j !== i))}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="mt-2 text-[12px] font-medium text-[#6b6b6b] underline underline-offset-2"
+              onClick={() => setCustomFieldRows([...customFieldRows, { key: '', value: '' }])}
+            >
+              Add field
+            </button>
           </div>
           <label className="mt-4 block text-[12.5px] font-medium text-[#6b6b6b]">
             Private HR notes
@@ -432,6 +691,54 @@ export function EmployeeHRFileClient({
                   <dd className="mt-0.5 text-[#121212]">{employee.employment_start_date ?? '—'}</dd>
                 </div>
                 <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Length of service</dt>
+                  <dd className="mt-0.5 text-[#121212]">
+                    {employee.length_of_service_years != null && employee.length_of_service_months != null
+                      ? `${employee.length_of_service_years} years, ${employee.length_of_service_months} months (from employment start)`
+                      : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Pay grade</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.pay_grade || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Position type</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.position_type || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Employment basis</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.employment_basis || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Weekly hours</dt>
+                  <dd className="mt-0.5 text-[#121212]">
+                    {employee.weekly_hours != null ? `${employee.weekly_hours}` : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">No. of positions</dt>
+                  <dd className="mt-0.5 text-[#121212]">
+                    {employee.positions_count != null ? String(employee.positions_count) : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Budget</dt>
+                  <dd className="mt-0.5 text-[#121212]">
+                    {employee.budget_amount != null
+                      ? `${employee.budget_amount}${employee.budget_currency ? ` ${employee.budget_currency}` : ''}`
+                      : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Dept. start</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.department_start_date ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Continuous employment</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.continuous_employment_start_date ?? '—'}</dd>
+                </div>
+                <div>
                   <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                     Probation end
                   </dt>
@@ -447,6 +754,24 @@ export function EmployeeHRFileClient({
                   </dd>
                 </div>
               </dl>
+              {employee.custom_fields &&
+              typeof employee.custom_fields === 'object' &&
+              !Array.isArray(employee.custom_fields) &&
+              Object.keys(employee.custom_fields).length > 0 ? (
+                <div className="mt-4 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+                    Custom fields
+                  </p>
+                  <dl className="grid gap-2 text-[13px] sm:grid-cols-2">
+                    {Object.entries(employee.custom_fields as Record<string, unknown>).map(([k, v]) => (
+                      <div key={k}>
+                        <dt className="text-[11px] text-[#9b9b9b]">{k}</dt>
+                        <dd className="text-[#121212]">{v == null ? '—' : String(v)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ) : null}
               {employee.notes ? (
                 <div className="mt-4 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3 text-[13px] text-[#4a4a4a]">
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">

@@ -18,8 +18,11 @@ android
 .env.*.local
 scripts/qa-seed-output.json
 scripts/qa-login-import.csv
+scripts/ussu-provision-output/
 supabase/.branches
 supabase/.temp
+# Accidental nested CLI workdir (should not be committed)
+supabase/supabase/
 .DS_Store
 coverage
 *.log

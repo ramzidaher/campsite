@@ -23,6 +23,10 @@ export type HRDirectoryRow = {
   employment_start_date: string | null;
   probation_end_date: string | null;
   notice_period_weeks: number | null;
+  weekly_hours?: number | null;
+  positions_count?: number | null;
+  length_of_service_years?: number | null;
+  length_of_service_months?: number | null;
 };
 
 type DashStats = {
@@ -341,7 +345,7 @@ export function HRDirectoryClient({
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-white">
-            <table className="w-full min-w-[820px] text-[13px]">
+            <table className="w-full min-w-[1080px] text-[13px]">
               <thead>
                 <tr className="border-b border-[#ececec] text-left text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                   <th className="px-4 py-3">Name</th>
@@ -349,6 +353,8 @@ export function HRDirectoryClient({
                   <th className="px-4 py-3">Contract</th>
                   <th className="px-4 py-3">Location</th>
                   <th className="px-4 py-3">Start date</th>
+                  <th className="px-4 py-3">Tenure</th>
+                  <th className="px-4 py-3">Hrs / pos.</th>
                   <th className="px-4 py-3">Probation ends</th>
                   <th className="px-4 py-3">Departments</th>
                   <th className="px-4 py-3" />
@@ -356,7 +362,7 @@ export function HRDirectoryClient({
               </thead>
               <tbody className="divide-y divide-[#ececec]">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-[#9b9b9b]">No members match.</td></tr>
+                  <tr><td colSpan={10} className="px-4 py-8 text-center text-[#9b9b9b]">No members match.</td></tr>
                 ) : null}
                 {filtered.map((r) => {
                   const onProbation = r.probation_end_date && r.probation_end_date >= today;
@@ -388,6 +394,21 @@ export function HRDirectoryClient({
                       </td>
                       <td className="px-4 py-3 text-[#4a4a4a]">{r.work_location ? locationLabel(r.work_location) : <span className="text-[#c8c8c8]">—</span>}</td>
                       <td className="px-4 py-3 text-[#4a4a4a]">{r.employment_start_date ?? <span className="text-[#c8c8c8]">—</span>}</td>
+                      <td className="px-4 py-3 text-[#4a4a4a] text-[12px]">
+                        {r.length_of_service_years != null && r.length_of_service_months != null ? (
+                          <span>
+                            {r.length_of_service_years}y {r.length_of_service_months}m
+                          </span>
+                        ) : (
+                          <span className="text-[#c8c8c8]">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[12px] text-[#4a4a4a]">
+                        {r.weekly_hours != null ? <span>{r.weekly_hours}h</span> : <span className="text-[#c8c8c8]">—</span>}
+                        {r.positions_count != null && r.positions_count > 1 ? (
+                          <span className="text-[#9b9b9b]"> · {r.positions_count} pos.</span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3">
                         {r.probation_end_date ? (
                           <span className={['text-[12px]', onProbation ? 'font-medium text-[#c2410c]' : 'text-[#6b6b6b]'].join(' ')}>

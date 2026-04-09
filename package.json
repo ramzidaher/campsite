@@ -10,6 +10,8 @@
     "create-super-admin": "node scripts/create-super-admin.mjs",
     "seed-demo-org": "node scripts/seed-demo-org.mjs",
     "seed-qa-full": "node scripts/seed-qa-full.mjs",
+    "provision:university-of-sussex-student-union": "node scripts/provision-university-of-sussex-student-union.mjs",
+    "generate:ussu-password-tsv": "python3 scripts/generate-ussu-password-import-tsv.py",
     "add-platform-founder": "node scripts/add-platform-founder.mjs",
     "build": "turbo run build",
     "dev": "turbo run dev",
