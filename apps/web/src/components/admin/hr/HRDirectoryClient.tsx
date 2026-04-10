@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
 export type HRDirectoryRow = {
   user_id: string;
@@ -83,6 +83,7 @@ export function HRDirectoryClient({
   canViewAll,
   initialRows,
   dashStats,
+  initialQuery = '',
 }: {
   orgId: string;
   canManage: boolean;
@@ -92,6 +93,8 @@ export function HRDirectoryClient({
   canViewAll: boolean;
   initialRows: HRDirectoryRow[];
   dashStats: Record<string, unknown> | null;
+  /** Optional query seeded from URL (`?q=`), used by top-bar search. */
+  initialQuery?: string;
 }) {
   const columnOptions = [
     { key: 'jobTitle', label: 'Job title' },
@@ -104,14 +107,7 @@ export function HRDirectoryClient({
     { key: 'departments', label: 'Departments' },
   ] as const;
   type ColumnKey = typeof columnOptions[number]['key'];
-
-  const stats = dashStats as DashStats | null;
-
-  const [q, setQ] = useState('');
-  const [filterContract, setFilterContract] = useState('');
-  const [filterLocation, setFilterLocation] = useState('');
-  const [filterHasRecord, setFilterHasRecord] = useState('');
-  const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>({
+  const defaultVisibleColumns: Record<ColumnKey, boolean> = {
     jobTitle: true,
     contract: true,
     location: true,
@@ -120,23 +116,73 @@ export function HRDirectoryClient({
     hoursPositions: true,
     probation: true,
     departments: true,
+  };
+  const columnPrefsKey = 'hr-directory-visible-columns-v1';
+
+  const stats = dashStats as DashStats | null;
+
+  const [q, setQ] = useState(initialQuery);
+  const [filterContract, setFilterContract] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterHasRecord, setFilterHasRecord] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(() => {
+    if (typeof window === 'undefined') return defaultVisibleColumns;
+    try {
+      const raw = window.localStorage.getItem(columnPrefsKey);
+      if (!raw) return defaultVisibleColumns;
+      const parsed = JSON.parse(raw) as Partial<Record<ColumnKey, boolean>>;
+      return {
+        ...defaultVisibleColumns,
+        ...parsed,
+      };
+    } catch {
+      return defaultVisibleColumns;
+    }
   });
+  const [draftVisibleColumns, setDraftVisibleColumns] = useState<Record<ColumnKey, boolean>>(visibleColumns);
+  const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
+  const columnsMenuRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<'dashboard' | 'directory'>(stats ? 'dashboard' : 'directory');
+  const deferredQ = useDeferredValue(q);
+
+  useEffect(() => {
+    if (!isColumnsMenuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!columnsMenuRef.current) return;
+      if (!columnsMenuRef.current.contains(event.target as Node)) {
+        setIsColumnsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [isColumnsMenuOpen]);
+
+  const indexedRows = useMemo(
+    () =>
+      initialRows.map((r) => ({
+        row: r,
+        searchText: [r.full_name, r.email, r.role, r.job_title, r.department_names.join(' ')]
+          .join(' ')
+          .toLowerCase(),
+      })),
+    [initialRows]
+  );
 
   const filtered = useMemo(() => {
-    const term = q.toLowerCase().trim();
-    return initialRows.filter((r) => {
+    const term = deferredQ.toLowerCase().trim();
+    return indexedRows
+      .filter(({ row: r, searchText }) => {
       if (term) {
-        const haystack = [r.full_name, r.email, r.job_title, r.department_names.join(' ')].join(' ').toLowerCase();
-        if (!haystack.includes(term)) return false;
+        if (!searchText.includes(term)) return false;
       }
       if (filterContract && r.contract_type !== filterContract) return false;
       if (filterLocation && r.work_location !== filterLocation) return false;
       if (filterHasRecord === 'yes' && !r.hr_record_id) return false;
       if (filterHasRecord === 'no' && r.hr_record_id) return false;
       return true;
-    });
-  }, [initialRows, q, filterContract, filterLocation, filterHasRecord]);
+      })
+      .map(({ row }) => row);
+  }, [indexedRows, deferredQ, filterContract, filterLocation, filterHasRecord]);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -363,26 +409,57 @@ export function HRDirectoryClient({
               <option value="yes">Has HR record</option>
               <option value="no">Missing HR record</option>
             </select>
-            <details className="relative">
-              <summary className="flex h-9 cursor-pointer list-none items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#4a4a4a]">
+            <div ref={columnsMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsColumnsMenuOpen((prev) => !prev)}
+                className="flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#4a4a4a]"
+              >
                 Columns
-              </summary>
-              <div className="absolute right-0 z-10 mt-1 w-56 rounded-lg border border-[#d8d8d8] bg-white p-2 shadow-sm">
-                {columnOptions.map((c) => (
-                  <label key={c.key} className="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 text-[12.5px] text-[#4a4a4a] hover:bg-[#faf9f6]">
-                    <span>{c.label}</span>
-                    <input
-                      type="checkbox"
-                      checked={visibleColumns[c.key]}
-                      onChange={(e) => {
-                        setVisibleColumns((prev) => ({ ...prev, [c.key]: e.target.checked }));
+              </button>
+              {isColumnsMenuOpen ? (
+                <div className="absolute right-0 z-10 mt-1 w-56 rounded-lg border border-[#d8d8d8] bg-white p-2 shadow-sm">
+                  {columnOptions.map((c) => (
+                    <label key={c.key} className="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 text-[12.5px] text-[#4a4a4a] hover:bg-[#faf9f6]">
+                      <span>{c.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={draftVisibleColumns[c.key]}
+                        onChange={(e) => {
+                          setDraftVisibleColumns((prev) => ({ ...prev, [c.key]: e.target.checked }));
+                        }}
+                        className="h-3.5 w-3.5 accent-[#121212]"
+                      />
+                    </label>
+                  ))}
+                  <div className="mt-1 flex items-center gap-2 border-t border-[#ececec] px-1 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVisibleColumns(draftVisibleColumns);
+                        window.localStorage.setItem(columnPrefsKey, JSON.stringify(draftVisibleColumns));
+                        setIsColumnsMenuOpen(false);
                       }}
-                      className="h-3.5 w-3.5 accent-[#121212]"
-                    />
-                  </label>
-                ))}
-              </div>
-            </details>
+                      className="rounded-md bg-[#121212] px-2.5 py-1.5 text-[12px] font-medium text-white hover:bg-[#2b2b2b]"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftVisibleColumns(defaultVisibleColumns);
+                        setVisibleColumns(defaultVisibleColumns);
+                        window.localStorage.removeItem(columnPrefsKey);
+                        setIsColumnsMenuOpen(false);
+                      }}
+                      className="rounded-md border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[12px] text-[#4a4a4a] hover:bg-[#faf9f6]"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
             <span className="ml-auto flex items-center text-[12px] text-[#9b9b9b]">{filtered.length} of {initialRows.length}</span>
           </div>
 
@@ -474,11 +551,21 @@ export function HRDirectoryClient({
                       ) : null}
                       {visibleColumns.departments ? (
                         <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {r.department_names.slice(0, 3).map((d) => (
-                              <span key={d} className="rounded-full bg-[#f0ede8] px-2 py-0.5 text-[11px] text-[#6b6b6b]">{d}</span>
+                          <div className="flex max-w-[220px] items-center gap-1.5 overflow-hidden whitespace-nowrap">
+                            {r.department_names.slice(0, 2).map((d) => (
+                              <span
+                                key={d}
+                                title={d}
+                                className="max-w-[130px] truncate rounded-full bg-[#f3f1ed] px-2 py-0.5 text-[11px] font-medium text-[#5b5b5b]"
+                              >
+                                {d}
+                              </span>
                             ))}
-                            {r.department_names.length > 3 ? <span className="text-[11px] text-[#9b9b9b]">+{r.department_names.length - 3}</span> : null}
+                            {r.department_names.length > 2 ? (
+                              <span className="shrink-0 rounded-full bg-[#f7f6f3] px-1.5 py-0.5 text-[10.5px] font-medium text-[#8a8a8a]">
+                                +{r.department_names.length - 2}
+                              </span>
+                            ) : null}
                           </div>
                         </td>
                       ) : null}

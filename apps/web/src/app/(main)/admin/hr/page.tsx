@@ -4,7 +4,11 @@ import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 
-export default async function HRDirectoryPage() {
+export default async function HRDirectoryPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string | string[] }>;
+}) {
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
@@ -39,6 +43,10 @@ export default async function HRDirectoryPage() {
       : Promise.resolve(null),
   ]);
 
+  const params = (await searchParams) ?? {};
+  const qRaw = params.q;
+  const initialQuery = (Array.isArray(qRaw) ? qRaw[0] : qRaw ?? '').trim();
+
   return (
     <HRDirectoryClient
       orgId={orgId}
@@ -47,6 +55,7 @@ export default async function HRDirectoryPage() {
       canViewAll={canViewAll}
       initialRows={(rows ?? []) as Parameters<typeof HRDirectoryClient>[0]['initialRows']}
       dashStats={(dashStats ?? null) as Record<string, unknown> | null}
+      initialQuery={initialQuery}
     />
   );
 }

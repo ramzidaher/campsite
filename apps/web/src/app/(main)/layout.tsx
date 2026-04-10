@@ -61,6 +61,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let performanceNavBadge = 0;
   let showOnboardingNav = false;
   let showMyHrRecordNav = false;
+  let showMemberSearch = false;
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
@@ -144,6 +145,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       permissionKeys.includes('leave.approve_direct_reports') ||
       permissionKeys.includes('leave.manage_org');
     showMyHrRecordNav = permissionKeys.includes('hr.view_own');
+    showMemberSearch =
+      permissionKeys.includes('hr.view_records') || permissionKeys.includes('hr.view_direct_reports');
     hasAdminAreaAccess = permissionKeys.some(
       (k) =>
         k.startsWith('members.') ||
@@ -353,6 +356,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           performanceNavBadge={performanceNavBadge}
           showOnboardingNav={showOnboardingNav}
           showMyHrRecordNav={showMyHrRecordNav}
+          showMemberSearch={showMemberSearch}
         >
           {children}
         </AppShell>

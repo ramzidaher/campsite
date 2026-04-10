@@ -125,7 +125,7 @@ export default async function MyProfilePage() {
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
       <header className="border-b border-[#e8e8e8] pb-5">
-        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">My profile</h1>
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">My Profile</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
           Your contact details, job information, leave, and links to other people tools — same data your HR team
           maintains for you.

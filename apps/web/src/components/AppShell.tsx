@@ -121,6 +121,8 @@ export function AppShell({
   performanceNavBadge = 0,
   showOnboardingNav = false,
   showMyHrRecordNav = false,
+  showMemberSearch = false,
+  orgId = null,
   managerNavItems = null,
   managerNavSectionLabel = 'Manager',
   hrNavItems = null,
@@ -154,6 +156,8 @@ export function AppShell({
   performanceNavBadge?: number;
   showOnboardingNav?: boolean;
   showMyHrRecordNav?: boolean;
+  showMemberSearch?: boolean;
+  orgId?: string | null;
   /** Collapsible “Manager” links (same pattern as `adminNavItems`). */
   managerNavItems?: MainShellAdminNavItem[] | null;
   /** Sidebar group title (e.g. “Department” for coordinators). */
@@ -230,12 +234,16 @@ export function AppShell({
           mobileNav ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         ].join(' ')}
       >
-        <div className="relative z-[1] flex items-center gap-2.5 border-b border-white/[0.07] px-5 py-5">
+        <Link
+          href="/dashboard"
+          onClick={closeMobile}
+          className="relative z-[1] flex items-center gap-2.5 border-b border-white/[0.07] px-5 py-5"
+        >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.12] text-[15px]">
             ⛺
           </div>
           <span className="font-authSerif text-[19px] tracking-tight text-[#faf9f6]">Campsite</span>
-        </div>
+        </Link>
 
         <div className="relative z-[1] border-b border-white/[0.07] px-5 py-3">
           <button
@@ -266,6 +274,14 @@ export function AppShell({
         >
           <div className="space-y-0.5">
             <NavLink href="/dashboard" icon="dashboard" label="Dashboard" onNavigate={closeMobile} />
+            {showMyHrRecordNav ? (
+              <NavLink
+                href="/profile"
+                icon="userProfile"
+                label="My Profile"
+                onNavigate={closeMobile}
+              />
+            ) : null}
             <NavLink
               href="/broadcasts"
               icon="broadcasts"
@@ -288,14 +304,6 @@ export function AppShell({
               onNavigate={closeMobile}
             />
             <NavLink href="/discount" icon="discount" label="Discount Card" onNavigate={closeMobile} />
-            {showMyHrRecordNav ? (
-              <NavLink
-                href="/profile"
-                icon="userProfile"
-                label="My profile"
-                onNavigate={closeMobile}
-              />
-            ) : null}
             {showLeaveNav ? (
               <NavLink
                 href="/leave"
@@ -640,6 +648,8 @@ export function AppShell({
           onAvatarImageError={() => setUserAvatarFailed(true)}
           notificationCount={totalNotifCount}
           notifications={topBarNotifications}
+          showMemberSearch={showMemberSearch}
+          orgId={orgId}
         />
         <div className="flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       </div>
