@@ -104,15 +104,35 @@ export default async function PublicJobsPage({
   const orgName = (orgLookup?.name as string | undefined)?.trim() || rows[0]?.org_name || 'Organisation';
 
   const orgQuery = !tenantHostMatchesOrg(orgSlug, host) ? <input type="hidden" name="org" value={orgSlug} /> : null;
+  const year = new Date().getFullYear();
 
   return (
-    <div className="bg-[#faf9f6] font-sans text-[#121212] antialiased">
-      <div className="mx-auto max-w-5xl px-4 pb-12 pt-8 sm:px-6 lg:px-8">
-        {/* Org branding */}
-        <section className="rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] px-5 py-5 sm:px-7 sm:py-6">
+    <div className="bg-gradient-to-b from-[#f3f9f6] via-[#faf9f6] to-[#faf9f6] font-sans text-[#121212] antialiased">
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+        {/* Campsite product branding */}
+        <div className="rounded-2xl border border-[#c5e6d6] bg-gradient-to-br from-white via-[#f6fdfb] to-[#f0faf6] px-5 py-4 shadow-[0_1px_0_0_rgba(0,139,96,0.08)] sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-authSerif text-[1.35rem] leading-none tracking-tight text-[#121212] sm:text-[1.5rem]">
+                Campsite
+              </span>
+              <span className="hidden h-5 w-px bg-[#008B60]/35 sm:block" aria-hidden />
+              <span className="rounded-full bg-[#008B60] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
+                Careers
+              </span>
+            </div>
+            <p className="text-[12px] leading-snug text-[#4a6b5e] sm:text-right">
+              Hiring tools by{' '}
+              <span className="font-semibold text-[#0d4a36]">Common Ground Studios Ltd</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Employer organisation */}
+        <section className="mt-5 rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] px-5 py-5 sm:px-7 sm:py-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6b6b]">Careers</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#008B60]">Your organisation</p>
               <p className="mt-1 font-authSerif text-[clamp(1.75rem,4vw,2.25rem)] leading-[1.15] tracking-[-0.02em] text-[#121212]">
                 {orgName}
               </p>
@@ -131,13 +151,13 @@ export default async function PublicJobsPage({
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-medium">
                 <Link
                   href={tenantJobsSubrouteRelativePath('me', orgSlug, host)}
-                  className="text-[#121212] underline decoration-[#c4c4c4] underline-offset-4 hover:decoration-[#121212]"
+                  className="text-[#0d4a36] underline decoration-[#008B60]/40 underline-offset-[3px] hover:text-[#008B60] hover:decoration-[#008B60]"
                 >
                   My applications
                 </Link>
                 <Link
                   href={tenantJobsSubrouteRelativePath('me/profile', orgSlug, host)}
-                  className="text-[#121212] underline decoration-[#c4c4c4] underline-offset-4 hover:decoration-[#121212]"
+                  className="text-[#0d4a36] underline decoration-[#008B60]/40 underline-offset-[3px] hover:text-[#008B60] hover:decoration-[#008B60]"
                 >
                   Profile
                 </Link>
@@ -145,13 +165,13 @@ export default async function PublicJobsPage({
                   <>
                     <Link
                       href={tenantJobsSubrouteRelativePath('login', orgSlug, host)}
-                      className="text-[#121212] underline decoration-[#c4c4c4] underline-offset-4 hover:decoration-[#121212]"
+                      className="text-[#0d4a36] underline decoration-[#008B60]/40 underline-offset-[3px] hover:text-[#008B60] hover:decoration-[#008B60]"
                     >
                       Sign in
                     </Link>
                     <Link
                       href={tenantJobsSubrouteRelativePath('register', orgSlug, host)}
-                      className="text-[#121212] underline decoration-[#c4c4c4] underline-offset-4 hover:decoration-[#121212]"
+                      className="text-[#0d4a36] underline decoration-[#008B60]/40 underline-offset-[3px] hover:text-[#008B60] hover:decoration-[#008B60]"
                     >
                       Register
                     </Link>
@@ -162,23 +182,23 @@ export default async function PublicJobsPage({
           </div>
         </section>
 
-        {/* Local nav — same surface language */}
+        {/* Local nav */}
         <nav
-          className="mt-5 flex w-full gap-1 rounded-xl border border-[#e8e6e3] bg-[#f5f4f1] p-1"
+          className="mt-5 flex w-full gap-1 rounded-xl border border-[#d4ede4] bg-white/80 p-1 shadow-sm shadow-[#008B60]/[0.06]"
           aria-label="Careers sections"
         >
-          <span className="flex-1 rounded-lg bg-[#121212] py-2.5 text-center text-[13px] font-semibold text-[#faf9f6]">
+          <span className="flex-1 rounded-lg bg-[#008B60] py-2.5 text-center text-[13px] font-semibold text-white shadow-sm shadow-[#008B60]/25">
             Open roles
           </span>
           <Link
             href={tenantJobsSubrouteRelativePath('me', orgSlug, host)}
-            className="flex-1 rounded-lg py-2.5 text-center text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#ebe8e3] hover:text-[#121212]"
+            className="flex-1 rounded-lg py-2.5 text-center text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#ecf8f3] hover:text-[#0d4a36]"
           >
             Applications
           </Link>
           <Link
             href={tenantJobsSubrouteRelativePath('me/profile', orgSlug, host)}
-            className="flex-1 rounded-lg py-2.5 text-center text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#ebe8e3] hover:text-[#121212]"
+            className="flex-1 rounded-lg py-2.5 text-center text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#ecf8f3] hover:text-[#0d4a36]"
           >
             Profile
           </Link>
@@ -186,7 +206,9 @@ export default async function PublicJobsPage({
 
         <header className="mt-8">
           <h1 className="font-authSerif text-[clamp(1.5rem,3.5vw,2rem)] tracking-[-0.02em] text-[#121212]">Open roles</h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">Browse live vacancies. Filters apply instantly.</p>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            Browse live vacancies for <span className="font-medium text-[#0d4a36]">{orgName}</span>. Filters apply instantly.
+          </p>
         </header>
 
         {/* Search: inline, submit on Enter */}
@@ -194,8 +216,8 @@ export default async function PublicJobsPage({
           {orgQuery}
           {dept ? <input type="hidden" name="dept" value={dept} /> : null}
           {contract ? <input type="hidden" name="contract" value={contract} /> : null}
-          <label className="flex min-h-[48px] items-center gap-3 rounded-xl border border-[#e8e6e3] bg-[#f5f4f1] px-4 transition-[box-shadow,border-color] focus-within:border-[#121212] focus-within:shadow-[0_0_0_1px_#121212]">
-            <SearchIcon className="shrink-0 text-[#9b9b9b]" />
+          <label className="flex min-h-[48px] items-center gap-3 rounded-xl border border-[#d4ede4] bg-white px-4 shadow-sm shadow-[#008B60]/[0.06] transition-[box-shadow,border-color] focus-within:border-[#008B60] focus-within:shadow-[0_0_0_3px_rgba(0,139,96,0.15)]">
+            <SearchIcon className="shrink-0 text-[#008B60]/70" />
             <input
               name="q"
               defaultValue={q}
@@ -209,7 +231,7 @@ export default async function PublicJobsPage({
 
         {/* Contract — compact toggle pills */}
         <div className="mt-5">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9b9b9b]">Contract</p>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#006b4a]">Contract</p>
           <div className="flex flex-wrap gap-1.5">
             {CONTRACT_OPTIONS.map((opt) => {
               const isOn =
@@ -228,8 +250,8 @@ export default async function PublicJobsPage({
                   className={[
                     'rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors',
                     isOn
-                      ? 'bg-[#121212] text-[#faf9f6]'
-                      : 'bg-[#f5f4f1] text-[#6b6b6b] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ebe8e3] hover:text-[#121212]',
+                      ? 'bg-[#008B60] text-white shadow-sm shadow-[#008B60]/30'
+                      : 'bg-[#f5f4f1] text-[#6b6b6b] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ecf8f3] hover:text-[#0d4a36] hover:ring-[#b8e6d4]',
                   ].join(' ')}
                 >
                   {opt.label}
@@ -241,15 +263,15 @@ export default async function PublicJobsPage({
 
         {/* Team — toggle pills */}
         <div className="mt-4">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9b9b9b]">Team</p>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#006b4a]">Team</p>
           <div className="flex flex-wrap gap-1.5">
             <Link
               href={buildPublicJobsHref(orgSlug, host, { q, dept: '', contract, page: 1 })}
               className={[
                 'rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors',
                 !dept
-                  ? 'bg-[#121212] text-[#faf9f6]'
-                  : 'bg-[#f5f4f1] text-[#6b6b6b] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ebe8e3] hover:text-[#121212]',
+                  ? 'bg-[#008B60] text-white shadow-sm shadow-[#008B60]/30'
+                  : 'bg-[#f5f4f1] text-[#6b6b6b] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ecf8f3] hover:text-[#0d4a36] hover:ring-[#b8e6d4]',
               ].join(' ')}
             >
               All teams
@@ -265,8 +287,8 @@ export default async function PublicJobsPage({
                   className={[
                     'rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors',
                     isOn
-                      ? 'bg-[#121212] text-[#faf9f6]'
-                      : 'bg-[#f5f4f1] text-[#6b6b6b] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ebe8e3] hover:text-[#121212]',
+                      ? 'bg-[#008B60] text-white shadow-sm shadow-[#008B60]/30'
+                      : 'bg-[#f5f4f1] text-[#6b6b6b] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ecf8f3] hover:text-[#0d4a36] hover:ring-[#b8e6d4]',
                   ].join(' ')}
                 >
                   {name}
@@ -277,7 +299,7 @@ export default async function PublicJobsPage({
         </div>
 
         {rows.length === 0 ? (
-          <section className="mt-10 rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] px-6 py-12 text-center">
+          <section className="mt-10 rounded-2xl border border-[#d4ede4] bg-gradient-to-b from-white to-[#f6fdfb] px-6 py-12 text-center shadow-sm shadow-[#008B60]/[0.05]">
             <h2 className="font-authSerif text-[1.375rem] text-[#121212]">
               {liveCount === 0 && !q && !dept && !contract ? 'No open roles yet' : 'No matching roles'}
             </h2>
@@ -288,7 +310,7 @@ export default async function PublicJobsPage({
             </p>
             <Link
               href={buildPublicJobsHref(orgSlug, host, {})}
-              className="mt-6 inline-flex rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-semibold text-[#faf9f6] hover:opacity-90"
+              className="mt-6 inline-flex rounded-lg bg-[#008B60] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm shadow-[#008B60]/25 hover:bg-[#007a52]"
             >
               Clear filters
             </Link>
@@ -308,40 +330,41 @@ export default async function PublicJobsPage({
                 <li key={job.job_listing_id}>
                   <Link
                     href={href}
-                    className="group flex h-full flex-col rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-5 transition-[border-color,box-shadow] hover:border-[#c9c5c0] hover:shadow-[0_1px_0_0_rgba(18,18,18,0.06)]"
+                    className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#e0ede8] bg-[#f5f4f1] p-5 pl-6 transition-[border-color,box-shadow] before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-[#008B60]/25 hover:border-[#b8e6d4] hover:bg-white hover:shadow-md hover:shadow-[#008B60]/[0.08] hover:before:bg-[#008B60]"
                   >
-                    <h2 className="text-[17px] font-semibold leading-snug tracking-[-0.01em] text-[#121212] group-hover:underline group-hover:decoration-[#121212] group-hover:underline-offset-2">
+                    <h2 className="text-[17px] font-semibold leading-snug tracking-[-0.01em] text-[#121212] group-hover:text-[#0d4a36] group-hover:underline group-hover:decoration-[#008B60] group-hover:underline-offset-2">
                       {job.title}
                     </h2>
 
                     <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
                       <div className="min-w-0">
-                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b9b9b]">Team</dt>
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#008B60]/85">Team</dt>
                         <dd className="mt-0.5 truncate text-[#121212]">{job.department_name}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b9b9b]">Contract</dt>
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#008B60]/85">Contract</dt>
                         <dd className="mt-0.5 text-[#121212]">{recruitmentContractLabel(job.contract_type)}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b9b9b]">Salary band</dt>
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#008B60]/85">Salary band</dt>
                         <dd className="mt-0.5 truncate text-[#121212]">{job.salary_band}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b9b9b]">Grade</dt>
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#008B60]/85">Grade</dt>
                         <dd className="mt-0.5 text-[#121212]">{job.grade_level}</dd>
                       </div>
                       <div className="col-span-2 min-w-0 border-t border-[#e0ddd8] pt-3">
-                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b9b9b]">Posted</dt>
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#008B60]/85">Posted</dt>
                         <dd className="mt-0.5 text-[#121212]">{posted ?? '—'}</dd>
                       </div>
                     </dl>
 
                     <p className="mt-4 text-[12px] text-[#6b6b6b]">
-                      Apply with <span className="font-medium text-[#121212]">{jobApplicationModeLabel(job.application_mode)}</span>
+                      Apply with{' '}
+                      <span className="font-medium text-[#0d4a36]">{jobApplicationModeLabel(job.application_mode)}</span>
                     </p>
 
-                    <span className="mt-4 inline-flex items-center text-[13px] font-semibold text-[#121212]">
+                    <span className="mt-4 inline-flex items-center text-[13px] font-semibold text-[#008B60]">
                       View role
                       <span className="ml-1 transition-transform group-hover:translate-x-0.5" aria-hidden>
                         →
@@ -354,12 +377,12 @@ export default async function PublicJobsPage({
           </ul>
         )}
 
-        <div className="mt-8 flex items-center justify-between border-t border-[#e8e6e3] pt-6">
+        <div className="mt-8 flex items-center justify-between border-t border-[#d4ede4] pt-6">
           <Link
             aria-disabled={!hasPrev}
             className={`rounded-lg px-3 py-2 text-[13px] font-medium ${
               hasPrev
-                ? 'bg-[#f5f4f1] text-[#121212] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ebe8e3]'
+                ? 'bg-white text-[#0d4a36] ring-1 ring-inset ring-[#b8e6d4] hover:bg-[#ecf8f3]'
                 : 'cursor-not-allowed text-[#b0b0b0]'
             }`}
             href={hasPrev ? buildPublicJobsHref(orgSlug, host, { q, dept, contract, page: page - 1 }) : '#'}
@@ -371,7 +394,7 @@ export default async function PublicJobsPage({
             aria-disabled={!hasNext}
             className={`rounded-lg px-3 py-2 text-[13px] font-medium ${
               hasNext
-                ? 'bg-[#f5f4f1] text-[#121212] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ebe8e3]'
+                ? 'bg-white text-[#0d4a36] ring-1 ring-inset ring-[#b8e6d4] hover:bg-[#ecf8f3]'
                 : 'cursor-not-allowed text-[#b0b0b0]'
             }`}
             href={hasNext ? buildPublicJobsHref(orgSlug, host, { q, dept, contract, page: page + 1 }) : '#'}
@@ -380,17 +403,42 @@ export default async function PublicJobsPage({
           </Link>
         </div>
 
-        <footer className="mt-10 rounded-xl border border-[#e8e6e3] bg-[#f5f4f1] px-5 py-4 text-[13px] text-[#6b6b6b]">
-          <span className="font-medium text-[#121212]">Candidates:</span>{' '}
-          <Link className="font-semibold text-[#121212] underline decoration-[#c4c4c4] underline-offset-4 hover:decoration-[#121212]" href={tenantJobsSubrouteRelativePath('login', orgSlug, host)}>
+        <footer className="mt-10 rounded-xl border border-[#b8e6d4] bg-gradient-to-br from-[#f0fdf9] to-[#ecf8f3] px-5 py-4 text-[13px] text-[#3d5c50] shadow-sm shadow-[#008B60]/[0.06]">
+          <span className="font-medium text-[#0d4a36]">Candidates:</span>{' '}
+          <Link
+            className="font-semibold text-[#008B60] underline decoration-[#008B60]/35 underline-offset-4 hover:text-[#006b4a] hover:decoration-[#008B60]"
+            href={tenantJobsSubrouteRelativePath('login', orgSlug, host)}
+          >
             Sign in
           </Link>
           {' · '}
-          <Link className="font-semibold text-[#121212] underline decoration-[#c4c4c4] underline-offset-4 hover:decoration-[#121212]" href={tenantJobsSubrouteRelativePath('register', orgSlug, host)}>
+          <Link
+            className="font-semibold text-[#008B60] underline decoration-[#008B60]/35 underline-offset-4 hover:text-[#006b4a] hover:decoration-[#008B60]"
+            href={tenantJobsSubrouteRelativePath('register', orgSlug, host)}
+          >
             Create an account
           </Link>
           {' '}to save progress and track applications.
         </footer>
+
+        {/* Legal / product attribution */}
+        <div className="mt-12 border-t border-[#e8e6e3] pt-8">
+          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:justify-between sm:text-left">
+            <div>
+              <p className="font-authSerif text-[1.125rem] text-[#121212]">Campsite</p>
+              <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[#008B60]">Careers</p>
+            </div>
+            <div className="max-w-md space-y-1 text-[11px] leading-relaxed text-[#9b9b9b] sm:text-right">
+              <p>
+                © {year} Common Ground Studios Ltd. All rights reserved.
+              </p>
+              <p className="text-[#b0b0b0]">
+                Campsite is a product of Common Ground Studios Ltd. Job listings are published by the organisation named
+                above.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
