@@ -95,6 +95,8 @@ export type MainShellAdminNavItem = {
   section?: string;
   /** When true, only this path counts as active (e.g. `/manager` vs `/manager/teams`). */
   exact?: boolean;
+  /** Optional visual nesting hint (used by HR recruitment sub-nav). */
+  nested?: boolean;
 };
 
 export function getMainShellAdminNavItems(
@@ -294,15 +296,38 @@ export function getMainShellHrNavItemsByPermissions(
   if (!canSeeAnyHr) return null;
 
   const items: MainShellAdminNavItem[] = [];
-  if (p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request'))
+  const canSeeRecruitment =
+    p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request');
+  const canSeeJobs = p.includes('jobs.view');
+  const canSeeApplications = p.includes('applications.view');
+  const canSeeOffers = p.includes('offers.view');
+  const canSeeInterviews = p.includes('interviews.view') || p.includes('interviews.book_slot');
+
+  if (canSeeRecruitment)
     items.push({ href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment' });
-  if (p.includes('jobs.view')) items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs' });
-  if (p.includes('applications.view'))
-    items.push({ href: '/hr/applications', label: 'Applications', icon: 'applications' });
-  if (p.includes('offers.view'))
-    items.push({ href: '/hr/offer-templates', label: 'Offer templates', icon: 'offerTemplates' });
-  if (p.includes('interviews.view') || p.includes('interviews.book_slot'))
-    items.push({ href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews' });
+  if (canSeeJobs)
+    items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs', nested: canSeeRecruitment });
+  if (canSeeApplications)
+    items.push({
+      href: '/hr/applications',
+      label: 'Applications',
+      icon: 'applications',
+      nested: canSeeRecruitment,
+    });
+  if (canSeeOffers)
+    items.push({
+      href: '/hr/offer-templates',
+      label: 'Offer templates',
+      icon: 'offerTemplates',
+      nested: canSeeRecruitment,
+    });
+  if (canSeeInterviews)
+    items.push({
+      href: '/hr/interviews',
+      label: 'Interview schedule',
+      icon: 'interviews',
+      nested: canSeeRecruitment,
+    });
   if (p.includes('leave.manage_org') && !p.includes('hr.view_records'))
     items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart' });
   if (p.includes('hr.view_records'))

@@ -61,7 +61,7 @@ export function OnboardingRunClient({
   canActAsManager: boolean;
   canActAsEmployeeSelf: boolean;
   run: { id: string; user_id: string; status: string; employment_start_date: string; created_at: string };
-  employee: { id: string; full_name: string; email: string | null; avatar_url: string | null };
+  employee: { id: string; display_name: string; email: string | null; avatar_url: string | null };
   tasks: RunTask[];
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -141,12 +141,12 @@ export function OnboardingRunClient({
           <img src={employee.avatar_url} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
         ) : (
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] text-[14px] font-bold text-[#6b6b6b]">
-            {initials(employee.full_name)}
+            {initials(employee.display_name)}
           </div>
         )}
         <div className="flex-1">
           <h1 className="font-authSerif text-[24px] leading-tight tracking-[-0.03em] text-[#121212]">
-            {employee.full_name}
+            {employee.display_name}
           </h1>
           <p className="text-[13px] text-[#6b6b6b]">
             Starts {run.employment_start_date}

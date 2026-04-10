@@ -28,7 +28,8 @@ export function ApplyJobFormClient({
     SubmitJobApplicationState | undefined,
     FormData
   >(submitPublicJobApplication, undefined);
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
@@ -37,297 +38,486 @@ export function ApplyJobFormClient({
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [motivationText, setMotivationText] = useState('');
   const [loomUrl, setLoomUrl] = useState('');
-  const [score, setScore] = useState('');
+  const [fitScore, setFitScore] = useState('');
+  const [staffsavvyScore, setStaffsavvyScore] = useState('');
   const [cvName, setCvName] = useState('');
+  const [coverLetter, setCoverLetter] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [consent, setConsent] = useState(false);
+  const [toast, setToast] = useState('');
+  const [selectedWorkStyle, setSelectedWorkStyle] = useState('');
 
   const done = state?.ok === true;
+  const fullName = `${firstName} ${lastName}`.trim();
   const bits: string[] = [];
   if (listing.allow_cv) bits.push(jobApplicationModeLabel('cv'));
   if (listing.allow_loom) bits.push(jobApplicationModeLabel('loom'));
   if (listing.allow_staffsavvy) bits.push(jobApplicationModeLabel('staffsavvy'));
 
-  const requiredCount = useMemo(() => {
-    let count = 2;
-    if (listing.application_mode === 'combination') count += 1;
-    if (listing.application_mode !== 'combination') {
-      if (listing.allow_cv && !listing.allow_loom && !listing.allow_staffsavvy) count += 1;
-      if (listing.allow_loom && !listing.allow_cv && !listing.allow_staffsavvy) count += 1;
-      if (listing.allow_staffsavvy && !listing.allow_cv && !listing.allow_loom) count += 1;
+  const stepReady = useMemo(() => {
+    const step0 = Boolean(firstName.trim() && lastName.trim() && email.includes('@'));
+    const step1 = Boolean(motivationText.trim().length > 10 && (fitScore || selectedWorkStyle));
+    const hasAnyChannel =
+      (listing.allow_cv && cvName.trim()) ||
+      (listing.allow_loom && loomUrl.trim()) ||
+      (listing.allow_staffsavvy && staffsavvyScore.trim());
+    const requiresAny = listing.application_mode === 'combination';
+    const requiresCvOnly = listing.allow_cv && !listing.allow_loom && !listing.allow_staffsavvy;
+    const requiresLoomOnly = listing.allow_loom && !listing.allow_cv && !listing.allow_staffsavvy;
+    const requiresStaffsavvyOnly = listing.allow_staffsavvy && !listing.allow_cv && !listing.allow_loom;
+    const step2 = requiresAny
+      ? Boolean(hasAnyChannel)
+      : (requiresCvOnly ? Boolean(cvName.trim()) : true) &&
+        (requiresLoomOnly ? Boolean(loomUrl.trim()) : true) &&
+        (requiresStaffsavvyOnly ? Boolean(staffsavvyScore.trim()) : true);
+    const step3 = consent;
+    return [step0, step1, step2, step3];
+  }, [
+    firstName,
+    lastName,
+    email,
+    motivationText,
+    fitScore,
+    staffsavvyScore,
+    selectedWorkStyle,
+    listing,
+    cvName,
+    loomUrl,
+    consent,
+  ]);
+
+  const progressLabel = ['barely started', 'making progress', 'halfway hero', 'almost there!', 'submitted!'];
+  const progressPct = [5, 35, 65, 90, 100][done ? 4 : currentStep] ?? 5;
+  const banters = [
+    {
+      icon: '👋',
+      msg: "Hey! Applying should take just a few minutes.",
+      em: 'We promise to keep this lightweight and straightforward.',
+    },
+    {
+      icon: '🎯',
+      msg: 'Great start. A couple of quick questions next.',
+      em: 'Clear answers help us review faster.',
+    },
+    {
+      icon: '📎',
+      msg: 'Nice. Add your application materials and you are almost done.',
+      em: 'One strong submission channel is enough for combination roles.',
+    },
+    {
+      icon: '🏁',
+      msg: 'Final check before submit.',
+      em: 'Take a breath, review, and send it.',
+    },
+  ];
+
+  function goNext() {
+    if (!stepReady[currentStep]) return;
+    setCurrentStep((s) => Math.min(3, s + 1));
+    const messages = ['', 'Step 1 complete.', 'Questions complete.', 'Materials added.'];
+    const nextMessage = messages[currentStep + 1];
+    if (nextMessage) {
+      setToast(nextMessage);
+      setTimeout(() => setToast(''), 2400);
     }
-    return count;
-  }, [listing]);
+  }
 
-  const channelsFilled = useMemo(() => {
-    let count = 0;
-    if (listing.allow_cv && cvName.trim()) count += 1;
-    if (listing.allow_loom && loomUrl.trim()) count += 1;
-    if (listing.allow_staffsavvy && score.trim()) count += 1;
-    return count;
-  }, [listing, cvName, loomUrl, score]);
+  function goBack() {
+    setCurrentStep((s) => Math.max(0, s - 1));
+  }
 
-  const completedCount = useMemo(() => {
-    let count = 0;
-    if (name.trim()) count += 1;
-    if (email.trim()) count += 1;
-    if (listing.application_mode === 'combination') {
-      if (channelsFilled > 0) count += 1;
-    } else {
-      if (listing.allow_cv && !listing.allow_loom && !listing.allow_staffsavvy && cvName.trim()) count += 1;
-      if (listing.allow_loom && !listing.allow_cv && !listing.allow_staffsavvy && loomUrl.trim()) count += 1;
-      if (listing.allow_staffsavvy && !listing.allow_cv && !listing.allow_loom && score.trim()) count += 1;
-    }
-    return Math.min(count, requiredCount);
-  }, [name, email, listing, channelsFilled, cvName, loomUrl, score, requiredCount]);
+  function prefillLinkedIn() {
+    setFirstName('Alex');
+    setLastName('Taylor');
+    setEmail('you@example.com');
+    setPhone('+44 7700 000000');
+    setLocation('Brighton, UK');
+    setLinkedinUrl('https://linkedin.com/in/alextaylor');
+    setPortfolioUrl('https://yoursite.com');
+    setToast('Demo LinkedIn import complete.');
+    setTimeout(() => setToast(''), 2400);
+  }
 
-  const completionPct = Math.round((completedCount / Math.max(requiredCount, 1)) * 100);
-
-  const fieldClass =
-    'mt-0 w-full rounded-xl border border-[#d8d8d8] bg-white px-3 py-2.5 text-[15px] text-[#121212] outline-none transition focus:border-[#008B60] focus:ring-2 focus:ring-[#b8e8d7] disabled:opacity-60';
-  const labelClass = 'mb-1 block text-[12px] font-medium text-[#505050]';
+  const baseField =
+    'w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[14px] text-[#121212] outline-none transition focus:border-[#121212]';
+  const labelClass = 'mb-1 block text-[12px] font-medium uppercase tracking-[0.3px] text-[#6b6b6b]';
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eefaf4_0%,#faf9f6_45%,#faf9f6_100%)] text-[#121212]">
-      <header className="border-b border-[#ececec] bg-white/90 px-5 py-5 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">{listing.org_name}</p>
-            <h1 className="font-authSerif text-[24px] tracking-tight text-[#121212]">Apply for {listing.title}</h1>
-            <p className="mt-1 text-[13px] text-[#6b6b6b]">
-              A short, guided form designed to reduce friction and repetition.
-            </p>
+    <div className="min-h-screen bg-[#faf9f6] px-5 py-8 text-[#121212]">
+      <main className="mx-auto w-full max-w-[660px]">
+        <section className="mb-6 rounded-[11px] border border-[#d8d8d8] bg-[#f5f4f1] p-6">
+          <div className="mb-2 inline-flex rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-3 py-1 text-[12px] font-medium text-[#166534]">
+            Accepting applications
           </div>
-          <p className="text-[13px] text-[#6b6b6b]">
+          <h1 className="font-authSerif text-[34px] leading-[1.15] text-[#121212]">{listing.title}</h1>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">{listing.org_name}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-full border border-[#d8d8d8] bg-[#eeecea] px-3 py-1 text-[12px] font-medium text-[#6b6b6b]">
+              {jobApplicationModeLabel(listing.application_mode)}
+            </span>
+            <span className="rounded-full border border-[#d8d8d8] bg-[#eeecea] px-3 py-1 text-[12px] font-medium text-[#6b6b6b]">
+              {bits.length ? bits.join(' + ') : 'Guided application'}
+            </span>
             <Link
               href={tenantJobListingRelativePathClient(jobSlug, orgSlug)}
-              className="text-[#008B60] hover:underline"
+              className="rounded-full border border-[#fde68a] bg-[#fef3c7] px-3 py-1 text-[12px] font-medium text-[#92400e]"
             >
               Back to job
             </Link>
-          </p>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-5 py-8">
-        <section className="mb-5 rounded-2xl border border-[#dff2e9] bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-[13px] font-medium text-[#0f5135]">Application progress: {completionPct}% complete</p>
-            <p className="text-[12px] text-[#6b6b6b]">
-              {completedCount}/{requiredCount} key steps done
-            </p>
-          </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#e8f4ef]">
-            <div
-              className="h-full rounded-full bg-[#008B60] transition-all duration-300"
-              style={{ width: `${completionPct}%` }}
-              aria-hidden
-            />
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#5f5f5f]">
-            <span className="rounded-full border border-[#e4e4e4] bg-[#f7f7f7] px-2.5 py-1">~2-4 minutes</span>
-            <span className="rounded-full border border-[#e4e4e4] bg-[#f7f7f7] px-2.5 py-1">No account required</span>
-            <span className="rounded-full border border-[#e4e4e4] bg-[#f7f7f7] px-2.5 py-1">
-              Private status portal after submit
-            </span>
           </div>
         </section>
 
+        {!done ? (
+          <section className="mb-6 rounded-[11px] border border-[#d8d8d8] bg-[#f5f4f1] px-6 py-5">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-[13px] font-medium">Your application</span>
+              <span className="text-[12px] text-[#9b9b9b]">Step {currentStep + 1} of 4</span>
+            </div>
+            <div className="mb-3 grid grid-cols-4 items-start">
+              {['You', 'Questions', 'CV', 'Review'].map((label, idx) => (
+                <div key={label} className="relative flex flex-col items-center">
+                  <div
+                    className={[
+                      'z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 text-[11px] font-semibold',
+                      idx < currentStep ? 'border-[#15803d] bg-[#15803d] text-white' : '',
+                      idx === currentStep ? 'border-[#121212] bg-[#121212] text-white' : '',
+                      idx > currentStep ? 'border-[#d8d8d8] bg-[#faf9f6] text-[#9b9b9b]' : '',
+                    ].join(' ')}
+                  >
+                    {idx < currentStep ? '✓' : idx + 1}
+                  </div>
+                  {idx < 3 ? (
+                    <div
+                      className={`absolute left-[calc(50%+14px)] top-[13px] h-[2px] w-[calc(100%-28px)] ${
+                        idx < currentStep ? 'bg-[#15803d]' : 'bg-[#d8d8d8]'
+                      }`}
+                    />
+                  ) : null}
+                  <span
+                    className={`mt-1 text-[10px] ${idx === currentStep ? 'font-medium text-[#121212]' : 'text-[#9b9b9b]'}`}
+                  >
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] text-[#9b9b9b]">Application pain level:</span>
+              <div className="h-1 flex-1 overflow-hidden rounded bg-[#d8d8d8]">
+                <div className="h-full rounded bg-[#15803d] transition-all" style={{ width: `${progressPct}%` }} />
+              </div>
+              <span className="text-[12px] text-[#9b9b9b]">{progressLabel[currentStep]}</span>
+            </div>
+          </section>
+        ) : null}
+
         {done ? (
-          <div
-            role="status"
-            className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[14px] text-emerald-950"
-          >
-            <p>{state.message}</p>
-            <p className="mt-1 text-[12px] text-emerald-900">
-              You cannot edit this application after submission. Use your portal link for updates.
-            </p>
-          </div>
+          <section className="rounded-[11px] border border-[#d8d8d8] bg-white p-6 text-center">
+            <div className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 border-[#bbf7d0] bg-[#dcfce7] text-[28px]">
+              ✓
+            </div>
+            <h2 className="font-authSerif text-[30px]">Application submitted</h2>
+            <p className="mx-auto mt-2 max-w-[420px] text-[14px] leading-relaxed text-[#6b6b6b]">{state.message}</p>
+          </section>
         ) : null}
 
         {state?.ok === false ? (
-          <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-900">
+          <div role="alert" className="mb-5 rounded-[11px] border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-900">
             {state.error}
           </div>
         ) : null}
 
-        <form action={formAction} className="space-y-5 rounded-2xl border border-[#e8e8e8] bg-white p-5 shadow-sm sm:p-6">
+        <form action={formAction}>
           <input type="hidden" name="job_slug" value={jobSlug} />
-          <section className="rounded-xl border border-[#ececec] bg-[#fcfcfc] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]">Step 1</p>
-            <h2 className="mt-1 text-[16px] font-semibold text-[#121212]">Tell us who you are</h2>
-            <p className="mt-1 text-[13px] text-[#5f5f5f]">
-              We only ask for essentials so your application stays quick and clear.
-            </p>
-            <div className="mt-4 space-y-4">
+          <input type="hidden" name="candidate_name" value={fullName} />
+          <input type="hidden" name="candidate_email" value={email} />
+          <input type="hidden" name="candidate_phone" value={phone} />
+          <input type="hidden" name="candidate_location" value={location} />
+          <input type="hidden" name="current_title" value={currentTitle} />
+          <input type="hidden" name="linkedin_url" value={linkedinUrl} />
+          <input type="hidden" name="portfolio_url" value={portfolioUrl} />
+          <input type="hidden" name="motivation_text" value={motivationText} />
+          <input type="hidden" name="loom_url" value={loomUrl} />
+          <input type="hidden" name="staffsavvy_score" value={listing.allow_staffsavvy ? staffsavvyScore : ''} />
+
+          {!done ? (
+            <div className="mb-4 flex items-start gap-3 rounded-[11px] bg-[#121212] px-4 py-3 text-[13px] text-[#faf9f6]">
+              <span className="text-[16px]">{banters[currentStep]?.icon}</span>
               <div>
-                <label className={labelClass} htmlFor="candidate_name">
-                  Full name
-                </label>
-                <input
-                  id="candidate_name"
-                  name="candidate_name"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={pending || done}
-                  autoComplete="name"
-                  className={fieldClass}
-                />
+                <p>{banters[currentStep]?.msg}</p>
+                <p className="mt-1 text-[12px] italic opacity-75">{banters[currentStep]?.em}</p>
               </div>
-              <div>
-                <label className={labelClass} htmlFor="candidate_email">
-                  Email
+            </div>
+          ) : null}
+
+          <section className={`${currentStep === 0 && !done ? 'block' : 'hidden'}`}>
+            <div className="rounded-[11px] border border-[#d8d8d8] bg-white p-6">
+              <h2 className="mb-4 border-b border-[#d8d8d8] pb-2 font-authSerif text-[22px]">Your details</h2>
+              <button
+                type="button"
+                onClick={prefillLinkedIn}
+                className="mb-3 flex w-full items-center gap-3 rounded-[9px] border border-[#d8d8d8] bg-[#eeecea] px-4 py-3 text-left hover:border-[#9b9b9b]"
+              >
+                <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded bg-[#0077B5] text-[12px] font-bold text-white">
+                  in
+                </span>
+                <span className="text-[13px] text-[#6b6b6b]">
+                  <strong className="text-[#121212]">Import from LinkedIn</strong> - skip the typing
+                </span>
+                <span className="ml-auto text-[18px]">→</span>
+              </button>
+              <p className="mb-4 text-center text-[12px] text-[#9b9b9b]">or fill in manually</p>
+              <div className="mb-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass} htmlFor="first_name">
+                    First name *
+                  </label>
+                  <input
+                    id="first_name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className={baseField}
+                    placeholder="e.g. Alex"
+                    disabled={pending}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="last_name">
+                    Last name *
+                  </label>
+                  <input
+                    id="last_name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className={baseField}
+                    placeholder="e.g. Taylor"
+                    disabled={pending}
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className={labelClass} htmlFor="candidate_email_visible">
+                  Email address *
                 </label>
                 <input
-                  id="candidate_email"
-                  name="candidate_email"
+                  id="candidate_email_visible"
                   type="email"
-                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={pending || done}
-                  autoComplete="email"
-                  className={fieldClass}
+                  className={baseField}
+                  placeholder="you@example.com"
+                  disabled={pending}
                 />
               </div>
-              <div>
-                <label className={labelClass} htmlFor="candidate_phone">
-                  Phone <span className="font-normal text-[#9b9b9b]">(optional)</span>
-                </label>
-                <input
-                  id="candidate_phone"
-                  name="candidate_phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  disabled={pending || done}
-                  autoComplete="tel"
-                  className={fieldClass}
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="mb-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={labelClass} htmlFor="candidate_location">
-                    Current location <span className="font-normal text-[#9b9b9b]">(optional)</span>
+                  <label className={labelClass} htmlFor="candidate_phone_visible">
+                    Phone
                   </label>
                   <input
-                    id="candidate_location"
-                    name="candidate_location"
+                    id="candidate_phone_visible"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className={baseField}
+                    placeholder="+44 7700 000000"
+                    disabled={pending}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="candidate_location_visible">
+                    Location
+                  </label>
+                  <input
+                    id="candidate_location_visible"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    disabled={pending || done}
-                    autoComplete="address-level2"
-                    className={fieldClass}
-                    placeholder="e.g. London, UK"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="current_title">
-                    Current role <span className="font-normal text-[#9b9b9b]">(optional)</span>
-                  </label>
-                  <input
-                    id="current_title"
-                    name="current_title"
-                    value={currentTitle}
-                    onChange={(e) => setCurrentTitle(e.target.value)}
-                    disabled={pending || done}
-                    className={fieldClass}
-                    placeholder="e.g. Senior Support Manager"
+                    className={baseField}
+                    placeholder="Brighton, UK"
+                    disabled={pending}
                   />
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="mb-3 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={labelClass} htmlFor="linkedin_url">
-                    LinkedIn profile <span className="font-normal text-[#9b9b9b]">(optional)</span>
+                  <label className={labelClass} htmlFor="current_title_visible">
+                    Current role
                   </label>
                   <input
-                    id="linkedin_url"
-                    name="linkedin_url"
-                    type="url"
-                    value={linkedinUrl}
-                    onChange={(e) => setLinkedinUrl(e.target.value)}
-                    disabled={pending || done}
-                    className={fieldClass}
-                    placeholder="https://linkedin.com/in/..."
+                    id="current_title_visible"
+                    value={currentTitle}
+                    onChange={(e) => setCurrentTitle(e.target.value)}
+                    className={baseField}
+                    placeholder="e.g. Product Designer"
+                    disabled={pending}
                   />
                 </div>
                 <div>
-                  <label className={labelClass} htmlFor="portfolio_url">
-                    Portfolio / website <span className="font-normal text-[#9b9b9b]">(optional)</span>
+                  <label className={labelClass} htmlFor="portfolio_url_visible">
+                    LinkedIn / portfolio URL
                   </label>
                   <input
-                    id="portfolio_url"
-                    name="portfolio_url"
+                    id="portfolio_url_visible"
                     type="url"
                     value={portfolioUrl}
                     onChange={(e) => setPortfolioUrl(e.target.value)}
-                    disabled={pending || done}
-                    className={fieldClass}
-                    placeholder="https://your-portfolio.com"
+                    className={baseField}
+                    placeholder="https://yoursite.com"
+                    disabled={pending}
                   />
                 </div>
               </div>
+              <div>
+                <label className={labelClass} htmlFor="linkedin_url_visible">
+                  LinkedIn profile URL
+                </label>
+                <input
+                  id="linkedin_url_visible"
+                  type="url"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  className={baseField}
+                  placeholder="https://linkedin.com/in/..."
+                  disabled={pending}
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex gap-3">
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!stepReady[0] || pending}
+                className="flex-1 rounded-[11px] bg-[#121212] px-4 py-3 text-[14px] font-medium text-white disabled:bg-[#d8d8d8] disabled:text-[#9b9b9b]"
+              >
+                Continue →
+              </button>
             </div>
           </section>
 
-          <section className="rounded-xl border border-[#ececec] bg-[#fcfcfc] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]">Step 2</p>
-            <h2 className="mt-1 text-[16px] font-semibold text-[#121212]">Share your application materials</h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-[#505050]">
-              This role accepts: {bits.length ? bits.join(', ') : jobApplicationModeLabel(listing.application_mode)}.
-            </p>
-            {listing.application_mode === 'combination' ? (
-              <p className="mt-1 text-[12px] text-[#7a7a7a]">Provide at least one of the options below.</p>
-            ) : null}
-            <div className="mt-4 space-y-4">
+          <section className={`${currentStep === 1 && !done ? 'block' : 'hidden'}`}>
+            <div className="rounded-[11px] border border-[#d8d8d8] bg-white p-6">
+              <h2 className="mb-4 border-b border-[#d8d8d8] pb-2 font-authSerif text-[22px]">A few quick questions</h2>
+              <div className="mb-3 rounded-[9px] border border-[#d8d8d8] bg-[#f5f4f1] p-4">
+                <p className="mb-2 text-[14px] font-medium">1. What draws you to this role specifically?</p>
+                <textarea
+                  value={motivationText}
+                  onChange={(e) => setMotivationText(e.target.value)}
+                  className={`${baseField} min-h-[92px] resize-y`}
+                  disabled={pending}
+                />
+                <p className={`mt-1 text-right text-[11px] ${motivationText.length > 255 ? 'text-[#92400e]' : 'text-[#9b9b9b]'}`}>
+                  {motivationText.length} / 300
+                </p>
+              </div>
+              <div className="mb-3 rounded-[9px] border border-[#d8d8d8] bg-[#f5f4f1] p-4">
+                <p className="mb-2 text-[14px] font-medium">2. On a scale of 1-5, how would you rate your fit?</p>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setFitScore(String(n))}
+                      className={`h-9 w-9 rounded-lg border text-[13px] ${
+                        fitScore === String(n)
+                          ? 'border-[#121212] bg-[#121212] text-white'
+                          : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#121212]'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[9px] border border-[#d8d8d8] bg-[#f5f4f1] p-4">
+                <p className="mb-2 text-[14px] font-medium">3. What&apos;s your preferred working style?</p>
+                <div className="space-y-2">
+                  {[
+                    'Deep focus, async',
+                    'Collaborative with frequent feedback',
+                    'Mix of both depending on task',
+                    'Flexible based on the team needs',
+                  ].map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setSelectedWorkStyle(item)}
+                      className={`w-full rounded-lg border px-3 py-2 text-left text-[13px] ${
+                        selectedWorkStyle === item
+                          ? 'border-[#121212] bg-[#121212] text-white'
+                          : 'border-[#d8d8d8] bg-[#faf9f6] text-[#121212] hover:border-[#121212]'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 flex gap-3">
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex-1 rounded-[11px] border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[14px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!stepReady[1] || pending}
+                className="flex-[2] rounded-[11px] bg-[#121212] px-4 py-3 text-[14px] font-medium text-white disabled:bg-[#d8d8d8] disabled:text-[#9b9b9b]"
+              >
+                Continue →
+              </button>
+            </div>
+          </section>
+
+          <section className={`${currentStep === 2 && !done ? 'block' : 'hidden'}`}>
+            <div className="rounded-[11px] border border-[#d8d8d8] bg-white p-6">
+              <h2 className="mb-4 border-b border-[#d8d8d8] pb-2 font-authSerif text-[22px]">Your application materials</h2>
               {listing.allow_cv ? (
-                <div>
+                <div className="mb-4">
                   <label className={labelClass} htmlFor="cv">
-                    CV (PDF recommended)
+                    CV upload
                   </label>
                   <input
                     id="cv"
                     name="cv"
                     type="file"
                     accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    disabled={pending || done}
+                    disabled={pending}
                     onChange={(e) => setCvName(e.target.files?.[0]?.name ?? '')}
-                    className={fieldClass}
+                    className={baseField}
                   />
-                  {cvName ? <p className="mt-1 text-[12px] text-[#0f5135]">Attached: {cvName}</p> : null}
+                  {cvName ? <p className="mt-1 text-[12px] text-[#15803d]">Uploaded: {cvName}</p> : null}
                 </div>
               ) : null}
-
               {listing.allow_loom ? (
-                <div>
-                  <label className={labelClass} htmlFor="loom_url">
-                    Loom video URL
+                <div className="mb-4">
+                  <label className={labelClass} htmlFor="loom_url_visible">
+                    Loom URL
                   </label>
                   <input
-                    id="loom_url"
-                    name="loom_url"
-                    type="url"
-                    placeholder="https://www.loom.com/share/..."
+                    id="loom_url_visible"
                     value={loomUrl}
                     onChange={(e) => setLoomUrl(e.target.value)}
-                    disabled={pending || done}
-                    className={fieldClass}
+                    className={baseField}
+                    placeholder="https://www.loom.com/share/..."
+                    disabled={pending}
                   />
                 </div>
               ) : null}
-
               {listing.allow_staffsavvy ? (
-                <div>
-                  <label className={labelClass} htmlFor="staffsavvy_score">
+                <div className="mb-4">
+                  <label className={labelClass} htmlFor="staffsavvy_score_visible">
                     StaffSavvy score (1-5)
                   </label>
                   <select
-                    id="staffsavvy_score"
-                    name="staffsavvy_score"
-                    value={score}
-                    onChange={(e) => setScore(e.target.value)}
-                    disabled={pending || done}
-                    className={fieldClass}
+                    id="staffsavvy_score_visible"
+                    value={staffsavvyScore}
+                    onChange={(e) => setStaffsavvyScore(e.target.value)}
+                    className={baseField}
+                    disabled={pending}
                   >
                     <option value="">Select...</option>
                     {[1, 2, 3, 4, 5].map((n) => (
@@ -338,45 +528,84 @@ export function ApplyJobFormClient({
                   </select>
                 </div>
               ) : null}
+              <div>
+                <label className={labelClass} htmlFor="cover_letter">
+                  Cover letter (optional)
+                </label>
+                <textarea
+                  id="cover_letter"
+                  value={coverLetter}
+                  onChange={(e) => setCoverLetter(e.target.value)}
+                  className={`${baseField} min-h-[100px] resize-y`}
+                  disabled={pending}
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex gap-3">
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex-1 rounded-[11px] border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[14px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!stepReady[2] || pending}
+                className="flex-[2] rounded-[11px] bg-[#121212] px-4 py-3 text-[14px] font-medium text-white disabled:bg-[#d8d8d8] disabled:text-[#9b9b9b]"
+              >
+                Continue →
+              </button>
             </div>
           </section>
 
-          <section className="rounded-xl border border-[#ececec] bg-[#fcfcfc] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]">Step 3</p>
-            <h2 className="mt-1 text-[16px] font-semibold text-[#121212]">Submit with confidence</h2>
-            <label className={`${labelClass} mt-3`} htmlFor="motivation_text">
-              Why this role? <span className="font-normal text-[#9b9b9b]">(optional, but recommended)</span>
+          <section className={`${currentStep === 3 && !done ? 'block' : 'hidden'}`}>
+            <div className="rounded-[11px] border border-[#d8d8d8] bg-white p-6">
+              <h2 className="mb-4 border-b border-[#d8d8d8] pb-2 font-authSerif text-[22px]">Review & submit</h2>
+              <div className="space-y-2 text-[13px]">
+                {[
+                  ['Name', fullName || '-'],
+                  ['Email', email || '-'],
+                  ['Role fit score', fitScore || '-'],
+                  ['Working style', selectedWorkStyle || '-'],
+                  ['StaffSavvy score', listing.allow_staffsavvy ? staffsavvyScore || '-' : 'Not required'],
+                  ['CV', cvName || 'Not uploaded'],
+                  ['Motivation', motivationText ? `${motivationText.slice(0, 70)}...` : '-'],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between border-b border-[#eeecea] py-2 last:border-b-0">
+                    <span className="text-[#6b6b6b]">{label}</span>
+                    <span className="max-w-[55%] text-right font-medium text-[#121212]">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <label className="mt-3 flex items-start gap-2 text-[13px] text-[#6b6b6b]">
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1" />
+              I confirm this information is accurate.
             </label>
-            <textarea
-              id="motivation_text"
-              name="motivation_text"
-              value={motivationText}
-              onChange={(e) => setMotivationText(e.target.value)}
-              disabled={pending || done}
-              rows={4}
-              className={fieldClass}
-              placeholder="In 3-5 lines, share what excites you about this role and your strongest fit."
-            />
-            <p className="mt-1 text-[13px] text-[#5f5f5f]">
-              After submitting, your application is locked and tracked in your private status portal.
-            </p>
+            <div className="mt-3 flex gap-3">
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex-1 rounded-[11px] border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[14px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              >
+                ← Back
+              </button>
+              <button
+                type="submit"
+                disabled={!stepReady[3] || pending}
+                className="flex-[2] rounded-[11px] bg-[#121212] px-4 py-3 text-[14px] font-medium text-white disabled:bg-[#d8d8d8] disabled:text-[#9b9b9b]"
+              >
+                {pending ? 'Submitting...' : 'Submit application ✓'}
+              </button>
+            </div>
           </section>
-
-          <div className="rounded-xl border border-[#e7efe9] bg-[#f5fbf8] px-4 py-3 text-[12px] text-[#355a4a]">
-            Tip: clear, specific applications are usually reviewed faster.
-          </div>
-
-          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-            <p className="text-[12px] text-[#7a7a7a]">You are almost done - one click to submit.</p>
-            <button
-              type="submit"
-              disabled={pending || done}
-              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#008B60] px-5 text-[14px] font-medium text-white transition hover:bg-[#007a54] disabled:opacity-60 sm:w-auto sm:min-w-[220px]"
-            >
-              {pending ? 'Submitting...' : done ? 'Submitted' : 'Submit application'}
-            </button>
-          </div>
         </form>
+
+        {toast ? (
+          <div className="fixed bottom-5 right-5 rounded-[11px] bg-[#121212] px-4 py-2 text-[13px] text-white shadow-lg">{toast}</div>
+        ) : null}
       </main>
     </div>
   );

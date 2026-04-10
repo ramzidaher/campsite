@@ -578,17 +578,25 @@ export function AppShell({
                 <div className="min-h-0 overflow-hidden" inert={!hrNavExpanded ? true : undefined}>
                   <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
                     {hrNavItems.map((item) => (
-                      <NavLink
+                      <div
                         key={item.href}
-                        href={item.href}
-                        icon={item.icon}
-                        label={item.label}
-                        badge={item.badge}
-                        secondaryBadge={item.secondaryBadge}
-                        secondaryBadgeTitle={item.secondaryBadgeTitle}
-                        exact={item.exact}
-                        onNavigate={closeMobile}
-                      />
+                        className={
+                          item.nested
+                            ? 'ml-2 border-l border-white/[0.12] pl-2'
+                            : undefined
+                        }
+                      >
+                        <NavLink
+                          href={item.href}
+                          icon={item.icon}
+                          label={item.label}
+                          badge={item.badge}
+                          secondaryBadge={item.secondaryBadge}
+                          secondaryBadgeTitle={item.secondaryBadgeTitle}
+                          exact={item.exact}
+                          onNavigate={closeMobile}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>

@@ -12,6 +12,8 @@ import styles from './OrgChartClient.module.css';
 type OrgChartRow = {
   user_id: string;
   full_name: string;
+  preferred_name?: string | null;
+  display_name?: string | null;
   email: string | null;
   role: string;
   reports_to_user_id: string | null;
@@ -146,6 +148,14 @@ function primaryDepartment(row: OrgChartRow): string {
   return [...row.department_names].sort((a, b) => a.localeCompare(b))[0];
 }
 
+function rowName(row: OrgChartRow): string {
+  return row.display_name ?? row.full_name;
+}
+
+function rowNameOrBlank(row: OrgChartRow | undefined): string {
+  return row ? rowName(row) : '';
+}
+
 const SLT_PRIMARY_DEPT = 'Senior Leadership';
 
 /** Lane order on each level: exec / SLT first, then A→Z, then Unassigned (matches QA seed dept name "Senior Leadership"). */
@@ -172,7 +182,7 @@ function compareSltPeers(a: OrgChartRow, b: OrgChartRow): number {
   };
   const d = rank(a) - rank(b);
   if (d !== 0) return d;
-  return a.full_name.localeCompare(b.full_name);
+  return rowName(a).localeCompare(rowName(b));
 }
 
 /**
@@ -300,7 +310,7 @@ function buildGraph(rows: OrgChartRow[]) {
 
   const roots = rows
     .filter((r) => !r.reports_to_user_id || !byId.has(r.reports_to_user_id))
-    .sort((a, b) => a.full_name.localeCompare(b.full_name));
+    .sort((a, b) => rowName(a).localeCompare(rowName(b)));
 
   const treeLevelById = new Map<string, number>();
   const q: string[] = roots.map((r) => r.user_id);
@@ -310,7 +320,7 @@ function buildGraph(rows: OrgChartRow[]) {
     if (!id) continue;
     const lvl = treeLevelById.get(id) ?? 0;
     const kids = children.get(id) ?? [];
-    kids.sort((a, b) => (byId.get(a)?.full_name ?? '').localeCompare(byId.get(b)?.full_name ?? ''));
+    kids.sort((a, b) => rowNameOrBlank(byId.get(a)).localeCompare(rowNameOrBlank(byId.get(b))));
     kids.forEach((k) => {
       if (!treeLevelById.has(k)) {
         treeLevelById.set(k, lvl + 1);
@@ -331,7 +341,7 @@ function buildGraph(rows: OrgChartRow[]) {
     list.push(r);
     levels.set(l, list);
   });
-  levels.forEach((list) => list.sort((a, b) => a.full_name.localeCompare(b.full_name)));
+  levels.forEach((list) => list.sort((a, b) => rowName(a).localeCompare(rowName(b))));
 
   return { edges, levels };
 }
@@ -353,7 +363,7 @@ export function OrgChartClient({
   const nodes = useMemo<NodeConfig[]>(() =>
     activeRows.map((r) => {
       const t = getVisualTier(r);
-      return { id: r.user_id, label: r.full_name, tier: t.tier, tc: t.tc, row: r };
+      return { id: r.user_id, label: rowName(r), tier: t.tier, tc: t.tc, row: r };
     }),
   [activeRows]);
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
@@ -424,7 +434,7 @@ export function OrgChartClient({
         for (const d of depts) {
           const group = byDept.get(d)!;
           if (d === SLT_PRIMARY_DEPT) group.sort(compareSltPeers);
-          else group.sort((a, b) => a.full_name.localeCompare(b.full_name));
+          else group.sort((a, b) => rowName(a).localeCompare(rowName(b)));
           for (const row of group) {
             next[row.user_id] = { x, y: levelY, tx: x, ty: levelY };
             x += gapX;
@@ -922,6 +932,8 @@ export function OrgChartClient({
       people: activeRows.map((r) => ({
         user_id: r.user_id,
         full_name: r.full_name,
+        preferred_name: r.preferred_name ?? null,
+        display_name: rowName(r),
         email: r.email,
         role: r.role,
         job_title: r.job_title,
@@ -939,6 +951,7 @@ export function OrgChartClient({
 
   const exportCsv = useCallback(() => {
     const header = [
+      'display_name',
       'full_name',
       'job_title',
       'role',
@@ -952,6 +965,7 @@ export function OrgChartClient({
       header.join(','),
       ...activeRows.map((r) =>
         [
+          csvCell(rowName(r)),
           csvCell(r.full_name),
           csvCell(r.job_title),
           csvCell(r.role),
@@ -1096,7 +1110,7 @@ export function OrgChartClient({
           }}
         >
           <div className={styles.modal}>
-            <h2>{modalNode?.full_name ?? ''}</h2>
+            <h2>{modalNode ? rowName(modalNode) : ''}</h2>
             <div className={styles.mTier}>{modalNode?.job_title || modalNode?.role || 'Team member'}</div>
             <div>
               <div className={styles.pr}>

@@ -52,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let rotaPendingPeerCount = 0;
   let recruitmentPendingReviewCount = 0;
   let recruitmentUnreadNotifications = 0;
+  let applicationUnreadNotifications = 0;
   let hasAdminAreaAccess = false;
   let canApproveRecruitment = false;
   let permissionKeys: PermissionKey[] = [];
@@ -181,6 +182,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       rotaPeerRes,
       recruitmentCountRes,
       recruitmentNotifRes,
+      applicationNotifRes,
     ] = await Promise.all([
       needsLeaveApprovalBadge
         ? supabase.rpc('leave_pending_approval_count_for_me')
@@ -218,6 +220,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ? supabase.rpc('recruitment_requests_pending_review_count')
         : Promise.resolve({ data: null as number | null }),
       supabase.rpc('recruitment_notifications_unread_count'),
+      supabase.rpc('application_notifications_unread_count'),
     ]);
 
     const lc = leavePendingRes.data;
@@ -241,6 +244,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const rn = recruitmentNotifRes.data;
     if (typeof rn === 'number') recruitmentUnreadNotifications = Math.max(0, rn);
     else if (rn !== null && rn !== undefined) recruitmentUnreadNotifications = Math.max(0, Number(rn));
+
+    const an = applicationNotifRes.data;
+    if (typeof an === 'number') applicationUnreadNotifications = Math.max(0, an);
+    else if (an !== null && an !== undefined) applicationUnreadNotifications = Math.max(0, Number(an));
   }
 
   const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
@@ -314,6 +321,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       label: 'Recruitment updates',
       href: '/notifications/recruitment',
       count: recruitmentUnreadNotifications,
+    },
+    {
+      id: 'application-notifications',
+      label: 'Application updates',
+      href: '/notifications/applications',
+      count: applicationUnreadNotifications,
     },
   ].filter((item) => item.count > 0);
 

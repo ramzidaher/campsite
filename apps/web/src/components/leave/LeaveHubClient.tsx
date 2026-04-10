@@ -13,6 +13,12 @@ type LeaveRequest = {
   status: string;
   note: string | null;
   created_at: string;
+  decided_at?: string | null;
+  requested_action_at?: string | null;
+  proposed_kind?: string | null;
+  proposed_start_date?: string | null;
+  proposed_end_date?: string | null;
+  proposed_note?: string | null;
   requester_id?: string;
   profiles?: { full_name: string } | { full_name: string }[] | null;
 };
@@ -64,9 +70,18 @@ function displayName(p: LeaveRequest): string {
   return row?.full_name?.trim() || 'Team member';
 }
 
+function isWithinApprovedChangeWindow(r: LeaveRequest, windowHours: number): boolean {
+  if (r.status !== 'approved' || !r.decided_at) return false;
+  const decidedMs = new Date(r.decided_at).getTime();
+  if (!Number.isFinite(decidedMs)) return false;
+  return Date.now() <= decidedMs + windowHours * 60 * 60 * 1000;
+}
+
 const STATUS_MAP: Record<string, { label: string; dot: string; text: string; bg: string }> = {
   pending:   { label: 'Awaiting approval', dot: 'bg-amber-400',   text: 'text-amber-800',  bg: 'bg-amber-50 border-amber-200' },
   approved:  { label: 'Approved',          dot: 'bg-emerald-500', text: 'text-emerald-800', bg: 'bg-emerald-50 border-emerald-200' },
+  pending_cancel: { label: 'Cancel request pending', dot: 'bg-amber-400', text: 'text-amber-800', bg: 'bg-amber-50 border-amber-200' },
+  pending_edit: { label: 'Edit request pending', dot: 'bg-amber-400', text: 'text-amber-800', bg: 'bg-amber-50 border-amber-200' },
   rejected:  { label: 'Declined',          dot: 'bg-red-400',     text: 'text-red-800',     bg: 'bg-red-50 border-red-200' },
   cancelled: { label: 'Cancelled',         dot: 'bg-[#d0d0d0]',   text: 'text-[#6b6b6b]',  bg: 'bg-[#f5f4f1] border-[#e0e0e0]' },
 };
@@ -90,6 +105,7 @@ export function LeaveHubClient({
   initialYear,
   leaveYearStartMonth,
   leaveYearStartDay,
+  approvedChangeWindowHours,
   showPerformanceTab,
   showOnboardingTab,
 }: {
@@ -101,6 +117,7 @@ export function LeaveHubClient({
   initialYear: string;
   leaveYearStartMonth: number;
   leaveYearStartDay: number;
+  approvedChangeWindowHours: number;
   showPerformanceTab: boolean;
   showOnboardingTab: boolean;
 }) {
@@ -125,6 +142,11 @@ export function LeaveHubClient({
   const [sickStart, setSickStart] = useState('');
   const [sickEnd, setSickEnd] = useState('');
   const [sickNotes, setSickNotes] = useState('');
+  const [editTarget, setEditTarget] = useState<LeaveRequest | null>(null);
+  const [editKind, setEditKind] = useState<'annual' | 'toil'>('annual');
+  const [editStart, setEditStart] = useState('');
+  const [editEnd, setEditEnd] = useState('');
+  const [editNote, setEditNote] = useState('');
 
   const currentYear = new Date().getFullYear();
   const yearOptions = [currentYear - 1, currentYear, currentYear + 1].map(String);
@@ -133,7 +155,7 @@ export function LeaveHubClient({
     setMsg(null);
     const [{ data: al }, { data: mine }, { data: sick }, { data: bf }] = await Promise.all([
       supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
-      supabase.from('leave_requests').select('id, kind, start_date, end_date, status, note, created_at').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
+      supabase.from('leave_requests').select('id, kind, start_date, end_date, status, note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
       supabase.from('sickness_absences').select('id, start_date, end_date, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
       supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: new Date().toISOString().slice(0, 10) }),
     ]);
@@ -150,13 +172,13 @@ export function LeaveHubClient({
     if (canApprove || canManage) {
       let pend: LeaveRequest[] = [];
       if (canManage) {
-        const { data } = await supabase.from('leave_requests').select('id, requester_id, kind, start_date, end_date, status, note, created_at').eq('org_id', orgId).eq('status', 'pending').order('created_at', { ascending: false });
+          const { data } = await supabase.from('leave_requests').select('id, requester_id, kind, start_date, end_date, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note').eq('org_id', orgId).in('status', ['pending', 'pending_cancel', 'pending_edit']).order('created_at', { ascending: false });
         pend = (data ?? []) as LeaveRequest[];
       } else {
         const { data: reportIds } = await supabase.from('profiles').select('id').eq('org_id', orgId).eq('reports_to_user_id', userId);
         const ids = (reportIds ?? []).map((r) => r.id as string).filter(Boolean);
         if (ids.length) {
-          const { data } = await supabase.from('leave_requests').select('id, requester_id, kind, start_date, end_date, status, note, created_at').eq('org_id', orgId).eq('status', 'pending').in('requester_id', ids).order('created_at', { ascending: false });
+          const { data } = await supabase.from('leave_requests').select('id, requester_id, kind, start_date, end_date, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note').eq('org_id', orgId).in('status', ['pending', 'pending_cancel', 'pending_edit']).in('requester_id', ids).order('created_at', { ascending: false });
           pend = (data ?? []) as LeaveRequest[];
         }
       }
@@ -201,6 +223,45 @@ export function LeaveHubClient({
     if (error) setMsg(error.message); else await load();
   }
 
+  async function requestCancelApproval(id: string) {
+    setBusy(true);
+    const { error } = await supabase.rpc('leave_request_cancel_request', { p_request_id: id });
+    setBusy(false);
+    if (error) setMsg(error.message); else await load();
+  }
+
+  async function requestEditApproval(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget || !editStart || !editEnd) return;
+    setBusy(true);
+    const { error } = await supabase.rpc('leave_request_edit_request', {
+      p_request_id: editTarget.id,
+      p_kind: editKind,
+      p_start: editStart,
+      p_end: editEnd,
+      p_note: editNote.trim() || null,
+    });
+    setBusy(false);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setEditTarget(null);
+    setEditStart('');
+    setEditEnd('');
+    setEditNote('');
+    await load();
+  }
+
+  function openEditDialog(r: LeaveRequest) {
+    setEditTarget(r);
+    setEditKind((r.kind === 'toil' ? 'toil' : 'annual') as 'annual' | 'toil');
+    setEditStart(r.start_date);
+    setEditEnd(r.end_date);
+    setEditNote(r.note ?? '');
+    setMsg(null);
+  }
+
   async function decideRequest(id: string, approve: boolean) {
     setBusy(true);
     const { error } = await supabase.rpc('leave_request_decide', { p_request_id: id, p_approve: approve, p_note: null });
@@ -237,7 +298,7 @@ export function LeaveHubClient({
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
-      <HrNav showLeave showPerformance={showPerformanceTab} showOnboarding={showOnboardingTab} />
+      <HrNav showLeave showPerformance={showPerformanceTab} showOnboarding={showOnboardingTab} showOrgChart />
 
       {/* Page header */}
       <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -395,6 +456,51 @@ export function LeaveHubClient({
         </div>
       ) : null}
 
+      {editTarget ? (
+        <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
+          <h2 className="mb-4 text-[15px] font-semibold text-[#121212]">Request changes to approved leave</h2>
+          <p className="mb-4 text-[12px] text-[#9b9b9b]">
+            This sends an edit request for manager approval.
+          </p>
+          <form className="space-y-4" onSubmit={(e) => void requestEditApproval(e)}>
+            <div className="flex gap-2">
+              {(['annual', 'toil'] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setEditKind(k)}
+                  className={`flex-1 rounded-xl border py-2.5 text-[13px] font-medium transition-colors ${editKind === k ? 'border-[#121212] bg-[#121212] text-white' : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#121212]'}`}
+                >
+                  {k === 'annual' ? 'Annual leave' : 'Time off in lieu (TOIL)'}
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">First day off</span>
+                <input type="date" required value={editStart} onChange={(e) => setEditStart(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Last day off</span>
+                <input type="date" required min={editStart} value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Note (optional)</span>
+              <input type="text" value={editNote} onChange={(e) => setEditNote(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+            </label>
+            <div className="flex items-center gap-3">
+              <button type="submit" disabled={busy || !editStart || !editEnd} className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50">
+                {busy ? 'Sending…' : 'Send edit request'}
+              </button>
+              <button type="button" onClick={() => setEditTarget(null)} className="inline-flex h-10 items-center rounded-xl border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#6b6b6b]">
+                Close
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
       {/* Pending approvals */}
       {(canApprove || canManage) && pendingForMe.length > 0 ? (
         <section className="mb-6">
@@ -410,6 +516,15 @@ export function LeaveHubClient({
                   <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
                     {r.kind === 'toil' ? 'Time off in lieu (TOIL)' : 'Annual leave'} &middot; {fmtDate(r.start_date)} – {fmtDate(r.end_date)} &middot; {daysLabel(r.start_date, r.end_date)}
                   </p>
+                  {r.status === 'pending_edit' && r.proposed_start_date && r.proposed_end_date ? (
+                    <p className="mt-1 text-[12px] text-[#92400e]">
+                      Requested edit to {r.proposed_kind === 'toil' ? 'TOIL' : 'Annual leave'} &middot; {fmtDate(r.proposed_start_date)} – {fmtDate(r.proposed_end_date)}
+                      {r.proposed_note ? ` · "${r.proposed_note}"` : ''}
+                    </p>
+                  ) : null}
+                  {r.status === 'pending_cancel' ? (
+                    <p className="mt-1 text-[12px] text-[#92400e]">Requested cancellation of this approved leave.</p>
+                  ) : null}
                   {r.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{r.note}&rdquo;</p> : null}
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -417,7 +532,7 @@ export function LeaveHubClient({
                     Approve
                   </button>
                   <button type="button" disabled={busy} onClick={() => void decideRequest(r.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
-                    Decline
+                    Reject
                   </button>
                 </div>
               </div>
@@ -444,12 +559,29 @@ export function LeaveHubClient({
                   </div>
                   <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{fmtDate(r.start_date)} – {fmtDate(r.end_date)} &middot; {daysLabel(r.start_date, r.end_date)}</p>
                   {r.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{r.note}&rdquo;</p> : null}
+                  {r.status === 'pending_edit' && r.proposed_start_date && r.proposed_end_date ? (
+                    <p className="mt-1 text-[12px] text-[#92400e]">
+                      Edit requested: {r.proposed_kind === 'toil' ? 'TOIL' : 'Annual leave'} &middot; {fmtDate(r.proposed_start_date)} – {fmtDate(r.proposed_end_date)}
+                    </p>
+                  ) : null}
                 </div>
-                {r.status === 'pending' ? (
-                  <button type="button" disabled={busy} onClick={() => void cancelRequest(r.id)} className="shrink-0 text-[12px] text-[#b91c1c] underline underline-offset-2 disabled:opacity-50 hover:no-underline">
-                    Cancel
-                  </button>
-                ) : null}
+                <div className="flex shrink-0 items-center gap-3">
+                  {r.status === 'pending' ? (
+                    <button type="button" disabled={busy} onClick={() => void cancelRequest(r.id)} className="text-[12px] text-[#b91c1c] underline underline-offset-2 disabled:opacity-50 hover:no-underline">
+                      Cancel
+                    </button>
+                  ) : null}
+                  {isWithinApprovedChangeWindow(r, approvedChangeWindowHours) ? (
+                    <>
+                      <button type="button" disabled={busy} onClick={() => openEditDialog(r)} className="text-[12px] text-[#6b6b6b] underline underline-offset-2 disabled:opacity-50 hover:no-underline">
+                        Request edit
+                      </button>
+                      <button type="button" disabled={busy} onClick={() => void requestCancelApproval(r.id)} className="text-[12px] text-[#b91c1c] underline underline-offset-2 disabled:opacity-50 hover:no-underline">
+                        Request cancellation
+                      </button>
+                    </>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

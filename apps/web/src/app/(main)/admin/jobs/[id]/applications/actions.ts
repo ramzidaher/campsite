@@ -3,6 +3,7 @@
 import {
   sendApplicationStageEmail,
 } from '@/lib/recruitment/sendApplicationCandidateEmails';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { createClient } from '@/lib/supabase/server';
 import {
   isJobApplicationStage,
@@ -22,7 +23,11 @@ async function requireOrgPermission(permissionKey: string) {
   const user = await getAuthUser();
   if (!user) return { supabase, user: null as null, profile: null as null, orgId: null as null };
 
-  const { data: profile } = await supabase.from('profiles').select('id, org_id, status').eq('id', user.id).maybeSingle();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, org_id, status, full_name')
+    .eq('id', user.id)
+    .maybeSingle();
   if (!profile?.org_id || profile.status !== 'active') {
     return { supabase, user, profile: null as null, orgId: null as null };
   }
@@ -74,7 +79,7 @@ export async function updateJobApplicationStage(
   const { data: app, error: fetchErr } = await supabase
     .from('job_applications')
     .select(
-      'id, org_id, job_listing_id, candidate_email, candidate_name, portal_token, job_listings(title), organisations(name)'
+      'id, org_id, job_listing_id, candidate_email, candidate_name, portal_token, stage, job_listings(title), organisations(name)'
     )
     .eq('id', id)
     .eq('org_id', orgId)
@@ -94,6 +99,22 @@ export async function updateJobApplicationStage(
 
   if (rpcErr) {
     return { ok: false, error: rpcErr.message ?? 'Could not update stage.' };
+  }
+
+  if (newStage !== String(app.stage ?? '')) {
+    try {
+      const admin = createServiceRoleClient();
+      const actorName = (profile.full_name as string | undefined)?.trim() || null;
+      void admin.rpc('application_notify_stage_changed', {
+        p_application_id: id,
+        p_old_stage: String(app.stage ?? ''),
+        p_new_stage: newStage,
+        p_actor_name: actorName,
+        p_actor_user_id: user.id,
+      });
+    } catch {
+      // Non-fatal (best-effort notifications)
+    }
   }
 
   if (notify) {

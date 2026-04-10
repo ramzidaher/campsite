@@ -35,7 +35,7 @@ export default async function AdminLeavePage() {
       .order('full_name'),
     supabase
       .from('org_leave_settings')
-      .select('bradford_window_days, leave_year_start_month, leave_year_start_day')
+      .select('bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours')
       .eq('org_id', orgId)
       .maybeSingle(),
   ]);
@@ -50,6 +50,7 @@ export default async function AdminLeavePage() {
               bradford_window_days: Number(settings.bradford_window_days),
               leave_year_start_month: Number(settings.leave_year_start_month),
               leave_year_start_day: Number(settings.leave_year_start_day),
+              approved_request_change_window_hours: Number(settings.approved_request_change_window_hours ?? 48),
             }
           : null
       }

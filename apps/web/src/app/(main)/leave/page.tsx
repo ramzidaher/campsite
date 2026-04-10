@@ -52,12 +52,13 @@ export default async function LeavePage() {
 
   const { data: leaveSettings } = await supabase
     .from('org_leave_settings')
-    .select('leave_year_start_month, leave_year_start_day')
+    .select('leave_year_start_month, leave_year_start_day, approved_request_change_window_hours')
     .eq('org_id', orgId)
     .maybeSingle();
 
   const leaveYearStartMonth = Number(leaveSettings?.leave_year_start_month ?? 1);
   const leaveYearStartDay = Number(leaveSettings?.leave_year_start_day ?? 1);
+  const approvedChangeWindowHours = Number(leaveSettings?.approved_request_change_window_hours ?? 48);
   const now = new Date();
   const yearStartThisCalendarYear = new Date(Date.UTC(now.getUTCFullYear(), leaveYearStartMonth - 1, leaveYearStartDay));
   const initialYear = String(now >= yearStartThisCalendarYear ? now.getUTCFullYear() : now.getUTCFullYear() - 1);
@@ -72,6 +73,7 @@ export default async function LeavePage() {
       initialYear={initialYear}
       leaveYearStartMonth={leaveYearStartMonth}
       leaveYearStartDay={leaveYearStartDay}
+      approvedChangeWindowHours={approvedChangeWindowHours}
       showPerformanceTab={showPerformanceTab}
       showOnboardingTab={showOnboardingTab}
     />

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getDisplayName } from '@/lib/names';
 
 function labelContract(value: string | null) {
   if (value === 'full_time') return 'Full-time';
@@ -28,7 +29,7 @@ export default async function MyProfilePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, status, full_name, email, avatar_url, role, reports_to_user_id')
+    .select('org_id, status, full_name, preferred_name, email, avatar_url, role, reports_to_user_id')
     .eq('id', user.id)
     .maybeSingle();
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
@@ -53,7 +54,6 @@ export default async function MyProfilePage() {
     fileRows,
     allowanceRow,
     annualApprovedRes,
-    bradfordRes,
     udRes,
     directReportsRes,
     onboardingCountRes,
@@ -73,17 +73,13 @@ export default async function MyProfilePage() {
       .eq('requester_id', user.id)
       .eq('kind', 'annual')
       .eq('status', 'approved'),
-    supabase.rpc('bradford_factor_for_user', {
-      p_user_id: user.id,
-      p_on: new Date().toISOString().slice(0, 10),
-    }),
     supabase
       .from('user_departments')
       .select('departments(name)')
       .eq('user_id', user.id),
     supabase
       .from('profiles')
-      .select('id, full_name, email')
+      .select('id, full_name, preferred_name, email')
       .eq('org_id', orgId)
       .eq('status', 'active')
       .eq('reports_to_user_id', user.id)
@@ -112,13 +108,8 @@ export default async function MyProfilePage() {
     return sum + Math.max(0, diff);
   }, 0);
 
-  const b0 = Array.isArray(bradfordRes.data) ? bradfordRes.data[0] : null;
-  const bradfordScore =
-    b0 && typeof b0 === 'object' && 'bradford_score' in b0
-      ? Number((b0 as { bradford_score: number }).bradford_score)
-      : 0;
-
   const emailDisplay = (profile.email as string | null)?.trim() || user.email || '—';
+  const profileDisplayName = getDisplayName(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
   const roleLabel = (profile.role as string | null) ?? '—';
   const onboardingActive = (onboardingCountRes.count ?? 0) > 0;
 
@@ -161,7 +152,7 @@ export default async function MyProfilePage() {
           <dl className="grid gap-3 sm:grid-cols-2 text-[13px]">
             <div>
               <dt className="text-[#9b9b9b]">Name</dt>
-              <dd className="text-[#121212]">{String(profile.full_name ?? '—')}</dd>
+              <dd className="text-[#121212]">{profileDisplayName}</dd>
             </div>
             <div>
               <dt className="text-[#9b9b9b]">Work email</dt>
@@ -321,10 +312,6 @@ export default async function MyProfilePage() {
                 {Number(allowanceRow.data?.toil_balance_days ?? 0)} days
               </p>
             </div>
-            <div className="rounded-lg bg-[#faf9f6] p-3">
-              <p className="text-[#9b9b9b]">Bradford score</p>
-              <p className="mt-1 text-[18px] font-semibold text-[#121212]">{bradfordScore}</p>
-            </div>
           </div>
           <p className="mt-4 text-[13px]">
             <Link href="/leave" className="font-medium text-[#121212] underline underline-offset-2">
@@ -355,7 +342,7 @@ export default async function MyProfilePage() {
                 <ul className="space-y-1">
                   {(directReportsRes.data ?? []).map((r) => (
                     <li key={r.id as string} className="text-[#121212]">
-                      {String(r.full_name)}
+                      {getDisplayName(r.full_name as string, (r.preferred_name as string | null) ?? null)}
                       {r.email ? (
                         <span className="text-[#9b9b9b]"> · {String(r.email)}</span>
                       ) : null}

@@ -84,20 +84,41 @@ export async function createRecruitmentRequest(form: {
 
   let canRaiseForDirectReportDepartment = false;
   const directReportIds = (directReportRows ?? []).map((r) => String(r.id));
+  let canCreateForAnyDepartmentByHierarchy = false;
   if (directReportIds.length > 0) {
-    const { data: directReportDeptMatch } = await supabase
-      .from('user_departments')
-      .select('dept_id')
-      .in('user_id', directReportIds)
-      .eq('dept_id', deptId)
-      .maybeSingle();
+    const [{ data: directReportDeptMatch }, { data: directReportManagerRows }, { data: indirectReportRows }] =
+      await Promise.all([
+        supabase
+          .from('user_departments')
+          .select('dept_id')
+          .in('user_id', directReportIds)
+          .eq('dept_id', deptId)
+          .maybeSingle(),
+        supabase.from('dept_managers').select('user_id').in('user_id', directReportIds).limit(1),
+        supabase
+          .from('profiles')
+          .select('id')
+          .eq('org_id', profile.org_id)
+          .in('reports_to_user_id', directReportIds)
+          .limit(1),
+      ]);
     canRaiseForDirectReportDepartment = Boolean(directReportDeptMatch);
+    canCreateForAnyDepartmentByHierarchy = Boolean(
+      (directReportManagerRows ?? []).length || (indirectReportRows ?? []).length
+    );
   }
 
-  if (!ownDeptMatch && !dmMatch && !canRaiseForDirectReportDepartment && !canCreateForAnyDepartment) {
+  if (
+    !ownDeptMatch &&
+    !dmMatch &&
+    !canRaiseForDirectReportDepartment &&
+    !canCreateForAnyDepartment &&
+    !canCreateForAnyDepartmentByHierarchy
+  ) {
     return {
       ok: false,
-      error: 'You can only raise requests for your departments or departments where your direct reports sit.',
+      error:
+        'You can only raise requests for your departments, your direct reports departments, or any department if you are a senior hierarchy manager.',
     };
   }
 

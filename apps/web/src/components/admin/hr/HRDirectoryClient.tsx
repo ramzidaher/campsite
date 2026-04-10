@@ -6,6 +6,8 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 export type HRDirectoryRow = {
   user_id: string;
   full_name: string;
+  preferred_name?: string | null;
+  display_name?: string | null;
   email: string | null;
   status: string;
   avatar_url: string | null;
@@ -35,10 +37,10 @@ type DashStats = {
   onboarding_active: number;
   by_contract: { contract_type: string; count: number }[];
   by_location: { work_location: string; count: number }[];
-  probation_ending_soon: { user_id: string; full_name: string; probation_end_date: string }[];
+  probation_ending_soon: { user_id: string; full_name: string; preferred_name?: string | null; display_name?: string | null; probation_end_date: string }[];
   review_cycles_active: { id: string; name: string; type: string; total: number; completed: number; manager_due: string | null }[];
-  on_leave_today: { user_id: string; full_name: string; kind: string; end_date: string }[];
-  bradford_alerts: { user_id: string; full_name: string; spell_count: number; total_days: number; bradford_score: number }[];
+  on_leave_today: { user_id: string; full_name: string; preferred_name?: string | null; display_name?: string | null; kind: string; end_date: string }[];
+  bradford_alerts: { user_id: string; full_name: string; preferred_name?: string | null; display_name?: string | null; spell_count: number; total_days: number; bradford_score: number }[];
 };
 
 function contractLabel(ct: string | null) {
@@ -161,7 +163,7 @@ export function HRDirectoryClient({
     () =>
       initialRows.map((r) => ({
         row: r,
-        searchText: [r.full_name, r.email, r.role, r.job_title, r.department_names.join(' ')]
+        searchText: [r.display_name ?? r.full_name, r.full_name, r.preferred_name, r.email, r.role, r.job_title, r.department_names.join(' ')]
           .join(' ')
           .toLowerCase(),
       })),
@@ -329,7 +331,7 @@ export function HRDirectoryClient({
                 <ul className="mt-3 divide-y divide-[#ececec]">
                   {stats.probation_ending_soon.map((p) => (
                     <li key={p.user_id} className="py-2">
-                      <Link href={`/hr/records/${p.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{p.full_name}</Link>
+                      <Link href={`/hr/records/${p.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{p.display_name ?? p.full_name}</Link>
                       <p className="text-[11.5px] text-[#c2410c]">{p.probation_end_date}</p>
                     </li>
                   ))}
@@ -346,7 +348,7 @@ export function HRDirectoryClient({
                 <ul className="mt-3 divide-y divide-[#ececec]">
                   {stats.on_leave_today.map((l) => (
                     <li key={l.user_id} className="py-2">
-                      <p className="text-[12.5px] font-medium text-[#121212]">{l.full_name}</p>
+                      <p className="text-[12.5px] font-medium text-[#121212]">{l.display_name ?? l.full_name}</p>
                       <p className="text-[11.5px] text-[#9b9b9b]">
                         {l.kind === 'annual' ? 'Annual leave' : 'TOIL'} · back {l.end_date}
                       </p>
@@ -366,7 +368,7 @@ export function HRDirectoryClient({
                   {stats.bradford_alerts.map((b) => (
                     <li key={b.user_id} className="py-2">
                       <div className="flex items-center justify-between">
-                        <Link href={`/hr/records/${b.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{b.full_name}</Link>
+                        <Link href={`/hr/records/${b.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{b.display_name ?? b.full_name}</Link>
                         <span className="text-[12px] font-bold text-[#b91c1c]">{b.bradford_score}</span>
                       </div>
                       <p className="text-[11px] text-[#9b9b9b]">{b.spell_count} spell{b.spell_count === 1 ? '' : 's'} · {b.total_days} day{b.total_days === 1 ? '' : 's'}</p>
@@ -495,7 +497,7 @@ export function HRDirectoryClient({
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] text-[10px] font-bold text-[#6b6b6b]">{initials(r.full_name)}</div>
                           )}
                           <div>
-                            <div className="font-medium text-[#121212]">{r.full_name}</div>
+                            <div className="font-medium text-[#121212]">{r.display_name ?? r.full_name}</div>
                             {r.email ? <div className="text-[11.5px] text-[#9b9b9b]">{r.email}</div> : null}
                           </div>
                         </div>

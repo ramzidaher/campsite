@@ -27,7 +27,7 @@ type Template = {
 type Run = {
   id: string;
   user_id: string;
-  full_name: string;
+  display_name: string;
   email: string | null;
   status: string;
   employment_start_date: string;
@@ -35,7 +35,7 @@ type Run = {
   template_name: string;
 };
 
-type Member = { id: string; full_name: string; email: string | null };
+type Member = { id: string; display_name: string; email: string | null };
 type TemplateTask = {
   id: string;
   template_id: string;
@@ -312,7 +312,7 @@ export function OnboardingHubClient({
                 required
               >
                 {members.map((m) => (
-                  <option key={m.id} value={m.id}>{m.full_name}</option>
+                  <option key={m.id} value={m.id}>{m.display_name}</option>
                 ))}
               </select>
             </label>
@@ -403,7 +403,7 @@ export function OnboardingHubClient({
                   <li key={r.id}>
                     <Link href={`/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
                       <div>
-                        <p className="font-medium text-[#121212]">{r.full_name}</p>
+                        <p className="font-medium text-[#121212]">{r.display_name}</p>
                         <p className="text-[12px] text-[#9b9b9b]">
                           {r.template_name} · starts {r.employment_start_date}
                         </p>
@@ -431,7 +431,7 @@ export function OnboardingHubClient({
                   <li key={r.id}>
                     <Link href={`/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4 hover:bg-[#f0efe9] transition-colors">
                       <div>
-                        <p className="text-[13px] font-medium text-[#4a4a4a]">{r.full_name}</p>
+                        <p className="text-[13px] font-medium text-[#4a4a4a]">{r.display_name}</p>
                         <p className="text-[12px] text-[#9b9b9b]">{r.template_name} · started {new Date(r.created_at).toLocaleDateString()}</p>
                       </div>
                       {statusBadge(r.status)}

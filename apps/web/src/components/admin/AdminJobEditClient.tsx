@@ -63,6 +63,12 @@ export function AdminJobEditClient({
   const showPublic = job.status === 'live' && job.slug && !job.slug.startsWith('draft-');
   const publicUrl = showPublic ? tenantJobPublicUrl(orgSlug, job.slug) : '';
   const isArchived = job.status === 'archived';
+  const previewApplyBits: string[] = [];
+  if (allowCv) previewApplyBits.push(jobApplicationModeLabel('cv'));
+  if (allowLoom) previewApplyBits.push(jobApplicationModeLabel('loom'));
+  if (allowStaffsavvy) previewApplyBits.push(jobApplicationModeLabel('staffsavvy'));
+  const previewApplySummary =
+    previewApplyBits.length > 0 ? previewApplyBits.join(', ') : jobApplicationModeLabel(applicationMode);
 
   function save() {
     setMsg(null);
@@ -352,6 +358,64 @@ export function AdminJobEditClient({
             disabled={isArchived}
             onChange={(e) => setBenefits(e.target.value)}
           />
+        </div>
+      </div>
+
+      <div className="space-y-4 rounded-xl border border-[#d8d8d8] bg-white p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-authSerif text-lg text-[#121212]">Job listing preview</h2>
+          <span className="rounded-full border border-[#e8e8e8] bg-[#faf9f6] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
+            {job.status === 'live' ? 'Live format' : 'Draft preview'}
+          </span>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-[#ececec] bg-[#faf9f6]">
+          <header className="border-b border-[#ececec] bg-white px-5 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Your organisation</p>
+            <h3 className="font-authSerif text-[24px] tracking-tight text-[#121212]">{title || 'Untitled role'}</h3>
+            <p className="mt-1 text-[13px] text-[#6b6b6b]">
+              {gradeLevel || 'Grade / level'}
+              {' · '}
+              {recruitmentContractLabel(contractType)}
+              {' · '}
+              {salaryBand || 'Salary band'}
+            </p>
+          </header>
+          <div className="mx-auto max-w-2xl px-5 py-8">
+            <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">About the role</h4>
+              <div className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-[#242424]">
+                {advertCopy?.trim() || 'Details coming soon.'}
+              </div>
+            </section>
+
+            {requirements?.trim() ? (
+              <section className="mt-5 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
+                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Requirements</h4>
+                <div className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#242424]">{requirements}</div>
+              </section>
+            ) : null}
+
+            {benefits?.trim() ? (
+              <section className="mt-5 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
+                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Benefits</h4>
+                <div className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#242424]">{benefits}</div>
+              </section>
+            ) : null}
+
+            <section className="mt-5 rounded-xl border border-[#d8ece5] bg-[#f0fdf9] p-5">
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[#0f5132]">How to apply</h4>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#14532d]">
+                Apply online - this vacancy accepts: {previewApplySummary}.
+              </p>
+              <button
+                type="button"
+                disabled
+                className="mt-3 inline-flex h-10 items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white opacity-70"
+              >
+                Apply now
+              </button>
+            </section>
+          </div>
         </div>
       </div>
 

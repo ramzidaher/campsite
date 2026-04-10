@@ -13,7 +13,12 @@ export function OrgLeaveAdminClient({
 }: {
   orgId: string;
   members: Member[];
-  initialSettings: { bradford_window_days: number; leave_year_start_month: number; leave_year_start_day: number } | null;
+  initialSettings: {
+    bradford_window_days: number;
+    leave_year_start_month: number;
+    leave_year_start_day: number;
+    approved_request_change_window_hours: number;
+  } | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const currentYear = new Date().getFullYear();
@@ -24,6 +29,7 @@ export function OrgLeaveAdminClient({
   const [bradfordDays, setBradfordDays] = useState(String(initialSettings?.bradford_window_days ?? 365));
   const [lyM, setLyM] = useState(String(initialSettings?.leave_year_start_month ?? 1));
   const [lyD, setLyD] = useState(String(initialSettings?.leave_year_start_day ?? 1));
+  const [changeWindowHours, setChangeWindowHours] = useState(String(initialSettings?.approved_request_change_window_hours ?? 48));
   const [msg, setMsg] = useState<string | null>(null);
   const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok');
   const [busy, setBusy] = useState(false);
@@ -79,6 +85,7 @@ export function OrgLeaveAdminClient({
       p_bradford_window_days: Number(bradfordDays),
       p_leave_year_start_month: Number(lyM) as unknown as number,
       p_leave_year_start_day: Number(lyD) as unknown as number,
+      p_approved_request_change_window_hours: Number(changeWindowHours),
     });
     setBusy(false);
     if (error) flash(error.message, 'err');
@@ -208,6 +215,23 @@ export function OrgLeaveAdminClient({
             </label>
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
               How many days back to count when calculating sickness absence scores. 365 = last 12 months (recommended).
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Approved request change window (hours)
+              <input
+                type="number"
+                min={1}
+                max={720}
+                className="mt-1 w-full max-w-[240px] rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                value={changeWindowHours}
+                onChange={(e) => setChangeWindowHours(e.target.value)}
+              />
+            </label>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              How long after approval a user can request an edit or cancellation that still requires manager approval.
             </p>
           </div>
 
