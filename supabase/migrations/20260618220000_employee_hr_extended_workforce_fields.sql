@@ -286,6 +286,9 @@ grant execute on function public.employee_hr_record_upsert(
 -- 3. hr_employee_file: expose new columns + computed length of service
 -- ---------------------------------------------------------------------------
 
+-- Drop first: return type changes (new columns added).
+drop function if exists public.hr_employee_file(uuid);
+
 create or replace function public.hr_employee_file(p_user_id uuid)
 returns table (
   user_id uuid,
@@ -438,6 +441,9 @@ $$;
 -- ---------------------------------------------------------------------------
 -- 4. hr_directory_list: same shape for directory / exports
 -- ---------------------------------------------------------------------------
+
+-- Drop first: return type changes (new columns added).
+drop function if exists public.hr_directory_list();
 
 create or replace function public.hr_directory_list()
 returns table (

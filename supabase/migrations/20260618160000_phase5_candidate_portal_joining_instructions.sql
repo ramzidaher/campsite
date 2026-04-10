@@ -1,5 +1,8 @@
 -- Phase 5: candidate portal should expose interview joining instructions.
 
+-- Drop first because the return type changes (adding interview_joining_instructions column).
+drop function if exists public.get_candidate_application_portal(text);
+
 create or replace function public.get_candidate_application_portal(p_portal_token text)
 returns table (
   org_name text,

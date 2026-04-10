@@ -100,7 +100,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (typeof uc === 'number') unreadBroadcasts = uc;
     else if (uc !== null && uc !== undefined) unreadBroadcasts = Number(uc);
 
-    const [udRes, pendingRes, broadcastPendingCount] = await Promise.all([
+    // Round 3: fetch dept, pending counts, broadcast pending, AND permissions — all in parallel.
+    // get_my_permissions was previously sequential after this batch; moving it here saves one round trip.
+    const [udRes, pendingRes, broadcastPendingCount, permsRes] = await Promise.all([
       orgId
         ? supabase
             .from('user_departments')
@@ -119,6 +121,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             role: profileRole,
           })
         : Promise.resolve(0),
+      orgId
+        ? supabase.rpc('get_my_permissions', { p_org_id: orgId })
+        : Promise.resolve({ data: null }),
     ]);
 
     if (orgId) {
@@ -133,59 +138,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
     if (typeof broadcastPendingCount === 'number') pendingBroadcastApprovals = broadcastPendingCount;
 
-    if (orgId) {
-      const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: orgId });
-      if (Array.isArray(perms)) {
-        permissionKeys = (perms as Array<{ permission_key?: string }>).map((p) =>
-          String(p.permission_key ?? '')
-        ) as PermissionKey[];
-      }
-      showLeaveNav =
-        permissionKeys.includes('leave.view_own') ||
-        permissionKeys.includes('leave.approve_direct_reports') ||
-        permissionKeys.includes('leave.manage_org');
-      if (
-        showLeaveNav &&
-        (permissionKeys.includes('leave.approve_direct_reports') ||
-          permissionKeys.includes('leave.manage_org'))
-      ) {
-        const { data: lc } = await supabase.rpc('leave_pending_approval_count_for_me');
-        if (typeof lc === 'number') leaveNavBadge = Math.max(0, lc);
-        else if (lc !== null && lc !== undefined) leaveNavBadge = Math.max(0, Number(lc));
-      }
-
-      // Performance nav: show if user has any review (as reviewee or reviewer)
-      if (permissionKeys.includes('performance.view_own') || permissionKeys.includes('performance.review_direct_reports')) {
-        const { count: reviewCount } = await supabase
-          .from('performance_reviews')
-          .select('id', { count: 'exact', head: true })
-          .or(`reviewee_id.eq.${user.id},reviewer_id.eq.${user.id}`);
-        if ((reviewCount ?? 0) > 0) {
-          showPerformanceNav = true;
-          // badge = reviews where I'm the reviewer and status = self_submitted (awaiting my assessment)
-          if (permissionKeys.includes('performance.review_direct_reports')) {
-            const { count: pendingCount } = await supabase
-              .from('performance_reviews')
-              .select('id', { count: 'exact', head: true })
-              .eq('reviewer_id', user.id)
-              .eq('status', 'self_submitted');
-            performanceNavBadge = Math.max(0, Number(pendingCount ?? 0));
-          }
-        }
-      }
-
-      // Onboarding nav: show if user has an active onboarding run
-      if (permissionKeys.includes('onboarding.complete_own_tasks')) {
-        const { count: runCount } = await supabase
-          .from('onboarding_runs')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'active');
-        if ((runCount ?? 0) > 0) showOnboardingNav = true;
-      }
-
-      showMyHrRecordNav = permissionKeys.includes('hr.view_own');
+    if (orgId && Array.isArray(permsRes.data)) {
+      permissionKeys = (permsRes.data as Array<{ permission_key?: string }>).map((p) =>
+        String(p.permission_key ?? '')
+      ) as PermissionKey[];
     }
+
+    showLeaveNav =
+      permissionKeys.includes('leave.view_own') ||
+      permissionKeys.includes('leave.approve_direct_reports') ||
+      permissionKeys.includes('leave.manage_org');
+    showMyHrRecordNav = permissionKeys.includes('hr.view_own');
     hasAdminAreaAccess = permissionKeys.some(
       (k) =>
         k.startsWith('members.') ||
@@ -197,27 +160,85 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         k.startsWith('interviews.')
     );
     canApproveRecruitment = permissionKeys.includes('recruitment.approve_request');
-    const needsRecruitmentBadge = Boolean(orgId && permissionKeys.includes('recruitment.approve_request'));
 
+    const needsLeaveApprovalBadge =
+      showLeaveNav &&
+      (permissionKeys.includes('leave.approve_direct_reports') ||
+        permissionKeys.includes('leave.manage_org'));
+    const hasPerformanceAccess =
+      permissionKeys.includes('performance.view_own') ||
+      permissionKeys.includes('performance.review_direct_reports');
+    const canReviewPerformance = permissionKeys.includes('performance.review_direct_reports');
+    const hasOnboardingAccess = permissionKeys.includes('onboarding.complete_own_tasks');
     const canApproveRota = permissionKeys.includes('rota.final_approve');
-    const [rotaFinalRes, rotaPeerRes, recruitmentCountRes] = await Promise.all([
+    const needsRecruitmentBadge = Boolean(orgId && canApproveRecruitment);
+
+    // Round 4: run ALL remaining badge/nav queries in a single parallel batch.
+    // Previously these were spread across 5+ sequential awaits; now they fire together.
+    const [
+      leavePendingRes,
+      performanceAnyRes,
+      performancePendingRes,
+      onboardingRes,
+      rotaFinalRes,
+      rotaPeerRes,
+      recruitmentCountRes,
+      recruitmentNotifRes,
+    ] = await Promise.all([
+      needsLeaveApprovalBadge
+        ? supabase.rpc('leave_pending_approval_count_for_me')
+        : Promise.resolve({ data: null as number | null }),
+      hasPerformanceAccess && orgId
+        ? supabase
+            .from('performance_reviews')
+            .select('id', { count: 'exact', head: true })
+            .or(`reviewee_id.eq.${user.id},reviewer_id.eq.${user.id}`)
+        : Promise.resolve({ count: 0 as number | null }),
+      canReviewPerformance && orgId
+        ? supabase
+            .from('performance_reviews')
+            .select('id', { count: 'exact', head: true })
+            .eq('reviewer_id', user.id)
+            .eq('status', 'self_submitted')
+        : Promise.resolve({ count: 0 as number | null }),
+      hasOnboardingAccess
+        ? supabase
+            .from('onboarding_runs')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+        : Promise.resolve({ count: 0 as number | null }),
       canApproveRota
         ? supabase
             .from('rota_change_requests')
             .select('id', { count: 'exact', head: true })
             .eq('org_id', orgId ?? '')
             .eq('status', 'pending_final')
-        : Promise.resolve({ count: 0 }),
-      supabase
-        .from('rota_change_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId ?? '')
-        .eq('counterparty_user_id', user.id)
-        .eq('status', 'pending_peer'),
+        : Promise.resolve({ count: 0 as number | null }),
+      orgId
+        ? supabase
+            .from('rota_change_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('org_id', orgId ?? '')
+            .eq('counterparty_user_id', user.id)
+            .eq('status', 'pending_peer')
+        : Promise.resolve({ count: 0 as number | null }),
       needsRecruitmentBadge
         ? supabase.rpc('recruitment_requests_pending_review_count')
         : Promise.resolve({ data: null as number | null }),
+      supabase.rpc('recruitment_notifications_unread_count'),
     ]);
+
+    const lc = leavePendingRes.data;
+    if (lc !== null && lc !== undefined) leaveNavBadge = Math.max(0, Number(lc));
+
+    if ((performanceAnyRes.count ?? 0) > 0) {
+      showPerformanceNav = true;
+      performanceNavBadge = Math.max(0, Number(performancePendingRes.count ?? 0));
+    }
+
+    if ((onboardingRes.count ?? 0) > 0) showOnboardingNav = true;
+
     rotaPendingFinalCount = Math.max(0, Number(rotaFinalRes.count ?? 0));
     rotaPendingPeerCount = Math.max(0, Number(rotaPeerRes.count ?? 0));
 
@@ -226,8 +247,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     else if (rc !== null && rc !== undefined) recruitmentPendingReviewCount = Number(rc);
     recruitmentPendingReviewCount = Math.max(0, recruitmentPendingReviewCount);
 
-    // In-app recruitment notifications (unread count for bell)
-    const { data: rn } = await supabase.rpc('recruitment_notifications_unread_count');
+    const rn = recruitmentNotifRes.data;
     if (typeof rn === 'number') recruitmentUnreadNotifications = Math.max(0, rn);
     else if (rn !== null && rn !== undefined) recruitmentUnreadNotifications = Math.max(0, Number(rn));
   }

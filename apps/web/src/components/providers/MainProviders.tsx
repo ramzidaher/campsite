@@ -2,6 +2,7 @@
 
 import { NetworkStatusBanner } from '@/components/providers/NetworkStatusBanner';
 import { OfflineReadQueueSync } from '@/components/providers/OfflineReadQueueSync';
+import { ShellAutoRefresh } from '@/components/providers/ShellAutoRefresh';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -24,6 +25,7 @@ export function MainProviders({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <NetworkStatusBanner />
       <OfflineReadQueueSync />
+      <ShellAutoRefresh />
       {children}
     </QueryClientProvider>
   );

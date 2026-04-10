@@ -345,7 +345,7 @@ export function HRDirectoryClient({
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-white">
-            <table className="w-full min-w-[1080px] text-[13px]">
+            <table className="w-full min-w-[1180px] text-[13px]">
               <thead>
                 <tr className="border-b border-[#ececec] text-left text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                   <th className="px-4 py-3">Name</th>
@@ -383,18 +383,18 @@ export function HRDirectoryClient({
                       </td>
                       <td className="px-4 py-3 text-[#4a4a4a]">
                         {r.job_title || <span className="text-[#c8c8c8]">—</span>}
-                        {r.grade_level ? <span className="ml-1 text-[11px] text-[#9b9b9b]">({r.grade_level})</span> : null}
+                        {r.grade_level ? <span className="ml-1 whitespace-nowrap text-[11px] text-[#9b9b9b]">({r.grade_level})</span> : null}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {r.contract_type ? (
                           <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#4a4a4a]">
                             {contractLabel(r.contract_type)}{r.fte && r.fte < 1 ? ` ${Math.round(r.fte * 100)}%` : ''}
                           </span>
                         ) : <span className="text-[#c8c8c8]">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-[#4a4a4a]">{r.work_location ? locationLabel(r.work_location) : <span className="text-[#c8c8c8]">—</span>}</td>
-                      <td className="px-4 py-3 text-[#4a4a4a]">{r.employment_start_date ?? <span className="text-[#c8c8c8]">—</span>}</td>
-                      <td className="px-4 py-3 text-[#4a4a4a] text-[12px]">
+                      <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.work_location ? locationLabel(r.work_location) : <span className="text-[#c8c8c8]">—</span>}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.employment_start_date ?? <span className="text-[#c8c8c8]">—</span>}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#4a4a4a]">
                         {r.length_of_service_years != null && r.length_of_service_months != null ? (
                           <span>
                             {r.length_of_service_years}y {r.length_of_service_months}m
@@ -409,7 +409,7 @@ export function HRDirectoryClient({
                           <span className="text-[#9b9b9b]"> · {r.positions_count} pos.</span>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {r.probation_end_date ? (
                           <span className={['text-[12px]', onProbation ? 'font-medium text-[#c2410c]' : 'text-[#6b6b6b]'].join(' ')}>
                             {r.probation_end_date}{onProbation ? ' ●' : ''}
@@ -424,8 +424,8 @@ export function HRDirectoryClient({
                           {r.department_names.length > 3 ? <span className="text-[11px] text-[#9b9b9b]">+{r.department_names.length - 3}</span> : null}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link href={`/hr/records/${r.user_id}`} className="text-[12px] font-medium text-[#121212] underline underline-offset-2 opacity-0 group-hover:opacity-100">
+                      <td className="px-4 py-3 text-right align-middle whitespace-nowrap">
+                        <Link href={`/hr/records/${r.user_id}`} className="inline-flex items-center whitespace-nowrap text-[12px] font-medium text-[#121212] underline underline-offset-2 opacity-70 transition-opacity group-hover:opacity-100">
                           Open file →
                         </Link>
                       </td>
