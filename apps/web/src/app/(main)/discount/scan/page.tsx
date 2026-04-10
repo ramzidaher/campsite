@@ -2,12 +2,11 @@ import { DiscountScannerClient } from '@/components/discount/DiscountScannerClie
 import { createClient } from '@/lib/supabase/server';
 import { canVerifyStaffDiscountQr } from '@campsite/types';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function DiscountScanPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

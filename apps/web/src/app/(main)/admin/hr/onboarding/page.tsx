@@ -1,6 +1,7 @@
 import { OnboardingHubClient } from '@/components/admin/hr/onboarding/OnboardingHubClient';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function OnboardingHubPage({
   searchParams,
@@ -8,9 +9,7 @@ export default async function OnboardingHubPage({
   searchParams: Promise<{ template?: string }>;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

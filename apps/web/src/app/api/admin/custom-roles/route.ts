@@ -6,6 +6,7 @@ import {
 import { buildPermissionPickerItems } from '@/lib/authz/buildPermissionPicker';
 import { validateCustomRolePermissionKeys } from '@/lib/authz/validateCustomRolePermissions';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 async function requireRolesManage(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, orgId: string) {
   const { data: allowed, error } = await supabase.rpc('has_permission', {
@@ -22,9 +23,7 @@ async function requireRolesManage(supabase: Awaited<ReturnType<typeof createClie
 /** GET: custom roles + permission picker contract for the tenant admin UI. */
 export async function GET() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();
@@ -81,9 +80,7 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();

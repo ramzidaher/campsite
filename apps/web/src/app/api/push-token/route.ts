@@ -1,13 +1,12 @@
 import { parsePushTokenBody } from '@/lib/push/parsePushTokenBody';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 /** Register Expo / web push token (Phase 2 scaffold - wire to Expo push in production). */
 export async function POST(req: Request) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

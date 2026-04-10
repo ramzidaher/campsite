@@ -9,6 +9,7 @@ import {
   isRecruitmentUrgency,
 } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export type CreateRecruitmentRequestState = { ok: true; id: string } | { ok: false; error: string };
 
@@ -25,9 +26,7 @@ export async function createRecruitmentRequest(form: {
   urgency: string;
 }): Promise<CreateRecruitmentRequestState> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
   const { data: profile } = await supabase

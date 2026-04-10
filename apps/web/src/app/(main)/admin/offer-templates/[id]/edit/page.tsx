@@ -2,6 +2,7 @@ import { OfferTemplateFormClient } from '@/app/(main)/admin/offer-templates/Offe
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function EditOfferTemplatePage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params;
@@ -9,9 +10,7 @@ export default async function EditOfferTemplatePage({ params }: { params: Promis
   if (!id) notFound();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

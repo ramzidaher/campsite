@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { JOB_APPLICATION_STAGES } from '@campsite/types';
 import Link from 'next/link';
 import { redirect, notFound } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 function spVal(v: string | string[] | undefined): string {
   if (typeof v === 'string') return v.trim();
@@ -22,9 +23,7 @@ export default async function AdminApplicationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

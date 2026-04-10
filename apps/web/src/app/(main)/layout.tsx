@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   type PermissionKey,
 } from '@campsite/types';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,9 +34,7 @@ function roleLabel(role: string): string {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   let profileRole: string | null = null;
   let orgName = 'Organisation';

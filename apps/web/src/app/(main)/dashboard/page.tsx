@@ -4,6 +4,7 @@ import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { canComposeBroadcastByPermissions, type PermissionKey } from '@campsite/types';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 function greeting(hour: number, name: string) {
   if (hour < 12) return `Good morning, ${name}`;
@@ -13,9 +14,7 @@ function greeting(hour: number, name: string) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile, error: profileError } = await supabase

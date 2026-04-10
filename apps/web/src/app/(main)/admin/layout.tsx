@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { viewerHasAnyAdminAccess } from '@/lib/authz/serverGuards';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 /** Org tenant admin routes; nav lives in the main shell under “Admin”. */
 export default async function OrgAdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

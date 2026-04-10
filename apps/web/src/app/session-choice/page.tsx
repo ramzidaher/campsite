@@ -3,12 +3,11 @@ import { redirect } from 'next/navigation';
 import { syncRegistrationAvatarToProfileIfEmpty } from '@/lib/auth/completeRegistrationProfile';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function SessionChoicePage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) {
     redirect('/login?next=/session-choice');
   }

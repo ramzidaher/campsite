@@ -2,6 +2,7 @@ import { AdminJobEditClient } from '@/components/admin/AdminJobEditClient';
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminJobEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params;
@@ -9,9 +10,7 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
   if (!id) notFound();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

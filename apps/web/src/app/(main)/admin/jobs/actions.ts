@@ -10,6 +10,7 @@ import {
   type JobApplicationMode,
 } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export type JobActionState = { ok: true } | { ok: false; error: string };
 
@@ -30,9 +31,7 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
   if (!rid) return { ok: false, error: 'Missing request.' };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
   const { data: profile } = await supabase
@@ -167,9 +166,7 @@ export async function updateJobListing(
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
   const { data: profile } = await supabase
@@ -219,9 +216,7 @@ export async function publishJobListing(jobId: string): Promise<JobActionState> 
   if (!id) return { ok: false, error: 'Missing job.' };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
   const { data: profile } = await supabase
@@ -307,9 +302,7 @@ export async function archiveJobListing(jobId: string): Promise<JobActionState> 
   if (!id) return { ok: false, error: 'Missing job.' };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
   const { data: profile } = await supabase

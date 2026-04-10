@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 /** Exchanges Google OAuth code and stores tokens in `google_connections`. */
 export async function GET(req: Request) {
@@ -74,9 +75,7 @@ export async function GET(req: Request) {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user || user.id !== meta.uid) {
     return NextResponse.redirect(new URL('/settings?google_error=session', req.url));
   }

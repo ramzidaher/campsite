@@ -9,6 +9,7 @@ import {
   zonedWallToUtc,
 } from '@/lib/rota/sheetsImportParse';
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 type MappingRow = {
   id: string;
@@ -41,9 +42,7 @@ function norm(s: string): string {
 /** POST - org admin only; reads Sheets via caller's `google_connections`, upserts `rota_shifts`. */
 export async function POST() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

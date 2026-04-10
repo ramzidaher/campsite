@@ -2,6 +2,7 @@ import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function SettingsPage({
   searchParams,
@@ -18,9 +19,7 @@ export default async function SettingsPage({
   const googleFlashTone =
     sp.google_connected === '1' ? ('success' as const) : sp.google_error ? ('error' as const) : null;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) {
     redirect('/login');
   }

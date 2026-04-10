@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 import { retryEnsureRegistrationProfile } from './actions';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function PendingPage({
   searchParams,
@@ -17,9 +18,7 @@ export default async function PendingPage({
 }) {
   const sp = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) {
     redirect('/login');
   }

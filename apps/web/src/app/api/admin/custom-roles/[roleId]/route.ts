@@ -3,6 +3,7 @@ import { buildPermissionPickerItems } from '@/lib/authz/buildPermissionPicker';
 import { validateCustomRolePermissionKeys } from '@/lib/authz/validateCustomRolePermissions';
 import type { CustomRoleResponse } from '@/lib/authz/customRolePickerContract';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 async function requireRolesManage(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, orgId: string) {
   const { data: allowed, error } = await supabase.rpc('has_permission', {
@@ -52,9 +53,7 @@ async function loadCustomRole(
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ roleId: string }> }) {
   const { roleId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();
@@ -81,9 +80,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ rol
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ roleId: string }> }) {
   const { roleId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();
@@ -132,9 +129,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ro
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ roleId: string }> }) {
   const { roleId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();

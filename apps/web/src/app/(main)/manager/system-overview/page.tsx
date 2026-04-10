@@ -6,12 +6,11 @@ import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirec
 import { loadWorkspaceDepartmentIds } from '@/lib/manager/workspaceDepartmentIds';
 import { buildSystemOverviewGraph } from '@/lib/systemOverview/buildSystemOverviewGraph';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function ManagerSystemOverviewPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

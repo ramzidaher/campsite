@@ -1,13 +1,12 @@
 import { PerformanceCycleDetailClient } from '@/components/admin/hr/performance/PerformanceCycleDetailClient';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function PerformanceCycleDetailPage({ params }: { params: Promise<{ cycleId: string }> }) {
   const { cycleId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

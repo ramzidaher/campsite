@@ -5,12 +5,11 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { canManageOrgBroadcastsAdmin } from '@/lib/adminGates';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminBroadcastsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

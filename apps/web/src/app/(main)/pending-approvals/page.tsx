@@ -3,12 +3,11 @@ import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function PendingApprovalsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: me } = await supabase.from('profiles').select('role,org_id,id,status').eq('id', user.id).single();

@@ -1,13 +1,12 @@
 import { ReviewDetailClient } from '@/components/performance/ReviewDetailClient';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function ReviewDetailPage({ params }: { params: Promise<{ reviewId: string }> }) {
   const { reviewId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

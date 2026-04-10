@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export type PlatformActionResult = { ok: true } | { ok: false; error: string };
 export type PlatformActionDataResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -40,9 +41,7 @@ async function getPlatformFounderContext(): Promise<
   | { ok: false; error: string }
 > {
   const userSupabase = await createClient();
-  const {
-    data: { user },
-  } = await userSupabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
   const { data: row, error } = await userSupabase
     .from('platform_admins')

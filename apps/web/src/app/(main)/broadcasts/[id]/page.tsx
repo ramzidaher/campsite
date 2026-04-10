@@ -1,13 +1,12 @@
 import { BroadcastDetailView } from '@/components/broadcasts/BroadcastDetailView';
 import { createClient } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function BroadcastDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   // Core row only (no embeds): avoids PostgREST/nested-resource edge cases where

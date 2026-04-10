@@ -3,12 +3,11 @@ import { RootAuthHashGuard } from '@/components/auth/RootAuthHashGuard';
 import { LandingPage } from '@/components/marketing/LandingPage';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (user) {
     const [founder, { data: profile }] = await Promise.all([

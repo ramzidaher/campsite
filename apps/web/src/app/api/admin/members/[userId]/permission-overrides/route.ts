@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { buildPermissionPickerItems } from '@/lib/authz/buildPermissionPicker';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 async function gateOverrides(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -48,9 +49,7 @@ async function gateOverrides(
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();
@@ -81,9 +80,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
 export async function POST(req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();

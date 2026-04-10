@@ -11,6 +11,7 @@ import {
 import { requirePlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 function initialsFromName(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -21,9 +22,7 @@ function initialsFromName(name: string) {
 
 export default async function FoundersPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login?next=/founders');
 
   await requirePlatformFounder(supabase, user.id);

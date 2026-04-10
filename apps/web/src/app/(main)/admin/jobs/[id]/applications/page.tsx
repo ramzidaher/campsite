@@ -3,6 +3,7 @@ import type { PipelineApplicationRow } from '@/app/(main)/admin/jobs/[id]/applic
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function JobApplicationsPipelinePage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params;
@@ -10,9 +11,7 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
   if (!id) notFound();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

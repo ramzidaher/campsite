@@ -1,13 +1,12 @@
 import { OnboardingRunClient } from '@/components/admin/hr/onboarding/OnboardingRunClient';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function OnboardingRunPage({ params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

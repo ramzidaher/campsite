@@ -81,9 +81,7 @@ export function AuthCallbackClient() {
 
       window.history.replaceState(null, '', `${full.pathname}${full.search}`);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (!alive || !user) {
         router.replace('/login?error=auth');

@@ -6,6 +6,7 @@ import { sendOfferLetterSigningEmail } from '@/lib/recruitment/sendOfferLetterEm
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { revalidatePath } from 'next/cache';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 function relationOne<T>(rel: T | T[] | null | undefined): T | null {
   if (rel == null) return null;
@@ -20,9 +21,7 @@ function newOfferPortalToken(): string {
 
 async function requireOrgPermission(permissionKey: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { supabase, user: null as null, profile: null as null, orgId: null as null };
 
   const { data: profile } = await supabase.from('profiles').select('id, org_id, status').eq('id', user.id).maybeSingle();

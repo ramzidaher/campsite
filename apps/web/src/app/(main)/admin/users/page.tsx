@@ -1,6 +1,7 @@
 import { AdminUsersClient } from '@/components/admin/AdminUsersClient';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminUsersPage({
   searchParams,
@@ -9,9 +10,7 @@ export default async function AdminUsersPage({
 }) {
   const sp = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ offerId: string }> }) {
   const { offerId } = await params;
@@ -7,9 +8,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ offerId
   if (!id) return new Response('Bad request', { status: 400 });
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return new Response('Unauthorized', { status: 401 });
 
   const { data: profile } = await supabase
