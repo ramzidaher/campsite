@@ -1,3 +1,4 @@
+import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { createClient } from '@/lib/supabase/server';
@@ -97,11 +98,15 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
           All open roles
         </Link>
 
+        <div className="mt-6 space-y-5">
+          <CareersProductStrip />
+          <CareersOrgLine orgName={job.org_name} />
+        </div>
+
         {/* Hero */}
         <header className="mt-6 overflow-hidden rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] shadow-[0_1px_0_0_rgba(18,18,18,0.04)]">
           <div className="border-b border-[#e0ddd8] bg-gradient-to-br from-white/90 to-[#f5f4f1] px-6 py-8 sm:px-10 sm:py-10">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b6b6b]">{job.org_name}</p>
-            <h1 className="mt-3 max-w-4xl font-authSerif text-[clamp(1.875rem,4.5vw,2.75rem)] leading-[1.12] tracking-[-0.03em] text-[#121212]">
+            <h1 className="max-w-4xl font-authSerif text-[clamp(1.875rem,4.5vw,2.75rem)] leading-[1.12] tracking-[-0.03em] text-[#121212]">
               {job.title}
             </h1>
             <div className="mt-8 flex flex-wrap gap-2">

@@ -1,3 +1,4 @@
+import { CareersOrgHero, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { buildPublicJobsHref } from '@/app/(public)/jobs/buildPublicJobsHref';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
@@ -118,38 +119,18 @@ export default async function PublicJobsPage({
   return (
     <div className="bg-[#faf9f6] font-sans text-[#121212] antialiased">
       <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
-        {/* Campsite — cream / black system (matches auth & admin chrome) */}
-        <div className="rounded-2xl border border-[#e8e6e3] bg-gradient-to-br from-white to-[#f5f4f1] px-5 py-4 shadow-[0_1px_0_0_rgba(18,18,18,0.04)] sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-authSerif text-[1.35rem] leading-none tracking-tight text-[#121212] sm:text-[1.5rem]">
-                Campsite
-              </span>
-              <span className="hidden h-5 w-px bg-[#d8d8d8] sm:block" aria-hidden />
-              <span className="rounded-full bg-[#121212] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#faf9f6]">
-                Careers
-              </span>
-            </div>
-            <p className="text-[12px] leading-snug text-[#6b6b6b] sm:text-right">
-              Hiring tools by <span className="font-semibold text-[#121212]">Common Ground Studios Ltd</span>
-            </p>
-          </div>
-        </div>
+        <CareersProductStrip />
 
-        <section className="mt-5 rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] px-5 py-5 sm:px-7 sm:py-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b9b9b]">Your organisation</p>
-              <p className="mt-1 font-authSerif text-[clamp(1.75rem,4vw,2.25rem)] leading-[1.15] tracking-[-0.02em] text-[#121212]">
-                {orgName}
-              </p>
-              <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-[#6b6b6b]">
-                {liveCount === 0
-                  ? 'No open roles at the moment. Listings appear here when your organisation publishes live vacancies.'
-                  : `${liveCount} open ${liveCount === 1 ? 'role' : 'roles'}${deptCount > 0 ? ` across ${deptCount} ${deptCount === 1 ? 'team' : 'teams'}` : ''}. Search and filter below.`}
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+        <CareersOrgHero
+          orgName={orgName}
+          description={
+            liveCount === 0
+              ? 'No open roles at the moment. Listings appear here when your organisation publishes live vacancies.'
+              : `${liveCount} open ${liveCount === 1 ? 'role' : 'roles'}${deptCount > 0 ? ` across ${deptCount} ${deptCount === 1 ? 'team' : 'teams'}` : ''}. Search and filter below.`
+          }
+          className="mt-5"
+          trailing={
+            <>
               {user?.email ? (
                 <p className="max-w-[240px] truncate text-[12px] text-[#6b6b6b]" title={user.email}>
                   {user.email}
@@ -173,9 +154,9 @@ export default async function PublicJobsPage({
                   </>
                 ) : null}
               </div>
-            </div>
-          </div>
-        </section>
+            </>
+          }
+        />
 
         <nav
           className="mt-5 flex w-full gap-1 rounded-xl border border-[#e8e6e3] bg-white p-1 shadow-sm shadow-[#121212]/[0.04]"

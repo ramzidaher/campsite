@@ -1,4 +1,5 @@
 import { ApplyJobFormClient } from '@/app/(public)/jobs/[slug]/apply/ApplyJobFormClient';
+import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { createClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -45,13 +46,21 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
   });
 
   return (
-    <ApplyJobFormClient
-      jobSlug={jobSlug}
-      listing={job}
-      orgSlug={orgSlug}
-      hostHeader={host}
-      defaultEmail={user?.email ?? null}
-      isAuthenticated={Boolean(user)}
-    />
+    <div className="min-h-screen bg-[#faf9f6] font-sans text-[#121212] antialiased">
+      <div className="mx-auto max-w-[660px] px-5 py-8">
+        <div className="space-y-5">
+          <CareersProductStrip />
+          <CareersOrgLine orgName={job.org_name} />
+        </div>
+        <ApplyJobFormClient
+          jobSlug={jobSlug}
+          listing={job}
+          orgSlug={orgSlug}
+          hostHeader={host}
+          defaultEmail={user?.email ?? null}
+          isAuthenticated={Boolean(user)}
+        />
+      </div>
+    </div>
   );
 }

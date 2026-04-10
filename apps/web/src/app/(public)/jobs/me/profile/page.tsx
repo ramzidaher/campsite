@@ -1,4 +1,6 @@
+import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { CandidatePortalNav } from '@/app/(public)/jobs/CandidatePortalNav';
+import { getOrganisationDisplayName } from '@/app/(public)/jobs/getOrganisationDisplayName';
 import { CandidateProfileForm } from '@/app/(public)/jobs/me/profile/CandidateProfileForm';
 import { buildCandidateJobsLoginRedirectUrl } from '@/lib/jobs/candidateAuthRedirect';
 import { createClient } from '@/lib/supabase/server';
@@ -31,13 +33,21 @@ export default async function CandidateProfilePage() {
     .eq('id', user.id)
     .maybeSingle();
 
+  const orgName = await getOrganisationDisplayName(supabase, orgSlug);
+
   return (
     <div className="min-h-screen bg-[#faf9f6] px-5 py-10 text-[#121212]">
       <main className="mx-auto w-full max-w-xl">
-        <CandidatePortalNav orgSlug={orgSlug} hostHeader={host} current="profile" />
+        <div className="space-y-5">
+          <CareersProductStrip />
+          {orgName ? <CareersOrgLine orgName={orgName} /> : null}
+        </div>
+        <div className="mt-8">
+          <CandidatePortalNav orgSlug={orgSlug} hostHeader={host} current="profile" />
+        </div>
 
         <header className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Candidate portal</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Your profile</p>
           <h1 className="mt-1 font-authSerif text-[34px]">Profile</h1>
           <p className="mt-2 text-[13px] text-[#6b6b6b]">
             Details you save here can support future applications. Your sign-in email comes from the account you registered with.

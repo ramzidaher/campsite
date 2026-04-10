@@ -40,9 +40,8 @@ export function CandidateLoginForm({ orgSlug, hostHeader, defaultNext = '/jobs/m
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] px-5 py-10 text-[#121212]">
-      <main className="mx-auto w-full max-w-md rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Candidate portal</p>
+    <main className="mt-6 w-full rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Account</p>
         <h1 className="mt-1 font-authSerif text-[30px]">Sign in</h1>
         <p className="mt-2 text-[13px] text-[#6b6b6b]">Access your job applications and status updates.</p>
         <form className="mt-5 space-y-4" onSubmit={(e) => void onSubmit(e)}>
@@ -94,7 +93,6 @@ export function CandidateLoginForm({ orgSlug, hostHeader, defaultNext = '/jobs/m
             Create account
           </Link>
         </div>
-      </main>
-    </div>
+    </main>
   );
 }

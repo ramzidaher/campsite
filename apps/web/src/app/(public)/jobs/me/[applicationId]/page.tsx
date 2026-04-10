@@ -1,3 +1,4 @@
+import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { CandidatePortalNav } from '@/app/(public)/jobs/CandidatePortalNav';
 import { ApplicationStageTimeline } from '@/app/(public)/jobs/me/ApplicationStageTimeline';
 import { CandidateApplicationMessages } from '@/app/(public)/jobs/me/CandidateApplicationMessages';
@@ -69,14 +70,19 @@ export default async function CandidateApplicationDetailPage({ params }: { param
   return (
     <div className="min-h-screen bg-[#faf9f6] px-5 py-10 text-[#121212]">
       <main className="mx-auto w-full max-w-3xl">
-        <CandidatePortalNav orgSlug={orgSlug} hostHeader={host} current="applications" />
+        <div className="space-y-5">
+          <CareersProductStrip />
+          <CareersOrgLine orgName={row.org_name} />
+        </div>
+        <div className="mt-8">
+          <CandidatePortalNav orgSlug={orgSlug} hostHeader={host} current="applications" />
+        </div>
 
         <header className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-6">
           <Link href={backToListHref} className="text-[12px] font-medium text-[#121212] underline decoration-[#d8d8d8] underline-offset-2 hover:decoration-[#121212]">
             ← Back to my applications
           </Link>
-          <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">{row.org_name}</p>
-          <h1 className="mt-1 font-authSerif text-[30px] leading-tight">{row.job_title}</h1>
+          <h1 className="mt-3 font-authSerif text-[30px] leading-tight">{row.job_title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <CandidateApplicationStageBadge stage={row.stage} />
             <span className="text-[12px] text-[#9b9b9b]">

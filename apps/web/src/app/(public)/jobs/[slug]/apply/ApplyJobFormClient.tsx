@@ -176,8 +176,7 @@ export function ApplyJobFormClient({
   }, [orgSlug, hostHeader, jobSlug]);
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] px-5 py-8 text-[#121212]">
-      <main className="mx-auto w-full max-w-[660px]">
+    <main className="mx-auto w-full max-w-[660px] pt-6 text-[#121212]">
         {!isAuthenticated ? (
           <div className="mb-4 rounded-[11px] border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] text-[#1e40af]">
             <strong className="font-medium">Have a candidate account?</strong>{' '}
@@ -193,11 +192,10 @@ export function ApplyJobFormClient({
           </div>
         )}
         <section className="mb-6 rounded-[11px] border border-[#d8d8d8] bg-[#f5f4f1] p-6">
-          <div className="mb-2 inline-flex rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-3 py-1 text-[12px] font-medium text-[#166534]">
+          <div className="mb-2 inline-flex rounded-full border border-[#e0ddd8] bg-white px-3 py-1 text-[12px] font-medium text-[#121212]">
             Accepting applications
           </div>
           <h1 className="font-authSerif text-[34px] leading-[1.15] text-[#121212]">{listing.title}</h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">{listing.org_name}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="rounded-full border border-[#d8d8d8] bg-[#eeecea] px-3 py-1 text-[12px] font-medium text-[#6b6b6b]">
               {jobApplicationModeLabel(listing.application_mode)}
@@ -679,7 +677,6 @@ export function ApplyJobFormClient({
         {toast ? (
           <div className="fixed bottom-5 right-5 rounded-[11px] bg-[#121212] px-4 py-2 text-[13px] text-white shadow-lg">{toast}</div>
         ) : null}
-      </main>
-    </div>
+    </main>
   );
 }

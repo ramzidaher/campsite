@@ -1,3 +1,4 @@
+import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { CandidateApplicationMessages } from '@/app/(public)/jobs/me/CandidateApplicationMessages';
 import { CandidateApplicationStageBadge } from '@/app/(public)/jobs/me/CandidateApplicationStageBadge';
 import { createClient } from '@/lib/supabase/server';
@@ -28,8 +29,13 @@ export default async function CandidatePortalPage({ params }: { params: Promise<
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#121212]">
+      <div className="border-b border-[#e8e6e3] bg-[#faf9f6] px-5 pb-6 pt-8">
+        <div className="mx-auto max-w-lg space-y-5">
+          <CareersProductStrip />
+          <CareersOrgLine orgName={row.org_name} />
+        </div>
+      </div>
       <header className="border-b border-[#ececec] bg-white px-5 py-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">{row.org_name}</p>
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">{row.job_title}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <CandidateApplicationStageBadge stage={row.stage} />

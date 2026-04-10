@@ -1,3 +1,4 @@
+import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { OfferSignClient } from '@/app/(public)/jobs/offer-sign/[token]/OfferSignClient';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
@@ -22,5 +23,15 @@ export default async function OfferSignPage({ params }: { params: Promise<{ toke
     job_title: string;
   };
 
-  return <OfferSignClient token={token} initial={row} />;
+  return (
+    <div className="min-h-screen bg-[#faf9f6] text-[#121212]">
+      <div className="mx-auto max-w-3xl px-5 pt-8 sm:px-6">
+        <div className="space-y-5">
+          <CareersProductStrip />
+          <CareersOrgLine orgName={row.org_name} />
+        </div>
+      </div>
+      <OfferSignClient token={token} initial={row} />
+    </div>
+  );
 }

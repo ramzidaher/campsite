@@ -123,10 +123,10 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] pb-16 text-[#121212]">
+    <div className="pb-16 text-[#121212]">
       <header className="border-b border-[#ececec] bg-white px-5 py-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">{row.org_name}</p>
-        <h1 className="font-authSerif text-[22px] tracking-tight">Offer — {row.job_title}</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Offer letter</p>
+        <h1 className="font-authSerif text-[22px] tracking-tight">{row.job_title}</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">{row.candidate_name}</p>
         <p className="mt-1 text-[12px] text-[#9b9b9b]">Secure signing link. No account required.</p>
       </header>
