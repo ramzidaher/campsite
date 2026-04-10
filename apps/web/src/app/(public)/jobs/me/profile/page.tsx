@@ -1,5 +1,5 @@
 import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
-import { CandidatePortalNav } from '@/app/(public)/jobs/CandidatePortalNav';
+import { CareersSectionNav } from '@/app/(public)/jobs/CareersSectionNav';
 import { getOrganisationDisplayName } from '@/app/(public)/jobs/getOrganisationDisplayName';
 import { CandidateProfileForm } from '@/app/(public)/jobs/me/profile/CandidateProfileForm';
 import { buildCandidateJobsLoginRedirectUrl } from '@/lib/jobs/candidateAuthRedirect';
@@ -33,28 +33,27 @@ export default async function CandidateProfilePage() {
     .eq('id', user.id)
     .maybeSingle();
 
-  const orgName = await getOrganisationDisplayName(supabase, orgSlug);
+  const orgResolved = await getOrganisationDisplayName(supabase, orgSlug);
+  const orgDisplay = orgResolved?.trim() || 'Organisation';
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] px-5 py-10 text-[#121212]">
-      <main className="mx-auto w-full max-w-xl">
+    <div className="min-h-screen bg-[#faf9f6] font-sans text-[#121212] antialiased">
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
         <div className="space-y-5">
           <CareersProductStrip />
-          {orgName ? <CareersOrgLine orgName={orgName} /> : null}
+          <CareersOrgLine orgName={orgDisplay} />
         </div>
-        <div className="mt-8">
-          <CandidatePortalNav orgSlug={orgSlug} hostHeader={host} current="profile" />
-        </div>
+        <CareersSectionNav orgSlug={orgSlug} hostHeader={host} current="profile" />
 
-        <header className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Your profile</p>
-          <h1 className="mt-1 font-authSerif text-[34px]">Profile</h1>
+        <header className="mt-8">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b9b9b]">Your profile</p>
+          <h1 className="mt-1 font-authSerif text-[clamp(1.5rem,3.5vw,2rem)] tracking-[-0.02em] text-[#121212]">Profile</h1>
           <p className="mt-2 text-[13px] text-[#6b6b6b]">
             Details you save here can support future applications. Your sign-in email comes from the account you registered with.
           </p>
         </header>
 
-        <section className="rounded-xl border border-[#e8e8e8] bg-white p-6">
+        <section className="mx-auto mt-10 max-w-xl rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-6 shadow-sm shadow-[#121212]/[0.03]">
           <CandidateProfileForm
             profile={{
               full_name: profile?.full_name ?? null,
@@ -65,7 +64,7 @@ export default async function CandidateProfilePage() {
             }}
           />
         </section>
-      </main>
+      </div>
     </div>
   );
 }

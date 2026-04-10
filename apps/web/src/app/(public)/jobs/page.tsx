@@ -1,4 +1,5 @@
 import { CareersOrgHero, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
+import { CareersSectionNav } from '@/app/(public)/jobs/CareersSectionNav';
 import { buildPublicJobsHref } from '@/app/(public)/jobs/buildPublicJobsHref';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
@@ -158,26 +159,7 @@ export default async function PublicJobsPage({
           }
         />
 
-        <nav
-          className="mt-5 flex w-full gap-1 rounded-xl border border-[#e8e6e3] bg-white p-1 shadow-sm shadow-[#121212]/[0.04]"
-          aria-label="Careers sections"
-        >
-          <span className="flex-1 rounded-lg bg-[#121212] py-2.5 text-center text-[13px] font-semibold text-[#faf9f6]">
-            Open roles
-          </span>
-          <Link
-            href={tenantJobsSubrouteRelativePath('me', orgSlug, host)}
-            className="flex-1 rounded-lg py-2.5 text-center text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
-          >
-            Applications
-          </Link>
-          <Link
-            href={tenantJobsSubrouteRelativePath('me/profile', orgSlug, host)}
-            className="flex-1 rounded-lg py-2.5 text-center text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
-          >
-            Profile
-          </Link>
-        </nav>
+        <CareersSectionNav orgSlug={orgSlug} hostHeader={host} current="browse" />
 
         <header className="mt-8">
           <h1 className="font-authSerif text-[clamp(1.5rem,3.5vw,2rem)] tracking-[-0.02em] text-[#121212]">Open roles</h1>
@@ -288,9 +270,9 @@ export default async function PublicJobsPage({
                 <li key={job.job_listing_id}>
                   <Link
                     href={href}
-                    className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-5 pl-6 transition-[border-color,box-shadow] before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-[#121212]/15 hover:border-[#d8d8d8] hover:bg-white hover:shadow-md hover:shadow-[#121212]/[0.06] hover:before:bg-[#121212]"
+                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-5 transition-[border-color,box-shadow] hover:border-[#d8d8d8] hover:bg-white hover:shadow-md hover:shadow-[#121212]/[0.06]"
                   >
-                    <h2 className="text-[17px] font-semibold leading-snug tracking-[-0.01em] text-[#121212] group-hover:underline group-hover:decoration-[#121212] group-hover:underline-offset-2">
+                    <h2 className="text-[17px] font-semibold leading-snug tracking-[-0.01em] text-[#121212]">
                       {job.title}
                     </h2>
 

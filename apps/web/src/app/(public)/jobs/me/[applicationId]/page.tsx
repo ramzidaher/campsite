@@ -1,5 +1,5 @@
 import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
-import { CandidatePortalNav } from '@/app/(public)/jobs/CandidatePortalNav';
+import { CareersSectionNav } from '@/app/(public)/jobs/CareersSectionNav';
 import { ApplicationStageTimeline } from '@/app/(public)/jobs/me/ApplicationStageTimeline';
 import { CandidateApplicationMessages } from '@/app/(public)/jobs/me/CandidateApplicationMessages';
 import { CandidateApplicationStageBadge } from '@/app/(public)/jobs/me/CandidateApplicationStageBadge';
@@ -68,21 +68,19 @@ export default async function CandidateApplicationDetailPage({ params }: { param
   const backToListHref = tenantJobsSubrouteRelativePath('me', orgSlug, host);
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] px-5 py-10 text-[#121212]">
-      <main className="mx-auto w-full max-w-3xl">
+    <div className="min-h-screen bg-[#faf9f6] font-sans text-[#121212] antialiased">
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
         <div className="space-y-5">
           <CareersProductStrip />
           <CareersOrgLine orgName={row.org_name} />
         </div>
-        <div className="mt-8">
-          <CandidatePortalNav orgSlug={orgSlug} hostHeader={host} current="applications" />
-        </div>
+        <CareersSectionNav orgSlug={orgSlug} hostHeader={host} current="applications" />
 
-        <header className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-6">
+        <header className="mt-8 rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-6 shadow-sm shadow-[#121212]/[0.03]">
           <Link href={backToListHref} className="text-[12px] font-medium text-[#121212] underline decoration-[#d8d8d8] underline-offset-2 hover:decoration-[#121212]">
             ← Back to my applications
           </Link>
-          <h1 className="mt-3 font-authSerif text-[30px] leading-tight">{row.job_title}</h1>
+          <h1 className="mt-3 font-authSerif text-[clamp(1.5rem,3.5vw,2rem)] leading-tight tracking-[-0.02em]">{row.job_title}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <CandidateApplicationStageBadge stage={row.stage} />
             <span className="text-[12px] text-[#9b9b9b]">
@@ -105,7 +103,7 @@ export default async function CandidateApplicationDetailPage({ params }: { param
           </div>
         </header>
 
-        <section className="mb-4 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
+        <section className="mb-4 rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-5 shadow-sm shadow-[#121212]/[0.03]">
           <h2 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Progress</h2>
           <p className="mt-2 text-[13px] text-[#6b6b6b]">
             Stages update as your application moves through review. This view is for your signed-in account only.
@@ -131,7 +129,7 @@ export default async function CandidateApplicationDetailPage({ params }: { param
         <p className="mt-8 text-center text-[11px] text-[#9b9b9b]">
           You can also bookmark your private tracker link from the email we sent — it does not require signing in.
         </p>
-      </main>
+      </div>
     </div>
   );
 }

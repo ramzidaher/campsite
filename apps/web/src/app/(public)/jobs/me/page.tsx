@@ -1,5 +1,5 @@
 import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
-import { CandidatePortalNav } from '@/app/(public)/jobs/CandidatePortalNav';
+import { CareersSectionNav } from '@/app/(public)/jobs/CareersSectionNav';
 import { getOrganisationDisplayName } from '@/app/(public)/jobs/getOrganisationDisplayName';
 import { CandidateApplicationStageBadge } from '@/app/(public)/jobs/me/CandidateApplicationStageBadge';
 import { buildCandidateJobsLoginRedirectUrl } from '@/lib/jobs/candidateAuthRedirect';
@@ -46,44 +46,48 @@ export default async function CandidateApplicationsPage() {
   }
 
   const rows = (data as CandidateApplicationRow[] | null) ?? [];
-  const orgName = await getOrganisationDisplayName(supabase, orgSlug);
+  const orgResolved = await getOrganisationDisplayName(supabase, orgSlug);
+  const orgDisplay = orgResolved?.trim() || rows[0]?.org_name?.trim() || 'Organisation';
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] px-5 py-10 text-[#121212]">
-      <main className="mx-auto w-full max-w-3xl">
+    <div className="min-h-screen bg-[#faf9f6] font-sans text-[#121212] antialiased">
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
         <div className="space-y-5">
           <CareersProductStrip />
-          {orgName ? <CareersOrgLine orgName={orgName} /> : null}
+          <CareersOrgLine orgName={orgDisplay} />
         </div>
-        <div className="mt-8">
-          <CandidatePortalNav orgSlug={orgSlug} hostHeader={host} current="applications" />
-        </div>
+        <CareersSectionNav orgSlug={orgSlug} hostHeader={host} current="applications" />
 
-        <header className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Applications</p>
-          <h1 className="mt-1 font-authSerif text-[34px]">My applications</h1>
+        <header className="mt-8">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b9b9b]">Applications</p>
+          <h1 className="mt-1 font-authSerif text-[clamp(1.5rem,3.5vw,2rem)] tracking-[-0.02em] text-[#121212]">My applications</h1>
           <p className="mt-2 text-[13px] text-[#6b6b6b]">
             Track status, open your private tracker link, or view full detail while signed in.
           </p>
         </header>
 
         {rows.length === 0 ? (
-          <section className="rounded-xl border border-[#e8e8e8] bg-white p-8 text-center">
-            <h2 className="font-authSerif text-[28px]">No applications yet</h2>
-            <p className="mt-2 text-[14px] text-[#6b6b6b]">Browse live roles and submit your first application.</p>
+          <section className="mt-10 rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] px-6 py-12 text-center shadow-sm shadow-[#121212]/[0.03]">
+            <h2 className="font-authSerif text-[1.375rem] text-[#121212]">No applications yet</h2>
+            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-[#6b6b6b]">
+              Browse live roles and submit your first application.
+            </p>
             <Link
               href={jobsIndexHref}
-              className="mt-4 inline-flex rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] hover:opacity-90"
+              className="mt-6 inline-flex rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-semibold text-[#faf9f6] hover:opacity-90"
             >
               Browse jobs
             </Link>
           </section>
         ) : (
-          <ul className="space-y-3">
+          <ul className="mt-10 space-y-4">
             {rows.map((row) => {
               const detailHref = tenantJobMeApplicationRelativePath(row.application_id, orgSlug, host);
               return (
-                <li key={row.application_id} className="rounded-xl border border-[#e8e8e8] bg-white p-5">
+                <li
+                  key={row.application_id}
+                  className="rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-5 shadow-sm shadow-[#121212]/[0.03]"
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">{row.org_name}</p>
@@ -120,7 +124,7 @@ export default async function CandidateApplicationsPage() {
             })}
           </ul>
         )}
-      </main>
+      </div>
     </div>
   );
 }
