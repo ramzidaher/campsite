@@ -19,6 +19,44 @@ export function tenantHostMatchesOrg(orgSlug: string, hostHeader: string | null)
   return hostname === `${orgSlug.toLowerCase()}.${root}` || hostname === `${orgSlug.toLowerCase()}.localhost`;
 }
 
+/** Public careers index `/jobs` with `?org=` when host is not the tenant subdomain. */
+export function tenantPublicJobsIndexRelativePath(
+  orgSlug: string | null | undefined,
+  hostHeader: string | null
+): string {
+  const path = '/jobs';
+  const o = orgSlug?.trim();
+  if (!o) return path;
+  if (tenantHostMatchesOrg(o, hostHeader)) return path;
+  return `${path}?org=${encodeURIComponent(o)}`;
+}
+
+/** Candidate routes under `/jobs/*` (e.g. login, me) with tenant org query when needed. */
+export function tenantJobsSubrouteRelativePath(
+  segment: 'me' | 'me/profile' | 'login' | 'register' | 'forgot-password',
+  orgSlug: string | null | undefined,
+  hostHeader: string | null
+): string {
+  const path = `/jobs/${segment}`;
+  const o = orgSlug?.trim();
+  if (!o) return path;
+  if (tenantHostMatchesOrg(o, hostHeader)) return path;
+  return `${path}?org=${encodeURIComponent(o)}`;
+}
+
+/** Single application under `/jobs/me/[applicationId]` with org preservation. */
+export function tenantJobMeApplicationRelativePath(
+  applicationId: string,
+  orgSlug: string | null | undefined,
+  hostHeader: string | null
+): string {
+  const path = `/jobs/me/${encodeURIComponent(applicationId)}`;
+  const o = orgSlug?.trim();
+  if (!o) return path;
+  if (tenantHostMatchesOrg(o, hostHeader)) return path;
+  return `${path}?org=${encodeURIComponent(o)}`;
+}
+
 export function tenantJobListingRelativePath(jobSlug: string, orgSlug: string, hostHeader: string | null): string {
   const path = `/jobs/${encodeURIComponent(jobSlug)}`;
   if (tenantHostMatchesOrg(orgSlug, hostHeader)) return path;

@@ -1,9 +1,13 @@
 'use client';
 
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
-import { tenantJobListingRelativePathClient } from '@/lib/tenant/adminUrl';
+import {
+  CV_MAX_BYTES,
+  cvUploadValidationMessage,
+} from '@/lib/recruitment/cvUploadConstraints';
+import { tenantJobApplyRelativePath, tenantJobListingRelativePathClient, tenantJobsSubrouteRelativePath } from '@/lib/tenant/adminUrl';
 import Link from 'next/link';
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import { submitPublicJobApplication, type SubmitJobApplicationState } from './actions';
 
 type Listing = {
@@ -19,10 +23,16 @@ export function ApplyJobFormClient({
   jobSlug,
   listing,
   orgSlug,
+  hostHeader,
+  defaultEmail,
+  isAuthenticated,
 }: {
   jobSlug: string;
   listing: Listing;
   orgSlug: string;
+  hostHeader: string;
+  defaultEmail?: string | null;
+  isAuthenticated: boolean;
 }) {
   const [state, formAction, pending] = useActionState<
     SubmitJobApplicationState | undefined,
@@ -46,6 +56,13 @@ export function ApplyJobFormClient({
   const [consent, setConsent] = useState(false);
   const [toast, setToast] = useState('');
   const [selectedWorkStyle, setSelectedWorkStyle] = useState('');
+  const [cvFileError, setCvFileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (defaultEmail?.trim()) {
+      setEmail(defaultEmail.trim());
+    }
+  }, [defaultEmail]);
 
   const done = state?.ok === true;
   const fullName = `${firstName} ${lastName}`.trim();
@@ -65,11 +82,16 @@ export function ApplyJobFormClient({
     const requiresCvOnly = listing.allow_cv && !listing.allow_loom && !listing.allow_staffsavvy;
     const requiresLoomOnly = listing.allow_loom && !listing.allow_cv && !listing.allow_staffsavvy;
     const requiresStaffsavvyOnly = listing.allow_staffsavvy && !listing.allow_cv && !listing.allow_loom;
+    const cvOk =
+      !listing.allow_cv ||
+      !cvName.trim() ||
+      (!cvFileError && Boolean(cvName.trim()));
     const step2 = requiresAny
-      ? Boolean(hasAnyChannel)
-      : (requiresCvOnly ? Boolean(cvName.trim()) : true) &&
+      ? Boolean(hasAnyChannel) && cvOk
+      : (requiresCvOnly ? Boolean(cvName.trim()) && !cvFileError : true) &&
         (requiresLoomOnly ? Boolean(loomUrl.trim()) : true) &&
-        (requiresStaffsavvyOnly ? Boolean(staffsavvyScore.trim()) : true);
+        (requiresStaffsavvyOnly ? Boolean(staffsavvyScore.trim()) : true) &&
+        cvOk;
     const step3 = consent;
     return [step0, step1, step2, step3];
   }, [
@@ -82,6 +104,7 @@ export function ApplyJobFormClient({
     selectedWorkStyle,
     listing,
     cvName,
+    cvFileError,
     loomUrl,
     consent,
   ]);
@@ -127,6 +150,7 @@ export function ApplyJobFormClient({
   }
 
   function prefillLinkedIn() {
+    if (isAuthenticated) return;
     setFirstName('Alex');
     setLastName('Taylor');
     setEmail('you@example.com');
@@ -142,9 +166,32 @@ export function ApplyJobFormClient({
     'w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[14px] text-[#121212] outline-none transition focus:border-[#121212]';
   const labelClass = 'mb-1 block text-[12px] font-medium uppercase tracking-[0.3px] text-[#6b6b6b]';
 
+  const loginWithNextHref = useMemo(() => {
+    const base = tenantJobsSubrouteRelativePath('login', orgSlug || null, hostHeader);
+    const nextPath = tenantJobApplyRelativePath(jobSlug, orgSlug, hostHeader);
+    const params = new URLSearchParams();
+    params.set('next', nextPath);
+    const join = base.includes('?') ? '&' : '?';
+    return `${base}${join}${params.toString()}`;
+  }, [orgSlug, hostHeader, jobSlug]);
+
   return (
     <div className="min-h-screen bg-[#faf9f6] px-5 py-8 text-[#121212]">
       <main className="mx-auto w-full max-w-[660px]">
+        {!isAuthenticated ? (
+          <div className="mb-4 rounded-[11px] border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3 text-[13px] text-[#1e40af]">
+            <strong className="font-medium">Have a candidate account?</strong>{' '}
+            <Link href={loginWithNextHref} className="font-medium underline">
+              Sign in
+            </Link>{' '}
+            first so we can link this application to your profile (when signed in, use the same email below).
+          </div>
+        ) : (
+          <div className="mb-4 rounded-[11px] border border-[#d8d8d8] bg-white px-4 py-3 text-[13px] text-[#6b6b6b]">
+            You are signed in — this application will be linked to your candidate account. The email field must match
+            your account email.
+          </div>
+        )}
         <section className="mb-6 rounded-[11px] border border-[#d8d8d8] bg-[#f5f4f1] p-6">
           <div className="mb-2 inline-flex rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-3 py-1 text-[12px] font-medium text-[#166534]">
             Accepting applications
@@ -237,6 +284,7 @@ export function ApplyJobFormClient({
           <input type="hidden" name="linkedin_url" value={linkedinUrl} />
           <input type="hidden" name="portfolio_url" value={portfolioUrl} />
           <input type="hidden" name="motivation_text" value={motivationText} />
+          <input type="hidden" name="cover_letter" value={coverLetter} />
           <input type="hidden" name="loom_url" value={loomUrl} />
           <input type="hidden" name="staffsavvy_score" value={listing.allow_staffsavvy ? staffsavvyScore : ''} />
 
@@ -306,7 +354,8 @@ export function ApplyJobFormClient({
                   onChange={(e) => setEmail(e.target.value)}
                   className={baseField}
                   placeholder="you@example.com"
-                  disabled={pending}
+                  disabled={pending || isAuthenticated}
+                  readOnly={isAuthenticated}
                 />
               </div>
               <div className="mb-4 grid gap-4 sm:grid-cols-2">
@@ -480,16 +529,40 @@ export function ApplyJobFormClient({
                   <label className={labelClass} htmlFor="cv">
                     CV upload
                   </label>
+                  <p className="mb-1 text-[11px] text-[#9b9b9b]">
+                    PDF or Word — max {Math.floor(CV_MAX_BYTES / (1024 * 1024))} MB
+                  </p>
                   <input
                     id="cv"
                     name="cv"
                     type="file"
                     accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     disabled={pending}
-                    onChange={(e) => setCvName(e.target.files?.[0]?.name ?? '')}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) {
+                        setCvName('');
+                        setCvFileError(null);
+                        return;
+                      }
+                      const err = cvUploadValidationMessage(f.name, f.size, f.type || '');
+                      setCvFileError(err);
+                      if (err) {
+                        setCvName('');
+                        e.target.value = '';
+                      } else {
+                        setCvName(f.name);
+                      }
+                    }}
                     className={baseField}
                   />
-                  {cvName ? <p className="mt-1 text-[12px] text-[#15803d]">Uploaded: {cvName}</p> : null}
+                  {cvFileError ? (
+                    <p className="mt-1 text-[12px] text-[#b91c1c]" role="alert">
+                      {cvFileError}
+                    </p>
+                  ) : cvName ? (
+                    <p className="mt-1 text-[12px] text-[#15803d]">Selected: {cvName}</p>
+                  ) : null}
                 </div>
               ) : null}
               {listing.allow_loom ? (

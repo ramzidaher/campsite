@@ -31,14 +31,23 @@ export type JobEditRow = {
   recruitment_request_id: string;
 };
 
+export type JobPublicMetrics = {
+  impressions: number;
+  applyStarts: number;
+  applySubmits: number;
+};
+
 export function AdminJobEditClient({
   job,
   orgSlug,
   requestHref,
+  publicMetrics,
 }: {
   job: JobEditRow;
   orgSlug: string;
   requestHref: string;
+  /** Careers-site funnel counts (live listings only). */
+  publicMetrics?: JobPublicMetrics | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -183,6 +192,33 @@ export function AdminJobEditClient({
         >
           {msg.text}
         </div>
+      ) : null}
+
+      {job.status === 'live' && publicMetrics ? (
+        <section
+          className="rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-5"
+          aria-label="Public careers site analytics"
+        >
+          <h2 className="font-authSerif text-lg text-[#121212]">Public careers funnel</h2>
+          <p className="mt-1 text-[12px] text-[#6b6b6b]">
+            Counts from the org-scoped job board and apply flow (anonymous visitors included). Internal preview
+            traffic may appear if staff open the public URL.
+          </p>
+          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-[#bfdbfe] bg-white px-4 py-3">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">Listing views</dt>
+              <dd className="mt-1 font-authSerif text-[22px] text-[#121212]">{publicMetrics.impressions}</dd>
+            </div>
+            <div className="rounded-lg border border-[#bfdbfe] bg-white px-4 py-3">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">Apply starts</dt>
+              <dd className="mt-1 font-authSerif text-[22px] text-[#121212]">{publicMetrics.applyStarts}</dd>
+            </div>
+            <div className="rounded-lg border border-[#bfdbfe] bg-white px-4 py-3">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">Applications submitted</dt>
+              <dd className="mt-1 font-authSerif text-[22px] text-[#121212]">{publicMetrics.applySubmits}</dd>
+            </div>
+          </dl>
+        </section>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">

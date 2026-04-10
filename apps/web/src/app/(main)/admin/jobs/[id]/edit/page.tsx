@@ -41,11 +41,33 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
   const orgSlug = (orgRow?.slug as string | undefined)?.trim() ?? '';
   const reqId = job.recruitment_request_id as string;
 
+  let publicMetrics: { impressions: number; applyStarts: number; applySubmits: number } | null = null;
+  if ((job.status as string) === 'live') {
+    const { data: metricRows } = await supabase.rpc('get_job_listing_public_metrics_summary', {
+      p_job_listing_id: id,
+    });
+    const m = metricRows?.[0] as
+      | {
+          impression_count: number | string;
+          apply_start_count: number | string;
+          apply_submit_count: number | string;
+        }
+      | undefined;
+    if (m) {
+      publicMetrics = {
+        impressions: Number(m.impression_count ?? 0),
+        applyStarts: Number(m.apply_start_count ?? 0),
+        applySubmits: Number(m.apply_submit_count ?? 0),
+      };
+    }
+  }
+
   return (
     <AdminJobEditClient
       job={job as Parameters<typeof AdminJobEditClient>[0]['job']}
       orgSlug={orgSlug}
       requestHref={`/hr/recruitment/${reqId}`}
+      publicMetrics={publicMetrics}
     />
   );
 }

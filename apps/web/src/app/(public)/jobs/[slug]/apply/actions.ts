@@ -3,6 +3,7 @@
 import {
   sendApplicationSubmittedEmail,
 } from '@/lib/recruitment/sendApplicationCandidateEmails';
+import { cvUploadValidationMessage } from '@/lib/recruitment/cvUploadConstraints';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { headers } from 'next/headers';
@@ -47,12 +48,20 @@ export async function submitPublicJobApplication(
   const linkedInUrl = String(formData.get('linkedin_url') ?? '').trim();
   const portfolioUrl = String(formData.get('portfolio_url') ?? '').trim();
   const motivationText = String(formData.get('motivation_text') ?? '').trim();
+  const coverLetter = String(formData.get('cover_letter') ?? '').trim();
   const cvFile = formData.get('cv');
 
   if (!name) return { ok: false, error: 'Please enter your name.' };
   if (!email) return { ok: false, error: 'Please enter your email.' };
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const candidateUserId = user?.id ?? null;
+  if (user?.email && email.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+    return { ok: false, error: 'Use the same email address as your signed-in account, or sign out to apply as a guest.' };
+  }
   const { data: listingRows, error: listingErr } = await supabase.rpc('public_job_listing_by_slug', {
     p_org_slug: orgSlug,
     p_job_slug: jobSlug,
@@ -65,6 +74,13 @@ export async function submitPublicJobApplication(
   const listing = listingRows[0] as PublicListingRow;
   const hasCvFile = cvFile instanceof File && cvFile.size > 0;
   const expectCvUpload = Boolean(listing.allow_cv && hasCvFile);
+
+  if (hasCvFile && cvFile instanceof File) {
+    const cvErr = cvUploadValidationMessage(cvFile.name, cvFile.size, cvFile.type || '');
+    if (cvErr) {
+      return { ok: false, error: cvErr };
+    }
+  }
 
   let staffsavvyScore: number | null = null;
   if (scoreRaw) {
@@ -90,6 +106,7 @@ export async function submitPublicJobApplication(
     p_linkedin_url: linkedInUrl || null,
     p_portfolio_url: portfolioUrl || null,
     p_motivation_text: motivationText || null,
+    p_cover_letter: coverLetter || null,
   });
 
   if (submitErr || !submitRows?.length) {
@@ -100,9 +117,31 @@ export async function submitPublicJobApplication(
     return { ok: false, error: msg };
   }
 
+  if (candidateUserId) {
+    await supabase.from('candidate_profiles').upsert(
+      {
+        id: candidateUserId,
+        full_name: name || null,
+        phone: phone || null,
+        location: location || null,
+        linkedin_url: linkedInUrl || null,
+        portfolio_url: portfolioUrl || null,
+      },
+      { onConflict: 'id' }
+    );
+  }
+
+  await supabase.rpc('track_public_job_metric', {
+    p_org_slug: orgSlug,
+    p_job_slug: jobSlug,
+    p_event_type: 'apply_submit',
+  });
+
   const row = submitRows[0] as { application_id: string; portal_token: string };
   const applicationId = row.application_id;
   const portalToken = row.portal_token;
+
+  let cvUploadWarning: string | null = null;
 
   if (expectCvUpload && hasCvFile && cvFile instanceof File) {
     try {
@@ -113,7 +152,10 @@ export async function submitPublicJobApplication(
         .eq('id', applicationId)
         .maybeSingle();
       const orgId = appRow?.org_id as string | undefined;
-      if (orgId) {
+      if (!orgId) {
+        cvUploadWarning =
+          'Your application was saved, but we could not attach your CV automatically. HR may contact you for a copy.';
+      } else {
         const buf = Buffer.from(await cvFile.arrayBuffer());
         const safe = sanitizeFilename(cvFile.name);
         const path = `${orgId}/${applicationId}/${safe}`;
@@ -123,10 +165,16 @@ export async function submitPublicJobApplication(
         });
         if (!upErr) {
           await admin.from('job_applications').update({ cv_storage_path: path }).eq('id', applicationId);
+        } else {
+          console.error('[applications] CV upload failed', upErr);
+          cvUploadWarning =
+            'Your application was saved, but the CV upload failed. HR may contact you for a copy of your CV.';
         }
       }
     } catch (e) {
       console.error('[applications] CV upload failed', e);
+      cvUploadWarning =
+        'Your application was saved, but the CV upload failed. HR may contact you for a copy of your CV.';
     }
   }
 
@@ -138,8 +186,9 @@ export async function submitPublicJobApplication(
     portalToken,
   });
 
+  const baseMsg = `Thanks for applying. We've emailed you a private link to track your application and any updates.`;
   return {
     ok: true,
-    message: `Thanks for applying. We've emailed you a private link to track your application and any updates.`,
+    message: cvUploadWarning ? `${baseMsg} ${cvUploadWarning}` : baseMsg,
   };
 }

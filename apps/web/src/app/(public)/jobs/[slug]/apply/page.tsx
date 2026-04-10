@@ -23,6 +23,11 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
   if (!orgSlug) notFound();
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? '';
+
   const { data, error } = await supabase.rpc('public_job_listing_by_slug', {
     p_org_slug: orgSlug,
     p_job_slug: jobSlug,
@@ -33,6 +38,20 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
   }
 
   const job = data[0] as PublicJobRow;
+  await supabase.rpc('track_public_job_metric', {
+    p_org_slug: orgSlug,
+    p_job_slug: jobSlug,
+    p_event_type: 'apply_start',
+  });
 
-  return <ApplyJobFormClient jobSlug={jobSlug} listing={job} orgSlug={orgSlug} />;
+  return (
+    <ApplyJobFormClient
+      jobSlug={jobSlug}
+      listing={job}
+      orgSlug={orgSlug}
+      hostHeader={host}
+      defaultEmail={user?.email ?? null}
+      isAuthenticated={Boolean(user)}
+    />
+  );
 }

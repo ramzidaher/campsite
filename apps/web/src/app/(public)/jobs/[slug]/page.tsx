@@ -1,7 +1,7 @@
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { createClient } from '@/lib/supabase/server';
-import { tenantJobApplyRelativePath } from '@/lib/tenant/adminUrl';
+import { tenantJobApplyRelativePath, tenantPublicJobsIndexRelativePath } from '@/lib/tenant/adminUrl';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -45,6 +45,11 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   }
 
   const job = data[0] as PublicJobRow;
+  await supabase.rpc('track_public_job_metric', {
+    p_org_slug: orgSlug,
+    p_job_slug: jobSlug,
+    p_event_type: 'impression',
+  });
 
   const applyBits: string[] = [];
   if (job.allow_cv) applyBits.push(jobApplicationModeLabel('cv'));
@@ -54,9 +59,17 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
     applyBits.length > 0 ? applyBits.join(', ') : jobApplicationModeLabel(job.application_mode);
   const applyHref = tenantJobApplyRelativePath(jobSlug, orgSlug, host);
 
+  const jobsIndexHref = tenantPublicJobsIndexRelativePath(orgSlug, host);
+
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#121212]">
       <header className="border-b border-[#ececec] bg-white px-5 py-4">
+        <Link
+          href={jobsIndexHref}
+          className="mb-3 inline-flex text-[12px] font-medium text-[#6b6b6b] hover:text-[#121212]"
+        >
+          ← Back to open roles
+        </Link>
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">{job.org_name}</p>
         <h1 className="font-authSerif text-[24px] tracking-tight text-[#121212]">{job.title}</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">

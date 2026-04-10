@@ -47,6 +47,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const pathname = request.nextUrl.pathname;
+  const accountType = (user?.user_metadata?.account_type as string | undefined) ?? '';
   const isAuthEmailReturn =
     pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm');
 
@@ -105,10 +106,40 @@ export async function middleware(request: NextRequest) {
     if (loginError === 'inactive') {
       return response;
     }
+    if (accountType === 'candidate') {
+      const dest = request.nextUrl.clone();
+      dest.pathname = '/jobs/me';
+      dest.search = '';
+      return NextResponse.redirect(dest);
+    }
     const dest = request.nextUrl.clone();
     dest.pathname = isPlatformAdmin ? '/dashboard' : '/';
     dest.search = '';
     return NextResponse.redirect(dest);
+  }
+
+  if (
+    user &&
+    accountType === 'candidate' &&
+    (pathname === '/register' || pathname.startsWith('/register/'))
+  ) {
+    const dest = request.nextUrl.clone();
+    dest.pathname = '/jobs/me';
+    dest.search = '';
+    return NextResponse.redirect(dest);
+  }
+
+  if (user && accountType === 'candidate') {
+    const candidateAllowed =
+      pathname.startsWith('/jobs') ||
+      pathname.startsWith('/auth/') ||
+      pathname === '/';
+    if (!candidateAllowed) {
+      const dest = request.nextUrl.clone();
+      dest.pathname = '/jobs/me';
+      dest.search = '';
+      return NextResponse.redirect(dest);
+    }
   }
 
   return response;
