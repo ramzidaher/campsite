@@ -64,7 +64,7 @@ export default async function CandidateApplicationsPage() {
             <p className="mt-2 text-[14px] text-[#6b6b6b]">Browse live roles and submit your first application.</p>
             <Link
               href={jobsIndexHref}
-              className="mt-4 inline-flex rounded-lg bg-[#008B60] px-4 py-2 text-[13px] font-medium text-white"
+              className="mt-4 inline-flex rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] hover:opacity-90"
             >
               Browse jobs
             </Link>
@@ -86,7 +86,7 @@ export default async function CandidateApplicationsPage() {
                     <div className="flex shrink-0 flex-col gap-2 sm:items-end">
                       <Link
                         href={detailHref}
-                        className="inline-flex justify-center rounded-lg bg-[#008B60] px-3 py-2 text-[13px] font-medium text-white hover:bg-[#007a52]"
+                        className="inline-flex justify-center rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-[#faf9f6] hover:opacity-90"
                       >
                         View detail
                       </Link>

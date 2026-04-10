@@ -27,9 +27,9 @@ export function ApplicationStageTimeline({ stage }: { stage: string }) {
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${
                   done
-                    ? 'bg-[#008B60] text-white'
+                    ? 'bg-[#121212] text-[#faf9f6]'
                     : cur
-                      ? 'bg-[#121212] text-white ring-2 ring-[#008B60] ring-offset-2 ring-offset-white'
+                      ? 'bg-[#121212] text-[#faf9f6] ring-2 ring-[#121212]/25 ring-offset-2 ring-offset-white'
                       : 'bg-[#e8e8e8] text-[#9b9b9b]'
                 }`}
               >
@@ -43,7 +43,7 @@ export function ApplicationStageTimeline({ stage }: { stage: string }) {
               <p className={`text-[14px] ${cur ? 'font-semibold text-[#121212]' : 'text-[#505050]'}`}>
                 {jobApplicationStageLabel(s)}
               </p>
-              {cur ? <p className="mt-0.5 text-[12px] text-[#008B60]">Current stage</p> : null}
+              {cur ? <p className="mt-0.5 text-[12px] font-medium text-[#6b6b6b]">Current stage</p> : null}
             </div>
           </li>
         );

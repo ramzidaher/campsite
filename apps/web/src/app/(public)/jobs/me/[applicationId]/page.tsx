@@ -72,7 +72,7 @@ export default async function CandidateApplicationDetailPage({ params }: { param
         <CandidatePortalNav orgSlug={orgSlug} hostHeader={host} current="applications" />
 
         <header className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-6">
-          <Link href={backToListHref} className="text-[12px] text-[#008B60] underline hover:text-[#006b4a]">
+          <Link href={backToListHref} className="text-[12px] font-medium text-[#121212] underline decoration-[#d8d8d8] underline-offset-2 hover:decoration-[#121212]">
             ← Back to my applications
           </Link>
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">{row.org_name}</p>

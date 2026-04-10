@@ -8,7 +8,7 @@ const initial: CandidateProfileFormState = { ok: false, error: null };
 
 const labelClass = 'block text-[12px] font-medium text-[#505050]';
 const inputClass =
-  'mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[14px] text-[#121212] outline-none focus:border-[#008B60]';
+  'mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[14px] text-[#121212] outline-none focus:border-[#121212]';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -16,7 +16,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-[#008B60] px-4 py-2 text-[13px] font-medium text-white hover:bg-[#007a52] disabled:opacity-60"
+      className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] hover:opacity-90 disabled:opacity-60"
     >
       {pending ? 'Saving…' : 'Save profile'}
     </button>

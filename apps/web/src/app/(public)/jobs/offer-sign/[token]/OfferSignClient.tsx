@@ -115,7 +115,7 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
     return (
       <div className="mx-auto max-w-lg px-5 py-16 text-center">
         <p className="text-[14px] text-[#6b6b6b]">This offer link is no longer valid.</p>
-        <Link href="/jobs" className="mt-4 inline-block text-[#008B60]">
+        <Link href="/jobs" className="mt-4 inline-block font-medium text-[#121212] underline decoration-[#d8d8d8] underline-offset-2 hover:decoration-[#121212]">
           Job listings
         </Link>
       </div>
@@ -215,7 +215,7 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
             <button
               type="button"
               onClick={clearCanvas}
-              className="mt-2 text-[13px] text-[#008B60] underline"
+              className="mt-2 text-[13px] font-medium text-[#121212] underline decoration-[#d8d8d8] underline-offset-2 hover:decoration-[#121212]"
             >
               Clear signature
             </button>
@@ -226,7 +226,7 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
               type="button"
               disabled={pending}
               onClick={onSign}
-              className="rounded-lg bg-[#008B60] px-4 py-2.5 text-[14px] font-medium text-white disabled:opacity-60"
+              className="rounded-lg bg-[#121212] px-4 py-2.5 text-[14px] font-medium text-[#faf9f6] hover:opacity-90 disabled:opacity-60"
             >
               {pending ? 'Submitting…' : 'Accept & sign offer'}
             </button>
