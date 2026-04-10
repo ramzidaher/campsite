@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 const MIN_PENDING_MS = 450;
 
-async function withMinimumDelay<T>(promise: Promise<T>) {
+async function withMinimumDelay<T>(promise: PromiseLike<T>) {
   const [result] = await Promise.all([
     promise,
     new Promise((resolve) => setTimeout(resolve, MIN_PENDING_MS)),
@@ -273,7 +273,7 @@ export function EmployeeHRFileClient({
     const posN = Number(positionsCount);
     const budN = budgetAmount.trim() === '' ? null : Number(budgetAmount);
     const whN = weeklyHours.trim() === '' ? null : Number(weeklyHours);
-    const { error } = await withMinimumDelay(
+    const response = await withMinimumDelay(
       supabase.rpc('employee_hr_record_upsert', {
         p_user_id: employee.user_id,
         p_job_title: jobTitle.trim(),
@@ -299,6 +299,7 @@ export function EmployeeHRFileClient({
         p_custom_fields: customFieldsToRecord(customFieldRows),
       })
     );
+    const error = (response as { error: { message: string } | null }).error;
     setBusy(false);
     if (error) {
       setMsg({ type: 'error', text: error.message });

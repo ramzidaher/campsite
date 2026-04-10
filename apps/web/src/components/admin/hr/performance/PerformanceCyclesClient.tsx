@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 
 const MIN_PENDING_MS = 450;
 
-async function withMinimumDelay<T>(promise: Promise<T>) {
+async function withMinimumDelay<T>(promise: PromiseLike<T>) {
   const [result] = await Promise.all([
     promise,
     new Promise((resolve) => setTimeout(resolve, MIN_PENDING_MS)),
