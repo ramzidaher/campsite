@@ -1,5 +1,6 @@
 import { OnboardingHubClient } from '@/components/admin/hr/onboarding/OnboardingHubClient';
 import { createClient } from '@/lib/supabase/server';
+import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -21,7 +22,7 @@ export default async function OnboardingHubPage({
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const orgId = profile.org_id as string;
 
-  const [canTemplates, canManageRuns, canViewDirectReports, canCompleteOwnTasks] = await Promise.all([
+  const [canTemplates, canManageRuns, canCompleteOwnTasks] = await Promise.all([
     supabase
       .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.manage_templates', p_context: {} })
       .then(({ data }) => !!data),
@@ -29,29 +30,16 @@ export default async function OnboardingHubPage({
       .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.manage_runs', p_context: {} })
       .then(({ data }) => !!data),
     supabase
-      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.view_direct_reports', p_context: {} })
-      .then(({ data }) => !!data),
-    supabase
       .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.complete_own_tasks', p_context: {} })
       .then(({ data }) => !!data),
   ]);
 
-  const canViewRuns = canManageRuns || canViewDirectReports || canCompleteOwnTasks;
+  const canViewRuns = canManageRuns || canCompleteOwnTasks;
   if (!canTemplates && !canViewRuns) redirect('/admin');
 
   const { template: rawTemplateId } = await searchParams;
 
-  const directReportIdsPromise = canManageRuns || !canViewDirectReports
-    ? Promise.resolve<string[]>([])
-    : supabase
-        .from('employee_hr_records')
-        .select('user_id')
-        .eq('org_id', orgId)
-        .eq('reports_to_user_id', user.id)
-        .then(({ data }) => (data ?? []).map((r) => r.user_id as string));
-
-  const [directReportIds, templatesRes, runsRes, membersRes] = await Promise.all([
-    directReportIdsPromise,
+  const [templatesRes, runsRes, membersRes] = await Promise.all([
     supabase
       .from('onboarding_templates')
       .select('id, name, description, is_default, is_archived, created_at')
@@ -65,7 +53,7 @@ export default async function OnboardingHubPage({
       .limit(100),
     supabase
       .from('profiles')
-      .select('id, full_name, email')
+      .select('id, full_name, preferred_name, email')
       .eq('org_id', orgId)
       .eq('status', 'active')
       .order('full_name'),
@@ -76,13 +64,16 @@ export default async function OnboardingHubPage({
   const allRuns = runsRes.data ?? [];
   const runs = canManageRuns
     ? allRuns
-    : canViewDirectReports
-      ? allRuns.filter((r) => directReportIds.includes(r.user_id as string) || (canCompleteOwnTasks && (r.user_id as string) === user.id))
-      : allRuns.filter((r) => (r.user_id as string) === user.id);
+    : allRuns.filter((r) => canCompleteOwnTasks && (r.user_id as string) === user.id);
 
   // resolve names
-  const memberMap: Record<string, { full_name: string; email: string | null }> = {};
-  for (const m of members ?? []) memberMap[m.id as string] = { full_name: m.full_name as string, email: (m.email as string | null) };
+  const memberMap: Record<string, { display_name: string; email: string | null }> = {};
+  for (const m of members ?? []) {
+    memberMap[m.id as string] = {
+      display_name: getDisplayName(m.full_name as string, (m.preferred_name as string | null) ?? null),
+      email: (m.email as string | null),
+    };
+  }
 
   const templateMap: Record<string, string> = {};
   for (const t of templates ?? []) templateMap[t.id as string] = t.name as string;
@@ -106,7 +97,7 @@ export default async function OnboardingHubPage({
   const enrichedRuns = (runs ?? []).map((r) => ({
     id: r.id as string,
     user_id: r.user_id as string,
-    full_name: memberMap[r.user_id as string]?.full_name ?? 'Unknown',
+    display_name: memberMap[r.user_id as string]?.display_name ?? 'Unknown',
     email: memberMap[r.user_id as string]?.email ?? null,
     status: r.status as string,
     employment_start_date: r.employment_start_date as string,
@@ -129,7 +120,11 @@ export default async function OnboardingHubPage({
         created_at: t.created_at as string,
       }))}
       runs={enrichedRuns}
-      members={(members ?? []).map((m) => ({ id: m.id as string, full_name: m.full_name as string, email: (m.email as string | null) }))}
+      members={(members ?? []).map((m) => ({
+        id: m.id as string,
+        display_name: getDisplayName(m.full_name as string, (m.preferred_name as string | null) ?? null),
+        email: (m.email as string | null),
+      }))}
       selectedTemplateId={validSelectedTemplateId}
       selectedTemplateTasks={templateTasks.map((t) => ({
         id: t.id as string,

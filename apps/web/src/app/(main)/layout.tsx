@@ -165,9 +165,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       showLeaveNav &&
       (permissionKeys.includes('leave.approve_direct_reports') ||
         permissionKeys.includes('leave.manage_org'));
-    const hasPerformanceAccess =
-      permissionKeys.includes('performance.view_own') ||
-      permissionKeys.includes('performance.review_direct_reports');
+    const hasPerformanceAccess = permissionKeys.includes('performance.review_direct_reports');
     const canReviewPerformance = permissionKeys.includes('performance.review_direct_reports');
     const hasOnboardingAccess = permissionKeys.includes('onboarding.complete_own_tasks');
     const canApproveRota = permissionKeys.includes('rota.final_approve');
@@ -177,7 +175,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Previously these were spread across 5+ sequential awaits; now they fire together.
     const [
       leavePendingRes,
-      performanceAnyRes,
       performancePendingRes,
       onboardingRes,
       rotaFinalRes,
@@ -188,12 +185,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       needsLeaveApprovalBadge
         ? supabase.rpc('leave_pending_approval_count_for_me')
         : Promise.resolve({ data: null as number | null }),
-      hasPerformanceAccess && orgId
-        ? supabase
-            .from('performance_reviews')
-            .select('id', { count: 'exact', head: true })
-            .or(`reviewee_id.eq.${user.id},reviewer_id.eq.${user.id}`)
-        : Promise.resolve({ count: 0 as number | null }),
       canReviewPerformance && orgId
         ? supabase
             .from('performance_reviews')
@@ -232,7 +223,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const lc = leavePendingRes.data;
     if (lc !== null && lc !== undefined) leaveNavBadge = Math.max(0, Number(lc));
 
-    if ((performanceAnyRes.count ?? 0) > 0) {
+    if (hasPerformanceAccess) {
       showPerformanceNav = true;
       performanceNavBadge = Math.max(0, Number(performancePendingRes.count ?? 0));
     }

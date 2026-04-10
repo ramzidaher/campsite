@@ -155,7 +155,7 @@ export function getMainShellManagerNavItems(
     section: 'People',
   };
   const recruitment: MainShellAdminNavItem = {
-    href: '/manager/recruitment',
+    href: '/hr/recruitment',
     label: 'Recruitment requests',
     icon: 'recruitment',
     section: 'People',
@@ -303,8 +303,8 @@ export function getMainShellHrNavItemsByPermissions(
     items.push({ href: '/hr/offer-templates', label: 'Offer templates', icon: 'offerTemplates' });
   if (p.includes('interviews.view') || p.includes('interviews.book_slot'))
     items.push({ href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews' });
-  if (p.includes('leave.manage_org'))
-    items.push({ href: '/hr/leave', label: 'Leave & allowances', icon: 'leave' });
+  if (p.includes('leave.manage_org') && !p.includes('hr.view_records'))
+    items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart' });
   if (p.includes('hr.view_records'))
     items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords' });
   else if (p.includes('hr.view_direct_reports'))
@@ -316,7 +316,6 @@ export function getMainShellHrNavItemsByPermissions(
   if (
     p.includes('onboarding.manage_runs') ||
     p.includes('onboarding.manage_templates') ||
-    p.includes('hr.view_direct_reports') ||
     p.includes('onboarding.complete_own_tasks')
   )
     items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding' });
@@ -357,7 +356,7 @@ export function getMainShellManagerNavItemsByPermissions(
     });
   }
   if (p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request'))
-    items.push({ href: '/manager/recruitment', label: 'Recruitment requests', icon: 'recruitment', section: 'People' });
+    items.push({ href: '/hr/recruitment', label: 'Recruitment requests', icon: 'recruitment', section: 'People' });
   if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team HR records', icon: 'hrRecords', section: 'People' });
   if (canViewDepts)

@@ -109,7 +109,7 @@ export function buildSystemOverviewGraph(params: {
         label: 'Recruitment',
         group: 'module',
         tier: 'hr',
-        href: isManagerScoped ? '/manager/recruitment' : '/hr/recruitment',
+        href: '/hr/recruitment',
       })
     : null;
   const jobsNode = canJobs ? addNode({ id: 'jobs', label: 'Jobs', group: 'entity', tier: 'hr', href: '/hr/jobs' }) : null;

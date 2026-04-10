@@ -1,5 +1,6 @@
 import { OnboardingRunClient } from '@/components/admin/hr/onboarding/OnboardingRunClient';
 import { createClient } from '@/lib/supabase/server';
+import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -18,7 +19,7 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const orgId = profile.org_id as string;
 
-  const [{ data: run }, canManageRuns, canCompleteOwnTasks, canViewDirectReports] = await Promise.all([
+  const [{ data: run }, canManageRuns, canCompleteOwnTasks] = await Promise.all([
     supabase
       .from('onboarding_runs')
       .select('id, user_id, status, employment_start_date, created_at, template_id')
@@ -31,28 +32,15 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
     supabase
       .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.complete_own_tasks', p_context: {} })
       .then(({ data }) => !!data),
-    supabase
-      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.view_direct_reports', p_context: {} })
-      .then(({ data }) => !!data),
   ]);
 
   if (!run) redirect('/hr/onboarding');
 
   const isSelfRun = (run.user_id as string) === user.id;
-  const managesEmployee = canViewDirectReports
-    ? await supabase
-        .from('employee_hr_records')
-        .select('id')
-        .eq('org_id', orgId)
-        .eq('user_id', run.user_id as string)
-        .eq('reports_to_user_id', user.id)
-        .limit(1)
-        .then(({ data }) => (data ?? []).length > 0)
-    : false;
-  const canActAsManager = canViewDirectReports && managesEmployee;
+  const canActAsManager = canManageRuns;
   const canActAsEmployeeSelf = canCompleteOwnTasks && isSelfRun;
 
-  if (!canManageRuns && !canActAsManager && !canActAsEmployeeSelf) redirect('/hr/onboarding');
+  if (!canActAsManager && !canActAsEmployeeSelf) redirect('/hr/onboarding');
 
   const { data: tasks } = await supabase
     .from('onboarding_run_tasks')
@@ -63,15 +51,17 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
 
   const { data: employee } = await supabase
     .from('profiles')
-    .select('id, full_name, email, avatar_url')
+    .select('id, full_name, preferred_name, email, avatar_url')
     .eq('id', run.user_id as string)
     .maybeSingle();
 
   const completerIds = [...new Set((tasks ?? []).map((t) => t.completed_by as string).filter(Boolean))];
   const completerNames: Record<string, string> = {};
   if (completerIds.length) {
-    const { data: completers } = await supabase.from('profiles').select('id, full_name').in('id', completerIds);
-    for (const c of completers ?? []) completerNames[c.id as string] = c.full_name as string;
+    const { data: completers } = await supabase.from('profiles').select('id, full_name, preferred_name').in('id', completerIds);
+    for (const c of completers ?? []) {
+      completerNames[c.id as string] = getDisplayName(c.full_name as string, (c.preferred_name as string | null) ?? null);
+    }
   }
 
   return (
@@ -90,7 +80,7 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
       }}
       employee={{
         id: (employee?.id as string) ?? run.user_id as string,
-        full_name: (employee?.full_name as string) ?? 'Unknown',
+        display_name: getDisplayName((employee?.full_name as string) ?? null, (employee?.preferred_name as string | null) ?? null),
         email: (employee?.email as string | null) ?? null,
         avatar_url: (employee?.avatar_url as string | null) ?? null,
       }}
