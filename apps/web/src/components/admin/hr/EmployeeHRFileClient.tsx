@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 const MIN_PENDING_MS = 450;
+const BRADFORD_ALERT_THRESHOLD = 200;
 
 async function withMinimumDelay<T>(promise: PromiseLike<T>) {
   const [result] = await Promise.all([
@@ -18,6 +19,8 @@ async function withMinimumDelay<T>(promise: PromiseLike<T>) {
 type Employee = {
   user_id: string;
   full_name: string;
+  preferred_name?: string | null;
+  display_name?: string | null;
   email: string | null;
   status: string;
   avatar_url: string | null;
@@ -51,6 +54,27 @@ type Employee = {
   custom_fields?: Record<string, unknown> | null;
   length_of_service_years?: number | null;
   length_of_service_months?: number | null;
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
+  contract_signed_on?: string | null;
+  contract_document_url?: string | null;
+  contract_review_date?: string | null;
+  home_address_line1?: string | null;
+  home_address_line2?: string | null;
+  home_city?: string | null;
+  home_county?: string | null;
+  home_postcode?: string | null;
+  home_country?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_relationship?: string | null;
+  emergency_contact_phone?: string | null;
+  emergency_contact_email?: string | null;
+  rtw_status?: string | null;
+  rtw_checked_on?: string | null;
+  rtw_expiry_date?: string | null;
+  rtw_check_method?: string | null;
+  rtw_document_url?: string | null;
+  visa_type?: string | null;
 };
 
 type AuditEvent = {
@@ -105,6 +129,27 @@ function fieldLabel(f: string) {
     department_start_date: 'Department start date',
     continuous_employment_start_date: 'Continuous employment start',
     custom_fields: 'Custom fields',
+    contract_start_date: 'Contract start date',
+    contract_end_date: 'Contract end date',
+    contract_signed_on: 'Contract signed on',
+    contract_document_url: 'Contract document URL',
+    contract_review_date: 'Contract review date',
+    home_address_line1: 'Home address line 1',
+    home_address_line2: 'Home address line 2',
+    home_city: 'Home city',
+    home_county: 'Home county',
+    home_postcode: 'Home postcode',
+    home_country: 'Home country',
+    emergency_contact_name: 'Emergency contact name',
+    emergency_contact_relationship: 'Emergency contact relationship',
+    emergency_contact_phone: 'Emergency contact phone',
+    emergency_contact_email: 'Emergency contact email',
+    rtw_status: 'Right-to-work status',
+    rtw_checked_on: 'Right-to-work checked on',
+    rtw_expiry_date: 'Right-to-work expiry date',
+    rtw_check_method: 'Right-to-work check method',
+    rtw_document_url: 'Right-to-work document URL',
+    visa_type: 'Visa type',
   };
   return map[f] ?? f;
 }
@@ -147,6 +192,7 @@ function fmt(v: string | null) {
 export function EmployeeHRFileClient({
   orgId: _orgId,
   canManage,
+  canViewGrading,
   employee,
   auditEvents,
   leaveAllowance,
@@ -155,6 +201,7 @@ export function EmployeeHRFileClient({
 }: {
   orgId: string;
   canManage: boolean;
+  canViewGrading: boolean;
   employee: Employee;
   auditEvents: AuditEvent[];
   leaveAllowance: { annual_entitlement_days: number; toil_balance_days: number } | null;
@@ -201,6 +248,27 @@ export function EmployeeHRFileClient({
   const [continuousEmploymentStart, setContinuousEmploymentStart] = useState(
     employee.continuous_employment_start_date ?? '',
   );
+  const [contractStartDate, setContractStartDate] = useState(employee.contract_start_date ?? '');
+  const [contractEndDate, setContractEndDate] = useState(employee.contract_end_date ?? '');
+  const [contractSignedOn, setContractSignedOn] = useState(employee.contract_signed_on ?? '');
+  const [contractDocumentUrl, setContractDocumentUrl] = useState(employee.contract_document_url ?? '');
+  const [contractReviewDate, setContractReviewDate] = useState(employee.contract_review_date ?? '');
+  const [homeAddressLine1, setHomeAddressLine1] = useState(employee.home_address_line1 ?? '');
+  const [homeAddressLine2, setHomeAddressLine2] = useState(employee.home_address_line2 ?? '');
+  const [homeCity, setHomeCity] = useState(employee.home_city ?? '');
+  const [homeCounty, setHomeCounty] = useState(employee.home_county ?? '');
+  const [homePostcode, setHomePostcode] = useState(employee.home_postcode ?? '');
+  const [homeCountry, setHomeCountry] = useState(employee.home_country ?? '');
+  const [emergencyContactName, setEmergencyContactName] = useState(employee.emergency_contact_name ?? '');
+  const [emergencyContactRelationship, setEmergencyContactRelationship] = useState(employee.emergency_contact_relationship ?? '');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(employee.emergency_contact_phone ?? '');
+  const [emergencyContactEmail, setEmergencyContactEmail] = useState(employee.emergency_contact_email ?? '');
+  const [rtwStatus, setRtwStatus] = useState(employee.rtw_status ?? 'unknown');
+  const [rtwCheckedOn, setRtwCheckedOn] = useState(employee.rtw_checked_on ?? '');
+  const [rtwExpiryDate, setRtwExpiryDate] = useState(employee.rtw_expiry_date ?? '');
+  const [rtwCheckMethod, setRtwCheckMethod] = useState(employee.rtw_check_method ?? '');
+  const [rtwDocumentUrl, setRtwDocumentUrl] = useState(employee.rtw_document_url ?? '');
+  const [visaType, setVisaType] = useState(employee.visa_type ?? '');
   const [customFieldRows, setCustomFieldRows] = useState<CustomFieldRow[]>(() =>
     customFieldRowsFromEmployee(employee.custom_fields),
   );
@@ -228,6 +296,27 @@ export function EmployeeHRFileClient({
     setBudgetCurrency(emp.budget_currency ?? '');
     setDepartmentStart(emp.department_start_date ?? '');
     setContinuousEmploymentStart(emp.continuous_employment_start_date ?? '');
+    setContractStartDate(emp.contract_start_date ?? '');
+    setContractEndDate(emp.contract_end_date ?? '');
+    setContractSignedOn(emp.contract_signed_on ?? '');
+    setContractDocumentUrl(emp.contract_document_url ?? '');
+    setContractReviewDate(emp.contract_review_date ?? '');
+    setHomeAddressLine1(emp.home_address_line1 ?? '');
+    setHomeAddressLine2(emp.home_address_line2 ?? '');
+    setHomeCity(emp.home_city ?? '');
+    setHomeCounty(emp.home_county ?? '');
+    setHomePostcode(emp.home_postcode ?? '');
+    setHomeCountry(emp.home_country ?? '');
+    setEmergencyContactName(emp.emergency_contact_name ?? '');
+    setEmergencyContactRelationship(emp.emergency_contact_relationship ?? '');
+    setEmergencyContactPhone(emp.emergency_contact_phone ?? '');
+    setEmergencyContactEmail(emp.emergency_contact_email ?? '');
+    setRtwStatus(emp.rtw_status ?? 'unknown');
+    setRtwCheckedOn(emp.rtw_checked_on ?? '');
+    setRtwExpiryDate(emp.rtw_expiry_date ?? '');
+    setRtwCheckMethod(emp.rtw_check_method ?? '');
+    setRtwDocumentUrl(emp.rtw_document_url ?? '');
+    setVisaType(emp.visa_type ?? '');
     setCustomFieldRows(customFieldRowsFromEmployee(emp.custom_fields));
   }
 
@@ -261,6 +350,27 @@ export function EmployeeHRFileClient({
     setBudgetCurrency(employee.budget_currency ?? '');
     setDepartmentStart(employee.department_start_date ?? '');
     setContinuousEmploymentStart(employee.continuous_employment_start_date ?? '');
+    setContractStartDate(employee.contract_start_date ?? '');
+    setContractEndDate(employee.contract_end_date ?? '');
+    setContractSignedOn(employee.contract_signed_on ?? '');
+    setContractDocumentUrl(employee.contract_document_url ?? '');
+    setContractReviewDate(employee.contract_review_date ?? '');
+    setHomeAddressLine1(employee.home_address_line1 ?? '');
+    setHomeAddressLine2(employee.home_address_line2 ?? '');
+    setHomeCity(employee.home_city ?? '');
+    setHomeCounty(employee.home_county ?? '');
+    setHomePostcode(employee.home_postcode ?? '');
+    setHomeCountry(employee.home_country ?? '');
+    setEmergencyContactName(employee.emergency_contact_name ?? '');
+    setEmergencyContactRelationship(employee.emergency_contact_relationship ?? '');
+    setEmergencyContactPhone(employee.emergency_contact_phone ?? '');
+    setEmergencyContactEmail(employee.emergency_contact_email ?? '');
+    setRtwStatus(employee.rtw_status ?? 'unknown');
+    setRtwCheckedOn(employee.rtw_checked_on ?? '');
+    setRtwExpiryDate(employee.rtw_expiry_date ?? '');
+    setRtwCheckMethod(employee.rtw_check_method ?? '');
+    setRtwDocumentUrl(employee.rtw_document_url ?? '');
+    setVisaType(employee.visa_type ?? '');
     setCustomFieldRows(customFieldRowsFromEmployee(employee.custom_fields));
     setMsg(null);
     setEditing(false);
@@ -297,6 +407,27 @@ export function EmployeeHRFileClient({
         p_department_start_date: departmentStart || null,
         p_continuous_employment_start_date: continuousEmploymentStart || null,
         p_custom_fields: customFieldsToRecord(customFieldRows),
+        p_contract_start_date: contractStartDate || null,
+        p_contract_end_date: contractEndDate || null,
+        p_contract_signed_on: contractSignedOn || null,
+        p_contract_document_url: contractDocumentUrl.trim() || null,
+        p_contract_review_date: contractReviewDate || null,
+        p_home_address_line1: homeAddressLine1.trim() || null,
+        p_home_address_line2: homeAddressLine2.trim() || null,
+        p_home_city: homeCity.trim() || null,
+        p_home_county: homeCounty.trim() || null,
+        p_home_postcode: homePostcode.trim() || null,
+        p_home_country: homeCountry.trim() || null,
+        p_emergency_contact_name: emergencyContactName.trim() || null,
+        p_emergency_contact_relationship: emergencyContactRelationship.trim() || null,
+        p_emergency_contact_phone: emergencyContactPhone.trim() || null,
+        p_emergency_contact_email: emergencyContactEmail.trim() || null,
+        p_rtw_status: rtwStatus || 'unknown',
+        p_rtw_checked_on: rtwCheckedOn || null,
+        p_rtw_expiry_date: rtwExpiryDate || null,
+        p_rtw_check_method: rtwCheckMethod.trim() || null,
+        p_rtw_document_url: rtwDocumentUrl.trim() || null,
+        p_visa_type: visaType.trim() || null,
       })
     );
     const error = (response as { error: { message: string } | null }).error;
@@ -333,12 +464,12 @@ export function EmployeeHRFileClient({
           />
         ) : (
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] text-[16px] font-bold text-[#6b6b6b]">
-            {initials(employee.full_name)}
+            {initials(employee.display_name ?? employee.full_name)}
           </div>
         )}
         <div className="flex-1">
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
-            {employee.full_name}
+            {employee.display_name ?? employee.full_name}
           </h1>
           <p className="mt-0.5 text-[13px] text-[#6b6b6b]">
             {employee.email ?? ''}
@@ -391,26 +522,30 @@ export function EmployeeHRFileClient({
                 placeholder="e.g. Senior Engineer"
               />
             </label>
-            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-              Grade / level
-              <input
-                type="text"
-                value={gradeLevel}
-                onChange={(e) => setGradeLevel(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                placeholder="e.g. L4, Senior"
-              />
-            </label>
-            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-              Pay grade (e.g. after pay spine)
-              <input
-                type="text"
-                value={payGrade}
-                onChange={(e) => setPayGrade(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
-                placeholder="e.g. spinal point, band"
-              />
-            </label>
+            {canViewGrading ? (
+              <>
+                <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                  Grade / level
+                  <input
+                    type="text"
+                    value={gradeLevel}
+                    onChange={(e) => setGradeLevel(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                    placeholder="e.g. L4, Senior"
+                  />
+                </label>
+                <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                  Pay grade (e.g. after pay spine)
+                  <input
+                    type="text"
+                    value={payGrade}
+                    onChange={(e) => setPayGrade(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                    placeholder="e.g. spinal point, band"
+                  />
+                </label>
+              </>
+            ) : null}
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Position type
               <input
@@ -573,6 +708,205 @@ export function EmployeeHRFileClient({
               />
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Contract start date
+              <input
+                type="date"
+                value={contractStartDate}
+                onChange={(e) => setContractStartDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Contract end date
+              <input
+                type="date"
+                value={contractEndDate}
+                onChange={(e) => setContractEndDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Contract signed on
+              <input
+                type="date"
+                value={contractSignedOn}
+                onChange={(e) => setContractSignedOn(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Contract review date
+              <input
+                type="date"
+                value={contractReviewDate}
+                onChange={(e) => setContractReviewDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
+              Contract document URL
+              <input
+                type="url"
+                value={contractDocumentUrl}
+                onChange={(e) => setContractDocumentUrl(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="https://..."
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Right-to-work status
+              <select
+                value={rtwStatus}
+                onChange={(e) => setRtwStatus(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              >
+                <option value="unknown">Unknown</option>
+                <option value="required">Required</option>
+                <option value="in_progress">In progress</option>
+                <option value="verified">Verified</option>
+                <option value="expired">Expired</option>
+                <option value="not_required">Not required</option>
+              </select>
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              RTW checked on
+              <input
+                type="date"
+                value={rtwCheckedOn}
+                onChange={(e) => setRtwCheckedOn(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              RTW expiry date
+              <input
+                type="date"
+                value={rtwExpiryDate}
+                onChange={(e) => setRtwExpiryDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              RTW check method
+              <input
+                type="text"
+                value={rtwCheckMethod}
+                onChange={(e) => setRtwCheckMethod(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. online share code"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Visa type
+              <input
+                type="text"
+                value={visaType}
+                onChange={(e) => setVisaType(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. Skilled Worker"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
+              RTW document URL
+              <input
+                type="url"
+                value={rtwDocumentUrl}
+                onChange={(e) => setRtwDocumentUrl(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="https://..."
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
+              Home address line 1
+              <input
+                type="text"
+                value={homeAddressLine1}
+                onChange={(e) => setHomeAddressLine1(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
+              Home address line 2
+              <input
+                type="text"
+                value={homeAddressLine2}
+                onChange={(e) => setHomeAddressLine2(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Home city / town
+              <input
+                type="text"
+                value={homeCity}
+                onChange={(e) => setHomeCity(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Home county / state
+              <input
+                type="text"
+                value={homeCounty}
+                onChange={(e) => setHomeCounty(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Home postcode / ZIP
+              <input
+                type="text"
+                value={homePostcode}
+                onChange={(e) => setHomePostcode(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Home country
+              <input
+                type="text"
+                value={homeCountry}
+                onChange={(e) => setHomeCountry(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Emergency contact name
+              <input
+                type="text"
+                value={emergencyContactName}
+                onChange={(e) => setEmergencyContactName(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Emergency contact relationship
+              <input
+                type="text"
+                value={emergencyContactRelationship}
+                onChange={(e) => setEmergencyContactRelationship(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Emergency contact phone
+              <input
+                type="text"
+                value={emergencyContactPhone}
+                onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Emergency contact email
+              <input
+                type="email"
+                value={emergencyContactEmail}
+                onChange={(e) => setEmergencyContactEmail(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Linked application (hired from)
               <select
                 value={hiredFromApp}
@@ -679,10 +1013,12 @@ export function EmployeeHRFileClient({
                   <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Job title</dt>
                   <dd className="mt-0.5 text-[#121212]">{employee.job_title || '—'}</dd>
                 </div>
-                <div>
-                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Grade</dt>
-                  <dd className="mt-0.5 text-[#121212]">{employee.grade_level || '—'}</dd>
-                </div>
+                {canViewGrading ? (
+                  <div>
+                    <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Grade</dt>
+                    <dd className="mt-0.5 text-[#121212]">{employee.grade_level || '—'}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contract</dt>
                   <dd className="mt-0.5 text-[#121212]">
@@ -720,10 +1056,12 @@ export function EmployeeHRFileClient({
                       : '—'}
                   </dd>
                 </div>
-                <div>
-                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Pay grade</dt>
-                  <dd className="mt-0.5 text-[#121212]">{employee.pay_grade || '—'}</dd>
-                </div>
+                {canViewGrading ? (
+                  <div>
+                    <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Pay grade</dt>
+                    <dd className="mt-0.5 text-[#121212]">{employee.pay_grade || '—'}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Position type</dt>
                   <dd className="mt-0.5 text-[#121212]">{employee.position_type || '—'}</dd>
@@ -761,6 +1099,38 @@ export function EmployeeHRFileClient({
                   <dd className="mt-0.5 text-[#121212]">{employee.continuous_employment_start_date ?? '—'}</dd>
                 </div>
                 <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contract start</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.contract_start_date ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contract end</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.contract_end_date ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contract signed</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.contract_signed_on ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contract review</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.contract_review_date ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">RTW status</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.rtw_status || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">RTW checked</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.rtw_checked_on ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">RTW expiry</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.rtw_expiry_date ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Visa type</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.visa_type || '—'}</dd>
+                </div>
+                <div>
                   <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                     Probation end
                   </dt>
@@ -776,6 +1146,36 @@ export function EmployeeHRFileClient({
                   </dd>
                 </div>
               </dl>
+              {employee.contract_document_url ? (
+                <p className="mt-4 text-[12px] text-[#6b6b6b]">
+                  Contract document: <a href={employee.contract_document_url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#121212]">Open link</a>
+                </p>
+              ) : null}
+              {(employee.home_address_line1 ||
+                employee.home_address_line2 ||
+                employee.home_city ||
+                employee.home_county ||
+                employee.home_postcode ||
+                employee.home_country) ? (
+                <div className="mt-4 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3 text-[13px] text-[#4a4a4a]">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Home address</p>
+                  <p>{employee.home_address_line1 || '—'}</p>
+                  {employee.home_address_line2 ? <p>{employee.home_address_line2}</p> : null}
+                  <p>{[employee.home_city, employee.home_county].filter(Boolean).join(', ') || '—'}</p>
+                  <p>{[employee.home_postcode, employee.home_country].filter(Boolean).join(', ') || '—'}</p>
+                </div>
+              ) : null}
+              {(employee.emergency_contact_name ||
+                employee.emergency_contact_relationship ||
+                employee.emergency_contact_phone ||
+                employee.emergency_contact_email) ? (
+                <div className="mt-4 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3 text-[13px] text-[#4a4a4a]">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Emergency contact</p>
+                  <p>{employee.emergency_contact_name || '—'}{employee.emergency_contact_relationship ? ` (${employee.emergency_contact_relationship})` : ''}</p>
+                  <p>{employee.emergency_contact_phone || '—'}</p>
+                  {employee.emergency_contact_email ? <p>{employee.emergency_contact_email}</p> : null}
+                </div>
+              ) : null}
               {employee.custom_fields &&
               typeof employee.custom_fields === 'object' &&
               !Array.isArray(employee.custom_fields) &&
@@ -861,6 +1261,11 @@ export function EmployeeHRFileClient({
             )}
           </div>
         </div>
+        {canManage && absenceScore && absenceScore.bradford_score >= BRADFORD_ALERT_THRESHOLD ? (
+          <div className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12.5px] text-[#b91c1c]">
+            <strong>HR warning:</strong> Bradford score is {absenceScore.bradford_score} (threshold {BRADFORD_ALERT_THRESHOLD}). Please review this employee&apos;s sickness record.
+          </div>
+        ) : null}
       </section>
 
       {/* Audit trail */}

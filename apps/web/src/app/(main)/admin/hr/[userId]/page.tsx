@@ -1,5 +1,6 @@
 import { EmployeeHRFileClient } from '@/components/admin/hr/EmployeeHRFileClient';
 import { createClient } from '@/lib/supabase/server';
+import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -19,7 +20,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
 
   const orgId = profile.org_id as string;
 
-  const [{ data: canViewAll }, { data: canViewTeam }] = await Promise.all([
+  const [{ data: canViewAll }, { data: canViewTeam }, { data: canManageLeaveOrg }] = await Promise.all([
     supabase.rpc('has_permission', {
       p_user_id: user.id,
       p_org_id: orgId,
@@ -30,6 +31,12 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       p_user_id: user.id,
       p_org_id: orgId,
       p_permission_key: 'hr.view_direct_reports',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: orgId,
+      p_permission_key: 'leave.manage_org',
       p_context: {},
     }),
   ]);
@@ -79,8 +86,10 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
   const changerIds = [...new Set((auditRows ?? []).map((e) => e.changed_by as string))];
   const changerNames: Record<string, string> = {};
   if (changerIds.length) {
-    const { data: changers } = await supabase.from('profiles').select('id, full_name').in('id', changerIds);
-    for (const c of changers ?? []) changerNames[c.id as string] = (c.full_name as string) ?? '';
+    const { data: changers } = await supabase.from('profiles').select('id, full_name, preferred_name').in('id', changerIds);
+    for (const c of changers ?? []) {
+      changerNames[c.id as string] = getDisplayName(c.full_name as string, (c.preferred_name as string | null) ?? null);
+    }
   }
 
   // applications list for "hired from" dropdown
@@ -105,6 +114,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
     <EmployeeHRFileClient
       orgId={orgId}
       canManage={canManage}
+      canViewGrading={!!canViewAll || !!canManageLeaveOrg}
       employee={fileRow as Parameters<typeof EmployeeHRFileClient>[0]['employee']}
       auditEvents={(auditRows ?? []).map((e) => ({
         id: e.id as string,
