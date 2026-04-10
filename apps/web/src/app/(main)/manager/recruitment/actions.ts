@@ -76,14 +76,29 @@ export async function createRecruitmentRequest(form: {
     .maybeSingle();
   if (!deptScope) return { ok: false, error: 'Department not found in your organisation.' };
 
-  const { data: dm } = await supabase
-    .from('dept_managers')
-    .select('dept_id')
-    .eq('user_id', user.id)
-    .eq('dept_id', deptId)
-    .maybeSingle();
-  if (!dm && !canCreateForAnyDepartment) {
-    return { ok: false, error: 'You are not a manager for that department.' };
+  const [{ data: ownDeptMatch }, { data: dmMatch }, { data: directReportRows }] = await Promise.all([
+    supabase.from('user_departments').select('dept_id').eq('user_id', user.id).eq('dept_id', deptId).maybeSingle(),
+    supabase.from('dept_managers').select('dept_id').eq('user_id', user.id).eq('dept_id', deptId).maybeSingle(),
+    supabase.from('profiles').select('id').eq('org_id', profile.org_id).eq('reports_to_user_id', user.id),
+  ]);
+
+  let canRaiseForDirectReportDepartment = false;
+  const directReportIds = (directReportRows ?? []).map((r) => String(r.id));
+  if (directReportIds.length > 0) {
+    const { data: directReportDeptMatch } = await supabase
+      .from('user_departments')
+      .select('dept_id')
+      .in('user_id', directReportIds)
+      .eq('dept_id', deptId)
+      .maybeSingle();
+    canRaiseForDirectReportDepartment = Boolean(directReportDeptMatch);
+  }
+
+  if (!ownDeptMatch && !dmMatch && !canRaiseForDirectReportDepartment && !canCreateForAnyDepartment) {
+    return {
+      ok: false,
+      error: 'You can only raise requests for your departments or departments where your direct reports sit.',
+    };
   }
 
   const jobTitle = form.jobTitle?.trim() ?? '';
