@@ -62,6 +62,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let showOnboardingNav = false;
   let showMyHrRecordNav = false;
   let showMemberSearch = false;
+  let currentOrgId: string | null = null;
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
@@ -85,6 +86,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     userRoleLabel = profileRole ? roleLabel(profileRole) : '';
 
     const orgId = profile?.org_id as string | undefined;
+    currentOrgId = orgId ?? null;
     const needsPendingBadge = Boolean(orgId);
     const needsBroadcastPendingBadge = Boolean(orgId);
 
@@ -357,6 +359,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           showOnboardingNav={showOnboardingNav}
           showMyHrRecordNav={showMyHrRecordNav}
           showMemberSearch={showMemberSearch}
+          orgId={currentOrgId}
         >
           {children}
         </AppShell>

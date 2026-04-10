@@ -5,6 +5,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+const MIN_PENDING_MS = 450;
+
+async function withMinimumDelay<T>(promise: Promise<T>) {
+  const [result] = await Promise.all([
+    promise,
+    new Promise((resolve) => setTimeout(resolve, MIN_PENDING_MS)),
+  ]);
+  return result;
+}
+
 type Employee = {
   user_id: string;
   full_name: string;
@@ -156,7 +166,7 @@ export function EmployeeHRFileClient({
 
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // form state — initialised from existing record or defaults
   const [jobTitle, setJobTitle] = useState(employee.job_title ?? '');
@@ -263,36 +273,39 @@ export function EmployeeHRFileClient({
     const posN = Number(positionsCount);
     const budN = budgetAmount.trim() === '' ? null : Number(budgetAmount);
     const whN = weeklyHours.trim() === '' ? null : Number(weeklyHours);
-    const { error } = await supabase.rpc('employee_hr_record_upsert', {
-      p_user_id: employee.user_id,
-      p_job_title: jobTitle.trim(),
-      p_grade_level: gradeLevel.trim(),
-      p_contract_type: contractType,
-      p_salary_band: salaryBand.trim(),
-      p_fte: Number(fte) || 1,
-      p_work_location: workLocation,
-      p_employment_start_date: startDate || null,
-      p_probation_end_date: probationEnd || null,
-      p_notice_period_weeks: noticePeriod !== '' ? Number(noticePeriod) : null,
-      p_hired_from_application_id: hiredFromApp || null,
-      p_notes: notes.trim() || null,
-      p_position_type: positionType.trim() || null,
-      p_pay_grade: payGrade.trim() || null,
-      p_employment_basis: employmentBasis.trim() || null,
-      p_weekly_hours: whN != null && !Number.isNaN(whN) ? whN : null,
-      p_positions_count: !Number.isNaN(posN) && posN >= 1 ? Math.floor(posN) : null,
-      p_budget_amount: budN != null && !Number.isNaN(budN) ? budN : null,
-      p_budget_currency: budgetCurrency.trim() || null,
-      p_department_start_date: departmentStart || null,
-      p_continuous_employment_start_date: continuousEmploymentStart || null,
-      p_custom_fields: customFieldsToRecord(customFieldRows),
-    });
+    const { error } = await withMinimumDelay(
+      supabase.rpc('employee_hr_record_upsert', {
+        p_user_id: employee.user_id,
+        p_job_title: jobTitle.trim(),
+        p_grade_level: gradeLevel.trim(),
+        p_contract_type: contractType,
+        p_salary_band: salaryBand.trim(),
+        p_fte: Number(fte) || 1,
+        p_work_location: workLocation,
+        p_employment_start_date: startDate || null,
+        p_probation_end_date: probationEnd || null,
+        p_notice_period_weeks: noticePeriod !== '' ? Number(noticePeriod) : null,
+        p_hired_from_application_id: hiredFromApp || null,
+        p_notes: notes.trim() || null,
+        p_position_type: positionType.trim() || null,
+        p_pay_grade: payGrade.trim() || null,
+        p_employment_basis: employmentBasis.trim() || null,
+        p_weekly_hours: whN != null && !Number.isNaN(whN) ? whN : null,
+        p_positions_count: !Number.isNaN(posN) && posN >= 1 ? Math.floor(posN) : null,
+        p_budget_amount: budN != null && !Number.isNaN(budN) ? budN : null,
+        p_budget_currency: budgetCurrency.trim() || null,
+        p_department_start_date: departmentStart || null,
+        p_continuous_employment_start_date: continuousEmploymentStart || null,
+        p_custom_fields: customFieldsToRecord(customFieldRows),
+      })
+    );
     setBusy(false);
     if (error) {
-      setMsg(error.message);
+      setMsg({ type: 'error', text: error.message });
       return;
     }
     setEditing(false);
+    setMsg({ type: 'success', text: 'HR record saved.' });
     router.refresh();
   }
 
@@ -350,8 +363,15 @@ export function EmployeeHRFileClient({
       </div>
 
       {msg ? (
-        <p className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">
-          {msg}
+        <p
+          className={[
+            'mt-4 rounded-lg px-3 py-2 text-[13px]',
+            msg.type === 'error'
+              ? 'border border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]'
+              : 'border border-[#86efac] bg-[#f0fdf4] text-[#166534]',
+          ].join(' ')}
+        >
+          {msg.text}
         </p>
       ) : null}
 
@@ -635,8 +655,9 @@ export function EmployeeHRFileClient({
             </button>
             <button
               type="button"
+              disabled={busy}
               onClick={cancelEdit}
-              className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1] disabled:opacity-50"
             >
               Cancel
             </button>

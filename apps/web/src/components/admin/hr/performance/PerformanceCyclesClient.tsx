@@ -5,6 +5,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
+const MIN_PENDING_MS = 450;
+
+async function withMinimumDelay<T>(promise: Promise<T>) {
+  const [result] = await Promise.all([
+    promise,
+    new Promise((resolve) => setTimeout(resolve, MIN_PENDING_MS)),
+  ]);
+  return result;
+}
+
 type Cycle = {
   id: string;
   name: string;
@@ -48,7 +58,7 @@ export function PerformanceCyclesClient({
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [name, setName] = useState('');
   const [type, setType] = useState('annual');
@@ -60,24 +70,30 @@ export function PerformanceCyclesClient({
   async function createCycle(e: React.FormEvent) {
     e.preventDefault();
     if (!canManage) {
-      setMsg('You do not have permission to create review cycles.');
+      setMsg({ type: 'error', text: 'You do not have permission to create review cycles.' });
       return;
     }
     if (!name.trim() || !periodStart || !periodEnd) return;
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.rpc('review_cycle_create', {
-      p_name: name.trim(),
-      p_type: type,
-      p_period_start: periodStart,
-      p_period_end: periodEnd,
-      p_self_assessment_due: selfDue || null,
-      p_manager_assessment_due: managerDue || null,
-    });
+    const { error } = await withMinimumDelay(
+      supabase.rpc('review_cycle_create', {
+        p_name: name.trim(),
+        p_type: type,
+        p_period_start: periodStart,
+        p_period_end: periodEnd,
+        p_self_assessment_due: selfDue || null,
+        p_manager_assessment_due: managerDue || null,
+      })
+    );
     setBusy(false);
-    if (error) { setMsg(error.message); return; }
+    if (error) {
+      setMsg({ type: 'error', text: error.message });
+      return;
+    }
     setShowForm(false);
     setName(''); setType('annual'); setPeriodStart(''); setPeriodEnd(''); setSelfDue(''); setManagerDue('');
+    setMsg({ type: 'success', text: 'Review cycle created.' });
     router.refresh();
   }
 
@@ -102,7 +118,18 @@ export function PerformanceCyclesClient({
         )}
       </div>
 
-      {msg ? <p className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p> : null}
+      {msg ? (
+        <p
+          className={[
+            'mb-4 rounded-lg px-3 py-2 text-[13px]',
+            msg.type === 'error'
+              ? 'border border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]'
+              : 'border border-[#86efac] bg-[#f0fdf4] text-[#166534]',
+          ].join(' ')}
+        >
+          {msg.text}
+        </p>
+      ) : null}
 
       {showForm && canManage ? (
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-5">
@@ -137,7 +164,7 @@ export function PerformanceCyclesClient({
             </label>
             <div className="flex gap-2 sm:col-span-2">
               <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">{busy ? 'Creating…' : 'Create cycle'}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]">Cancel</button>
+              <button type="button" disabled={busy} onClick={() => setShowForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6] disabled:opacity-50">Cancel</button>
             </div>
           </form>
         </div>

@@ -5,6 +5,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
+const MIN_PENDING_MS = 450;
+
+async function withMinimumDelay<T>(promise: Promise<T>) {
+  const [result] = await Promise.all([
+    promise,
+    new Promise((resolve) => setTimeout(resolve, MIN_PENDING_MS)),
+  ]);
+  return result;
+}
+
 type Template = {
   id: string;
   name: string;
@@ -72,7 +82,7 @@ export function OnboardingHubClient({
 
   const [tab, setTab] = useState<'runs' | 'templates'>(canRuns ? 'runs' : 'templates');
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Start run form
   const [showStartForm, setShowStartForm] = useState(false);
@@ -86,7 +96,7 @@ export function OnboardingHubClient({
   const [tplDesc, setTplDesc] = useState('');
   const [tplDefault, setTplDefault] = useState(false);
   const [taskBusy, setTaskBusy] = useState(false);
-  const [taskMsg, setTaskMsg] = useState<string | null>(null);
+  const [taskMsg, setTaskMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskCategory, setTaskCategory] = useState('other');
@@ -98,15 +108,21 @@ export function OnboardingHubClient({
     if (!startUserId || !startTemplateId || !startDate) return;
     setBusy(true);
     setMsg(null);
-    const { data: runId, error } = await supabase.rpc('onboarding_run_start', {
-      p_user_id: startUserId,
-      p_template_id: startTemplateId,
-      p_employment_start_date: startDate,
-      p_offer_id: null,
-    });
+    const { data: runId, error } = await withMinimumDelay(
+      supabase.rpc('onboarding_run_start', {
+        p_user_id: startUserId,
+        p_template_id: startTemplateId,
+        p_employment_start_date: startDate,
+        p_offer_id: null,
+      })
+    );
     setBusy(false);
-    if (error) { setMsg(error.message); return; }
+    if (error) {
+      setMsg({ type: 'error', text: error.message });
+      return;
+    }
     setShowStartForm(false);
+    setMsg({ type: 'success', text: 'Onboarding run started.' });
     router.push(`/hr/onboarding/${runId as string}`);
   }
 
@@ -115,15 +131,21 @@ export function OnboardingHubClient({
     if (!tplName.trim()) return;
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.from('onboarding_templates').insert({
-      name: tplName.trim(),
-      description: tplDesc.trim() || null,
-      is_default: tplDefault,
-    });
+    const { error } = await withMinimumDelay(
+      supabase.from('onboarding_templates').insert({
+        name: tplName.trim(),
+        description: tplDesc.trim() || null,
+        is_default: tplDefault,
+      })
+    );
     setBusy(false);
-    if (error) { setMsg(error.message); return; }
+    if (error) {
+      setMsg({ type: 'error', text: error.message });
+      return;
+    }
     setShowTemplateForm(false);
     setTplName(''); setTplDesc(''); setTplDefault(false);
+    setMsg({ type: 'success', text: 'Template created.' });
     router.refresh();
   }
 
@@ -139,17 +161,19 @@ export function OnboardingHubClient({
     if (!currentTemplateId || !taskTitle.trim()) return;
     setTaskBusy(true);
     setTaskMsg(null);
-    const { error } = await supabase.rpc('onboarding_template_task_upsert', {
-      p_template_id: currentTemplateId,
-      p_title: taskTitle.trim(),
-      p_category: taskCategory,
-      p_assignee_type: taskAssignee,
-      p_due_offset_days: Math.max(0, Number(taskDueOffset || '0')),
-      p_task_id: editTaskId,
-    });
+    const { error } = await withMinimumDelay(
+      supabase.rpc('onboarding_template_task_upsert', {
+        p_template_id: currentTemplateId,
+        p_title: taskTitle.trim(),
+        p_category: taskCategory,
+        p_assignee_type: taskAssignee,
+        p_due_offset_days: Math.max(0, Number(taskDueOffset || '0')),
+        p_task_id: editTaskId,
+      })
+    );
     setTaskBusy(false);
     if (error) {
-      setTaskMsg(error.message);
+      setTaskMsg({ type: 'error', text: error.message });
       return;
     }
     setEditTaskId(null);
@@ -157,6 +181,7 @@ export function OnboardingHubClient({
     setTaskCategory('other');
     setTaskAssignee('hr');
     setTaskDueOffset('1');
+    setTaskMsg({ type: 'success', text: editTaskId ? 'Task updated.' : 'Task added.' });
     router.refresh();
   }
 
@@ -172,10 +197,12 @@ export function OnboardingHubClient({
   async function deleteTask(taskId: string) {
     setTaskBusy(true);
     setTaskMsg(null);
-    const { error } = await supabase.rpc('onboarding_template_task_delete', { p_task_id: taskId });
+    const { error } = await withMinimumDelay(
+      supabase.rpc('onboarding_template_task_delete', { p_task_id: taskId })
+    );
     setTaskBusy(false);
     if (error) {
-      setTaskMsg(error.message);
+      setTaskMsg({ type: 'error', text: error.message });
       return;
     }
     if (editTaskId === taskId) {
@@ -185,6 +212,7 @@ export function OnboardingHubClient({
       setTaskAssignee('hr');
       setTaskDueOffset('1');
     }
+    setTaskMsg({ type: 'success', text: 'Task deleted.' });
     router.refresh();
   }
 
@@ -197,15 +225,17 @@ export function OnboardingHubClient({
 
     setTaskBusy(true);
     setTaskMsg(null);
-    const first = await supabase.rpc('onboarding_template_task_upsert', {
-      p_template_id: currentTemplateId,
-      p_title: task.title,
-      p_category: task.category,
-      p_assignee_type: task.assignee_type,
-      p_due_offset_days: task.due_offset_days,
-      p_sort_order: other.sort_order,
-      p_task_id: task.id,
-    });
+    const first = await withMinimumDelay(
+      supabase.rpc('onboarding_template_task_upsert', {
+        p_template_id: currentTemplateId,
+        p_title: task.title,
+        p_category: task.category,
+        p_assignee_type: task.assignee_type,
+        p_due_offset_days: task.due_offset_days,
+        p_sort_order: other.sort_order,
+        p_task_id: task.id,
+      })
+    );
     const second = await supabase.rpc('onboarding_template_task_upsert', {
       p_template_id: currentTemplateId,
       p_title: other.title,
@@ -217,9 +247,10 @@ export function OnboardingHubClient({
     });
     setTaskBusy(false);
     if (first.error || second.error) {
-      setTaskMsg(first.error?.message ?? second.error?.message ?? 'Could not reorder tasks');
+      setTaskMsg({ type: 'error', text: first.error?.message ?? second.error?.message ?? 'Could not reorder tasks' });
       return;
     }
+    setTaskMsg({ type: 'success', text: 'Task order updated.' });
     router.refresh();
   }
 
@@ -255,7 +286,16 @@ export function OnboardingHubClient({
       </div>
 
       {msg ? (
-        <p className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p>
+        <p
+          className={[
+            'mb-4 rounded-lg px-3 py-2 text-[13px]',
+            msg.type === 'error'
+              ? 'border border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]'
+              : 'border border-[#86efac] bg-[#f0fdf4] text-[#166534]',
+          ].join(' ')}
+        >
+          {msg.text}
+        </p>
       ) : null}
 
       {/* Start run form */}
@@ -305,7 +345,7 @@ export function OnboardingHubClient({
               <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">
                 {busy ? 'Starting…' : 'Start'}
               </button>
-              <button type="button" onClick={() => setShowStartForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]">
+              <button type="button" disabled={busy} onClick={() => setShowStartForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6] disabled:opacity-50">
                 Cancel
               </button>
             </div>
@@ -332,7 +372,7 @@ export function OnboardingHubClient({
             </label>
             <div className="flex gap-2">
               <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">{busy ? 'Creating…' : 'Create'}</button>
-              <button type="button" onClick={() => setShowTemplateForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]">Cancel</button>
+              <button type="button" disabled={busy} onClick={() => setShowTemplateForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6] disabled:opacity-50">Cancel</button>
             </div>
           </form>
         </div>
@@ -440,7 +480,16 @@ export function OnboardingHubClient({
                 <span className="text-[12px] text-[#9b9b9b]">{selectedTemplateTasks.length} task(s)</span>
               </div>
               {taskMsg ? (
-                <p className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{taskMsg}</p>
+                <p
+                  className={[
+                    'mt-3 rounded-lg px-3 py-2 text-[13px]',
+                    taskMsg.type === 'error'
+                      ? 'border border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]'
+                      : 'border border-[#86efac] bg-[#f0fdf4] text-[#166534]',
+                  ].join(' ')}
+                >
+                  {taskMsg.text}
+                </p>
               ) : null}
               <form className="mt-4 grid gap-3 sm:grid-cols-4" onSubmit={(e) => void upsertTask(e)}>
                 <label className="block text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">
