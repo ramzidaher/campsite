@@ -70,7 +70,6 @@ function tone(name: ShellNavIconId) {
     // Management and admin controls
     case 'manager':
     case 'recruitment':
-    case 'admin':
     case 'settings':
       return 'text-rose-300';
 
