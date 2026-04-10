@@ -5,7 +5,7 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
-  CalendarRange,
+  Clock3,
   ClipboardList,
   FileSignature,
   FileText,
@@ -28,19 +28,86 @@ import {
   Tag,
   Ticket,
   UserCog,
+  UserPlus,
   Users,
   Wrench,
 } from 'lucide-react';
 
-const cls = 'h-[18px] w-[18px] shrink-0 opacity-[0.92]';
-const stroke = 1.75;
+const cls = 'h-[18px] w-[18px] shrink-0 text-current';
+const stroke = 1.9;
 
 function cn(...parts: (string | false | undefined)[]) {
   return parts.filter(Boolean).join(' ');
 }
 
+function tone(name: ShellNavIconId) {
+  switch (name) {
+    // Communications and awareness
+    case 'dashboard':
+    case 'broadcasts':
+    case 'notifications':
+      return 'text-slate-300';
+
+    // People and profile
+    case 'userProfile':
+    case 'members':
+    case 'roles':
+    case 'departments':
+    case 'teams':
+    case 'hrRecords':
+    case 'onboarding':
+    case 'orgChart':
+      return 'text-violet-300';
+
+    // Scheduling and time
+    case 'calendar':
+    case 'rota':
+    case 'leave':
+    case 'pending':
+    case 'interviews':
+      return 'text-cyan-300';
+
+    // Management and admin controls
+    case 'manager':
+    case 'recruitment':
+    case 'admin':
+    case 'settings':
+      return 'text-rose-300';
+
+    // Workstreams and delivery
+    case 'jobs':
+    case 'applications':
+    case 'offerTemplates':
+    case 'performance':
+    case 'activity':
+      return 'text-orange-300';
+
+    // Perks, taxonomy and integrations
+    case 'discount':
+    case 'categories':
+    case 'integrations':
+      return 'text-emerald-300';
+
+    case 'orgSettings':
+    case 'systemOverview':
+      return 'text-zinc-300';
+
+    case 'home':
+      return 'text-zinc-300';
+    default:
+      return 'text-zinc-300';
+  }
+}
+
 export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: boolean }) {
-  const p = { className: cls, strokeWidth: stroke, 'aria-hidden': true as const };
+  const p = {
+    className: cn(cls, tone(name)),
+    strokeWidth: stroke,
+    absoluteStrokeWidth: true,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true as const,
+  };
   switch (name) {
     case 'settings':
       if (open !== undefined) {
@@ -63,7 +130,7 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
     case 'calendar':
       return <CalendarDays {...p} />;
     case 'rota':
-      return <CalendarRange {...p} />;
+      return <Clock3 {...p} />;
     case 'discount':
       return <Ticket {...p} />;
     case 'home':
@@ -103,7 +170,7 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       }
       return <Briefcase {...p} />;
     case 'recruitment':
-      return <Briefcase {...p} />;
+      return <UserPlus {...p} />;
     case 'jobs':
       return <FileText {...p} />;
     case 'applications':
@@ -118,7 +185,7 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <UserCircle {...p} />;
     case 'hrRecords':
       if (open !== undefined) {
-        const iconCls = 'h-[18px] w-[18px] shrink-0 opacity-[0.92]';
+        const iconCls = cn('h-[18px] w-[18px] shrink-0 text-current', tone(name));
         return (
           <span
             className={cn(
@@ -127,9 +194,23 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
             )}
           >
             {open ? (
-              <FolderOpen className={iconCls} strokeWidth={stroke} aria-hidden />
+              <FolderOpen
+                className={iconCls}
+                strokeWidth={stroke}
+                absoluteStrokeWidth
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              />
             ) : (
-              <Folder className={iconCls} strokeWidth={stroke} aria-hidden />
+              <Folder
+                className={iconCls}
+                strokeWidth={stroke}
+                absoluteStrokeWidth
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              />
             )}
           </span>
         );
