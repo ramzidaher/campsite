@@ -2,11 +2,13 @@ import { HRDirectoryClient } from '@/components/admin/hr/HRDirectoryClient';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 
 export default async function HRDirectoryPage() {
-  const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
+
+  const supabase = await createClient();
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -18,40 +20,19 @@ export default async function HRDirectoryPage() {
 
   const orgId = profile.org_id as string;
 
-  const [{ data: canViewAll }, { data: canViewTeam }] = await Promise.all([
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'hr.view_records',
-      p_context: {},
-    }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'hr.view_direct_reports',
-      p_context: {},
-    }),
-  ]);
+  // Use the cached permissions — layout already called getMyPermissions(orgId),
+  // so this is a free cache hit with no DB round trip.
+  const permissionKeys = await getMyPermissions(orgId);
 
+  const canViewAll = permissionKeys.includes('hr.view_records');
+  const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
   if (!canViewAll && !canViewTeam) redirect('/broadcasts');
 
-  const [canManage, canManagePerformanceCycles, rows, dashStats] = await Promise.all([
-    supabase
-      .rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: orgId,
-        p_permission_key: 'hr.manage_records',
-        p_context: {},
-      })
-      .then(({ data }) => !!data),
-    supabase
-      .rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: orgId,
-        p_permission_key: 'performance.manage_cycles',
-        p_context: {},
-      })
-      .then(({ data }) => !!data),
+  const canManage = permissionKeys.includes('hr.manage_records');
+  const canManagePerformanceCycles = permissionKeys.includes('performance.manage_cycles');
+
+  // Both data fetches in parallel — no prior permission round trips needed.
+  const [rows, dashStats] = await Promise.all([
     supabase.rpc('hr_directory_list').then(({ data }) => data ?? []),
     canViewAll
       ? supabase.rpc('hr_dashboard_stats').then(({ data }) => data ?? null)
@@ -63,7 +44,7 @@ export default async function HRDirectoryPage() {
       orgId={orgId}
       canManage={canManage}
       canManagePerformanceCycles={canManagePerformanceCycles}
-      canViewAll={!!canViewAll}
+      canViewAll={canViewAll}
       initialRows={(rows ?? []) as Parameters<typeof HRDirectoryClient>[0]['initialRows']}
       dashStats={(dashStats ?? null) as Record<string, unknown> | null}
     />

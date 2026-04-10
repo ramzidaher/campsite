@@ -14,6 +14,7 @@ import {
   type PermissionKey,
 } from '@campsite/types';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,9 +121,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             role: profileRole,
           })
         : Promise.resolve(0),
-      orgId
-        ? supabase.rpc('get_my_permissions', { p_org_id: orgId })
-        : Promise.resolve({ data: null }),
+      orgId ? getMyPermissions(orgId) : Promise.resolve([] as PermissionKey[]),
     ]);
 
     if (orgId) {
@@ -137,11 +136,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
     if (typeof broadcastPendingCount === 'number') pendingBroadcastApprovals = broadcastPendingCount;
 
-    if (orgId && Array.isArray(permsRes.data)) {
-      permissionKeys = (permsRes.data as Array<{ permission_key?: string }>).map((p) =>
-        String(p.permission_key ?? '')
-      ) as PermissionKey[];
-    }
+    // permsRes is now PermissionKey[] directly from the cached helper
+    if (orgId) permissionKeys = permsRes;
 
     showLeaveNav =
       permissionKeys.includes('leave.view_own') ||

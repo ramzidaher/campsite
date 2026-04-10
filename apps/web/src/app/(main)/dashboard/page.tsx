@@ -2,9 +2,10 @@ import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { loadDashboardHome } from '@/lib/dashboard/loadDashboardHome';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
-import { canComposeBroadcastByPermissions, type PermissionKey } from '@campsite/types';
+import { canComposeBroadcastByPermissions } from '@campsite/types';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 
 function greeting(hour: number, name: string) {
   if (hour < 12) return `Good morning, ${name}`;
@@ -31,10 +32,8 @@ export default async function DashboardPage() {
   }
   if (profile.status !== 'active') redirect('/pending');
 
-  const { data: permissionRows } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id as string });
-  const permissionKeys = ((permissionRows ?? []) as Array<{ permission_key?: string }>)
-    .map((row) => String(row.permission_key ?? ''))
-    .filter((key): key is PermissionKey => key.length > 0);
+  // Cache hit — layout already called getMyPermissions for nav display.
+  const permissionKeys = await getMyPermissions(profile.org_id as string);
   const data = await loadDashboardHome(supabase, user.id, profile.org_id as string, {
     full_name: profile.full_name as string | null,
     role: profile.role as string,
