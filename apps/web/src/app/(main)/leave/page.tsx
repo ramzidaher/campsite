@@ -50,7 +50,17 @@ export default async function LeavePage() {
     showOnboardingTab = (runCount ?? 0) > 0;
   }
 
-  const initialYear = String(new Date().getFullYear());
+  const { data: leaveSettings } = await supabase
+    .from('org_leave_settings')
+    .select('leave_year_start_month, leave_year_start_day')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  const leaveYearStartMonth = Number(leaveSettings?.leave_year_start_month ?? 1);
+  const leaveYearStartDay = Number(leaveSettings?.leave_year_start_day ?? 1);
+  const now = new Date();
+  const yearStartThisCalendarYear = new Date(Date.UTC(now.getUTCFullYear(), leaveYearStartMonth - 1, leaveYearStartDay));
+  const initialYear = String(now >= yearStartThisCalendarYear ? now.getUTCFullYear() : now.getUTCFullYear() - 1);
 
   return (
     <LeaveHubClient
@@ -60,6 +70,8 @@ export default async function LeavePage() {
       canApprove={canApprove}
       canManage={canManage}
       initialYear={initialYear}
+      leaveYearStartMonth={leaveYearStartMonth}
+      leaveYearStartDay={leaveYearStartDay}
       showPerformanceTab={showPerformanceTab}
       showOnboardingTab={showOnboardingTab}
     />

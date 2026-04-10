@@ -160,7 +160,9 @@ export function OrgLeaveAdminClient({
                 value={annual}
                 onChange={(e) => setAnnual(e.target.value)}
               />
-              <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">e.g. 25 for a standard full-time entitlement</span>
+              <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">
+                Enter full-year entitlement (e.g. 25). Save auto pro-rates by employment start date and leave-year settings.
+              </span>
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Time off in lieu (TOIL) balance (days)

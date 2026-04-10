@@ -36,6 +36,17 @@ function daysBetween(start: string, end: string): number {
   return Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
 }
 
+function overlapDays(aStart: string, aEnd: string, bStart: string, bEnd: string): number {
+  const s = new Date(`${aStart}T12:00:00Z`).getTime();
+  const e = new Date(`${aEnd}T12:00:00Z`).getTime();
+  const bs = new Date(`${bStart}T12:00:00Z`).getTime();
+  const be = new Date(`${bEnd}T12:00:00Z`).getTime();
+  const from = Math.max(s, bs);
+  const to = Math.min(e, be);
+  if (to < from) return 0;
+  return Math.round((to - from) / 86400000) + 1;
+}
+
 function daysLabel(start: string, end: string): string {
   const n = daysBetween(start, end);
   return `${n} day${n === 1 ? '' : 's'}`;
@@ -77,6 +88,8 @@ export function LeaveHubClient({
   canApprove,
   canManage,
   initialYear,
+  leaveYearStartMonth,
+  leaveYearStartDay,
   showPerformanceTab,
   showOnboardingTab,
 }: {
@@ -86,6 +99,8 @@ export function LeaveHubClient({
   canApprove: boolean;
   canManage: boolean;
   initialYear: string;
+  leaveYearStartMonth: number;
+  leaveYearStartDay: number;
   showPerformanceTab: boolean;
   showOnboardingTab: boolean;
 }) {
@@ -193,12 +208,32 @@ export function LeaveHubClient({
     if (error) setMsg(error.message); else await load();
   }
 
-  const usedAnnual = useMemo(() => myRequests.filter((r) => r.kind === 'annual' && (r.status === 'approved' || r.status === 'pending') && (r.start_date.startsWith(year) || r.end_date.startsWith(year))).reduce((acc, r) => acc + daysBetween(r.start_date, r.end_date), 0), [myRequests, year]);
+  const leaveYearStartIso = useMemo(() => {
+    const y = Number(year);
+    return `${String(y).padStart(4, '0')}-${String(leaveYearStartMonth).padStart(2, '0')}-${String(leaveYearStartDay).padStart(2, '0')}`;
+  }, [year, leaveYearStartMonth, leaveYearStartDay]);
+  const leaveYearEndIso = useMemo(() => {
+    const y = Number(year) + 1;
+    const d = new Date(Date.UTC(y, leaveYearStartMonth - 1, leaveYearStartDay));
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, [year, leaveYearStartMonth, leaveYearStartDay]);
+
+  const usedAnnual = useMemo(
+    () =>
+      myRequests
+        .filter((r) => r.kind === 'annual' && (r.status === 'approved' || r.status === 'pending'))
+        .reduce((acc, r) => acc + overlapDays(r.start_date, r.end_date, leaveYearStartIso, leaveYearEndIso), 0),
+    [myRequests, leaveYearStartIso, leaveYearEndIso]
+  );
 
   const entitlement = allowance?.annual_entitlement_days ?? 0;
   const remaining = Math.max(0, entitlement - usedAnnual);
   const toilBalance = allowance?.toil_balance_days ?? 0;
   const usedPct = entitlement > 0 ? Math.min(100, Math.round((usedAnnual / entitlement) * 100)) : 0;
+  const requestedDays = formStart && formEnd && formEnd >= formStart ? daysBetween(formStart, formEnd) : 0;
+  const projectedAnnualRemaining = formKind === 'annual' ? remaining - requestedDays : remaining;
+  const exceedsAnnualAllowance = formKind === 'annual' && requestedDays > 0 && projectedAnnualRemaining < 0;
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
@@ -304,16 +339,26 @@ export function LeaveHubClient({
               </label>
             </div>
             {formStart && formEnd && formEnd >= formStart ? (
-              <p className="rounded-lg bg-[#f0fdf9] px-3 py-2 text-[12.5px] font-medium text-[#166534]">
+              <p
+                className={[
+                  'rounded-lg px-3 py-2 text-[12.5px] font-medium',
+                  exceedsAnnualAllowance ? 'bg-[#fef2f2] text-[#b91c1c]' : 'bg-[#f0fdf9] text-[#166534]',
+                ].join(' ')}
+              >
                 {daysLabel(formStart, formEnd)}
-                {formKind === 'annual' ? ` · ${remaining} day${remaining === 1 ? '' : 's'} remaining after this` : ` · ${toilBalance} TOIL day${toilBalance === 1 ? '' : 's'} available`}
+                {formKind === 'annual'
+                  ? ` · ${Math.max(0, projectedAnnualRemaining)} day${Math.max(0, projectedAnnualRemaining) === 1 ? '' : 's'} remaining after this`
+                  : ` · ${toilBalance} TOIL day${toilBalance === 1 ? '' : 's'} available`}
+                {exceedsAnnualAllowance
+                  ? ` · Exceeds your allowance by ${Math.abs(projectedAnnualRemaining)} day${Math.abs(projectedAnnualRemaining) === 1 ? '' : 's'}`
+                  : ''}
               </p>
             ) : null}
             <label className="block">
               <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Note (optional)</span>
               <input type="text" placeholder="e.g. family holiday" value={formNote} onChange={(e) => setFormNote(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
             </label>
-            <button type="submit" disabled={busy || !formStart || !formEnd} className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50">
+            <button type="submit" disabled={busy || !formStart || !formEnd || exceedsAnnualAllowance} className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50">
               {busy ? 'Sending…' : 'Send request'}
             </button>
           </form>
