@@ -151,15 +151,28 @@ export async function submitOfferSignature(
 
   if (u2) return { ok: false, error: u2.message };
 
-  const { data: admins } = await admin
+  const { data: members } = await admin
     .from('profiles')
-    .select('email')
+    .select('id, email')
     .eq('org_id', orgId)
     .eq('status', 'active')
-    .in('role', ['org_admin', 'super_admin']);
+    .not('email', 'is', null);
 
-  const adminEmails = (admins ?? [])
-    .map((r) => (r.email as string | null)?.trim())
+  const checks = await Promise.all(
+    (members ?? []).map(async (m) => {
+      const { data } = await admin.rpc('has_permission', {
+        p_user_id: m.id,
+        p_org_id: orgId,
+        p_permission_key: 'offers.view',
+        p_context: {},
+      });
+      return { email: (m.email as string | null)?.trim() ?? '', allowed: Boolean(data) };
+    }),
+  );
+
+  const adminEmails = checks
+    .filter((r) => r.allowed)
+    .map((r) => r.email)
     .filter((e): e is string => Boolean(e));
 
   const pdfBase64 = Buffer.from(pdfBytes).toString('base64');

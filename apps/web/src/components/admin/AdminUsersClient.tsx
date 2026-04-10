@@ -133,6 +133,26 @@ export function AdminUsersClient({
     return assignableRoles.find((r) => r.key === 'csa')?.key ?? assignableRoles[0]?.key ?? '';
   }, [assignableRoles]);
 
+  const roleLabelByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of roleFilterOptions) map.set(r.key, r.label);
+    for (const r of assignableRoles) map.set(r.key, r.label);
+    return map;
+  }, [roleFilterOptions, assignableRoles]);
+
+  const editRoleOptions = useMemo(() => {
+    const options = [...assignableRoles];
+    if (editRole && !options.some((r) => r.key === editRole)) {
+      options.unshift({
+        id: `current-${editRole}`,
+        key: editRole,
+        label: roleLabelByKey.get(editRole) ?? editRole.replace(/_/g, ' '),
+        is_system: true,
+      });
+    }
+    return options;
+  }, [assignableRoles, editRole, roleLabelByKey]);
+
   useEffect(() => {
     if (!inviteRole) setInviteRole(defaultInviteRole);
     if (!bulkApproveRole) setBulkApproveRole(defaultInviteRole);
@@ -280,21 +300,23 @@ export function AdminUsersClient({
     setBusy(edit.id);
     setMsg(null);
     const roleId = assignableRoles.find((r) => r.key === editRole)?.id;
-    if (!roleId) {
+    if (!roleId && editRole !== edit.role) {
       setMsg('Invalid role selected');
       setBusy(null);
       return;
     }
-    const assignRes = await fetch('/api/admin/members/assign-role', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: edit.id, role_id: roleId }),
-    });
-    const assignData = (await assignRes.json().catch(() => ({}))) as { error?: string };
-    if (!assignRes.ok) {
-      setMsg(assignData.error ?? 'Could not assign role');
-      setBusy(null);
-      return;
+    if (roleId) {
+      const assignRes = await fetch('/api/admin/members/assign-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: edit.id, role_id: roleId }),
+      });
+      const assignData = (await assignRes.json().catch(() => ({}))) as { error?: string };
+      if (!assignRes.ok) {
+        setMsg(assignData.error ?? 'Could not assign role');
+        setBusy(null);
+        return;
+      }
     }
     const reportsPayload = editReportsTo.trim() ? editReportsTo.trim() : null;
     const reportsRes = await fetch('/api/admin/members/update-reports-to', {
@@ -921,10 +943,14 @@ export function AdminUsersClient({
                   onChange={(e) => setEditRole(e.target.value)}
                   disabled={!canEditRoles}
                 >
-                  {assignableRoles.map((role) => (
+                  {editRoleOptions.map((role) => (
                     <option key={role.id} value={role.key}>
                       {role.label}
-                      {role.is_system ? ' (predefined)' : ''}
+                      {!assignableRoles.some((r) => r.key === role.key)
+                        ? ' (current role — not assignable by your access)'
+                        : role.is_system
+                          ? ' (predefined)'
+                          : ''}
                     </option>
                   ))}
                 </select>

@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { buildPermissionPickerItems } from '@/lib/authz/buildPermissionPicker';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { DEFAULT_PERMISSION_SEED } from '@/lib/authz/defaultPermissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -58,7 +60,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
   const g = await gateOverrides(supabase, user.id, me.org_id, userId);
   if (!g.ok) return g.response;
 
-  const [{ data: overrides, error: ovErr }, picker] = await Promise.all([
+  const [{ data: overrides, error: ovErr }, rawPicker, { data: assignment, error: assignErr }] = await Promise.all([
     supabase
       .from('user_permission_overrides')
       .select('id, mode, permission_key, created_at')
@@ -67,13 +69,80 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
       .order('mode', { ascending: true })
       .order('permission_key', { ascending: true }),
     buildPermissionPickerItems(supabase, me.org_id),
+    supabase
+      .from('user_org_role_assignments')
+      .select('role_id')
+      .eq('org_id', me.org_id)
+      .eq('user_id', userId)
+      .maybeSingle(),
   ]);
 
   if (ovErr) return NextResponse.json({ error: ovErr.message }, { status: 400 });
+  if (assignErr) return NextResponse.json({ error: assignErr.message }, { status: 400 });
+
+  let picker = rawPicker;
+  if ((picker.items?.length ?? 0) === 0) {
+    try {
+      const admin = createServiceRoleClient();
+      await admin.from('permission_catalog').upsert(DEFAULT_PERMISSION_SEED, {
+        onConflict: 'key',
+        ignoreDuplicates: false,
+      });
+      const { data: allPermissionsAdmin } = await admin
+        .from('permission_catalog')
+        .select('key, label, description, is_founder_only')
+        .order('key');
+      if (allPermissionsAdmin?.length) {
+        const { data: mine } = await supabase.rpc('get_my_permissions', { p_org_id: me.org_id });
+        const granted = new Set(
+          (mine ?? []).map((row: unknown) =>
+            typeof row === 'object' && row !== null && 'permission_key' in row
+              ? String((row as { permission_key: string }).permission_key)
+              : String(row),
+          ),
+        );
+        picker = {
+          schema_version: rawPicker.schema_version,
+          items: allPermissionsAdmin.map((row) => ({
+            key: row.key,
+            label: row.label,
+            description: row.description ?? '',
+            is_founder_only: Boolean(row.is_founder_only),
+            assignable_into_custom_role: granted.has(row.key),
+          })),
+        };
+      }
+    } catch {
+      // keep original picker response; UI will still render safely
+    }
+  }
+
+  let baseRole:
+    | {
+        key: string;
+        label: string;
+      }
+    | null = null;
+  let baseRolePermissionKeys: string[] = [];
+
+  if (assignment?.role_id) {
+    const [{ data: roleRow, error: roleErr }, { data: rolePerms, error: permsErr }] = await Promise.all([
+      supabase.from('org_roles').select('key, label').eq('id', assignment.role_id).maybeSingle(),
+      supabase.from('org_role_permissions').select('permission_key').eq('role_id', assignment.role_id),
+    ]);
+    if (roleErr) return NextResponse.json({ error: roleErr.message }, { status: 400 });
+    if (permsErr) return NextResponse.json({ error: permsErr.message }, { status: 400 });
+    if (roleRow) {
+      baseRole = { key: roleRow.key, label: roleRow.label };
+      baseRolePermissionKeys = (rolePerms ?? []).map((p) => p.permission_key);
+    }
+  }
 
   return NextResponse.json({
     overrides: overrides ?? [],
     permission_picker: { schema_version: picker.schema_version, items: picker.items },
+    base_role: baseRole,
+    base_role_permission_keys: baseRolePermissionKeys,
   });
 }
 

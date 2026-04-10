@@ -70,15 +70,28 @@ export async function sendRecruitmentRequestHrEmail(payload: RecruitmentRequestE
     return;
   }
 
-  const { data: admins } = await admin
+  const { data: members } = await admin
     .from('profiles')
-    .select('email')
+    .select('id, email')
     .eq('org_id', payload.orgId)
     .eq('status', 'active')
-    .in('role', ['org_admin', 'super_admin']);
+    .not('email', 'is', null);
 
-  const to = (admins ?? [])
-    .map((r) => (r.email as string | null)?.trim())
+  const checks = await Promise.all(
+    (members ?? []).map(async (m) => {
+      const { data } = await admin.rpc('has_permission', {
+        p_user_id: m.id,
+        p_org_id: payload.orgId,
+        p_permission_key: 'recruitment.approve_request',
+        p_context: {},
+      });
+      return { email: (m.email as string | null)?.trim() ?? '', allowed: Boolean(data) };
+    }),
+  );
+
+  const to = checks
+    .filter((r) => r.allowed)
+    .map((r) => r.email)
     .filter((e): e is string => Boolean(e));
 
   if (!to.length) return;

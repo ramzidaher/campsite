@@ -264,7 +264,6 @@ export function AppShell({
               )}
             </div>
             <span className="min-w-0 flex-1 truncate text-xs font-medium text-white/[0.8]">{orgName}</span>
-            <ChevronDown className="shrink-0 text-white/35" size={14} strokeWidth={2} aria-hidden />
           </button>
         </div>
 
@@ -354,11 +353,17 @@ export function AppShell({
                     playUiSound(next ? 'dropdown_open' : 'dropdown_close');
                     try {
                       localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, next ? '1' : '0');
+                      if (next) {
+                        localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, '0');
+                        localStorage.setItem(HR_NAV_EXPANDED_KEY, '0');
+                      }
                     } catch {
                       /* ignore */
                     }
                     return next;
                   });
+                  setManagerNavExpanded(false);
+                  setHrNavExpanded(false);
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
@@ -440,11 +445,17 @@ export function AppShell({
                     playUiSound(next ? 'dropdown_open' : 'dropdown_close');
                     try {
                       localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, next ? '1' : '0');
+                      if (next) {
+                        localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, '0');
+                        localStorage.setItem(HR_NAV_EXPANDED_KEY, '0');
+                      }
                     } catch {
                       /* ignore */
                     }
                     return next;
                   });
+                  setAdminNavExpanded(false);
+                  setHrNavExpanded(false);
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
@@ -526,11 +537,17 @@ export function AppShell({
                     playUiSound(next ? 'dropdown_open' : 'dropdown_close');
                     try {
                       localStorage.setItem(HR_NAV_EXPANDED_KEY, next ? '1' : '0');
+                      if (next) {
+                        localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, '0');
+                        localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, '0');
+                      }
                     } catch {
                       /* ignore */
                     }
                     return next;
                   });
+                  setAdminNavExpanded(false);
+                  setManagerNavExpanded(false);
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
