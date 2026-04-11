@@ -1,8 +1,15 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { parseStaffResourceFolderEmbed } from '@/lib/staffResourceFolderEmbed';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+export type StaffResourceFolderRow = {
+  id: string;
+  name: string;
+  sort_order: number;
+};
 
 export type StaffResourceRow = {
   id: string;
@@ -12,21 +19,29 @@ export type StaffResourceRow = {
   mime_type: string;
   byte_size: number;
   updated_at: string;
+  folder_id: string | null;
+  staff_resource_folders?: { id: string; name: string } | null;
 };
 
 export function ResourcesListClient({
   orgId,
   canManage,
+  folderFilter,
 }: {
   orgId: string;
   canManage: boolean;
+  /** `null` = all (grouped by folder); UUID = that folder; `none` = uncategorised only */
+  folderFilter: string | null | 'none';
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
   const [rows, setRows] = useState<StaffResourceRow[]>([]);
+  const [folders, setFolders] = useState<StaffResourceFolderRow[]>([]);
   const [busy, setBusy] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [folderBusy, setFolderBusy] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(q.trim()), q.trim().length >= 2 ? 300 : 0);
@@ -34,6 +49,17 @@ export function ResourcesListClient({
   }, [q]);
 
   const searchActive = debounced.length >= 2;
+
+  const loadFolders = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('staff_resource_folders')
+      .select('id, name, sort_order')
+      .eq('org_id', orgId)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) throw error;
+    setFolders((data ?? []) as StaffResourceFolderRow[]);
+  }, [supabase, orgId]);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -45,29 +71,137 @@ export function ResourcesListClient({
           limit_n: 80,
         });
         if (error) throw error;
-        const list = (data ?? []) as StaffResourceRow[];
+        const raw = (data ?? []) as Record<string, unknown>[];
+        let list: StaffResourceRow[] = raw.map((r) => ({
+          id: String(r.id ?? ''),
+          title: String(r.title ?? ''),
+          description: r.description != null ? String(r.description) : '',
+          file_name: String(r.file_name ?? ''),
+          mime_type: String(r.mime_type ?? ''),
+          byte_size: Number(r.byte_size ?? 0),
+          updated_at: String(r.updated_at ?? ''),
+          folder_id: r.folder_id != null ? String(r.folder_id) : null,
+          staff_resource_folders: parseStaffResourceFolderEmbed(r.staff_resource_folders),
+        }));
+        if (folderFilter === 'none') {
+          list = list.filter((r) => !r.folder_id);
+        } else if (folderFilter) {
+          list = list.filter((r) => r.folder_id === folderFilter);
+        }
         setRows(list);
       } else {
-        const { data, error } = await supabase
+        let q = supabase
           .from('staff_resources')
-          .select('id, title, description, file_name, mime_type, byte_size, updated_at')
+          .select(
+            'id, title, description, file_name, mime_type, byte_size, updated_at, folder_id, staff_resource_folders(id, name)',
+          )
           .eq('org_id', orgId)
           .order('updated_at', { ascending: false })
-          .limit(100);
+          .limit(200);
+        if (folderFilter === 'none') {
+          q = q.is('folder_id', null);
+        } else if (folderFilter) {
+          q = q.eq('folder_id', folderFilter);
+        }
+        const { data, error } = await q;
         if (error) throw error;
-        setRows((data ?? []) as StaffResourceRow[]);
+        const raw = (data ?? []) as Record<string, unknown>[];
+        setRows(
+          raw.map((r) => ({
+            id: String(r.id ?? ''),
+            title: String(r.title ?? ''),
+            description: r.description != null ? String(r.description) : '',
+            file_name: String(r.file_name ?? ''),
+            mime_type: String(r.mime_type ?? ''),
+            byte_size: Number(r.byte_size ?? 0),
+            updated_at: String(r.updated_at ?? ''),
+            folder_id: r.folder_id != null ? String(r.folder_id) : null,
+            staff_resource_folders: parseStaffResourceFolderEmbed(r.staff_resource_folders),
+          })),
+        );
       }
+      await loadFolders();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load resources.');
       setRows([]);
     } finally {
       setBusy(false);
     }
-  }, [supabase, orgId, searchActive, debounced]);
+  }, [supabase, orgId, searchActive, debounced, folderFilter, loadFolders]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function addFolder(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newFolderName.trim();
+    if (!name || folderBusy) return;
+    setFolderBusy(true);
+    setErr(null);
+    try {
+      const { error } = await supabase.from('staff_resource_folders').insert({
+        org_id: orgId,
+        name,
+        sort_order: 0,
+      });
+      if (error) throw error;
+      setNewFolderName('');
+      await loadFolders();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not create folder.');
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+
+  async function deleteFolder(id: string, label: string) {
+    if (!canManage || folderBusy) return;
+    if (!window.confirm(`Delete folder “${label}”? Files stay in the library but are moved out of this folder.`)) {
+      return;
+    }
+    setFolderBusy(true);
+    setErr(null);
+    try {
+      const { error } = await supabase.from('staff_resource_folders').delete().eq('id', id);
+      if (error) throw error;
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not delete folder.');
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+
+  const groupedSections = useMemo(() => {
+    if (searchActive || folderFilter !== null) return null;
+    const uncategorized = rows.filter((r) => !r.folder_id);
+    const sections: { key: string; title: string; items: StaffResourceRow[] }[] = [];
+    if (uncategorized.length > 0) {
+      sections.push({ key: 'none', title: 'Uncategorised', items: uncategorized });
+    }
+    for (const f of folders) {
+      const items = rows.filter((r) => r.folder_id === f.id);
+      if (items.length > 0) {
+        sections.push({ key: f.id, title: f.name, items });
+      }
+    }
+    return sections.length > 0 ? sections : null;
+  }, [rows, folders, searchActive, folderFilter]);
+
+  const currentFolderLabel =
+    folderFilter && folderFilter !== 'none'
+      ? folders.find((f) => f.id === folderFilter)?.name ?? 'Folder'
+      : folderFilter === 'none'
+        ? 'Uncategorised'
+        : null;
+
+  const uploadHref =
+    folderFilter && folderFilter !== 'none'
+      ? `/resources/new?folder=${folderFilter}`
+      : folderFilter === 'none'
+        ? '/resources/new?folder=none'
+        : '/resources/new';
 
   return (
     <div className="mx-auto max-w-3xl px-7 py-8">
@@ -80,13 +214,100 @@ export function ResourcesListClient({
         </div>
         {canManage ? (
           <Link
-            href="/resources/new"
+            href={uploadHref}
             className="inline-flex h-9 items-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition hover:bg-black"
           >
             Upload
           </Link>
         ) : null}
       </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Link
+          href="/resources"
+          className={`inline-flex h-8 items-center rounded-full border px-3 text-[12.5px] ${
+            folderFilter === null && !searchActive
+              ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
+              : 'border-[#d8d8d8] bg-white text-[#121212] hover:bg-[#faf9f6]'
+          }`}
+        >
+          All
+        </Link>
+        <Link
+          href="/resources?folder=none"
+          className={`inline-flex h-8 items-center rounded-full border px-3 text-[12.5px] ${
+            folderFilter === 'none' && !searchActive
+              ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
+              : 'border-[#d8d8d8] bg-white text-[#121212] hover:bg-[#faf9f6]'
+          }`}
+        >
+          Uncategorised
+        </Link>
+        {folders.map((f) => (
+          <Link
+            key={f.id}
+            href={`/resources?folder=${f.id}`}
+            className={`inline-flex h-8 max-w-[200px] items-center truncate rounded-full border px-3 text-[12.5px] ${
+              folderFilter === f.id && !searchActive
+                ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
+                : 'border-[#d8d8d8] bg-white text-[#121212] hover:bg-[#faf9f6]'
+            }`}
+            title={f.name}
+          >
+            {f.name}
+          </Link>
+        ))}
+      </div>
+
+      {currentFolderLabel && !searchActive ? (
+        <p className="mb-3 text-[13px] text-[#3d3d3d]">
+          Viewing: <span className="font-medium text-[#121212]">{currentFolderLabel}</span>
+          {' · '}
+          <Link href="/resources" className="text-[#121212] underline">
+            Show all
+          </Link>
+        </p>
+      ) : null}
+
+      {canManage ? (
+        <form onSubmit={addFolder} className="mb-5 flex flex-wrap items-end gap-2 rounded-xl border border-[#ececec] bg-[#faf9f6] p-3">
+          <div className="min-w-[200px] flex-1">
+            <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#6b6b6b]">
+              New folder
+            </label>
+            <input
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="e.g. Policies"
+              className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] outline-none focus:border-[#121212]"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={folderBusy || !newFolderName.trim()}
+            className="h-9 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+          >
+            {folderBusy ? '…' : 'Add'}
+          </button>
+          {folders.length > 0 ? (
+            <div className="w-full pt-1 text-[12px] text-[#6b6b6b]">
+              {folders.map((f) => (
+                <span key={f.id} className="mr-3 inline-flex items-center gap-1">
+                  {f.name}
+                  <button
+                    type="button"
+                    className="text-[#b42318] hover:underline"
+                    onClick={() => void deleteFolder(f.id, f.name)}
+                    disabled={folderBusy}
+                  >
+                    Remove
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </form>
+      ) : null}
 
       <div className="relative mb-5">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9b9b9b]">
@@ -111,35 +332,54 @@ export function ResourcesListClient({
           {canManage && !searchActive ? (
             <>
               {' '}
-              <Link href="/resources/new" className="font-medium text-[#121212] underline">
+              <Link href={uploadHref} className="font-medium text-[#121212] underline">
                 Upload the first file
               </Link>
               .
             </>
           ) : null}
         </p>
+      ) : groupedSections && groupedSections.length > 0 ? (
+        <div className="space-y-8">
+          {groupedSections.map((section) => (
+            <div key={section.key}>
+              <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
+                {section.title}
+              </h2>
+              <ul className="divide-y divide-[#ececec] rounded-xl border border-[#d8d8d8] bg-white">
+                {section.items.map((r) => (
+                  <ResourceRow key={r.id} r={r} />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       ) : (
         <ul className="divide-y divide-[#ececec] rounded-xl border border-[#d8d8d8] bg-white">
           {rows.map((r) => (
-            <li key={r.id}>
-              <Link
-                href={`/resources/${r.id}`}
-                className="block px-4 py-3 transition hover:bg-[#faf9f6]"
-              >
-                <p className="text-[14px] font-medium text-[#121212]">{r.title}</p>
-                {r.description ? (
-                  <p className="mt-0.5 line-clamp-2 text-[12.5px] text-[#6b6b6b]">{r.description}</p>
-                ) : null}
-                <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
-                  {r.file_name} · {formatBytes(r.byte_size)} · Updated{' '}
-                  {new Date(r.updated_at).toLocaleString()}
-                </p>
-              </Link>
-            </li>
+            <ResourceRow key={r.id} r={r} />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function ResourceRow({ r }: { r: StaffResourceRow }) {
+  const folderName = r.staff_resource_folders?.name;
+  return (
+    <li>
+      <Link href={`/resources/${r.id}`} className="block px-4 py-3 transition hover:bg-[#faf9f6]">
+        <p className="text-[14px] font-medium text-[#121212]">{r.title}</p>
+        {r.description ? (
+          <p className="mt-0.5 line-clamp-2 text-[12.5px] text-[#6b6b6b]">{r.description}</p>
+        ) : null}
+        <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
+          {folderName ? `${folderName} · ` : null}
+          {r.file_name} · {formatBytes(r.byte_size)} · Updated {new Date(r.updated_at).toLocaleString()}
+        </p>
+      </Link>
+    </li>
   );
 }
 

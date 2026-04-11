@@ -1,10 +1,15 @@
 import { ResourceNewClient } from '@/components/resources/ResourceNewClient';
+import { parseResourcesFolderParam } from '@/lib/resourcesFolderParam';
 import { createClient } from '@/lib/supabase/server';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
-export default async function ResourceNewPage() {
+export default async function ResourceNewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ folder?: string }>;
+}) {
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
@@ -23,7 +28,14 @@ export default async function ResourceNewPage() {
     redirect('/resources');
   }
 
+  const sp = await searchParams;
+  const defaultFolder = parseResourcesFolderParam(sp.folder);
+
   return (
-    <ResourceNewClient orgId={profile.org_id as string} userId={profile.id as string} />
+    <ResourceNewClient
+      orgId={profile.org_id as string}
+      userId={profile.id as string}
+      defaultFolder={defaultFolder}
+    />
   );
 }

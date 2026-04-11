@@ -1,4 +1,5 @@
 import { ResourceDetailClient } from '@/components/resources/ResourceDetailClient';
+import { parseStaffResourceFolderEmbed } from '@/lib/staffResourceFolderEmbed';
 import { createClient } from '@/lib/supabase/server';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { notFound, redirect } from 'next/navigation';
@@ -21,7 +22,9 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
 
   const { data: row, error } = await supabase
     .from('staff_resources')
-    .select('id, title, description, file_name, mime_type, byte_size, storage_path, updated_at')
+    .select(
+      'id, title, description, file_name, mime_type, byte_size, storage_path, updated_at, folder_id, staff_resource_folders(id, name)',
+    )
     .eq('id', id)
     .maybeSingle();
 
@@ -42,6 +45,7 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
         byte_size: Number(row.byte_size ?? 0),
         storage_path: row.storage_path as string,
         updated_at: row.updated_at as string,
+        folder: parseStaffResourceFolderEmbed(row.staff_resource_folders),
       }}
     />
   );

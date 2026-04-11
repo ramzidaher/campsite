@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -12,20 +12,46 @@ function safeFileSegment(name: string): string {
   return base.slice(0, 180) || 'file';
 }
 
+type FolderOpt = { id: string; name: string };
+
 export function ResourceNewClient({
   orgId,
   userId,
+  defaultFolder,
 }: {
   orgId: string;
   userId: string;
+  /** From `?folder=` — UUID, `none`, or no selection */
+  defaultFolder: string | null | 'none';
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [folders, setFolders] = useState<FolderOpt[]>([]);
+  const [folderId, setFolderId] = useState<string | null>(() =>
+    defaultFolder && defaultFolder !== 'none' ? defaultFolder : null,
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from('staff_resource_folders')
+        .select('id, name')
+        .eq('org_id', orgId)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (cancelled) return;
+      if (!error && data) setFolders(data as FolderOpt[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, orgId]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,6 +97,7 @@ export function ResourceNewClient({
         mime_type: file.type || 'application/octet-stream',
         byte_size: file.size,
         created_by: userId,
+        folder_id: folderId,
       });
       if (insErr) {
         setErr(insErr.message);
@@ -105,6 +132,21 @@ export function ResourceNewClient({
             className="h-10 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
             required
           />
+        </div>
+        <div>
+          <label className="mb-1 block text-[12px] font-medium text-[#121212]">Folder (optional)</label>
+          <select
+            value={folderId ?? ''}
+            onChange={(e) => setFolderId(e.target.value || null)}
+            className="h-10 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+          >
+            <option value="">No folder</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="mb-1 block text-[12px] font-medium text-[#121212]">Description (optional)</label>
