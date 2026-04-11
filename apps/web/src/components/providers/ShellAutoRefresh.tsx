@@ -1,11 +1,13 @@
 'use client';
 
+import { SHELL_REFRESH_EVENT } from '@/hooks/useShellRefresh';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-const REFRESH_INTERVAL_MS = 30_000;
-const MIN_REFRESH_GAP_MS = 10_000;
+/** Keep in-app lists and badges aligned with new notifications / approvals within a few seconds. */
+const REFRESH_INTERVAL_MS = 3_000;
+const MIN_REFRESH_GAP_MS = 2_500;
 
 export function ShellAutoRefresh() {
   const router = useRouter();
@@ -26,6 +28,7 @@ export function ShellAutoRefresh() {
       if (!shouldRefreshNow()) return;
       lastRefreshAtRef.current = Date.now();
       void queryClient.invalidateQueries({ refetchType: 'active' });
+      window.dispatchEvent(new Event(SHELL_REFRESH_EVENT));
       router.refresh();
     };
 

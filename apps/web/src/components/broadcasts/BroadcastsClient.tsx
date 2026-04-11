@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { countPendingBroadcastApprovalsForViewer } from '@/lib/broadcasts/countPendingBroadcastApprovalsForViewer';
 import { BroadcastComposer } from './BroadcastComposer';
 import Link from 'next/link';
@@ -197,6 +198,8 @@ export function BroadcastsClient({
   useEffect(() => {
     void loadMeta();
   }, [loadMeta]);
+
+  useShellRefresh(() => void loadMeta());
 
   useEffect(() => {
     if (tab === 'compose') void loadMeta();
@@ -576,6 +579,8 @@ function MySubmissionsPendingList({
     void load();
   }, [load]);
 
+  useShellRefresh(() => void load());
+
   return (
     <ul className="space-y-2">
       {rows.map((r) => (
@@ -642,6 +647,8 @@ function DraftsScheduledList({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useShellRefresh(() => void load());
 
   const cancel = async (id: string, scheduledAt: string | null) => {
     if (mode === 'scheduled' && scheduledAt) {
@@ -748,6 +755,8 @@ function PendingBroadcastList({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useShellRefresh(() => void load());
 
   const decide = async (id: string, action: 'approve_send' | 'reject', note?: string) => {
     setDecideError(null);

@@ -1,5 +1,6 @@
 import type { ShellNavIconId } from '@/lib/adminGates';
 import {
+  BarChart3,
   Bell,
   Briefcase,
   Building2,
@@ -79,6 +80,7 @@ function tone(name: ShellNavIconId) {
     case 'offerTemplates':
     case 'performance':
     case 'activity':
+    case 'absenceReport':
       return 'text-orange-300';
 
     // Perks, taxonomy and integrations
@@ -148,6 +150,8 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <Tag {...p} />;
     case 'activity':
       return <ClipboardList {...p} />;
+    case 'absenceReport':
+      return <BarChart3 {...p} />;
     case 'orgSettings':
       return <Wrench {...p} />;
     case 'notifications':

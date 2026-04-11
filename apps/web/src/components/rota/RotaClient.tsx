@@ -16,6 +16,7 @@ import {
   formatShiftTimeRange,
   startOfWeekMonday,
 } from '@/lib/datetime';
+import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { friendlyDbError } from '@/lib/rota/friendlyDbError';
 import { GRID_END_HOUR, localYmd } from '@/lib/rota/weekGridLayout';
 import Link from 'next/link';
@@ -382,6 +383,8 @@ export function RotaClient({ profile }: { profile: Profile }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useShellRefresh(() => void load({ silent: true }));
 
   const loadRef = useRef(load);
   loadRef.current = load;

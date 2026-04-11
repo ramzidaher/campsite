@@ -1,4 +1,5 @@
 import { LeaveHubClient } from '@/components/leave/LeaveHubClient';
+import { currentLeaveYearKeyUtc } from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -52,16 +53,21 @@ export default async function LeavePage() {
 
   const { data: leaveSettings } = await supabase
     .from('org_leave_settings')
-    .select('leave_year_start_month, leave_year_start_day, approved_request_change_window_hours')
+    .select(
+      'leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, leave_use_working_days, non_working_iso_dows, toil_minutes_per_day',
+    )
     .eq('org_id', orgId)
     .maybeSingle();
 
   const leaveYearStartMonth = Number(leaveSettings?.leave_year_start_month ?? 1);
   const leaveYearStartDay = Number(leaveSettings?.leave_year_start_day ?? 1);
   const approvedChangeWindowHours = Number(leaveSettings?.approved_request_change_window_hours ?? 48);
-  const now = new Date();
-  const yearStartThisCalendarYear = new Date(Date.UTC(now.getUTCFullYear(), leaveYearStartMonth - 1, leaveYearStartDay));
-  const initialYear = String(now >= yearStartThisCalendarYear ? now.getUTCFullYear() : now.getUTCFullYear() - 1);
+  const initialYear = currentLeaveYearKeyUtc(new Date(), leaveYearStartMonth, leaveYearStartDay);
+  const leaveUseWorkingDays = Boolean(leaveSettings?.leave_use_working_days);
+  const nonWorkingIsoDows = Array.isArray(leaveSettings?.non_working_iso_dows)
+    ? (leaveSettings.non_working_iso_dows as number[]).map((n) => Number(n))
+    : [6, 7];
+  const toilMinutesPerDay = Math.max(1, Number(leaveSettings?.toil_minutes_per_day ?? 480));
 
   return (
     <LeaveHubClient
@@ -74,6 +80,9 @@ export default async function LeavePage() {
       leaveYearStartMonth={leaveYearStartMonth}
       leaveYearStartDay={leaveYearStartDay}
       approvedChangeWindowHours={approvedChangeWindowHours}
+      leaveUseWorkingDays={leaveUseWorkingDays}
+      nonWorkingIsoDows={nonWorkingIsoDows}
+      toilMinutesPerDay={toilMinutesPerDay}
       showPerformanceTab={showPerformanceTab}
       showOnboardingTab={showOnboardingTab}
     />

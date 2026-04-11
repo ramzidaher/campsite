@@ -196,7 +196,9 @@ export function EmployeeHRFileClient({
   employee,
   auditEvents,
   leaveAllowance,
+  leaveEntitlementYearLabel,
   absenceScore,
+  showAbsenceReportingLink = false,
   applications,
 }: {
   orgId: string;
@@ -205,7 +207,11 @@ export function EmployeeHRFileClient({
   employee: Employee;
   auditEvents: AuditEvent[];
   leaveAllowance: { annual_entitlement_days: number; toil_balance_days: number } | null;
+  /** Leave year key (YYYY) for entitlement row / heading — matches org leave-year settings. */
+  leaveEntitlementYearLabel: string;
   absenceScore: { spell_count: number; total_days: number; bradford_score: number } | null;
+  /** Link to org / team Bradford report (HR and managers with leave visibility). */
+  showAbsenceReportingLink?: boolean;
   applications: { id: string; candidate_name: string; job_listing_id: string }[];
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -1223,16 +1229,26 @@ export function EmployeeHRFileClient({
 
       {/* Leave & sickness summary */}
       <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[15px] font-semibold text-[#121212]">
-            Leave ({new Date().getFullYear()})
+            Leave ({leaveEntitlementYearLabel})
           </h2>
-          <Link
-            href="/hr/leave"
-            className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-          >
-            Manage allowances
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {showAbsenceReportingLink ? (
+              <Link
+                href="/hr/absence-reporting"
+                className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              >
+                Absence reporting
+              </Link>
+            ) : null}
+            <Link
+              href="/hr/leave"
+              className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+            >
+              Manage allowances
+            </Link>
+          </div>
         </div>
         <div className="mt-3 grid gap-4 text-[13px] sm:grid-cols-3">
           <div>

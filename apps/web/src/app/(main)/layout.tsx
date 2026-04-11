@@ -53,6 +53,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let recruitmentPendingReviewCount = 0;
   let recruitmentUnreadNotifications = 0;
   let applicationUnreadNotifications = 0;
+  let leaveUnreadNotifications = 0;
   let hasAdminAreaAccess = false;
   let canApproveRecruitment = false;
   let permissionKeys: PermissionKey[] = [];
@@ -183,6 +184,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       recruitmentCountRes,
       recruitmentNotifRes,
       applicationNotifRes,
+      leaveNotifRes,
     ] = await Promise.all([
       needsLeaveApprovalBadge
         ? supabase.rpc('leave_pending_approval_count_for_me')
@@ -221,6 +223,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         : Promise.resolve({ data: null as number | null }),
       supabase.rpc('recruitment_notifications_unread_count'),
       supabase.rpc('application_notifications_unread_count'),
+      supabase.rpc('leave_notifications_unread_count'),
     ]);
 
     const lc = leavePendingRes.data;
@@ -248,6 +251,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const an = applicationNotifRes.data;
     if (typeof an === 'number') applicationUnreadNotifications = Math.max(0, an);
     else if (an !== null && an !== undefined) applicationUnreadNotifications = Math.max(0, Number(an));
+
+    const ln = leaveNotifRes.data;
+    if (typeof ln === 'number') leaveUnreadNotifications = Math.max(0, ln);
+    else if (ln !== null && ln !== undefined) leaveUnreadNotifications = Math.max(0, Number(ln));
   }
 
   const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
@@ -327,6 +334,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       label: 'Application updates',
       href: '/notifications/applications',
       count: applicationUnreadNotifications,
+    },
+    {
+      id: 'leave-notifications',
+      label: 'Time off updates',
+      href: '/notifications/leave',
+      count: leaveUnreadNotifications,
     },
   ].filter((item) => item.count > 0);
 

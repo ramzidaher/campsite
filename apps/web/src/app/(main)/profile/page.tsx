@@ -1,3 +1,4 @@
+import { currentLeaveYearKeyUtc } from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -50,6 +51,18 @@ export default async function MyProfilePage() {
     p_context: {},
   });
 
+  const { data: leaveSettingsForYear } = await supabase
+    .from('org_leave_settings')
+    .select('leave_year_start_month, leave_year_start_day')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  const profileLeaveYearKey = currentLeaveYearKeyUtc(
+    new Date(),
+    Number(leaveSettingsForYear?.leave_year_start_month ?? 1),
+    Number(leaveSettingsForYear?.leave_year_start_day ?? 1),
+  );
+
   const [
     fileRows,
     allowanceRow,
@@ -64,7 +77,7 @@ export default async function MyProfilePage() {
       .select('annual_entitlement_days, toil_balance_days')
       .eq('org_id', orgId)
       .eq('user_id', user.id)
-      .eq('leave_year', String(new Date().getFullYear()))
+      .eq('leave_year', profileLeaveYearKey)
       .maybeSingle(),
     supabase
       .from('leave_requests')
@@ -294,6 +307,7 @@ export default async function MyProfilePage() {
 
       <section id="time-off" className="scroll-mt-24 pt-8">
         <h2 className="text-[15px] font-semibold text-[#121212]">Time off</h2>
+        <p className="mt-1 text-[12px] text-[#9b9b9b]">Leave year {profileLeaveYearKey}</p>
         <div className="mt-3 rounded-xl border border-[#e8e8e8] bg-white p-5">
           <div className="grid gap-3 sm:grid-cols-2 text-[13px]">
             <div className="rounded-lg bg-[#faf9f6] p-3">

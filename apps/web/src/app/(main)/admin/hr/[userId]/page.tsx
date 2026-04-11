@@ -1,4 +1,5 @@
 import { EmployeeHRFileClient } from '@/components/admin/hr/EmployeeHRFileClient';
+import { currentLeaveYearKeyUtc } from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
@@ -51,15 +52,26 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
     })
     .then(({ data }) => !!data);
 
+  const { data: leaveSettingsForYear } = await supabase
+    .from('org_leave_settings')
+    .select('leave_year_start_month, leave_year_start_day')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  const hrFileLeaveYearKey = currentLeaveYearKeyUtc(
+    new Date(),
+    Number(leaveSettingsForYear?.leave_year_start_month ?? 1),
+    Number(leaveSettingsForYear?.leave_year_start_day ?? 1),
+  );
+
   const [{ data: fileRows }, { data: leaveData }, { data: sickScore }] = await Promise.all([
     supabase.rpc('hr_employee_file', { p_user_id: userId }),
-    // current-year leave allowance
     supabase
       .from('leave_allowances')
       .select('leave_year, annual_entitlement_days, toil_balance_days')
       .eq('org_id', orgId)
       .eq('user_id', userId)
-      .eq('leave_year', String(new Date().getFullYear()))
+      .eq('leave_year', hrFileLeaveYearKey)
       .maybeSingle(),
     // Bradford score
     supabase.rpc('bradford_factor_for_user', {
@@ -132,7 +144,9 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
             }
           : null
       }
+      leaveEntitlementYearLabel={hrFileLeaveYearKey}
       absenceScore={absenceScore}
+      showAbsenceReportingLink={!!canViewAll || !!canViewTeam || !!canManageLeaveOrg}
       applications={(applications ?? []) as { id: string; candidate_name: string; job_listing_id: string }[]}
     />
   );

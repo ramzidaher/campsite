@@ -81,7 +81,8 @@ export type ShellNavIconId =
   | 'onboarding'
   | 'performance'
   | 'orgChart'
-  | 'systemOverview';
+  | 'systemOverview'
+  | 'absenceReport';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -121,6 +122,7 @@ export function getMainShellAdminNavItems(
     { href: '/hr/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'HR' },
     { href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' },
     { href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'HR' },
+    { href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport', section: 'HR' },
     { href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'HR' },
     { href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
     { href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' },
@@ -334,6 +336,9 @@ export function getMainShellHrNavItemsByPermissions(
     items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords' });
   else if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team records', icon: 'hrRecords' });
+  if (p.includes('hr.view_records') || p.includes('leave.manage_org') || p.includes('hr.view_direct_reports')) {
+    items.push({ href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport' });
+  }
   if (p.includes('hr.view_own'))
     items.push({ href: '/profile', label: 'My Profile', icon: 'userProfile' });
   if (p.includes('hr.view_records'))

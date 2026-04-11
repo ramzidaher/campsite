@@ -1,10 +1,22 @@
 'use client';
 
+import { currentLeaveYearKey } from '@/lib/datetime';
+import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Member = { id: string; full_name: string; email: string | null };
+
+const ISO_WEEKDAY_SHORT: Record<number, string> = {
+  1: 'Mon',
+  2: 'Tue',
+  3: 'Wed',
+  4: 'Thu',
+  5: 'Fri',
+  6: 'Sat',
+  7: 'Sun',
+};
 
 export function OrgLeaveAdminClient({
   orgId,
@@ -18,11 +30,19 @@ export function OrgLeaveAdminClient({
     leave_year_start_month: number;
     leave_year_start_day: number;
     approved_request_change_window_hours: number;
+    default_annual_entitlement_days: number | null;
+    leave_use_working_days: boolean;
+    non_working_iso_dows: number[];
   } | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(String(currentYear));
+  const [year, setYear] = useState(() =>
+    currentLeaveYearKey(
+      new Date(),
+      initialSettings?.leave_year_start_month ?? 1,
+      initialSettings?.leave_year_start_day ?? 1,
+    ),
+  );
   const [targetId, setTargetId] = useState(members[0]?.id ?? '');
   const [annual, setAnnual] = useState('25');
   const [toil, setToil] = useState('0');
@@ -30,11 +50,35 @@ export function OrgLeaveAdminClient({
   const [lyM, setLyM] = useState(String(initialSettings?.leave_year_start_month ?? 1));
   const [lyD, setLyD] = useState(String(initialSettings?.leave_year_start_day ?? 1));
   const [changeWindowHours, setChangeWindowHours] = useState(String(initialSettings?.approved_request_change_window_hours ?? 48));
+  const [defaultOrgAnnual, setDefaultOrgAnnual] = useState(
+    initialSettings?.default_annual_entitlement_days != null
+      ? String(initialSettings.default_annual_entitlement_days)
+      : '',
+  );
+  const [removeOrgDefaultAnnual, setRemoveOrgDefaultAnnual] = useState(false);
+  const [bulkOverwrite, setBulkOverwrite] = useState(false);
+  const [leaveUseWorkingDays, setLeaveUseWorkingDays] = useState(
+    initialSettings?.leave_use_working_days ?? false,
+  );
+  const [nonWorkingDows, setNonWorkingDows] = useState<number[]>(
+    initialSettings?.non_working_iso_dows?.length
+      ? [...initialSettings.non_working_iso_dows].sort((a, b) => a - b)
+      : [6, 7],
+  );
   const [msg, setMsg] = useState<string | null>(null);
   const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok');
   const [busy, setBusy] = useState(false);
 
-  const yearOptions = [currentYear - 1, currentYear, currentYear + 1].map(String);
+  const yearOptions = useMemo(() => {
+    const cy = new Date().getFullYear();
+    const base = [cy - 1, cy, cy + 1];
+    const yNum = Number(year);
+    if (Number.isFinite(yNum) && !base.includes(yNum)) {
+      base.push(yNum);
+      base.sort((a, b) => a - b);
+    }
+    return base.map(String);
+  }, [year]);
 
   const loadRow = useCallback(async () => {
     if (!targetId) return;
@@ -55,6 +99,7 @@ export function OrgLeaveAdminClient({
   }, [supabase, orgId, targetId, year]);
 
   useEffect(() => { void loadRow(); }, [loadRow]);
+  useShellRefresh(() => void loadRow());
 
   function flash(text: string, kind: 'ok' | 'err' = 'ok') {
     setMsg(text);
@@ -79,17 +124,56 @@ export function OrgLeaveAdminClient({
 
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
+    if (leaveUseWorkingDays && nonWorkingDows.length >= 7) {
+      flash('At least one weekday must count as a working day (not all seven can be non-working).', 'err');
+      return;
+    }
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.rpc('org_leave_settings_upsert', {
+    const payload: {
+      p_bradford_window_days: number;
+      p_leave_year_start_month: number;
+      p_leave_year_start_day: number;
+      p_approved_request_change_window_hours: number;
+      p_default_annual_entitlement_days?: number;
+      p_clear_default_annual_entitlement?: boolean;
+      p_leave_use_working_days: boolean;
+      p_non_working_iso_dows: number[];
+    } = {
       p_bradford_window_days: Number(bradfordDays),
-      p_leave_year_start_month: Number(lyM) as unknown as number,
-      p_leave_year_start_day: Number(lyD) as unknown as number,
+      p_leave_year_start_month: Number(lyM),
+      p_leave_year_start_day: Number(lyD),
       p_approved_request_change_window_hours: Number(changeWindowHours),
+      p_leave_use_working_days: leaveUseWorkingDays,
+      p_non_working_iso_dows: nonWorkingDows,
+    };
+    if (removeOrgDefaultAnnual) {
+      payload.p_clear_default_annual_entitlement = true;
+    } else if (defaultOrgAnnual.trim() !== '') {
+      payload.p_default_annual_entitlement_days = Number(defaultOrgAnnual);
+    }
+    const { error } = await supabase.rpc('org_leave_settings_upsert', payload);
+    setBusy(false);
+    if (error) flash(error.message, 'err');
+    else {
+      if (removeOrgDefaultAnnual) {
+        setDefaultOrgAnnual('');
+        setRemoveOrgDefaultAnnual(false);
+      }
+      flash('Settings saved.');
+    }
+  }
+
+  async function bulkApplyOrgDefault() {
+    setBusy(true);
+    setMsg(null);
+    const { data, error } = await supabase.rpc('leave_allowance_bulk_apply_org_default', {
+      p_leave_year: year,
+      p_overwrite_existing: bulkOverwrite,
     });
     setBusy(false);
     if (error) flash(error.message, 'err');
-    else flash('Settings saved.');
+    else flash(`Applied default to ${typeof data === 'number' ? data : 0} people for ${year}.`);
   }
 
   const selectedMember = members.find((m) => m.id === targetId);
@@ -169,6 +253,7 @@ export function OrgLeaveAdminClient({
               />
               <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">
                 Enter full-year entitlement (e.g. 25). Save auto pro-rates by employment start date and leave-year settings.
+                {leaveUseWorkingDays ? ' Entitlement is in working days (same as booking).' : ''}
               </span>
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
@@ -233,6 +318,118 @@ export function OrgLeaveAdminClient({
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
               How long after approval a user can request an edit or cancellation that still requires manager approval.
             </p>
+          </div>
+
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <label className="flex cursor-pointer items-start gap-2 text-[12.5px] font-medium text-[#121212]">
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded border-[#d8d8d8]"
+                checked={leaveUseWorkingDays}
+                onChange={(e) => setLeaveUseWorkingDays(e.target.checked)}
+              />
+              <span>
+                Count annual leave and TOIL using working days only
+                <span className="mt-1 block text-[11px] font-normal text-[#9b9b9b]">
+                  Weekends and any weekday you mark below do not deduct from leave. Typical for UK-style &quot;days per year&quot; entitlement.
+                </span>
+              </span>
+            </label>
+            {leaveUseWorkingDays ? (
+              <div className="mt-3">
+                <p className="text-[11.5px] font-medium text-[#6b6b6b]">Non-working weekdays (no leave deduction)</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {([1, 2, 3, 4, 5, 6, 7] as const).map((iso) => (
+                    <button
+                      key={iso}
+                      type="button"
+                      onClick={() =>
+                        setNonWorkingDows((prev) =>
+                          prev.includes(iso) ? prev.filter((x) => x !== iso) : [...prev, iso].sort((a, b) => a - b),
+                        )
+                      }
+                      className={`rounded-lg border px-2.5 py-1.5 text-[12px] font-medium ${
+                        nonWorkingDows.includes(iso)
+                          ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
+                          : 'border-[#d8d8d8] bg-white text-[#6b6b6b] hover:border-[#121212]'
+                      }`}
+                    >
+                      {ISO_WEEKDAY_SHORT[iso]}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-[#9b9b9b]">Highlighted = excluded from leave (default Sat–Sun).</p>
+              </div>
+            ) : null}
+          </div>
+
+          <div>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Default full-year annual leave (days)
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                disabled={removeOrgDefaultAnnual}
+                className="mt-1 w-full max-w-[200px] rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] disabled:opacity-50"
+                value={defaultOrgAnnual}
+                onChange={(e) => {
+                  setDefaultOrgAnnual(e.target.value);
+                  setRemoveOrgDefaultAnnual(false);
+                }}
+                placeholder="e.g. 20 or 30"
+              />
+            </label>
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-[12.5px] text-[#6b6b6b]">
+              <input
+                type="checkbox"
+                checked={removeOrgDefaultAnnual}
+                onChange={(e) => setRemoveOrgDefaultAnnual(e.target.checked)}
+                className="rounded border-[#d8d8d8]"
+              />
+              Remove saved organisation default
+            </label>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              Each SU (organisation) can set its own policy — e.g. 20 days or 30 days. Save here, then use “Apply to everyone” below to populate allowances; employment start dates still pro-rate the year someone joins.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <p className="text-[12.5px] font-medium text-[#121212]">Apply organisation default to everyone</p>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              Uses the saved default above (full-year days) and writes each person&apos;s allowance for the selected leave year, pro-rated by their employment start date. TOIL balances are kept. By default only fills people who don&apos;t already have a row for that year; enable overwrite to recalculate everyone.
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Leave year
+                <select
+                  className="mt-1 block w-full min-w-[120px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                >
+                  {yearOptions.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-[#6b6b6b] sm:pb-2">
+                <input
+                  type="checkbox"
+                  checked={bulkOverwrite}
+                  onChange={(e) => setBulkOverwrite(e.target.checked)}
+                  className="rounded border-[#d8d8d8]"
+                />
+                Overwrite existing allowances for this year
+              </label>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void bulkApplyOrgDefault()}
+                className="rounded-lg border border-[#121212] bg-white px-4 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
+              >
+                {busy ? 'Applying…' : 'Apply default to all'}
+              </button>
+            </div>
           </div>
 
           <div>

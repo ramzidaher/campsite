@@ -42,14 +42,22 @@ export function AppMobileHeader() {
       void (async () => {
         try {
           const supabase = getSupabase();
-          const [{ data: bc }, { data: rn }] = await Promise.all([
+          const [{ data: bc }, { data: rn }, { data: an }, { data: ln }] = await Promise.all([
             supabase.rpc('broadcast_unread_count'),
             supabase.rpc('recruitment_notifications_unread_count'),
+            supabase.rpc('application_notifications_unread_count'),
+            supabase.rpc('leave_notifications_unread_count'),
           ]);
           if (cancelled) return;
           const broadcastN = typeof bc === 'number' ? bc : Number(bc);
           const recruitN = typeof rn === 'number' ? rn : Number(rn);
-          setHasNotifDot(!Number.isNaN(broadcastN) && broadcastN > 0);
+          const appN = typeof an === 'number' ? an : Number(an);
+          const leaveN = typeof ln === 'number' ? ln : Number(ln);
+          setHasNotifDot(
+            (!Number.isNaN(broadcastN) && broadcastN > 0) ||
+              (!Number.isNaN(appN) && appN > 0) ||
+              (!Number.isNaN(leaveN) && leaveN > 0),
+          );
           setHasRecruitmentDot(!Number.isNaN(recruitN) && recruitN > 0);
         } catch {
           setHasNotifDot(false);

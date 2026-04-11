@@ -12,6 +12,7 @@ import {
   startOfMonth,
   startOfWeekMonday,
 } from '@/lib/datetime';
+import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Profile = {
@@ -144,8 +145,9 @@ export function CalendarClient({ profile }: { profile: Profile }) {
     return { from: start, to: end };
   }, [view, anchor, selectedDay]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setLoading(true);
     const from = range.from.toISOString();
     const to = range.to.toISOString();
 
@@ -224,6 +226,8 @@ export function CalendarClient({ profile }: { profile: Profile }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useShellRefresh(() => void load({ silent: true }));
 
   const monthWeeks = useMemo(() => monthCalendarWeeks(anchor), [anchor]);
 
