@@ -54,6 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let recruitmentUnreadNotifications = 0;
   let applicationUnreadNotifications = 0;
   let leaveUnreadNotifications = 0;
+  let hrMetricUnreadNotifications = 0;
   let hasAdminAreaAccess = false;
   let canApproveRecruitment = false;
   let permissionKeys: PermissionKey[] = [];
@@ -192,6 +193,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       recruitmentNotifRes,
       applicationNotifRes,
       leaveNotifRes,
+      hrMetricNotifRes,
     ] = await Promise.all([
       needsLeaveApprovalBadge
         ? supabase.rpc('leave_pending_approval_count_for_me')
@@ -231,6 +233,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       supabase.rpc('recruitment_notifications_unread_count'),
       supabase.rpc('application_notifications_unread_count'),
       supabase.rpc('leave_notifications_unread_count'),
+      supabase.rpc('hr_metric_notifications_unread_count'),
     ]);
 
     const lc = leavePendingRes.data;
@@ -262,6 +265,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const ln = leaveNotifRes.data;
     if (typeof ln === 'number') leaveUnreadNotifications = Math.max(0, ln);
     else if (ln !== null && ln !== undefined) leaveUnreadNotifications = Math.max(0, Number(ln));
+
+    const hm = hrMetricNotifRes.data;
+    if (typeof hm === 'number') hrMetricUnreadNotifications = Math.max(0, hm);
+    else if (hm !== null && hm !== undefined) hrMetricUnreadNotifications = Math.max(0, Number(hm));
   }
 
   const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
@@ -347,6 +354,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       label: 'Time off updates',
       href: '/notifications/leave',
       count: leaveUnreadNotifications,
+    },
+    {
+      id: 'hr-metric-notifications',
+      label: 'HR metric alerts',
+      href: '/notifications/hr-metrics',
+      count: hrMetricUnreadNotifications,
     },
   ].filter((item) => item.count > 0);
 

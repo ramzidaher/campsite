@@ -343,6 +343,9 @@ export function getMainShellHrNavItemsByPermissions(
   if (p.includes('hr.view_records') || p.includes('leave.manage_org') || p.includes('hr.view_direct_reports')) {
     items.push({ href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport' });
   }
+  if (p.includes('hr.view_records')) {
+    items.push({ href: '/hr/hr-metric-alerts', label: 'HR metric alerts', icon: 'notifications' });
+  }
   if (p.includes('hr.view_own'))
     items.push({ href: '/profile', label: 'My Profile', icon: 'userProfile' });
   if (p.includes('hr.view_records'))

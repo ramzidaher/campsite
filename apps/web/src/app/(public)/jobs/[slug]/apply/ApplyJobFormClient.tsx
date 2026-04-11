@@ -26,6 +26,7 @@ export function ApplyJobFormClient({
   hostHeader,
   defaultEmail,
   isAuthenticated,
+  eqCategories = [],
 }: {
   jobSlug: string;
   listing: Listing;
@@ -33,6 +34,8 @@ export function ApplyJobFormClient({
   hostHeader: string;
   defaultEmail?: string | null;
   isAuthenticated: boolean;
+  /** Optional equality monitoring options from org HR settings. */
+  eqCategories?: { code: string; label: string }[];
 }) {
   const [state, formAction, pending] = useActionState<
     SubmitJobApplicationState | undefined,
@@ -634,6 +637,35 @@ export function ApplyJobFormClient({
           <section className={`${currentStep === 3 && !done ? 'block' : 'hidden'}`}>
             <div className="rounded-[11px] border border-[#d8d8d8] bg-white p-6">
               <h2 className="mb-4 border-b border-[#d8d8d8] pb-2 font-authSerif text-[22px]">Review & submit</h2>
+              {eqCategories.length > 0 ? (
+                <div className="mb-5 rounded-[9px] border border-[#e5e5e5] bg-[#faf9f6] p-4">
+                  <p className="mb-2 text-[12px] font-medium uppercase tracking-wide text-[#6b6b6b]">
+                    Equality monitoring (optional)
+                  </p>
+                  <p className="mb-3 text-[12px] leading-relaxed text-[#6b6b6b]">
+                    This is voluntary and used only in aggregate to support fair recruitment reporting. You can skip
+                    this question.
+                  </p>
+                  <label className={labelClass} htmlFor="eq_ethnicity">
+                    How would you describe your ethnicity?
+                  </label>
+                  <select
+                    id="eq_ethnicity"
+                    name="eq_ethnicity"
+                    className={baseField}
+                    defaultValue=""
+                    disabled={pending}
+                  >
+                    <option value="">Prefer not to say</option>
+                    {eqCategories.map((o) => (
+                      <option key={o.code} value={o.code}>
+                        {o.label}
+                      </option>
+                    ))}
+                    <option value="__declined__">Prefer not to participate in monitoring</option>
+                  </select>
+                </div>
+              ) : null}
               <div className="space-y-2 text-[13px]">
                 {[
                   ['Name', fullName || '-'],

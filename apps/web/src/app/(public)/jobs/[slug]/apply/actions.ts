@@ -49,7 +49,16 @@ export async function submitPublicJobApplication(
   const portfolioUrl = String(formData.get('portfolio_url') ?? '').trim();
   const motivationText = String(formData.get('motivation_text') ?? '').trim();
   const coverLetter = String(formData.get('cover_letter') ?? '').trim();
+  const eqRaw = String(formData.get('eq_ethnicity') ?? '').trim();
   const cvFile = formData.get('cv');
+
+  let pEqEthnicityCode: string | null = null;
+  let pEqualityMonitoringDeclined = false;
+  if (eqRaw === '__declined__') {
+    pEqualityMonitoringDeclined = true;
+  } else if (eqRaw) {
+    pEqEthnicityCode = eqRaw;
+  }
 
   if (!name) return { ok: false, error: 'Please enter your name.' };
   if (!email) return { ok: false, error: 'Please enter your email.' };
@@ -107,6 +116,8 @@ export async function submitPublicJobApplication(
     p_portfolio_url: portfolioUrl || null,
     p_motivation_text: motivationText || null,
     p_cover_letter: coverLetter || null,
+    p_eq_ethnicity_code: pEqEthnicityCode,
+    p_equality_monitoring_declined: pEqualityMonitoringDeclined,
   });
 
   if (submitErr || !submitRows?.length) {

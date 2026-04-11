@@ -39,6 +39,20 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
   }
 
   const job = data[0] as PublicJobRow;
+
+  const { data: eqJson } = await supabase.rpc('public_org_eq_monitoring_codes', {
+    p_org_slug: orgSlug,
+  });
+  let eqCategories: { code: string; label: string }[] = [];
+  if (Array.isArray(eqJson)) {
+    eqCategories = eqJson
+      .map((e: unknown) => ({
+        code: String((e as { code?: string }).code ?? '').trim(),
+        label: String((e as { label?: string }).label ?? '').trim(),
+      }))
+      .filter((e) => e.code && e.label);
+  }
+
   await supabase.rpc('track_public_job_metric', {
     p_org_slug: orgSlug,
     p_job_slug: jobSlug,
@@ -59,6 +73,7 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
           hostHeader={host}
           defaultEmail={user?.email ?? null}
           isAuthenticated={Boolean(user)}
+          eqCategories={eqCategories}
         />
       </div>
     </div>

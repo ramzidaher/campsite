@@ -144,6 +144,8 @@ export async function updateJobListing(
     allowCv: boolean;
     allowLoom: boolean;
     allowStaffsavvy: boolean;
+    diversityTargetPct: number | null;
+    diversityIncludedCodes: string[];
   }
 ): Promise<JobActionState> {
   const id = jobId?.trim();
@@ -202,6 +204,8 @@ export async function updateJobListing(
       allow_cv: flags.allow_cv,
       allow_loom: flags.allow_loom,
       allow_staffsavvy: flags.allow_staffsavvy,
+      diversity_target_pct: fields.diversityTargetPct,
+      diversity_included_codes: fields.diversityIncludedCodes,
     })
     .eq('id', id)
     .eq('org_id', profile.org_id as string);

@@ -24,19 +24,35 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
 
   const orgId = profile.org_id as string;
 
-  const [{ data: orgRow }, { data: job, error }] = await Promise.all([
+  const [{ data: orgRow }, { data: job, error }, canHrSettings] = await Promise.all([
     supabase.from('organisations').select('slug').eq('id', orgId).single(),
     supabase
       .from('job_listings')
       .select(
-        'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, recruitment_request_id'
+        'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, recruitment_request_id, diversity_target_pct, diversity_included_codes'
       )
       .eq('id', id)
       .eq('org_id', orgId)
       .maybeSingle(),
+    viewerHasPermission('hr.view_records'),
   ]);
 
   if (error || !job) notFound();
+
+  let eqCategoryOptions: { code: string; label: string }[] = [];
+  if (canHrSettings) {
+    const { data: settingsJson } = await supabase.rpc('org_hr_metric_settings_get');
+    const row = settingsJson as { eq_category_codes?: unknown } | null;
+    const raw = row?.eq_category_codes;
+    if (Array.isArray(raw)) {
+      eqCategoryOptions = raw
+        .map((e) => ({
+          code: String((e as { code?: string }).code ?? '').trim(),
+          label: String((e as { label?: string }).label ?? '').trim(),
+        }))
+        .filter((e) => e.code && e.label);
+    }
+  }
 
   const orgSlug = (orgRow?.slug as string | undefined)?.trim() ?? '';
   const reqId = job.recruitment_request_id as string;
@@ -68,6 +84,7 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
       orgSlug={orgSlug}
       requestHref={`/hr/recruitment/${reqId}`}
       publicMetrics={publicMetrics}
+      eqCategoryOptions={eqCategoryOptions}
     />
   );
 }

@@ -29,6 +29,8 @@ export type JobEditRow = {
   allow_loom: boolean;
   allow_staffsavvy: boolean;
   recruitment_request_id: string;
+  diversity_target_pct: number | null;
+  diversity_included_codes: string[] | null;
 };
 
 export type JobPublicMetrics = {
@@ -42,12 +44,15 @@ export function AdminJobEditClient({
   orgSlug,
   requestHref,
   publicMetrics,
+  eqCategoryOptions = [],
 }: {
   job: JobEditRow;
   orgSlug: string;
   requestHref: string;
   /** Careers-site funnel counts (live listings only). */
   publicMetrics?: JobPublicMetrics | null;
+  /** From org HR metric settings — used for diversity target codes. */
+  eqCategoryOptions?: { code: string; label: string }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -64,6 +69,12 @@ export function AdminJobEditClient({
   const [allowCv, setAllowCv] = useState(job.allow_cv);
   const [allowLoom, setAllowLoom] = useState(job.allow_loom);
   const [allowStaffsavvy, setAllowStaffsavvy] = useState(job.allow_staffsavvy);
+  const [diversityTargetPct, setDiversityTargetPct] = useState(
+    job.diversity_target_pct != null ? String(job.diversity_target_pct) : '',
+  );
+  const [diversityCodes, setDiversityCodes] = useState<string[]>(
+    Array.isArray(job.diversity_included_codes) ? [...job.diversity_included_codes] : [],
+  );
 
   const fieldClass =
     'mt-0 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
@@ -82,6 +93,8 @@ export function AdminJobEditClient({
   function save() {
     setMsg(null);
     startTransition(async () => {
+      const tp = diversityTargetPct.trim();
+      const targetNum = tp === '' ? null : Number.parseFloat(tp);
       const res = await updateJobListing(job.id, {
         title,
         gradeLevel,
@@ -94,6 +107,9 @@ export function AdminJobEditClient({
         allowCv,
         allowLoom,
         allowStaffsavvy,
+        diversityTargetPct:
+          tp === '' || !Number.isFinite(targetNum) ? null : targetNum,
+        diversityIncludedCodes: diversityCodes,
       });
       if (!res.ok) {
         setMsg({ type: 'err', text: res.error });
@@ -218,6 +234,52 @@ export function AdminJobEditClient({
               <dd className="mt-1 font-authSerif text-[22px] text-[#121212]">{publicMetrics.applySubmits}</dd>
             </div>
           </dl>
+        </section>
+      ) : null}
+
+      {eqCategoryOptions.length > 0 && !isArchived ? (
+        <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
+          <h2 className="font-authSerif text-lg text-[#121212]">Diversity monitoring (optional)</h2>
+          <p className="mt-1 text-[12px] text-[#6b6b6b]">
+            When set, in-app alerts can fire if the share of applicants (with equality data) in the selected codes
+            falls below the minimum % over the org&apos;s rolling window. Configure codes under HR metric alerts.
+          </p>
+          <div className="mt-4">
+            <label className={labelClass} htmlFor="div_tgt">
+              Minimum share of applicants (%)
+            </label>
+            <input
+              id="div_tgt"
+              type="number"
+              min={0}
+              max={100}
+              step={0.1}
+              className={fieldClass}
+              placeholder="e.g. 15"
+              value={diversityTargetPct}
+              onChange={(e) => setDiversityTargetPct(e.target.value)}
+            />
+          </div>
+          <p className={`${labelClass} mt-4`}>Count toward diversity share</p>
+          <div className="mt-2 space-y-2">
+            {eqCategoryOptions.map((o) => (
+              <label key={o.code} className="flex items-center gap-2 text-[13px] text-[#121212]">
+                <input
+                  type="checkbox"
+                  checked={diversityCodes.includes(o.code)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setDiversityCodes((prev) => [...new Set([...prev, o.code])]);
+                    } else {
+                      setDiversityCodes((prev) => prev.filter((c) => c !== o.code));
+                    }
+                  }}
+                />
+                <span>{o.label}</span>
+                <span className="text-[11px] text-[#9b9b9b]">({o.code})</span>
+              </label>
+            ))}
+          </div>
         </section>
       ) : null}
 
