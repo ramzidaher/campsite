@@ -48,7 +48,9 @@ function normalizeDoc(raw: unknown): OneOnOneDoc {
   const qs = Array.isArray(o.questions) ? o.questions : [];
   const questions = qs.map((q) => {
     const r = q && typeof q === 'object' ? (q as Record<string, unknown>) : {};
-    const owner = r.owner === 'manager' || r.owner === 'both' ? r.owner : 'employee';
+    const v = r.owner;
+    const owner: QuestionOwner =
+      v === 'manager' || v === 'both' || v === 'employee' ? v : 'employee';
     return {
       id: String(r.id ?? `q-${Math.random().toString(36).slice(2)}`),
       prompt: String(r.prompt ?? ''),
