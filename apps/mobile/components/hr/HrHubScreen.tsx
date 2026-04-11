@@ -1,25 +1,51 @@
 import { useCampsiteTheme } from '@campsite/ui';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LeaveScreen } from '@/components/leave/LeaveScreen';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
+import { OneOnOneListScreen } from '@/components/one-on-one/OneOnOneListScreen';
 import { PerformanceScreen } from '@/components/performance/PerformanceScreen';
 import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
 import type { ProfileRow } from '@/lib/AuthContext';
+import { getSupabase } from '@/lib/supabase';
 
-type HrTab = 'leave' | 'performance' | 'onboarding';
-
-const TABS: { key: HrTab; label: string }[] = [
-  { key: 'leave', label: 'Time off' },
-  { key: 'performance', label: 'Reviews' },
-  { key: 'onboarding', label: 'Onboarding' },
-];
+type HrTab = 'leave' | 'performance' | 'onboarding' | 'one_on_one';
 
 export function HrHubScreen({ profile }: { profile: ProfileRow }) {
   const { tokens, scheme } = useCampsiteTheme();
   const isDark = scheme === 'dark';
   const [tab, setTab] = useState<HrTab>('leave');
+  const [showOneOnOne, setShowOneOnOne] = useState(false);
+
+  useEffect(() => {
+    if (!profile.org_id) return;
+    const supabase = getSupabase();
+    void (async () => {
+      const [a, b] = await Promise.all([
+        supabase.rpc('has_permission', {
+          p_user_id: profile.id,
+          p_org_id: profile.org_id,
+          p_permission_key: 'one_on_one.view_own',
+          p_context: {},
+        }),
+        supabase.rpc('has_permission', {
+          p_user_id: profile.id,
+          p_org_id: profile.org_id,
+          p_permission_key: 'hr.view_records',
+          p_context: {},
+        }),
+      ]);
+      setShowOneOnOne(!!a.data || !!b.data);
+    })();
+  }, [profile.id, profile.org_id]);
+
+  const tabs: { key: HrTab; label: string }[] = [
+    { key: 'leave', label: 'Time off' },
+    { key: 'performance', label: 'Reviews' },
+    ...(showOneOnOne ? [{ key: 'one_on_one' as const, label: '1:1' }] : []),
+    { key: 'onboarding', label: 'Onboarding' },
+  ];
 
   const barBg = isDark ? tokens.surface : '#ffffff';
   const border = isDark ? tokens.border : '#e8e8e8';
@@ -31,7 +57,7 @@ export function HrHubScreen({ profile }: { profile: ProfileRow }) {
     <View style={{ flex: 1 }}>
       {/* Internal tab bar */}
       <View style={[styles.tabBar, { backgroundColor: barBg, borderBottomColor: border }]}>
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const active = tab === t.key;
           return (
             <Pressable
@@ -51,6 +77,7 @@ export function HrHubScreen({ profile }: { profile: ProfileRow }) {
       <View style={{ flex: 1 }}>
         {tab === 'leave' && <LeaveScreen profile={profile} />}
         {tab === 'performance' && <PerformanceScreen profile={profile} />}
+        {tab === 'one_on_one' && <OneOnOneListScreen profile={profile} />}
         {tab === 'onboarding' && <OnboardingScreen profile={profile} />}
       </View>
     </View>

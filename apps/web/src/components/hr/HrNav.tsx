@@ -4,15 +4,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const TABS = [
-  { href: '/leave',       label: 'Time off',    icon: '🌴' },
+  { href: '/leave', label: 'Time off', icon: '🌴' },
   { href: '/performance', label: 'Performance', icon: '⭐' },
-  { href: '/onboarding',  label: 'Onboarding',  icon: '✅' },
+  { href: '/one-on-ones', label: '1:1', icon: '💬' },
+  { href: '/onboarding', label: 'Onboarding', icon: '✅' },
   { href: '/hr/org-chart', label: 'Org chart', icon: '🧭' },
 ] as const;
 
 type HrNavProps = {
   showLeave?: boolean;
   showPerformance?: boolean;
+  showOneOnOne?: boolean;
   showOnboarding?: boolean;
   showOrgChart?: boolean;
 };
@@ -20,6 +22,7 @@ type HrNavProps = {
 export function HrNav({
   showLeave = true,
   showPerformance = true,
+  showOneOnOne = true,
   showOnboarding = true,
   showOrgChart = true,
 }: HrNavProps) {
@@ -27,6 +30,7 @@ export function HrNav({
   const tabs = TABS.filter((tab) => {
     if (tab.href === '/leave') return showLeave;
     if (tab.href === '/performance') return showPerformance;
+    if (tab.href === '/one-on-ones') return showOneOnOne;
     if (tab.href === '/onboarding') return showOnboarding;
     if (tab.href === '/hr/org-chart') return showOrgChart;
     return true;

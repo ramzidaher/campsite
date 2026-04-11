@@ -62,6 +62,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let showPerformanceNav = false;
   let performanceNavBadge = 0;
   let showOnboardingNav = false;
+  let showOneOnOneNav = false;
   let showMyHrRecordNav = false;
   let showMemberSearch = false;
   let currentOrgId: string | null = null;
@@ -149,6 +150,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       permissionKeys.includes('leave.approve_direct_reports') ||
       permissionKeys.includes('leave.manage_org');
     showMyHrRecordNav = permissionKeys.includes('hr.view_own');
+    showOneOnOneNav =
+      permissionKeys.includes('one_on_one.view_own') || permissionKeys.includes('hr.view_records');
     showMemberSearch =
       permissionKeys.includes('hr.view_records') || permissionKeys.includes('hr.view_direct_reports');
     hasAdminAreaAccess = permissionKeys.some(
@@ -374,6 +377,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           showPerformanceNav={showPerformanceNav}
           performanceNavBadge={performanceNavBadge}
           showOnboardingNav={showOnboardingNav}
+          showOneOnOneNav={showOneOnOneNav}
           showMyHrRecordNav={showMyHrRecordNav}
           showMemberSearch={showMemberSearch}
           orgId={currentOrgId}

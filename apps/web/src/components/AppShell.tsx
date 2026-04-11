@@ -120,6 +120,7 @@ export function AppShell({
   showPerformanceNav = false,
   performanceNavBadge = 0,
   showOnboardingNav = false,
+  showOneOnOneNav = false,
   showMyHrRecordNav = false,
   showMemberSearch = false,
   orgId = null,
@@ -155,6 +156,7 @@ export function AppShell({
   /** Pending manager assessments count badge on the performance nav link. */
   performanceNavBadge?: number;
   showOnboardingNav?: boolean;
+  showOneOnOneNav?: boolean;
   showMyHrRecordNav?: boolean;
   showMemberSearch?: boolean;
   orgId?: string | null;
@@ -320,6 +322,9 @@ export function AppShell({
                 badge={performanceNavBadge > 0 ? performanceNavBadge : undefined}
                 onNavigate={closeMobile}
               />
+            ) : null}
+            {showOneOnOneNav ? (
+              <NavLink href="/one-on-ones" icon="manager" label="1:1 check-ins" onNavigate={closeMobile} />
             ) : null}
             {showOnboardingNav ? (
               <NavLink

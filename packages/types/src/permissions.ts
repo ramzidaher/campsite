@@ -90,6 +90,10 @@ export const PERMISSION_KEYS = [
   'performance.view_reports',
   'performance.review_direct_reports',
   'performance.view_own',
+  // 1:1 check-ins
+  'one_on_one.view_own',
+  'one_on_one.manage_direct_reports',
+  'one_on_one.manage_templates',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];

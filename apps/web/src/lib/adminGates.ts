@@ -126,6 +126,7 @@ export function getMainShellAdminNavItems(
     { href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'HR' },
     { href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
     { href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' },
+    { href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'hrRecords', section: 'HR' },
     { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
     { href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' },
     { href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' },
@@ -293,7 +294,8 @@ export function getMainShellHrNavItemsByPermissions(
       k.startsWith('leave.') ||
       k.startsWith('hr.') ||
       k.startsWith('onboarding.') ||
-      k.startsWith('performance.')
+      k.startsWith('performance.') ||
+      k.startsWith('one_on_one.')
   );
   if (!canSeeAnyHr) return null;
 
@@ -336,6 +338,8 @@ export function getMainShellHrNavItemsByPermissions(
     items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords' });
   else if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team records', icon: 'hrRecords' });
+  if (p.includes('hr.view_records'))
+    items.push({ href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'hrRecords' });
   if (p.includes('hr.view_records') || p.includes('leave.manage_org') || p.includes('hr.view_direct_reports')) {
     items.push({ href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport' });
   }

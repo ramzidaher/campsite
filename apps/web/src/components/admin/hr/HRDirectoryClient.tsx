@@ -41,6 +41,8 @@ type DashStats = {
   review_cycles_active: { id: string; name: string; type: string; total: number; completed: number; manager_due: string | null }[];
   on_leave_today: { user_id: string; full_name: string; preferred_name?: string | null; display_name?: string | null; kind: string; end_date: string }[];
   bradford_alerts: { user_id: string; full_name: string; preferred_name?: string | null; display_name?: string | null; spell_count: number; total_days: number; bradford_score: number }[];
+  one_on_one_pairs_overdue?: number;
+  one_on_one_pairs_due_soon?: number;
 };
 
 function contractLabel(ct: string | null) {
@@ -227,6 +229,22 @@ export function HRDirectoryClient({
           {/* Headline stats */}
           <div className="grid grid-cols-2 items-stretch gap-4 sm:grid-cols-4">
             <StatCard label="Active headcount" value={stats.headcount_total} />
+            {typeof stats.one_on_one_pairs_overdue === 'number' ? (
+              <StatCard
+                label="1:1 pairs overdue"
+                value={stats.one_on_one_pairs_overdue}
+                warn={stats.one_on_one_pairs_overdue > 0}
+                sub={stats.one_on_one_pairs_overdue > 0 ? 'Cadence missed' : 'On track'}
+                href="/hr/one-on-ones"
+              />
+            ) : null}
+            {typeof stats.one_on_one_pairs_due_soon === 'number' ? (
+              <StatCard
+                label="1:1 due soon"
+                value={stats.one_on_one_pairs_due_soon}
+                href="/hr/one-on-ones"
+              />
+            ) : null}
             <StatCard
               label="Missing HR records"
               value={stats.missing_hr_records}
