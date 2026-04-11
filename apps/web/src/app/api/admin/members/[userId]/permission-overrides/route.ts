@@ -163,6 +163,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
         op?: string;
         mode?: string;
         permission_key?: string;
+        permission_keys?: string[];
         modes?: string[];
       }
     | null;
@@ -177,6 +178,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
       p_permission_key: body.permission_key,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.op === 'upsert_batch') {
+    if (!body.mode || !Array.isArray(body.permission_keys)) {
+      return NextResponse.json({ error: 'mode and permission_keys array required' }, { status: 400 });
+    }
+    const keys = [...new Set(body.permission_keys.map((k) => String(k).trim()).filter(Boolean))];
+    if (keys.length === 0) return NextResponse.json({ error: 'permission_keys required' }, { status: 400 });
+    for (const permission_key of keys) {
+      const { error } = await supabase.rpc('user_permission_override_upsert', {
+        p_org_id: me.org_id,
+        p_target_user_id: userId,
+        p_mode: body.mode,
+        p_permission_key: permission_key,
+      });
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ ok: true });
   }
 

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { authColors, authRadii } from '@/constants/authTheme';
 
 const PAGE_BG = '#faf9f6';
@@ -22,9 +23,7 @@ export function LandingScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.logoMark}>
-            <Text style={styles.logoEmoji}>⛺</Text>
-          </View>
+          <CampsiteLogoMark style={styles.logoMark} size={30} />
           <Text style={styles.wordmark}>Campsite</Text>
         </View>
 
@@ -84,10 +83,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 10,
     backgroundColor: authColors.marketingBg,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  logoEmoji: { fontSize: 18 },
   wordmark: {
     fontSize: 20,
     letterSpacing: -0.5,

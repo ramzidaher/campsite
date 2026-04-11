@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
+
 function ProductPreview() {
   return (
     <div className="relative mx-auto w-full max-w-[520px] lg:mx-0 lg:max-w-none">
@@ -19,7 +21,7 @@ function ProductPreview() {
         <div className="mt-1 flex h-[min(320px,52vw)] min-h-[240px] overflow-hidden rounded-xl bg-[#f6f5f2] sm:h-[340px] sm:min-h-[280px]">
           <div className="flex w-[32%] min-w-[100px] flex-col bg-[#121212] px-3 py-4">
             <div className="mb-5 flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-xs">⛺</span>
+              <CampsiteLogoMark className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-white/10" />
               <div className="h-2 w-14 rounded bg-white/25" aria-hidden />
             </div>
             <div className="space-y-2.5">
@@ -71,9 +73,7 @@ export function LandingPage() {
       <header className="sticky top-0 z-20 border-b border-[#ebe9e6]/80 bg-[#faf9f6]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-[4.25rem] max-w-6xl items-center justify-between px-5 sm:px-8">
           <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-85">
-            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#121212] text-lg text-white shadow-sm">
-              ⛺
-            </span>
+            <CampsiteLogoMark className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] bg-[#121212] shadow-sm" />
             <span className="font-authSerif text-xl tracking-tight">Campsite</span>
           </Link>
           <nav className="flex items-center gap-1 sm:gap-2">
@@ -181,9 +181,7 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 sm:flex-row sm:items-start">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#121212] text-sm text-white">
-                ⛺
-              </span>
+              <CampsiteLogoMark className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-[#121212]" />
               <span className="font-authSerif text-lg tracking-tight">Campsite</span>
             </div>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#7a7a7a]">

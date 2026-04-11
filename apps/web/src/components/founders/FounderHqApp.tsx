@@ -866,7 +866,9 @@ export function FounderHqApp({
       <div className="founder-hq-body">
       <div className="sidebar">
         <div className="sidebar-brand">
-          <div className="brand-icon">⛺</div>
+          <div className="brand-icon">
+            <img src="/Campsite%20Logo.svg" alt="" />
+          </div>
           <div className="brand-text">Campsite</div>
           <div className="brand-badge">Founder</div>
         </div>

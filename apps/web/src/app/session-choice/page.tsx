@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { redirect } from 'next/navigation';
 import { syncRegistrationAvatarToProfileIfEmpty } from '@/lib/auth/completeRegistrationProfile';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
@@ -46,9 +47,7 @@ export default async function SessionChoicePage() {
     <div className="auth-shell-main flex min-h-screen flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 flex items-center justify-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#121212] text-lg text-white">
-            ⛺
-          </div>
+          <CampsiteLogoMark className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] bg-[#121212]" />
           <span className="font-authSerif text-xl tracking-tight text-[#121212]">Campsite</span>
         </div>
 

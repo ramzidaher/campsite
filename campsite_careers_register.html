@@ -1,0 +1,341 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Serif+Display&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#FAF9F6;--surface:#F5F4F1;--surface2:#EEECEA;
+  --text:#121212;--text2:#6B6B6B;--text3:#9B9B9B;--border:#D8D8D8;
+  --success:#15803D;--success-bg:#DCFCE7;--success-border:#BBF7D0;
+  --error:#B91C1C;--error-bg:#FEE2E2;
+  --amber:#92400E;--amber-bg:#FEF3C7;--amber-border:#FDE68A;
+  --r:11px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);}
+.wrap{max-width:420px;margin:0 auto;padding:2rem 1.25rem 4rem;}
+.brand{text-align:center;margin-bottom:1.75rem;}
+.brand .name{font-family:'DM Serif Display',serif;font-size:1.5rem;}
+.brand .sub{font-size:12px;color:var(--text3);margin-top:3px;}
+
+.step-row{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:1.75rem;}
+.s-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text3);transition:all .25s;flex-shrink:0;}
+.s-dot.active{border-color:var(--text);background:var(--text);color:white;}
+.s-dot.done{border-color:var(--success);background:var(--success);color:white;}
+.s-line{flex:1;height:2px;background:var(--border);max-width:48px;transition:background .25s;}
+.s-line.done{background:var(--success);}
+
+.card{background:white;border:1px solid var(--border);border-radius:var(--r);padding:1.6rem;}
+.card h2{font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:.3rem;}
+.card .hint{font-size:13px;color:var(--text2);margin-bottom:1.25rem;line-height:1.5;}
+
+.banter{background:#121212;color:#FAF9F6;border-radius:9px;padding:.7rem 1rem;font-size:12px;line-height:1.5;margin-bottom:1.1rem;display:flex;gap:8px;align-items:flex-start;}
+.banter-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+
+label.fl{display:block;font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.field{margin-bottom:.9rem;}
+input.fi{width:100%;padding:9px 12px;font-size:14px;font-family:'Inter',sans-serif;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;transition:border-color .15s;}
+input.fi:focus{border-color:var(--text);}
+input.fi.valid{border-color:var(--success);}
+input.fi.invalid{border-color:var(--error);}
+
+.pw-strength{height:3px;border-radius:2px;margin-top:5px;background:var(--border);overflow:hidden;}
+.pw-bar{height:100%;border-radius:2px;transition:width .3s,background .3s;}
+.pw-label{font-size:11px;margin-top:3px;color:var(--text3);}
+
+.btn-primary{width:100%;padding:11px;border:none;border-radius:var(--r);background:var(--text);color:white;font-size:14px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;margin-top:.25rem;transition:background .15s;}
+.btn-primary:hover{background:#333;}
+.btn-primary:disabled{background:var(--border);color:var(--text3);cursor:not-allowed;}
+.btn-back{width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);font-size:14px;font-family:'Inter',sans-serif;color:var(--text2);cursor:pointer;margin-top:.5rem;}
+.btn-back:hover{background:var(--surface);}
+
+.social-btn{width:100%;padding:9px;border:1px solid var(--border);border-radius:var(--r);background:white;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:background .15s;}
+.social-btn:hover{background:var(--surface);}
+.divider{display:flex;align-items:center;gap:10px;color:var(--text3);font-size:12px;margin:.85rem 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.pill{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;border:1px solid;}
+.pill-green{background:var(--success-bg);border-color:var(--success-border);color:#166534;}
+.pill-amber{background:var(--amber-bg);border-color:var(--amber-border);color:var(--amber);}
+
+.otp-row{display:flex;gap:8px;justify-content:center;margin:1rem 0;}
+.otp-box{width:46px;height:52px;border:1px solid var(--border);border-radius:9px;text-align:center;font-size:20px;font-weight:500;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);outline:none;transition:border-color .15s;}
+.otp-box:focus{border-color:var(--text);}
+
+.pref-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.5rem;}
+.pref-btn{padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:var(--bg);font-size:12px;font-family:'Inter',sans-serif;color:var(--text2);cursor:pointer;text-align:left;transition:all .12s;line-height:1.4;}
+.pref-btn.sel{background:var(--text);color:white;border-color:var(--text);}
+.pref-btn strong{display:block;font-size:13px;margin-bottom:1px;}
+
+.success-wrap{text-align:center;padding:2.5rem 1rem;}
+.success-circle{width:68px;height:68px;border-radius:50%;background:var(--success-bg);border:2px solid var(--success-border);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 1.1rem;}
+.success-wrap h2{font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:.5rem;}
+.success-wrap p{font-size:13px;color:var(--text2);line-height:1.6;max-width:320px;margin:0 auto;}
+.next-steps{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;text-align:left;margin-top:1.25rem;}
+.ns-item{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text2);padding:5px 0;}
+.ns-num{width:20px;height:20px;border-radius:50%;background:var(--text);color:white;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+
+.view{display:none;}
+.view.active{display:block;}
+
+.toast{background:var(--text);color:white;border-radius:9px;padding:8px 14px;font-size:12px;position:fixed;bottom:16px;right:16px;max-width:220px;transform:translateY(60px);opacity:0;transition:all .3s;z-index:99;}
+.toast.show{transform:translateY(0);opacity:1;}
+</style>
+
+<div class="wrap">
+
+  <div class="brand">
+    <div class="name">Campsite Careers</div>
+    <div class="sub">Create your applicant account</div>
+  </div>
+
+  <div class="step-row" id="step-row">
+    <div class="s-dot active" id="sd0">1</div>
+    <div class="s-line" id="sl0"></div>
+    <div class="s-dot" id="sd1">2</div>
+    <div class="s-line" id="sl1"></div>
+    <div class="s-dot" id="sd2">3</div>
+    <div class="s-line" id="sl2"></div>
+    <div class="s-dot" id="sd3">4</div>
+  </div>
+
+  <!-- STEP 0: Start / Social -->
+  <div class="view active" id="v0">
+    <div class="banter">
+      <span class="banter-icon">👋</span>
+      <span>Creating an account takes about 2 minutes. We're not going to ask for your mother's maiden name or your first pet. Promise.</span>
+    </div>
+    <div class="card">
+      <h2>Let's get you set up</h2>
+      <p class="hint">One account, all your applications in one place. Sign up free — we don't spam.</p>
+      <button class="social-btn" onclick="googleSignup()">
+        <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign up with Google — skip all the typing
+      </button>
+      <button class="social-btn" onclick="googleSignup()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="#0077B5"/><path d="M6.5 9h2V17h-2V9zm1-3a1.25 1.25 0 110 2.5A1.25 1.25 0 017.5 6zm4 3h1.9v1.1h.03C13.7 9.5 14.6 9 15.8 9c2.1 0 2.7 1.4 2.7 3.2V17h-2v-4.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2V9z" fill="white"/></svg>
+        Import from LinkedIn — even faster
+      </button>
+      <div class="divider">or sign up with email</div>
+      <div class="field">
+        <label class="fl">Email address</label>
+        <input class="fi" type="email" id="reg-email" placeholder="you@example.com" oninput="validateEmail()">
+      </div>
+      <button class="btn-primary" id="btn-s0" onclick="goStep(1)" disabled>Continue →</button>
+      <div style="text-align:center;margin-top:.85rem;font-size:12px;color:var(--text3);">Already have an account? <span style="text-decoration:underline;cursor:pointer;color:var(--text2);" onclick="sendPrompt('Sign in to Campsite Careers')">Sign in instead</span></div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Name + Password -->
+  <div class="view" id="v1">
+    <div class="banter">
+      <span class="banter-icon">🔐</span>
+      <span>Your name and a password. That's it. The password strength meter below is judging you, but only a little.</span>
+    </div>
+    <div class="card">
+      <h2>Your details</h2>
+      <p class="hint">Tell us who you are. (Your CV can fill in the rest later.)</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="field">
+          <label class="fl">First name</label>
+          <input class="fi" type="text" id="reg-fn" placeholder="Alex" oninput="checkStep1()">
+        </div>
+        <div class="field">
+          <label class="fl">Last name</label>
+          <input class="fi" type="text" id="reg-ln" placeholder="Morgan" oninput="checkStep1()">
+        </div>
+      </div>
+      <div class="field">
+        <label class="fl">Password</label>
+        <input class="fi" type="password" id="reg-pw" placeholder="Make it a good one" oninput="checkPw();checkStep1()">
+        <div class="pw-strength"><div class="pw-bar" id="pw-bar" style="width:0%;background:var(--border)"></div></div>
+        <div class="pw-label" id="pw-label">Start typing…</div>
+      </div>
+      <div class="field">
+        <label class="fl">Confirm password</label>
+        <input class="fi" type="password" id="reg-pw2" placeholder="Same again" oninput="checkStep1()">
+      </div>
+      <button class="btn-primary" id="btn-s1" onclick="goStep(2)" disabled>Continue →</button>
+      <button class="btn-back" onclick="goStep(0)">← Back</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Email verify -->
+  <div class="view" id="v2">
+    <div class="banter">
+      <span class="banter-icon">📬</span>
+      <span>We sent a 6-digit code to <strong id="email-shown" style="color:#FAF9F6;"></strong>. Check your inbox — and yes, check spam if it's not there in 30 seconds.</span>
+    </div>
+    <div class="card">
+      <h2>Verify your email</h2>
+      <p class="hint">Enter the code below. It expires in 10 minutes. (Use <strong>123456</strong> to demo this.)</p>
+      <div class="otp-row" id="otp-row">
+        <input class="otp-box" maxlength="1" oninput="otpInput(this,0)" onkeydown="otpKey(event,0)">
+        <input class="otp-box" maxlength="1" oninput="otpInput(this,1)" onkeydown="otpKey(event,1)">
+        <input class="otp-box" maxlength="1" oninput="otpInput(this,2)" onkeydown="otpKey(event,2)">
+        <input class="otp-box" maxlength="1" oninput="otpInput(this,3)" onkeydown="otpKey(event,3)">
+        <input class="otp-box" maxlength="1" oninput="otpInput(this,4)" onkeydown="otpKey(event,4)">
+        <input class="otp-box" maxlength="1" oninput="otpInput(this,5)" onkeydown="otpKey(event,5)">
+      </div>
+      <div id="otp-msg" style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:.75rem;"></div>
+      <button class="btn-primary" id="btn-s2" onclick="verifyOtp()" disabled>Verify & continue →</button>
+      <div style="text-align:center;margin-top:.75rem;font-size:12px;color:var(--text3);">Didn't get it? <span style="text-decoration:underline;cursor:pointer;" onclick="resendCode()">Resend code</span></div>
+      <button class="btn-back" onclick="goStep(1)">← Back</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Preferences -->
+  <div class="view" id="v3">
+    <div class="banter">
+      <span class="banter-icon">🎯</span>
+      <span>Almost done — one quick preferences screen so we show you roles that actually make sense for you. Takes 20 seconds.</span>
+    </div>
+    <div class="card">
+      <h2>Job preferences</h2>
+      <p class="hint">Help us surface the right roles. You can change these any time.</p>
+      <div class="field">
+        <label class="fl">I'm looking for</label>
+        <div class="pref-grid" id="pref-type">
+          <button class="pref-btn" onclick="togPref('pref-type',this)"><strong>Full-time</strong>Permanent role</button>
+          <button class="pref-btn" onclick="togPref('pref-type',this)"><strong>Part-time</strong>Flexible hours</button>
+          <button class="pref-btn" onclick="togPref('pref-type',this)"><strong>Contract</strong>Fixed term</button>
+          <button class="pref-btn" onclick="togPref('pref-type',this)"><strong>Any</strong>Open to all</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="fl">Location preference</label>
+        <div class="pref-grid" id="pref-loc">
+          <button class="pref-btn" onclick="togPref('pref-loc',this)"><strong>Remote</strong>Work from anywhere</button>
+          <button class="pref-btn" onclick="togPref('pref-loc',this)"><strong>Hybrid</strong>Mix of both</button>
+          <button class="pref-btn" onclick="togPref('pref-loc',this)"><strong>On-site</strong>In the office</button>
+          <button class="pref-btn" onclick="togPref('pref-loc',this)"><strong>No preference</strong>Whatever works</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="fl">Notify me about new roles</label>
+        <select class="fi" id="pref-notif">
+          <option>Immediately — yes please, I'm keen</option>
+          <option>Weekly digest — chill but interested</option>
+          <option>Never — I'll check manually like it's 2005</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="finish()">Create my account →</button>
+      <button class="btn-back" onclick="goStep(2)">← Back</button>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="view" id="v-done">
+    <div class="success-wrap">
+      <div class="success-circle">✓</div>
+      <h2>You're in!</h2>
+      <p>Account created. You're ready to apply, track applications, and generally conquer the job hunt.</p>
+      <div class="next-steps">
+        <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">What's next</div>
+        <div class="ns-item"><div class="ns-num">1</div><span>Browse open roles and find something that excites you</span></div>
+        <div class="ns-item"><div class="ns-num">2</div><span>Apply in under 6 minutes (yes, we timed it again)</span></div>
+        <div class="ns-item"><div class="ns-num">3</div><span>Track your application status right here — no chasing emails</span></div>
+      </div>
+      <button class="btn-primary" style="margin-top:1.25rem;width:auto;padding:11px 28px;" onclick="sendPrompt('Browse open roles on Campsite Careers')">Browse open roles →</button>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let step=0;
+const views=['v0','v1','v2','v3'];
+
+function showToast(m){
+  const t=document.getElementById('toast');
+  t.textContent=m;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function setStep(s){
+  ['sd0','sd1','sd2','sd3'].forEach((id,i)=>{
+    const d=document.getElementById(id);
+    d.className='s-dot'+(i<s?' done':i===s?' active':'');
+    d.textContent=i<s?'✓':i+1;
+  });
+  ['sl0','sl1','sl2'].forEach((id,i)=>{
+    document.getElementById(id).className='s-line'+(i<s?' done':'');
+  });
+}
+
+function goStep(s){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const id=s<4?'v'+s:'v-done';
+  document.getElementById(id).classList.add('active');
+  setStep(s);step=s;
+  if(s===2) document.getElementById('email-shown').textContent=document.getElementById('reg-email').value||'your email';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function validateEmail(){
+  const e=document.getElementById('reg-email').value;
+  const ok=e.includes('@')&&e.includes('.');
+  document.getElementById('btn-s0').disabled=!ok;
+  document.getElementById('reg-email').className='fi'+(ok?' valid':'');
+}
+
+function checkPw(){
+  const pw=document.getElementById('reg-pw').value;
+  const bar=document.getElementById('pw-bar');
+  const lbl=document.getElementById('pw-label');
+  let s=0,msg='',col='';
+  if(pw.length>=6)s++;if(pw.length>=10)s++;
+  if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^a-zA-Z0-9]/.test(pw))s++;
+  if(!pw){msg='Start typing…';col='var(--border)';}
+  else if(s<=1){msg='Weak — a hacker would crack this in seconds';col='#B91C1C';}
+  else if(s<=2){msg='Okay-ish. You can do better.';col='#D97706';}
+  else if(s<=3){msg='Not bad. Getting there.';col='#CA8A04';}
+  else if(s<=4){msg='Strong. Your future employer approves.';col='var(--success)';}
+  else{msg='Very strong! Are you a secret agent?';col='var(--success)';}
+  bar.style.width=Math.min(s*20,100)+'%';bar.style.background=col;
+  lbl.textContent=msg;lbl.style.color=col;
+}
+
+function checkStep1(){
+  const fn=document.getElementById('reg-fn').value.trim();
+  const ln=document.getElementById('reg-ln').value.trim();
+  const pw=document.getElementById('reg-pw').value;
+  const pw2=document.getElementById('reg-pw2').value;
+  document.getElementById('btn-s1').disabled=!(fn&&ln&&pw.length>=6&&pw===pw2);
+}
+
+function otpInput(el,idx){
+  const boxes=document.querySelectorAll('.otp-box');
+  if(el.value&&idx<5) boxes[idx+1].focus();
+  const full=[...boxes].map(b=>b.value).join('');
+  document.getElementById('btn-s2').disabled=full.length<6;
+  document.getElementById('otp-msg').textContent='';
+}
+
+function otpKey(e,idx){
+  const boxes=document.querySelectorAll('.otp-box');
+  if(e.key==='Backspace'&&!boxes[idx].value&&idx>0) boxes[idx-1].focus();
+}
+
+function verifyOtp(){
+  const boxes=document.querySelectorAll('.otp-box');
+  const code=[...boxes].map(b=>b.value).join('');
+  if(code==='123456'){goStep(3);showToast('Email verified! Nice one.');}
+  else{
+    document.getElementById('otp-msg').textContent='Nope, that\'s not it. Try 123456 for the demo.';
+    document.getElementById('otp-msg').style.color='var(--error)';
+    boxes.forEach(b=>{b.style.borderColor='var(--error)';});
+    setTimeout(()=>boxes.forEach(b=>b.style.borderColor=''),1200);
+  }
+}
+
+function resendCode(){showToast('Code resent! (Demo: still use 123456)');}
+
+function togPref(groupId,btn){
+  document.querySelectorAll('#'+groupId+' .pref-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function googleSignup(){goStep(3);showToast('Google signup complete! (Demo mode)');}
+
+function finish(){goStep(4);showToast('Account created! Welcome to Campsite Careers 🎉');}
+</script>

@@ -1,6 +1,8 @@
 import Constants from 'expo-constants';
 import { Link } from 'expo-router';
 import { type ReactNode } from 'react';
+
+import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -77,9 +79,7 @@ export function AuthChrome({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headerRow}>
-            <View style={styles.logoMark}>
-              <Text style={styles.logoEmoji}>⛺</Text>
-            </View>
+            <CampsiteLogoMark style={styles.logoMark} size={30} />
             <Text style={styles.wordmark}>Campsite</Text>
           </View>
           {hideOrgCard ? null : <AuthOrgCardMobile hideChange={hideOrgChange} />}
@@ -112,10 +112,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 10,
     backgroundColor: authColors.marketingBg,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  logoEmoji: { fontSize: 18 },
   wordmark: {
     fontSize: 22,
     letterSpacing: -0.5,

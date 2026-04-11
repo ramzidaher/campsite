@@ -1,0 +1,435 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Serif+Display&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#FAF9F6;--surface:#F5F4F1;--surface2:#EEECEA;
+  --text:#121212;--text2:#6B6B6B;--text3:#9B9B9B;--border:#D8D8D8;
+  --success:#15803D;--success-bg:#DCFCE7;--success-border:#BBF7D0;
+  --error:#B91C1C;--error-bg:#FEE2E2;
+  --amber:#92400E;--amber-bg:#FEF3C7;--amber-border:#FDE68A;
+  --blue:#1D4ED8;--blue-bg:#EFF6FF;--blue-border:#BFDBFE;
+  --r:11px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);}
+
+.portal{max-width:680px;margin:0 auto;padding:1.5rem 1.25rem 4rem;}
+
+.view{display:none;}
+.view.active{display:block;}
+
+/* NAV TABS */
+.nav-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:3px;margin-bottom:1.5rem;}
+.nav-tab{flex:1;padding:7px 10px;border-radius:9px;border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--text2);cursor:pointer;transition:all .15s;font-weight:500;}
+.nav-tab.active{background:var(--text);color:white;}
+.nav-tab:hover:not(.active){background:var(--surface2);}
+
+/* LOGIN */
+.login-wrap{max-width:400px;margin:2rem auto 0;}
+.brand-mark{text-align:center;margin-bottom:2rem;}
+.brand-mark .wordmark{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--text);}
+.brand-mark .sub{font-size:12px;color:var(--text3);margin-top:3px;}
+.login-card{background:white;border:1px solid var(--border);border-radius:var(--r);padding:1.75rem;}
+.login-card h2{font-family:'DM Serif Display',serif;font-size:1.2rem;margin-bottom:0.35rem;}
+.login-card p{font-size:13px;color:var(--text2);margin-bottom:1.5rem;}
+.field{margin-bottom:1rem;}
+label.fl{display:block;font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+input.fi{width:100%;padding:9px 12px;font-size:14px;font-family:'Inter',sans-serif;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;transition:border-color .15s;}
+input.fi:focus{border-color:var(--text);}
+.btn-primary{width:100%;padding:11px;border:none;border-radius:var(--r);background:var(--text);color:white;font-size:14px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;transition:background .15s;margin-top:4px;}
+.btn-primary:hover{background:#333;}
+.login-footer{text-align:center;margin-top:1rem;font-size:12px;color:var(--text3);}
+.login-footer a{color:var(--text2);cursor:pointer;text-decoration:underline;}
+.error-msg{background:var(--error-bg);border:1px solid #FECACA;border-radius:8px;padding:8px 12px;font-size:13px;color:var(--error);margin-bottom:1rem;display:none;}
+.social-btn{width:100%;padding:9px;border:1px solid var(--border);border-radius:var(--r);background:white;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:background .15s;}
+.social-btn:hover{background:var(--surface);}
+.divider{display:flex;align-items:center;gap:10px;color:var(--text3);font-size:12px;margin:1rem 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* TOP BAR (logged in) */
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+.top-brand{font-family:'DM Serif Display',serif;font-size:1.4rem;}
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 6px;font-size:12px;color:var(--text2);cursor:pointer;}
+.avatar{width:26px;height:26px;border-radius:50%;background:var(--text);color:white;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;}
+.signout-link{font-size:12px;color:var(--text3);text-decoration:underline;cursor:pointer;background:none;border:none;font-family:'Inter',sans-serif;}
+
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;border:1px solid;}
+.pill-green{background:var(--success-bg);border-color:var(--success-border);color:#166534;}
+.pill-amber{background:var(--amber-bg);border-color:var(--amber-border);color:var(--amber);}
+.pill-blue{background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue);}
+.pill-gray{background:var(--surface2);border-color:var(--border);color:var(--text2);}
+.pill-red{background:var(--error-bg);border-color:#FECACA;color:var(--error);}
+
+/* JOB BOARD */
+.board-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.board-title{font-family:'DM Serif Display',serif;font-size:1.5rem;}
+.board-meta{font-size:12px;color:var(--text3);margin-top:2px;}
+.search-row{display:flex;gap:8px;margin-bottom:1rem;}
+.search-input{flex:1;padding:8px 12px;font-size:13px;font-family:'Inter',sans-serif;background:white;border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;}
+.search-input:focus{border-color:var(--text3);}
+.filter-btn{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:white;font-size:12px;font-family:'Inter',sans-serif;color:var(--text2);cursor:pointer;white-space:nowrap;}
+.filter-btn.active{background:var(--text);color:white;border-color:var(--text);}
+.dept-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;}
+.dept-tab{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:12px;color:var(--text2);cursor:pointer;transition:all .12s;}
+.dept-tab.active{background:var(--text);color:white;border-color:var(--text);}
+.job-card{background:white;border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;margin-bottom:.75rem;cursor:pointer;transition:border-color .15s;}
+.job-card:hover{border-color:var(--text3);}
+.job-card.applied{border-left:3px solid var(--success);}
+.job-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.job-name{font-weight:500;font-size:15px;color:var(--text);}
+.job-dept{font-size:12px;color:var(--text2);margin-top:2px;}
+.job-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+.job-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--surface2);}
+.job-footer-left{font-size:12px;color:var(--text3);}
+.apply-chip{padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;transition:all .12s;}
+.apply-chip:hover{background:var(--text);color:white;border-color:var(--text);}
+.apply-chip.done{background:var(--success-bg);border-color:var(--success-border);color:#166534;cursor:default;}
+.no-results{text-align:center;padding:2.5rem 1rem;color:var(--text3);font-size:14px;}
+
+/* STATUS TRACKER */
+.status-title{font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:1rem;}
+.app-card{background:white;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem;}
+.app-card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;}
+.app-card-role{font-weight:500;font-size:15px;}
+.app-card-org{font-size:12px;color:var(--text2);margin-top:2px;}
+.timeline{position:relative;padding-left:20px;}
+.tl-item{position:relative;padding-bottom:16px;padding-left:16px;}
+.tl-item:last-child{padding-bottom:0;}
+.tl-dot{position:absolute;left:-8px;top:2px;width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:var(--bg);}
+.tl-dot.done{border-color:var(--success);background:var(--success);}
+.tl-dot.active{border-color:var(--text);background:var(--text);}
+.tl-dot.pending{border-color:var(--border);background:var(--bg);}
+.tl-line{position:absolute;left:-2px;top:16px;width:2px;height:calc(100% - 8px);background:var(--border);}
+.tl-line.done{background:var(--success);}
+.tl-item:last-child .tl-line{display:none;}
+.tl-label{font-size:13px;font-weight:500;color:var(--text);}
+.tl-label.pending{color:var(--text3);}
+.tl-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+.tl-note{font-size:12px;color:var(--text2);margin-top:4px;background:var(--surface);border-radius:6px;padding:6px 9px;}
+.ref-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;border-top:1px solid var(--surface2);padding-top:.75rem;margin-top:.75rem;}
+.empty-state{text-align:center;padding:3rem 1rem;}
+.empty-icon{font-size:32px;margin-bottom:.75rem;}
+.empty-state h3{font-family:'DM Serif Display',serif;font-size:1.1rem;margin-bottom:.4rem;}
+.empty-state p{font-size:13px;color:var(--text2);max-width:280px;margin:0 auto;}
+.nudge-btn{margin-top:1rem;padding:9px 20px;border:1px solid var(--border);border-radius:var(--r);background:white;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);cursor:pointer;}
+.nudge-btn:hover{background:var(--surface);}
+</style>
+
+<div class="portal">
+
+  <!-- LOGIN VIEW -->
+  <div class="view active" id="view-login">
+    <div class="login-wrap">
+      <div class="brand-mark">
+        <div class="wordmark">Campsite Careers</div>
+        <div class="sub">Common Ground Studios · Applicant Portal</div>
+      </div>
+      <div class="login-card">
+        <h2>Sign in to your account</h2>
+        <p>Track applications, explore open roles, and pick up where you left off.</p>
+        <div class="error-msg" id="login-error">Hmm, those details don't match. Try again — or reset your password.</div>
+
+        <button class="social-btn" onclick="googleLogin()">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <button class="social-btn" onclick="googleLogin()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="#0077B5"/><path d="M6.5 9h2V17h-2V9zm1-3a1.25 1.25 0 110 2.5A1.25 1.25 0 017.5 6zm4 3h1.9v1.1h.03C13.7 9.5 14.6 9 15.8 9c2.1 0 2.7 1.4 2.7 3.2V17h-2v-4.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2V9z" fill="white"/></svg>
+          Continue with LinkedIn
+        </button>
+        <div class="divider">or use email</div>
+
+        <div class="field">
+          <label class="fl">Email address</label>
+          <input class="fi" type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="field">
+          <label class="fl">Password</label>
+          <input class="fi" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn-primary" onclick="doLogin()">Sign in →</button>
+        <div class="login-footer">
+          <a onclick="showMagicLink()">Forgot password?</a> &nbsp;·&nbsp; No account? <a onclick="goRegister()">Create one</a>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:1.25rem;font-size:12px;color:var(--text3);">
+        Applied before? Sign in to see your status.
+        <br>First time here? You'll create an account during your application.
+      </div>
+    </div>
+  </div>
+
+  <!-- MAGIC LINK / FORGOT -->
+  <div class="view" id="view-magic">
+    <div class="login-wrap">
+      <div class="brand-mark">
+        <div class="wordmark">Campsite Careers</div>
+        <div class="sub">Password reset</div>
+      </div>
+      <div class="login-card">
+        <h2>Reset your password</h2>
+        <p>Enter your email and we'll send a magic link. No judgement — we forget ours too.</p>
+        <div class="field">
+          <label class="fl">Email address</label>
+          <input class="fi" type="email" id="magic-email" placeholder="you@example.com">
+        </div>
+        <button class="btn-primary" onclick="sendMagic()">Send magic link →</button>
+        <div class="login-footer"><a onclick="showLogin()">Back to sign in</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAGIC SENT CONFIRMATION -->
+  <div class="view" id="view-magic-sent">
+    <div class="login-wrap">
+      <div class="login-card" style="text-align:center;padding:2.5rem;">
+        <div style="font-size:32px;margin-bottom:.75rem;">📬</div>
+        <h2 style="font-family:'DM Serif Display',serif;font-size:1.2rem;margin-bottom:.5rem;">Check your inbox</h2>
+        <p style="font-size:13px;color:var(--text2);">Magic link sent. Click it to sign in — it expires in 15 minutes. (Yes, really. Don't go make a cup of tea first.)</p>
+        <button class="nudge-btn" onclick="showLogin()" style="margin-top:1.25rem;">Back to sign in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGGED IN: top bar + tabs -->
+  <div class="view" id="view-app">
+    <div class="top-bar">
+      <div>
+        <div class="top-brand">Campsite Careers</div>
+        <div style="font-size:12px;color:var(--text3);">Common Ground Studios</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="user-chip">
+          <div class="avatar">AM</div>
+          <span>Alex Morgan</span>
+        </div>
+        <button class="signout-link" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-board" onclick="switchTab('board')">Open roles</button>
+      <button class="nav-tab" id="tab-status" onclick="switchTab('status')">My applications <span id="app-badge" style="background:#B91C1C;color:white;border-radius:10px;font-size:10px;padding:1px 6px;margin-left:4px;">2</span></button>
+    </div>
+
+    <!-- JOB BOARD PANEL -->
+    <div id="panel-board">
+      <div class="board-header">
+        <div>
+          <div class="board-title">Open roles</div>
+          <div class="board-meta" id="board-meta">12 positions across 5 departments</div>
+        </div>
+      </div>
+
+      <div class="search-row">
+        <input class="search-input" type="text" placeholder="Search roles, teams, locations…" id="job-search" oninput="filterJobs()">
+        <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">All</button>
+        <button class="filter-btn" id="filter-remote" onclick="setFilter('remote')">Remote</button>
+        <button class="filter-btn" id="filter-hiring" onclick="setFilter('hiring')">Fast hire</button>
+      </div>
+
+      <div class="dept-tabs" id="dept-tabs">
+        <button class="dept-tab active" onclick="setDept(this,'all')">All teams</button>
+        <button class="dept-tab" onclick="setDept(this,'product')">Product & Design</button>
+        <button class="dept-tab" onclick="setDept(this,'eng')">Engineering</button>
+        <button class="dept-tab" onclick="setDept(this,'ops')">Operations</button>
+        <button class="dept-tab" onclick="setDept(this,'marketing')">Marketing</button>
+        <button class="dept-tab" onclick="setDept(this,'hr')">People & HR</button>
+      </div>
+
+      <div id="job-list"></div>
+    </div>
+
+    <!-- STATUS PANEL -->
+    <div id="panel-status" style="display:none;">
+      <div class="status-title">My applications</div>
+      <div id="status-list"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const JOBS = [
+  {id:1,title:'Senior Product Designer',dept:'product',deptLabel:'Product & Design',location:'Brighton · Hybrid',type:'Full-time',salary:'£60–75k',close:'30 Apr',remote:false,fast:false,applied:true},
+  {id:2,title:'Frontend Engineer (React)',dept:'eng',deptLabel:'Engineering',location:'Remote · UK',type:'Full-time',salary:'£55–70k',close:'15 May',remote:true,fast:true,applied:false},
+  {id:3,title:'iOS Developer',dept:'eng',deptLabel:'Engineering',location:'Brighton · Hybrid',type:'Full-time',salary:'£60–75k',close:'20 May',remote:false,fast:false,applied:false},
+  {id:4,title:'Head of Marketing',dept:'marketing',deptLabel:'Marketing',location:'London · Hybrid',type:'Full-time',salary:'£70–85k',close:'1 May',remote:false,fast:true,applied:false},
+  {id:5,title:'Operations Coordinator',dept:'ops',deptLabel:'Operations',location:'Remote · UK',type:'Full-time',salary:'£32–40k',close:'10 May',remote:true,fast:false,applied:false},
+  {id:6,title:'People Partner',dept:'hr',deptLabel:'People & HR',location:'Brighton · Hybrid',type:'Part-time',salary:'£45–55k',close:'25 Apr',remote:false,fast:true,applied:false},
+  {id:7,title:'Content & SEO Lead',dept:'marketing',deptLabel:'Marketing',location:'Remote · UK',type:'Contract',salary:'£350/day',close:'5 May',remote:true,fast:false,applied:false},
+  {id:8,title:'Backend Engineer (Node)',dept:'eng',deptLabel:'Engineering',location:'Remote · UK',type:'Full-time',salary:'£60–72k',close:'18 May',remote:true,fast:false,applied:false},
+  {id:9,title:'UX Researcher',dept:'product',deptLabel:'Product & Design',location:'Brighton · Hybrid',type:'Full-time',salary:'£45–58k',close:'12 May',remote:false,fast:true,applied:true},
+  {id:10,title:'DevOps Engineer',dept:'eng',deptLabel:'Engineering',location:'Remote · UK',type:'Full-time',salary:'£65–78k',close:'22 May',remote:true,fast:false,applied:false},
+  {id:11,title:'Talent Acquisition Lead',dept:'hr',deptLabel:'People & HR',location:'Remote · UK',type:'Full-time',salary:'£50–60k',close:'28 Apr',remote:true,fast:false,applied:false},
+  {id:12,title:'Growth Marketing Manager',dept:'marketing',deptLabel:'Marketing',location:'London · Hybrid',type:'Full-time',salary:'£55–65k',close:'8 May',remote:false,fast:true,applied:false},
+];
+
+const APPS = [
+  {id:1,title:'Senior Product Designer',org:'Common Ground Studios',ref:'CGS-2024-SPD-0042',submitted:'3 Apr 2025',
+   stages:[
+     {label:'Application submitted',status:'done',date:'3 Apr 2025',note:'Received and logged. You\'re in the pool!'},
+     {label:'Application reviewed',status:'done',date:'7 Apr 2025',note:'Shortlisted for next stage. Nice work.'},
+     {label:'Intro call',status:'active',date:'Scheduled 14 Apr',note:'30 min with Priya from People — check your email for the link.'},
+     {label:'Design task',status:'pending',date:null,note:null},
+     {label:'Final interview',status:'pending',date:null,note:null},
+     {label:'Decision',status:'pending',date:null,note:null},
+   ]},
+  {id:9,title:'UX Researcher',org:'Common Ground Studios',ref:'CGS-2024-UXR-0018',submitted:'8 Apr 2025',
+   stages:[
+     {label:'Application submitted',status:'done',date:'8 Apr 2025',note:'All good — we have your application.'},
+     {label:'Application reviewed',status:'active',date:'In review',note:'Under active review. Usually takes 3–5 working days.'},
+     {label:'Screening call',status:'pending',date:null,note:null},
+     {label:'Interview',status:'pending',date:null,note:null},
+     {label:'Decision',status:'pending',date:null,note:null},
+   ]},
+];
+
+let currentDept = 'all';
+let currentFilter = 'all';
+let appliedIds = new Set(JOBS.filter(j=>j.applied).map(j=>j.id));
+
+function filterJobs(){
+  const q = document.getElementById('job-search').value.toLowerCase();
+  let list = JOBS.filter(j => {
+    const matchQ = !q || j.title.toLowerCase().includes(q) || j.deptLabel.toLowerCase().includes(q) || j.location.toLowerCase().includes(q);
+    const matchDept = currentDept==='all' || j.dept===currentDept;
+    const matchFilter = currentFilter==='all' || (currentFilter==='remote'&&j.remote) || (currentFilter==='hiring'&&j.fast);
+    return matchQ && matchDept && matchFilter;
+  });
+  renderJobs(list);
+}
+
+function setFilter(f){
+  currentFilter=f;
+  ['all','remote','hiring'].forEach(x=>document.getElementById('filter-'+x).classList.toggle('active',x===f));
+  filterJobs();
+}
+
+function setDept(btn,dept){
+  currentDept=dept;
+  document.querySelectorAll('.dept-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  filterJobs();
+}
+
+function renderJobs(list){
+  const el=document.getElementById('job-list');
+  document.getElementById('board-meta').textContent=`${list.length} position${list.length!==1?'s':''} · ${appliedIds.size} applied`;
+  if(!list.length){
+    el.innerHTML=`<div class="no-results">No roles match that search.<br><span style="font-size:12px;color:var(--text3)">Try a different team or remove filters.</span></div>`;
+    return;
+  }
+  el.innerHTML=list.map(j=>{
+    const applied=appliedIds.has(j.id);
+    return `<div class="job-card${applied?' applied':''}" onclick="openJob(${j.id})">
+      <div class="job-card-top">
+        <div>
+          <div class="job-name">${j.title}${applied?' <span class="pill pill-green" style="font-size:10px;vertical-align:middle;">Applied</span>':''}</div>
+          <div class="job-dept">${j.deptLabel}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:13px;font-weight:500;">${j.salary}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Closes ${j.close}</div>
+        </div>
+      </div>
+      <div class="job-tags">
+        <span class="pill pill-gray">${j.type}</span>
+        <span class="pill pill-gray">${j.location}</span>
+        ${j.remote?'<span class="pill pill-blue">Remote</span>':''}
+        ${j.fast?'<span class="pill pill-amber">Fast hire</span>':''}
+      </div>
+      <div class="job-footer">
+        <span class="job-footer-left">${j.deptLabel} · Common Ground Studios</span>
+        <button class="apply-chip${applied?' done':''}" onclick="event.stopPropagation();${applied?'':('quickApply('+j.id+')')}">
+          ${applied?'✓ Applied':'Apply now'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openJob(id){
+  const j=JOBS.find(x=>x.id===id);
+  if(!j) return;
+  sendPrompt(`Show me the full job listing and application form for: ${j.title} (${j.deptLabel}) at Common Ground Studios — ${j.salary}, ${j.location}`);
+}
+
+function quickApply(id){
+  const j=JOBS.find(x=>x.id===id);
+  if(!j) return;
+  sendPrompt(`I want to apply for the ${j.title} role at Common Ground Studios. Open the application form.`);
+}
+
+function renderStatus(){
+  const el=document.getElementById('status-list');
+  if(!APPS.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><h3>No applications yet</h3><p>Once you apply for a role, you can track every stage right here.</p><button class="nudge-btn" onclick="switchTab('board')">Browse open roles →</button></div>`;
+    return;
+  }
+  el.innerHTML=APPS.map(app=>{
+    const activeStage=app.stages.find(s=>s.status==='active');
+    const statusPill=activeStage?`<span class="pill pill-amber">${activeStage.label}</span>`:`<span class="pill pill-green">Complete</span>`;
+    return `<div class="app-card">
+      <div class="app-card-head">
+        <div>
+          <div class="app-card-role">${app.title}</div>
+          <div class="app-card-org">${app.org}</div>
+        </div>
+        ${statusPill}
+      </div>
+      <div class="timeline">
+        ${app.stages.map((s,i)=>`
+          <div class="tl-item">
+            <div class="tl-dot ${s.status}"></div>
+            ${i<app.stages.length-1?`<div class="tl-line ${s.status==='done'?'done':''}"></div>`:''}
+            <div class="tl-label${s.status==='pending'?' pending':''}">${s.label}${s.date?` <span style="font-weight:400;color:var(--text3)">· ${s.date}</span>`:''}</div>
+            ${s.note?`<div class="tl-note">${s.note}</div>`:''}
+          </div>`).join('')}
+      </div>
+      <div class="ref-row">
+        <span style="color:var(--text3);">Ref: ${app.ref}</span>
+        <span style="color:var(--text3);">Applied ${app.submitted}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function switchTab(t){
+  document.getElementById('tab-board').classList.toggle('active',t==='board');
+  document.getElementById('tab-status').classList.toggle('active',t==='status');
+  document.getElementById('panel-board').style.display=t==='board'?'block':'none';
+  document.getElementById('panel-status').style.display=t==='status'?'block':'none';
+  if(t==='status') renderStatus();
+}
+
+function doLogin(){
+  const e=document.getElementById('login-email').value;
+  const p=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-error');
+  if(!e||!p){err.style.display='block';err.textContent='Fill in both fields — it\'s only two things.';return;}
+  if(e.includes('@')&&p.length>=4){
+    showView('view-app');
+    filterJobs();
+  } else {
+    err.style.display='block';
+    err.textContent='Hmm, those details don\'t match. Try again — or reset your password.';
+  }
+}
+
+function googleLogin(){showView('view-app');filterJobs();}
+function signOut(){showView('view-login');document.getElementById('login-error').style.display='none';}
+function showMagicLink(){showView('view-magic');}
+function showLogin(){showView('view-login');}
+function goRegister(){sendPrompt('I want to create an account on Campsite Careers to apply for a job.');}
+function sendMagic(){
+  const e=document.getElementById('magic-email').value;
+  if(e&&e.includes('@')) showView('view-magic-sent');
+}
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+</script>

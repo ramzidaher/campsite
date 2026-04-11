@@ -1,0 +1,637 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Serif+Display&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #FAF9F6;
+    --surface: #F5F4F1;
+    --surface2: #EEECEA;
+    --text: #121212;
+    --text2: #6B6B6B;
+    --text3: #9B9B9B;
+    --border: #D8D8D8;
+    --accent: #121212;
+    --success: #15803D;
+    --error: #B91C1C;
+    --amber: #92400E;
+    --amber-bg: #FEF3C7;
+    --emerald-bg: #DCFCE7;
+    --emerald: #166534;
+    --r: 11px;
+  }
+
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+
+  .portal-wrap { max-width: 660px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .job-header-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .job-title { font-family: 'DM Serif Display', serif; font-size: 1.75rem; color: var(--text); line-height: 1.2; margin-bottom: 0.5rem; }
+  .job-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.75rem; }
+  .pill {
+    font-size: 12px; font-weight: 500; padding: 3px 10px;
+    border-radius: 20px; border: 1px solid;
+  }
+  .pill-neutral { background: var(--surface2); border-color: var(--border); color: var(--text2); }
+  .pill-amber { background: var(--amber-bg); border-color: #FDE68A; color: var(--amber); }
+  .pill-emerald { background: var(--emerald-bg); border-color: #BBF7D0; color: var(--emerald); }
+
+  .progress-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .progress-steps { display: flex; gap: 0; align-items: center; margin-top: 0.75rem; }
+  .step-item { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+  .step-dot {
+    width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border);
+    background: var(--bg); display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--text3); z-index: 1;
+    transition: all 0.3s ease;
+  }
+  .step-dot.active { border-color: var(--text); background: var(--text); color: white; }
+  .step-dot.done { border-color: var(--success); background: var(--success); color: white; }
+  .step-line {
+    position: absolute; top: 14px; left: calc(50% + 14px);
+    width: calc(100% - 28px); height: 2px; background: var(--border);
+    transition: background 0.3s ease;
+  }
+  .step-line.done { background: var(--success); }
+  .step-label { font-size: 10px; color: var(--text3); margin-top: 5px; text-align: center; white-space: nowrap; }
+  .step-label.active { color: var(--text); font-weight: 500; }
+  .step-label.done { color: var(--success); }
+
+  .banter-box {
+    background: #121212; color: #FAF9F6;
+    border-radius: var(--r); padding: 0.85rem 1.1rem;
+    font-size: 13px; line-height: 1.5;
+    margin-bottom: 1.25rem;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .banter-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .banter-box em { font-style: italic; opacity: 0.7; font-size: 12px; display: block; margin-top: 3px; }
+
+  .form-card {
+    background: white; border: 1px solid var(--border);
+    border-radius: var(--r); padding: 1.5rem; margin-bottom: 1rem;
+  }
+  .form-section-title {
+    font-family: 'DM Serif Display', serif; font-size: 1.1rem; margin-bottom: 1rem;
+    padding-bottom: 0.6rem; border-bottom: 1px solid var(--border);
+  }
+
+  .field-row { display: grid; gap: 1rem; margin-bottom: 1rem; }
+  .field-row.two { grid-template-columns: 1fr 1fr; }
+  .field-row.one { grid-template-columns: 1fr; }
+
+  label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; letter-spacing: 0.3px; text-transform: uppercase; }
+
+  input[type=text], input[type=email], input[type=url], textarea, select {
+    width: 100%; padding: 9px 12px; font-size: 14px; font-family: 'Inter', sans-serif;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); outline: none; transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--text); }
+  textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
+
+  .char-count { font-size: 11px; color: var(--text3); text-align: right; margin-top: 3px; }
+  .char-count.warn { color: var(--amber); }
+
+  .question-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 9px; padding: 1rem 1.1rem; margin-bottom: 0.75rem;
+  }
+  .question-item p { font-size: 14px; color: var(--text); margin-bottom: 8px; font-weight: 500; }
+
+  .rating-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .rating-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg);
+    font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text2);
+    transition: all 0.15s;
+  }
+  .rating-btn:hover { border-color: var(--text); color: var(--text); }
+  .rating-btn.selected { background: var(--text); color: white; border-color: var(--text); }
+
+  .option-row { display: flex; flex-direction: column; gap: 6px; }
+  .option-btn {
+    padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg);
+    font-size: 13px; cursor: pointer; color: var(--text); text-align: left;
+    transition: all 0.15s;
+  }
+  .option-btn:hover { border-color: var(--text); }
+  .option-btn.selected { background: var(--text); color: white; border-color: var(--text); }
+
+  .upload-drop {
+    border: 2px dashed var(--border); border-radius: var(--r);
+    padding: 1.5rem; text-align: center; cursor: pointer;
+    transition: all 0.15s; background: var(--bg);
+  }
+  .upload-drop:hover { border-color: var(--text3); background: var(--surface); }
+  .upload-drop.has-file { border-color: var(--success); background: var(--emerald-bg); }
+  .upload-label { font-size: 13px; color: var(--text2); margin-top: 6px; }
+  .upload-label strong { color: var(--text); }
+  .upload-icon { font-size: 22px; }
+
+  .nav-row { display: flex; gap: 10px; margin-top: 0.5rem; }
+  .btn-back {
+    flex: 1; padding: 11px; border: 1px solid var(--border);
+    border-radius: var(--r); background: var(--bg); color: var(--text2);
+    font-size: 14px; font-family: 'Inter', sans-serif; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-back:hover { background: var(--surface); }
+  .btn-next {
+    flex: 2; padding: 11px; border: none;
+    border-radius: var(--r); background: var(--text); color: white;
+    font-size: 14px; font-weight: 500; font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-next:hover { background: #333; }
+  .btn-next:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; }
+
+  .success-screen {
+    text-align: center; padding: 3rem 1rem;
+  }
+  .success-circle {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--emerald-bg); border: 2px solid #BBF7D0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 1.25rem;
+  }
+  .success-screen h2 { font-family: 'DM Serif Display', serif; font-size: 1.6rem; margin-bottom: 0.5rem; }
+  .success-screen p { color: var(--text2); font-size: 14px; line-height: 1.6; max-width: 380px; margin: 0 auto; }
+
+  .milestone-toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--text); color: white;
+    border-radius: var(--r); padding: 10px 14px;
+    font-size: 13px; max-width: 220px;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s ease; z-index: 100;
+  }
+  .milestone-toast.show { transform: translateY(0); opacity: 1; }
+
+  .linkedin-strip {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.75rem 1rem; margin-bottom: 1rem; cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .linkedin-strip:hover { border-color: var(--text3); }
+  .linkedin-logo { width: 22px; height: 22px; border-radius: 4px; background: #0077B5; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .linkedin-strip span { font-size: 13px; color: var(--text2); }
+  .linkedin-strip strong { color: var(--text); }
+
+  .divider { display: flex; align-items: center; gap: 10px; margin: 0.75rem 0; color: var(--text3); font-size: 12px; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .review-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--surface2); font-size: 13px; }
+  .review-row:last-child { border-bottom: none; }
+  .review-label { color: var(--text2); }
+  .review-value { color: var(--text); font-weight: 500; max-width: 55%; text-align: right; }
+
+  .confetti-wrap { pointer-events: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 200; }
+
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  .fun-meter { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text3); margin-top: 0.5rem; }
+  .fun-bar-outer { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .fun-bar-inner { height: 100%; background: var(--success); border-radius: 2px; transition: width 0.5s ease; }
+
+  @media (max-width: 480px) {
+    .field-row.two { grid-template-columns: 1fr; }
+    .step-label { font-size: 9px; }
+  }
+</style>
+
+<div class="portal-wrap">
+
+  <div class="job-header-card">
+    <div class="pill pill-emerald" style="display:inline-block;margin-bottom:0.5rem;">● Accepting applications</div>
+    <div class="job-title">Senior Product Designer</div>
+    <div style="font-size:13px;color:var(--text2);margin-top:4px;">Common Ground Studios · Brighton, UK · Hybrid · £60,000 – £75,000</div>
+    <div class="job-meta">
+      <span class="pill pill-neutral">Full-time</span>
+      <span class="pill pill-neutral">5+ yrs exp</span>
+      <span class="pill pill-amber">Closes 30 Apr 2025</span>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;font-weight:500;">Your application</span>
+      <span style="font-size:12px;color:var(--text3);" id="step-counter">Step 1 of 4</span>
+    </div>
+    <div class="progress-steps" id="progress-steps">
+      <div class="step-item">
+        <div class="step-dot active" id="dot-0">1</div>
+        <div class="step-line" id="line-0"></div>
+        <div class="step-label active" id="lbl-0">You</div>
+      </div>
+      <div class="step-item">
+        <div class="step-dot" id="dot-1">2</div>
+        <div class="step-line" id="line-1"></div>
+        <div class="step-label" id="lbl-1">Questions</div>
+      </div>
+      <div class="step-item">
+        <div class="step-dot" id="dot-2">3</div>
+        <div class="step-line" id="line-2"></div>
+        <div class="step-label" id="lbl-2">CV</div>
+      </div>
+      <div class="step-item">
+        <div class="step-dot" id="dot-3">4</div>
+        <div class="step-label" id="lbl-3">Review</div>
+      </div>
+    </div>
+    <div class="fun-meter">
+      <span>Application pain level:</span>
+      <div class="fun-bar-outer"><div class="fun-bar-inner" id="fun-bar" style="width:5%"></div></div>
+      <span id="fun-label">barely started</span>
+    </div>
+  </div>
+
+  <div id="banter-area"></div>
+
+  <!-- STEP 1: Personal Info -->
+  <div class="step-panel active" id="panel-0">
+    <div class="form-card">
+      <div class="form-section-title">Your details</div>
+
+      <div class="linkedin-strip" onclick="prefillLinkedIn()">
+        <div class="linkedin-logo">in</div>
+        <span><strong>Import from LinkedIn</strong> — skip the typing, live your best life</span>
+        <span style="margin-left:auto;font-size:18px;">→</span>
+      </div>
+      <div class="divider">or fill in manually (we believe in you)</div>
+
+      <div class="field-row two">
+        <div>
+          <label>First name *</label>
+          <input type="text" id="fname" placeholder="e.g. Alex" oninput="checkStep0()">
+        </div>
+        <div>
+          <label>Last name *</label>
+          <input type="text" id="lname" placeholder="e.g. Taylor" oninput="checkStep0()">
+        </div>
+      </div>
+      <div class="field-row one">
+        <div>
+          <label>Email address *</label>
+          <input type="email" id="email" placeholder="you@example.com" oninput="checkStep0()">
+        </div>
+      </div>
+      <div class="field-row two">
+        <div>
+          <label>Phone</label>
+          <input type="text" id="phone" placeholder="+44 7700 000000">
+        </div>
+        <div>
+          <label>Location</label>
+          <input type="text" id="location" placeholder="Brighton, UK">
+        </div>
+      </div>
+      <div class="field-row one">
+        <div>
+          <label>LinkedIn / Portfolio URL</label>
+          <input type="url" id="portfolio" placeholder="https://yoursite.com">
+        </div>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-next" id="btn-0" onclick="nextStep()" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Questions -->
+  <div class="step-panel" id="panel-1">
+    <div class="form-card">
+      <div class="form-section-title">A few quick questions</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;">We kept it short. Really. Just 3 questions. We're not monsters.</p>
+
+      <div class="question-item">
+        <p>1. What draws you to this role specifically?</p>
+        <textarea id="q1" placeholder="Be real with us. 'I need a job' is valid but maybe expand a tiny bit…" oninput="updateCharCount(this,'cc1',300);checkStep1()"></textarea>
+        <div class="char-count" id="cc1">0 / 300</div>
+      </div>
+
+      <div class="question-item">
+        <p>2. On a scale of 1–5, how would you rate your Figma skills?</p>
+        <div class="rating-row" id="rating-figma">
+          <button class="rating-btn" onclick="selectRating('rating-figma',this,1)" title="Never opened it">1</button>
+          <button class="rating-btn" onclick="selectRating('rating-figma',this,2)" title="Watched a YouTube tutorial once">2</button>
+          <button class="rating-btn" onclick="selectRating('rating-figma',this,3)" title="Confident enough">3</button>
+          <button class="rating-btn" onclick="selectRating('rating-figma',this,4)" title="Could teach a workshop">4</button>
+          <button class="rating-btn" onclick="selectRating('rating-figma',this,5)" title="I basically AM Figma">5 ★</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:5px;" id="rating-hint">hover to see what each number really means</div>
+      </div>
+
+      <div class="question-item">
+        <p>3. What's your preferred working style?</p>
+        <div class="option-row" id="work-style">
+          <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">🙋 Deep focus, async — I do my best thinking alone then share</button>
+          <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">🤝 Collaborative, lots of real-time feedback loops</button>
+          <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">⚖️ Mix of both depending on the task</button>
+          <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">🤷 Honestly depends on my coffee intake</button>
+        </div>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-back" onclick="prevStep()">← Back</button>
+      <button class="btn-next" id="btn-1" onclick="nextStep()" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: CV Upload -->
+  <div class="step-panel" id="panel-2">
+    <div class="form-card">
+      <div class="form-section-title">Your CV</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;">Almost there. Just drop your CV. This is the hard part (it isn't).</p>
+
+      <input type="file" id="cv-input" accept=".pdf,.doc,.docx" style="display:none" onchange="handleFile(this)">
+      <div class="upload-drop" id="upload-zone" onclick="document.getElementById('cv-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='#121212'"
+        ondragleave="this.style.borderColor=''"
+        ondrop="handleDrop(event)">
+        <div class="upload-icon" id="upload-icon">📄</div>
+        <div class="upload-label" id="upload-label">
+          <strong>Click or drag & drop your CV</strong><br>
+          PDF, DOC, DOCX · Max 5 MB
+        </div>
+      </div>
+
+      <div style="margin-top:1.25rem;">
+        <label>Cover letter <span style="color:var(--text3);font-weight:400;text-transform:none;">(optional — but we actually read these)</span></label>
+        <textarea id="cover" placeholder="Tell us something your CV doesn't. Or paste a 50-page manifesto. Your call." style="min-height:100px;"></textarea>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-back" onclick="prevStep()">← Back</button>
+      <button class="btn-next" id="btn-2" onclick="nextStep()" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Review -->
+  <div class="step-panel" id="panel-3">
+    <div class="form-card">
+      <div class="form-section-title">Review & submit</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;">Take one last look. You've come this far — no backing out now.</p>
+      <div id="review-content"></div>
+    </div>
+    <div style="margin-top:0.75rem;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text2);">
+        <input type="checkbox" id="consent" onchange="checkStep3()" style="width:auto;margin-top:2px;">
+        I confirm this is all true, I'm a real human, and I've actually read the job description. (We know. You skimmed it. That's fine.)
+      </label>
+    </div>
+    <div class="nav-row" style="margin-top:0.75rem;">
+      <button class="btn-back" onclick="prevStep()">← Back</button>
+      <button class="btn-next" id="btn-3" onclick="submitApp()" disabled>Submit application ✓</button>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="step-panel" id="panel-success">
+    <div class="success-screen">
+      <div class="success-circle">✓</div>
+      <h2>You actually did it!</h2>
+      <p style="margin-top:0.5rem;">Your application for <strong>Senior Product Designer</strong> is in. We'll review it and get back to you within 5 working days. In the meantime — treat yourself. You've earned it.</p>
+      <div style="margin-top:1.5rem;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);text-align:left;max-width:360px;margin-left:auto;margin-right:auto;">
+        <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">What happens next</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.7;">
+          ① Application reviewed by the hiring team<br>
+          ② Shortlisted candidates contacted for a chat<br>
+          ③ Interview process (2 rounds, max)<br>
+          ④ Offer or honest feedback — always
+        </div>
+      </div>
+      <div style="margin-top:1.25rem;">
+        <span class="pill pill-emerald">Reference: CGS-2024-SPD-0042</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="milestone-toast" id="toast"></div>
+<canvas class="confetti-wrap" id="confetti" style="display:none;"></canvas>
+
+<script>
+let currentStep = 0;
+const totalSteps = 4;
+let ratings = {};
+let options = {};
+let cvFileName = '';
+
+const banters = [
+  { step: 0, icon: '👋', msg: "Hey! Yes, applying takes 4 minutes. We timed it. Also we lied, it's 6 minutes. Still fine.", em: "We promise not to ghost you. (Unlike your last interviewer.)" },
+  { step: 1, icon: '🎯', msg: "Look at you, smashing through the first bit. Only 3 questions stand between you and the finish line.", em: "We kept it short. Our HR team also hates long forms." },
+  { step: 2, icon: '📎', msg: "Just your CV now. If it's from 2019 and still says 'proficient in Microsoft Word' — no judgement. Update it though.", em: "Seriously, one file. You're basically done." },
+  { step: 3, icon: '🏁', msg: "THIS IS IT. One click away. You've put in the work. Hit submit before you talk yourself out of it.", em: "Future you is already grateful." },
+];
+
+function showBanter(step) {
+  const b = banters.find(x => x.step === step);
+  if (!b) return;
+  const el = document.getElementById('banter-area');
+  el.innerHTML = `<div class="banter-box"><span class="banter-icon">${b.icon}</span><div>${b.msg}<em>${b.em}</em></div></div>`;
+}
+
+function updateProgress(step) {
+  document.getElementById('step-counter').textContent = `Step ${step+1} of ${totalSteps}`;
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById(`dot-${i}`);
+    const lbl = document.getElementById(`lbl-${i}`);
+    const line = document.getElementById(`line-${i}`);
+    dot.className = 'step-dot' + (i < step ? ' done' : i === step ? ' active' : '');
+    dot.textContent = i < step ? '✓' : i + 1;
+    lbl.className = 'step-label' + (i < step ? ' done' : i === step ? ' active' : '');
+    if (line) line.className = 'step-line' + (i < step ? ' done' : '');
+  }
+  const pct = [5, 35, 65, 90, 100][step] || 5;
+  document.getElementById('fun-bar').style.width = pct + '%';
+  const labels = ['barely started','making progress','halfway hero','almost there!','submitted!'];
+  document.getElementById('fun-label').textContent = labels[step] || 'submitted!';
+}
+
+function nextStep() {
+  if (currentStep < totalSteps - 1) {
+    document.getElementById(`panel-${currentStep}`).classList.remove('active');
+    currentStep++;
+    document.getElementById(`panel-${currentStep}`).classList.add('active');
+    updateProgress(currentStep);
+    showBanter(currentStep);
+    if (currentStep === 3) buildReview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast(getMilestoneMsg(currentStep));
+  }
+}
+
+function prevStep() {
+  if (currentStep > 0) {
+    document.getElementById(`panel-${currentStep}`).classList.remove('active');
+    currentStep--;
+    document.getElementById(`panel-${currentStep}`).classList.add('active');
+    updateProgress(currentStep);
+    showBanter(currentStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function getMilestoneMsg(s) {
+  const msgs = ['','Step 1 done — names are easy, right? 😌','The hard questions are DONE. Big brain.','CV uploaded! Only legends do it this fast.'];
+  return msgs[s] || '';
+}
+
+function checkStep0() {
+  const ok = document.getElementById('fname').value.trim() && document.getElementById('lname').value.trim() && document.getElementById('email').value.includes('@');
+  document.getElementById('btn-0').disabled = !ok;
+}
+
+function checkStep1() {
+  const q1 = document.getElementById('q1').value.trim().length > 10;
+  const figma = !!document.querySelector('#rating-figma .rating-btn.selected');
+  const style = !!document.querySelector('#work-style .option-btn.selected');
+  document.getElementById('btn-1').disabled = !(q1 && figma && style);
+}
+
+function checkStep3() {
+  document.getElementById('btn-3').disabled = !document.getElementById('consent').checked;
+}
+
+function selectRating(groupId, btn, val) {
+  document.querySelectorAll(`#${groupId} .rating-btn`).forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  ratings[groupId] = val;
+  const hints = {1:'Not even once? Bold honesty.',2:'YouTube uni graduate.',3:'Gets the job done.',4:'Workshop-ready.',5:'You ARE Figma.'};
+  document.getElementById('rating-hint').textContent = hints[val];
+  checkStep1();
+}
+
+function selectOption(groupId, btn) {
+  document.querySelectorAll(`#${groupId} .option-btn`).forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  options[groupId] = btn.textContent.trim();
+}
+
+function updateCharCount(el, countId, max) {
+  const len = el.value.length;
+  const cc = document.getElementById(countId);
+  cc.textContent = `${len} / ${max}`;
+  cc.className = 'char-count' + (len > max * 0.85 ? ' warn' : '');
+}
+
+function handleFile(input) {
+  if (input.files && input.files[0]) {
+    cvFileName = input.files[0].name;
+    setUploadDone();
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f) { cvFileName = f.name; setUploadDone(); }
+}
+
+function setUploadDone() {
+  const zone = document.getElementById('upload-zone');
+  zone.classList.add('has-file');
+  document.getElementById('upload-icon').textContent = '✅';
+  document.getElementById('upload-label').innerHTML = `<strong>${cvFileName}</strong><br><span style="color:var(--success);font-size:12px;">Uploaded successfully — nice one</span>`;
+  document.getElementById('btn-2').disabled = false;
+  showToast('CV uploaded! You\'re on fire 🔥');
+}
+
+function prefillLinkedIn() {
+  document.getElementById('fname').value = 'Alex';
+  document.getElementById('lname').value = 'Morgan';
+  document.getElementById('email').value = 'alex.morgan@email.com';
+  document.getElementById('phone').value = '+44 7700 123456';
+  document.getElementById('location').value = 'Brighton, UK';
+  document.getElementById('portfolio').value = 'https://linkedin.com/in/alexmorgan';
+  checkStep0();
+  showToast('LinkedIn import complete! ✓ (Demo mode — it\'s pretend)');
+}
+
+function buildReview() {
+  const fname = document.getElementById('fname').value;
+  const lname = document.getElementById('lname').value;
+  const email = document.getElementById('email').value;
+  const q1 = document.getElementById('q1').value;
+  const figmaRating = document.querySelector('#rating-figma .rating-btn.selected');
+  const styleOpt = document.querySelector('#work-style .option-btn.selected');
+  const rows = [
+    ['Name', `${fname} ${lname}`],
+    ['Email', email],
+    ['Figma rating', figmaRating ? figmaRating.textContent : '—'],
+    ['Working style', styleOpt ? styleOpt.textContent.slice(2,40)+'…' : '—'],
+    ['CV', cvFileName || 'Not uploaded'],
+    ['Motivation', q1 ? q1.slice(0,60)+'…' : '—'],
+  ];
+  document.getElementById('review-content').innerHTML = rows.map(([l,v]) =>
+    `<div class="review-row"><span class="review-label">${l}</span><span class="review-value">${v}</span></div>`
+  ).join('');
+}
+
+function submitApp() {
+  document.getElementById('panel-3').classList.remove('active');
+  document.getElementById('panel-success').classList.add('active');
+  updateProgress(4);
+  document.getElementById('banter-area').innerHTML = '';
+  fireConfetti();
+  showToast('APPLICATION SUBMITTED! You absolute legend. 🎉');
+}
+
+function showToast(msg) {
+  if (!msg) return;
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function fireConfetti() {
+  const canvas = document.getElementById('confetti');
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const pieces = Array.from({length: 90}, () => ({
+    x: Math.random() * canvas.width, y: -10,
+    vx: (Math.random() - 0.5) * 4, vy: Math.random() * 3 + 2,
+    color: ['#121212','#15803D','#B91C1C','#92400E','#6B6B6B'][Math.floor(Math.random()*5)],
+    size: Math.random() * 7 + 4, rot: Math.random() * Math.PI * 2, rv: (Math.random()-0.5)*0.2
+  }));
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.rot += p.rv; p.vy += 0.04;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+      ctx.restore();
+    });
+    frame++;
+    if (frame < 180) requestAnimationFrame(draw);
+    else { ctx.clearRect(0,0,canvas.width,canvas.height); canvas.style.display='none'; }
+  }
+  draw();
+}
+
+showBanter(0);
+updateProgress(0);
+</script>

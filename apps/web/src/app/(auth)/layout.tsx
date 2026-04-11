@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { AuthOrgCard, type AuthOrgDisplay } from '@/components/auth/AuthOrgCard';
+import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { createClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
 
@@ -55,9 +56,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         />
 
         <Link href="/" className="relative z-[1] mb-auto flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/[0.12] text-lg">
-            ⛺
-          </div>
+          <CampsiteLogoMark className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] bg-white/[0.12]" />
           <span className="font-authSerif text-[22px] tracking-tight text-[#faf9f6]">Campsite</span>
         </Link>
 
@@ -95,9 +94,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       <main className="auth-shell-main flex min-h-screen flex-1 items-start justify-center overflow-y-auto px-6 py-10 sm:px-8 sm:py-12 lg:items-center">
         <div className="w-full max-w-[460px]">
           <Link href="/" className="mb-6 flex items-center gap-2.5 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#121212] text-lg text-white">
-              ⛺
-            </div>
+            <CampsiteLogoMark className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] bg-[#121212]" />
             <span className="font-authSerif text-xl tracking-tight text-[#121212]">Campsite</span>
           </Link>
           <AuthOrgCard org={org} />

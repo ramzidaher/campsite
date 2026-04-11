@@ -23,9 +23,10 @@ export function MemberPermissionOverridesPanel({
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<'additive' | 'subtractive'>('additive');
-  const [replacePermKey, setReplacePermKey] = useState('');
-  const [permKey, setPermKey] = useState('');
+  const [selectedAddKeys, setSelectedAddKeys] = useState<Set<string>>(() => new Set());
+  const [selectedReplaceKeys, setSelectedReplaceKeys] = useState<Set<string>>(() => new Set());
   const [search, setSearch] = useState('');
+  const [replaceSearch, setReplaceSearch] = useState('');
   const [existingSearch, setExistingSearch] = useState('');
 
   const assignableKeys = useMemo(
@@ -69,26 +70,27 @@ export function MemberPermissionOverridesPanel({
     void load();
   }, [load]);
 
-  async function addOverride() {
-    if (!permKey.trim()) return;
-    if (!assignableKeys.has(permKey.trim())) {
-      setLoadErr('You cannot assign this permission because it is outside your current access.');
+  async function addOverridesBatch(keys: string[]) {
+    const trimmed = [...new Set(keys.map((k) => k.trim()).filter(Boolean))];
+    const allowed = trimmed.filter((k) => assignableKeys.has(k));
+    if (allowed.length === 0) {
+      setLoadErr('You cannot assign these permissions because they are outside your current access.');
       return;
     }
-    setBusy(true);
     setLoadErr(null);
+    setBusy(true);
     const res = await fetch(`/api/admin/members/${targetUserId}/permission-overrides`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ op: 'upsert', mode, permission_key: permKey.trim() }),
+      body: JSON.stringify({ op: 'upsert_batch', mode, permission_keys: allowed }),
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     setBusy(false);
     if (!res.ok) {
-      setLoadErr(data.error ?? 'Could not add override');
+      setLoadErr(data.error ?? 'Could not add overrides');
       return;
     }
-    setPermKey('');
+    setSelectedAddKeys(new Set());
     await load();
   }
 
@@ -153,6 +155,19 @@ export function MemberPermissionOverridesPanel({
       : pickerItems;
     return groupPermissionPickerItems(filtered);
   }, [pickerItems, search]);
+
+  const groupedReplaceItems = useMemo(() => {
+    const q = replaceSearch.trim().toLowerCase();
+    const filtered = q
+      ? pickerItems.filter(
+          (item) =>
+            item.key.toLowerCase().includes(q) ||
+            item.label.toLowerCase().includes(q) ||
+            item.description.toLowerCase().includes(q),
+        )
+      : pickerItems;
+    return groupPermissionPickerItems(filtered);
+  }, [pickerItems, replaceSearch]);
 
   const preview = useMemo(
     () =>
@@ -265,39 +280,98 @@ export function MemberPermissionOverridesPanel({
             placeholder="Search by name or key"
           />
         </label>
-        <label className="block text-[12px] font-medium text-[#6b6b6b]">
-          Permission
-          <select
-            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-2 py-2 text-[13px]"
-            value={permKey}
-            disabled={busy}
-            onChange={(e) => setPermKey(e.target.value)}
-          >
-            <option value="">Select…</option>
-            {groupedItems.map((group) => (
-              <optgroup key={group.group} label={group.group}>
-                {group.items.map((item) => (
-                  <option key={item.key} value={item.key}>
-                    {item.label}
-                    {!item.assignable_into_custom_role ? ' (not assignable)' : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        {permKey ? <p className="mt-1 text-[12px] text-[#6b6b6b]">{permDescription(permKey)}</p> : null}
-        <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
-          All permissions are listed. Disabled options cannot be assigned with your current access.
+        <p className="mt-2 text-[12px] font-medium text-[#6b6b6b]">Permissions</p>
+        <div className="mt-2 max-h-[min(420px,55vh)] space-y-3 overflow-y-auto pr-1">
+          {groupedItems.map((group) => {
+            const assignableInGroup = group.items.filter((i) => assignableKeys.has(i.key));
+            const allAssignableSelected =
+              assignableInGroup.length > 0 && assignableInGroup.every((p) => selectedAddKeys.has(p.key));
+            return (
+              <div key={group.group}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">{group.group}</p>
+                  {assignableInGroup.length > 0 ? (
+                    <button
+                      type="button"
+                      className="shrink-0 text-[12px] text-[#1A5FA8] underline underline-offset-2"
+                      disabled={busy}
+                      onClick={() =>
+                        setSelectedAddKeys((curr) => {
+                          const next = new Set(curr);
+                          for (const p of assignableInGroup) {
+                            if (allAssignableSelected) next.delete(p.key);
+                            else next.add(p.key);
+                          }
+                          return next;
+                        })
+                      }
+                    >
+                      {allAssignableSelected ? 'Clear all' : 'Select all'}
+                    </button>
+                  ) : null}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {group.items.map((item) => {
+                    const canAssign = assignableKeys.has(item.key);
+                    return (
+                      <label
+                        key={item.key}
+                        className={[
+                          'flex cursor-pointer items-start gap-2 rounded-lg border p-2.5',
+                          selectedAddKeys.has(item.key)
+                            ? 'border-[#1A5FA8]/25 bg-[#EBF3FF]'
+                            : 'border-[#e8e8e8] bg-white',
+                          !canAssign ? 'opacity-60' : '',
+                        ].join(' ')}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={selectedAddKeys.has(item.key)}
+                          disabled={busy || !canAssign}
+                          onChange={(e) =>
+                            setSelectedAddKeys((curr) => {
+                              const next = new Set(curr);
+                              if (e.target.checked) next.add(item.key);
+                              else next.delete(item.key);
+                              return next;
+                            })
+                          }
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-medium text-[#121212]">{item.label}</span>
+                          <span className="text-[11.5px] text-[#6b6b6b]">{item.description}</span>
+                          {!canAssign ? (
+                            <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">Not assignable with your access</span>
+                          ) : null}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {selectedAddKeys.size === 1 ? (
+          <p className="mt-2 text-[12px] text-[#6b6b6b]">{permDescription([...selectedAddKeys][0]!)}</p>
+        ) : null}
+        <p className="mt-2 text-[11.5px] text-[#9b9b9b]">
+          Check every permission to grant or remove for this person. Rows you cannot assign are disabled.
         </p>
-        <button
-          type="button"
-          disabled={busy || !permKey}
-          className="mt-3 rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] font-medium text-white disabled:opacity-50"
-          onClick={() => void addOverride()}
-        >
-          Apply exception
-        </button>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[12.5px] text-[#6b6b6b]">
+            <span className="font-medium text-[#121212]">{selectedAddKeys.size}</span> selected
+          </p>
+          <button
+            type="button"
+            disabled={busy || selectedAddKeys.size === 0}
+            className="rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] font-medium text-white disabled:opacity-50"
+            onClick={() => void addOverridesBatch([...selectedAddKeys])}
+          >
+            Apply exception{selectedAddKeys.size > 1 ? 's' : ''}
+          </button>
+        </div>
       </div>
 
       <details className="mt-4 rounded-lg border border-[#fcd34d] bg-[#fffbeb] p-3">
@@ -310,35 +384,99 @@ export function MemberPermissionOverridesPanel({
           Example: keep someone on a broad role, but temporarily restrict them to a small safe permission set.
         </p>
         <label className="mt-2 block text-[12px] font-medium text-[#6b6b6b]">
-          Permission to allow
-          <select
+          Search allowlist
+          <input
             className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-2 py-2 text-[13px]"
-            value={replacePermKey}
-            disabled={busy}
-            onChange={(e) => setReplacePermKey(e.target.value)}
-          >
-            <option value="">Select…</option>
-            {groupedItems.map((group) => (
-              <optgroup key={group.group} label={group.group}>
-                {group.items.map((item) => (
-                  <option key={item.key} value={item.key}>
-                    {item.label}
-                    {!item.assignable_into_custom_role ? ' (not assignable)' : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+            value={replaceSearch}
+            onChange={(e) => setReplaceSearch(e.target.value)}
+            placeholder="Search by name or key"
+          />
         </label>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <p className="mt-2 text-[12px] font-medium text-[#6b6b6b]">Permissions to allow</p>
+        <div className="mt-2 max-h-[min(320px,45vh)] space-y-3 overflow-y-auto pr-1">
+          {groupedReplaceItems.map((group) => {
+            const assignableInGroup = group.items.filter((i) => assignableKeys.has(i.key));
+            const allAssignableSelected =
+              assignableInGroup.length > 0 && assignableInGroup.every((p) => selectedReplaceKeys.has(p.key));
+            return (
+              <div key={`replace-${group.group}`}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">{group.group}</p>
+                  {assignableInGroup.length > 0 ? (
+                    <button
+                      type="button"
+                      className="shrink-0 text-[12px] text-[#92400e] underline underline-offset-2"
+                      disabled={busy}
+                      onClick={() =>
+                        setSelectedReplaceKeys((curr) => {
+                          const next = new Set(curr);
+                          for (const p of assignableInGroup) {
+                            if (allAssignableSelected) next.delete(p.key);
+                            else next.add(p.key);
+                          }
+                          return next;
+                        })
+                      }
+                    >
+                      {allAssignableSelected ? 'Clear all' : 'Select all'}
+                    </button>
+                  ) : null}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {group.items.map((item) => {
+                    const canAssign = assignableKeys.has(item.key);
+                    return (
+                      <label
+                        key={`replace-${item.key}`}
+                        className={[
+                          'flex cursor-pointer items-start gap-2 rounded-lg border p-2.5',
+                          selectedReplaceKeys.has(item.key)
+                            ? 'border-[#92400e]/35 bg-[#fff7ed]'
+                            : 'border-[#fcd34d]/60 bg-white',
+                          !canAssign ? 'opacity-60' : '',
+                        ].join(' ')}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={selectedReplaceKeys.has(item.key)}
+                          disabled={busy || !canAssign}
+                          onChange={(e) =>
+                            setSelectedReplaceKeys((curr) => {
+                              const next = new Set(curr);
+                              if (e.target.checked) next.add(item.key);
+                              else next.delete(item.key);
+                              return next;
+                            })
+                          }
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-medium text-[#121212]">{item.label}</span>
+                          <span className="text-[11.5px] text-[#6b6b6b]">{item.description}</span>
+                          {!canAssign ? (
+                            <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">Not assignable with your access</span>
+                          ) : null}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[12.5px] text-[#92400e]">
+            <span className="font-medium">{selectedReplaceKeys.size}</span> selected for allowlist
+          </p>
           <button
             type="button"
-            disabled={busy || !replacePermKey}
+            disabled={busy || selectedReplaceKeys.size === 0}
             className="rounded-lg bg-[#92400e] px-3 py-2 text-[12.5px] font-medium text-white disabled:opacity-50"
             onClick={async () => {
-              if (!replacePermKey.trim()) return;
-              if (!assignableKeys.has(replacePermKey.trim())) {
-                setLoadErr('You cannot allowlist this permission because it is outside your current access.');
+              const keys = [...selectedReplaceKeys].filter((k) => assignableKeys.has(k.trim()));
+              if (keys.length === 0) {
+                setLoadErr('You cannot allowlist these permissions because they are outside your current access.');
                 return;
               }
               setBusy(true);
@@ -346,7 +484,7 @@ export function MemberPermissionOverridesPanel({
               const res = await fetch(`/api/admin/members/${targetUserId}/permission-overrides`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ op: 'upsert', mode: 'replace', permission_key: replacePermKey.trim() }),
+                body: JSON.stringify({ op: 'upsert_batch', mode: 'replace', permission_keys: keys }),
               });
               const data = (await res.json().catch(() => ({}))) as { error?: string };
               setBusy(false);
@@ -354,12 +492,14 @@ export function MemberPermissionOverridesPanel({
                 setLoadErr(data.error ?? 'Could not update custom allowlist');
                 return;
               }
-              setReplacePermKey('');
+              setSelectedReplaceKeys(new Set());
               await load();
             }}
           >
             Add to allowlist
           </button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
           {hasReplace ? (
             <button
               type="button"
