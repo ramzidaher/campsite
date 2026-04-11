@@ -69,10 +69,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (user) {
     const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
 
+    // Load profile without embedding `organisations`: nested selects can fail or behave inconsistently
+    // under RLS/postgrest while a plain profile row is readable — that left hasTenantProfile false,
+    // hid permissions/nav, and showed "Finish registration" despite a valid tenant profile.
     const [profileRes, unreadRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('role, org_id, full_name, avatar_url, organisations(name, logo_url)')
+        .select('role, org_id, full_name, avatar_url, status')
         .eq('id', user.id)
         .maybeSingle(),
       supabase.rpc('broadcast_unread_count'),
@@ -93,14 +96,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const needsPendingBadge = Boolean(orgId);
     const needsBroadcastPendingBadge = Boolean(orgId);
 
-    const orgEmbed = profile?.organisations as
-      | { name: string; logo_url: string | null }
-      | { name: string; logo_url: string | null }[]
-      | null
-      | undefined;
-    const orgRow = Array.isArray(orgEmbed) ? orgEmbed[0] : orgEmbed;
-    if (orgRow?.name) orgName = orgRow.name;
-    if (orgRow && 'logo_url' in orgRow) orgLogoUrl = orgRow.logo_url ?? null;
+    if (orgId) {
+      const { data: orgRow } = await supabase
+        .from('organisations')
+        .select('name, logo_url')
+        .eq('id', orgId)
+        .maybeSingle();
+      if (orgRow?.name) orgName = orgRow.name as string;
+      orgLogoUrl = (orgRow?.logo_url as string | null) ?? null;
+    }
 
     const uc = unreadRes.data;
     if (typeof uc === 'number') unreadBroadcasts = uc;
