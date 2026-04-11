@@ -35,10 +35,12 @@ export function homeHeaderTitle(fullName: string | null | undefined): string {
 export function mainScreenTitle(pathname: string): string {
   const p = pathname.toLowerCase();
   const rules: [string, string][] = [
+    ['broadcast-pending', 'Pending Broadcasts'],
     ['pending-approvals', 'Approvals'],
     ['broadcasts', 'Broadcasts'],
     ['calendar', 'Calendar'],
     ['rota', 'Rota'],
+    ['discount-scan', 'Scan a Card'],
     ['discount', 'Discount Card'],
     ['settings', 'Settings'],
   ];

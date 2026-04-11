@@ -101,6 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, s) => {
+      // Batch both updates so the auth gate never sees session=truthy + profileLoading=false
+      // in the same render (which would flash the register screen).
+      if (s) setProfileLoading(true);
       setSession(s);
     });
     return () => {

@@ -201,6 +201,49 @@ export default function HomeScreen() {
           <ActivityIndicator style={{ marginVertical: 24 }} color={tokens.textPrimary} />
         ) : (
           <>
+            {data?.probationAlerts && data.probationAlerts.length > 0 ? (
+              <View style={{ marginBottom: 16, gap: 10 }}>
+                {data.probationAlerts.map((p, idx) => {
+                  const critical = p.alert_level === 'critical';
+                  const overdue = p.alert_level === 'overdue';
+                  const bg = critical ? '#fef2f2' : '#fffbeb';
+                  const border = critical ? '#fecaca' : overdue ? '#fed7aa' : '#fde68a';
+                  const fg = critical ? '#991b1b' : overdue ? '#9a3412' : '#854d0e';
+                  const isSelf = p.user_id === userId;
+                  const title = isSelf
+                    ? critical
+                      ? 'Your probation review is more than one week overdue.'
+                      : overdue
+                        ? 'Your probation end date has passed — speak with your manager.'
+                        : 'Your probation period is ending soon — speak with your manager.'
+                    : critical
+                      ? `Probation review overdue: ${p.display_name}`
+                      : overdue
+                        ? `Probation overdue: ${p.display_name}`
+                        : `Probation ending soon: ${p.display_name}`;
+                  return (
+                    <Pressable
+                      key={`${p.user_id}-${p.probation_end_date}-${idx}`}
+                      onPress={() => router.push('/(tabs)/hr')}
+                      style={({ pressed }) => ({
+                        borderWidth: StyleSheet.hairlineWidth * 2,
+                        borderColor: border,
+                        backgroundColor: bg,
+                        borderRadius: 12,
+                        padding: 12,
+                        opacity: pressed ? 0.92 : 1,
+                      })}
+                    >
+                      <Text style={{ color: fg, fontSize: 14, fontWeight: '600' }}>{title}</Text>
+                      <Text style={{ color: fg, fontSize: 12, marginTop: 4, opacity: 0.9 }}>
+                        Probation ends {p.probation_end_date}. Open My HR for reviews.
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+
             {showDashboardKpis && stats ? (
               <View style={styles.statRow}>
                 {stats.broadcastTotal !== undefined ? (

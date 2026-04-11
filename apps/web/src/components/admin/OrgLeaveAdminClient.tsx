@@ -33,6 +33,12 @@ export function OrgLeaveAdminClient({
     default_annual_entitlement_days: number | null;
     leave_use_working_days: boolean;
     non_working_iso_dows: number[];
+    use_uk_weekly_paid_leave_formula: boolean;
+    statutory_weeks_annual_leave: number;
+    ssp_flat_weekly_rate_gbp: number;
+    ssp_lel_weekly_gbp: number | null;
+    ssp_waiting_qualifying_days: number;
+    ssp_reform_percent_of_earnings: number;
   } | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -65,6 +71,19 @@ export function OrgLeaveAdminClient({
       ? [...initialSettings.non_working_iso_dows].sort((a, b) => a - b)
       : [6, 7],
   );
+  const [useUkWeeklyPaid, setUseUkWeeklyPaid] = useState(
+    initialSettings?.use_uk_weekly_paid_leave_formula ?? false,
+  );
+  const [statutoryWeeks, setStatutoryWeeks] = useState(
+    String(initialSettings?.statutory_weeks_annual_leave ?? 5.6),
+  );
+  const [sspFlat, setSspFlat] = useState(String(initialSettings?.ssp_flat_weekly_rate_gbp ?? 123.25));
+  const [sspLel, setSspLel] = useState(
+    initialSettings?.ssp_lel_weekly_gbp != null ? String(initialSettings.ssp_lel_weekly_gbp) : '',
+  );
+  const [clearSspLel, setClearSspLel] = useState(false);
+  const [sspWaiting, setSspWaiting] = useState(String(initialSettings?.ssp_waiting_qualifying_days ?? 0));
+  const [sspPct, setSspPct] = useState(String(initialSettings?.ssp_reform_percent_of_earnings ?? 0.8));
   const [msg, setMsg] = useState<string | null>(null);
   const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok');
   const [busy, setBusy] = useState(false);
@@ -139,6 +158,13 @@ export function OrgLeaveAdminClient({
       p_clear_default_annual_entitlement?: boolean;
       p_leave_use_working_days: boolean;
       p_non_working_iso_dows: number[];
+      p_use_uk_weekly_paid_leave_formula: boolean;
+      p_statutory_weeks_annual_leave: number;
+      p_ssp_flat_weekly_rate_gbp: number;
+      p_ssp_lel_weekly_gbp?: number | null;
+      p_clear_ssp_lel?: boolean;
+      p_ssp_waiting_qualifying_days: number;
+      p_ssp_reform_percent_of_earnings: number;
     } = {
       p_bradford_window_days: Number(bradfordDays),
       p_leave_year_start_month: Number(lyM),
@@ -146,7 +172,17 @@ export function OrgLeaveAdminClient({
       p_approved_request_change_window_hours: Number(changeWindowHours),
       p_leave_use_working_days: leaveUseWorkingDays,
       p_non_working_iso_dows: nonWorkingDows,
+      p_use_uk_weekly_paid_leave_formula: useUkWeeklyPaid,
+      p_statutory_weeks_annual_leave: Number(statutoryWeeks),
+      p_ssp_flat_weekly_rate_gbp: Number(sspFlat),
+      p_ssp_waiting_qualifying_days: Number(sspWaiting),
+      p_ssp_reform_percent_of_earnings: Number(sspPct),
     };
+    if (clearSspLel) {
+      payload.p_clear_ssp_lel = true;
+    } else if (sspLel.trim() !== '') {
+      payload.p_ssp_lel_weekly_gbp = Number(sspLel);
+    }
     if (removeOrgDefaultAnnual) {
       payload.p_clear_default_annual_entitlement = true;
     } else if (defaultOrgAnnual.trim() !== '') {
@@ -361,6 +397,106 @@ export function OrgLeaveAdminClient({
                 <p className="mt-2 text-[11px] text-[#9b9b9b]">Highlighted = excluded from leave (default Sat–Sun).</p>
               </div>
             ) : null}
+          </div>
+
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <p className="text-[12.5px] font-medium text-[#121212]">UK weekly paid — statutory annual leave</p>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              When enabled, people with pay frequency &quot;weekly&quot; on their HR record use statutory weeks × contracted working days per week as the full-year entitlement (before employment-start pro-rating).
+            </p>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12.5px] font-medium text-[#121212]">
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded border-[#d8d8d8]"
+                checked={useUkWeeklyPaid}
+                onChange={(e) => setUseUkWeeklyPaid(e.target.checked)}
+              />
+              <span>Use statutory formula for weekly paid staff</span>
+            </label>
+            <label className="mt-3 block text-[12.5px] font-medium text-[#6b6b6b]">
+              Statutory weeks (default 5.6)
+              <input
+                type="number"
+                min={1}
+                max={10}
+                step="0.1"
+                className="mt-1 w-full max-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                value={statutoryWeeks}
+                onChange={(e) => setStatutoryWeeks(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <p className="text-[12.5px] font-medium text-[#121212]">Statutory Sick Pay (SSP) — estimates</p>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              Rates feed the SSP summary on the time-off hub. April 2026 reform: min(flat, % of AWE), no LEL by default. Set LEL only for legacy payroll comparisons.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Flat weekly SSP (£)
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                  value={sspFlat}
+                  onChange={(e) => setSspFlat(e.target.value)}
+                />
+              </label>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                % of AWE (reform)
+                <input
+                  type="number"
+                  min={0.1}
+                  max={1}
+                  step="0.05"
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                  value={sspPct}
+                  onChange={(e) => setSspPct(e.target.value)}
+                />
+              </label>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Waiting qualifying days (0 = reform)
+                <input
+                  type="number"
+                  min={0}
+                  max={7}
+                  step={1}
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                  value={sspWaiting}
+                  onChange={(e) => setSspWaiting(e.target.value)}
+                />
+              </label>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Lower Earnings Limit (£/wk, optional)
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={clearSspLel}
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] disabled:opacity-50"
+                  value={sspLel}
+                  onChange={(e) => {
+                    setSspLel(e.target.value);
+                    setClearSspLel(false);
+                  }}
+                  placeholder="Leave empty for no LEL check"
+                />
+              </label>
+            </div>
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-[12.5px] text-[#6b6b6b]">
+              <input
+                type="checkbox"
+                checked={clearSspLel}
+                onChange={(e) => {
+                  setClearSspLel(e.target.checked);
+                  if (e.target.checked) setSspLel('');
+                }}
+                className="rounded border-[#d8d8d8]"
+              />
+              Clear saved LEL (recommended for 2026 reform)
+            </label>
           </div>
 
           <div>

@@ -83,6 +83,10 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
   const fileRow = (fileRows ?? [])[0] ?? null;
   if (!fileRow) redirect('/hr/records');
 
+  const canMarkProbationCheck =
+    canManage ||
+    (!!canViewTeam && (fileRow.reports_to_user_id as string | null) === user.id);
+
   const hrRecordId = fileRow.hr_record_id as string | null;
   const { data: auditRows } = hrRecordId
     ? await supabase
@@ -126,6 +130,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
     <EmployeeHRFileClient
       orgId={orgId}
       canManage={canManage}
+      canMarkProbationCheck={canMarkProbationCheck}
       canViewGrading={!!canViewAll || !!canManageLeaveOrg}
       employee={fileRow as Parameters<typeof EmployeeHRFileClient>[0]['employee']}
       auditEvents={(auditRows ?? []).map((e) => ({

@@ -1,6 +1,7 @@
 import { PROFILE_ROLES, canVerifyStaffDiscountQr, type ProfileRole } from '@campsite/types';
 import { useCampsiteTheme } from '@campsite/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -68,6 +69,7 @@ function useExpiresCountdown(expiresAtIso: string | null): string | null {
 
 export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
   const { tokens } = useCampsiteTheme();
+  const router = useRouter();
   const qc = useQueryClient();
   const configured = isSupabaseConfigured();
   const canScan = canVerifyStaffDiscountQr(profile.role as ProfileRole);
@@ -267,14 +269,9 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
           {canScan ? (
             <Pressable
               style={[styles.ghostBtn, { borderColor: tokens.border }]}
-              onPress={() =>
-                Alert.alert(
-                  'Scan on web',
-                  'Staff discount scanning uses the camera. Open Campsite in your browser and use Discount → Scan a card.',
-                )
-              }
+              onPress={() => router.push('/discount-scan')}
             >
-              <Text style={{ color: tokens.textPrimary, fontWeight: '600' }}>How to scan</Text>
+              <Text style={{ color: tokens.textPrimary, fontWeight: '600' }}>Scan a card</Text>
             </Pressable>
           ) : null}
         </View>

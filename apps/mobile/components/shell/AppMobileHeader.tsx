@@ -81,8 +81,10 @@ export function AppMobileHeader() {
   const isStackAuxScreen =
     pathname === '/settings' ||
     pathname === '/pending-approvals' ||
+    pathname === '/broadcast-pending' ||
     pathname?.endsWith('/settings') ||
-    pathname?.endsWith('/pending-approvals');
+    pathname?.endsWith('/pending-approvals') ||
+    pathname?.endsWith('/broadcast-pending');
 
   const onBack = useCallback(() => {
     playUiSound('menu_close');

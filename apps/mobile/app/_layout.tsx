@@ -8,13 +8,13 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider, ToastProvider, useCampsiteTheme } from '@campsite/ui';
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useColorScheme as useAppColorScheme } from '@/components/useColorScheme';
-import { AuthProvider, useAuthGate } from '@/lib/AuthContext';
+import { AuthProvider, useAuth, useAuthGate } from '@/lib/AuthContext';
 import { CampsiteQueryProvider } from '@/lib/CampsiteQueryProvider';
 import { useRegisterPushNotifications } from '@/lib/registerPushNotifications';
 
@@ -44,9 +44,20 @@ function NavThemeBridge({ children }: { children: ReactNode }) {
 
 function AuthNavigationShell() {
   useAuthGate();
+  const { loading, profileLoading } = useAuth();
+  const splashHidden = useRef(false);
   const colorScheme = useAppColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   useRegisterPushNotifications();
+
+  // Keep the splash screen up until auth state is fully determined so users
+  // never see the landing page flash on cold start with a stored session.
+  useEffect(() => {
+    if (!loading && !profileLoading && !splashHidden.current) {
+      splashHidden.current = true;
+      void SplashScreen.hideAsync();
+    }
+  }, [loading, profileLoading]);
 
   return (
     <CampsiteQueryProvider>
@@ -99,12 +110,8 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
+  // Don't render until fonts are loaded. Splash is hidden later by AuthNavigationShell
+  // once auth state is determined, so users never see the landing page on cold start.
   if (!loaded) {
     return null;
   }

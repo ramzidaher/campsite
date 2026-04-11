@@ -6,8 +6,6 @@ import {
 import { Button, Card, EmptyState, Input, useCampsiteTheme, useToast } from '@campsite/ui';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -69,10 +67,6 @@ export default function BroadcastsScreen() {
   const [pillHydrated, setPillHydrated] = useState(false);
   const [markAllBusy, setMarkAllBusy] = useState(false);
 
-  const siteUrl = useMemo(() => {
-    const raw = (Constants.expoConfig?.extra as { siteUrl?: string } | undefined)?.siteUrl?.trim() ?? '';
-    return raw.replace(/\/$/, '');
-  }, []);
 
   useEffect(() => {
     const delay = searchQuery.trim().length >= 2 ? 300 : 0;
@@ -187,13 +181,9 @@ export default function BroadcastsScreen() {
     }
   }, [queryClient, showToast]);
 
-  const openPendingOnWeb = useCallback(async () => {
-    if (!siteUrl) {
-      showToast('Set EXPO_PUBLIC_SITE_URL for web links.');
-      return;
-    }
-    await WebBrowser.openBrowserAsync(`${siteUrl}/broadcasts?tab=pending`);
-  }, [siteUrl, showToast]);
+  const openPendingApprovals = useCallback(() => {
+    router.push('/broadcast-pending');
+  }, [router]);
 
   const composeAllowed = canComposeBroadcast(role);
   const approver = isBroadcastApproverRole(role);
@@ -240,9 +230,9 @@ export default function BroadcastsScreen() {
                   New broadcast
                 </Button>
               ) : null}
-              {approver && siteUrl ? (
-                <Button variant="ghost" onPress={() => void openPendingOnWeb()} style={styles.toolbarBtn}>
-                  Pending (web)
+              {approver ? (
+                <Button variant="ghost" onPress={openPendingApprovals} style={styles.toolbarBtn}>
+                  Pending approvals
                 </Button>
               ) : null}
             </View>

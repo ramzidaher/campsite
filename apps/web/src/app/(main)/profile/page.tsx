@@ -70,6 +70,7 @@ export default async function MyProfilePage() {
     udRes,
     directReportsRes,
     onboardingCountRes,
+    probationAlertsRes,
   ] = await Promise.all([
     supabase.rpc('hr_employee_file', { p_user_id: user.id }),
     supabase
@@ -102,6 +103,7 @@ export default async function MyProfilePage() {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('status', 'active'),
+    supabase.rpc('my_probation_alerts'),
   ]);
 
   const fileRow = (fileRows.data ?? [])[0];
@@ -125,6 +127,11 @@ export default async function MyProfilePage() {
   const profileDisplayName = getDisplayName(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
   const roleLabel = (profile.role as string | null) ?? '—';
   const onboardingActive = (onboardingCountRes.count ?? 0) > 0;
+
+  const probationItems = (
+    (probationAlertsRes.data as { items?: { role: string; alert_level: string; probation_end_date: string; display_name: string }[] } | null)
+      ?.items ?? []
+  ).filter((i) => i.role === 'self');
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
@@ -199,6 +206,33 @@ export default async function MyProfilePage() {
 
       <section id="job" className="scroll-mt-24 pt-8">
         <h2 className="text-[15px] font-semibold text-[#121212]">Job</h2>
+        {probationItems.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {probationItems.map((p) => (
+              <div
+                key={p.probation_end_date + p.alert_level}
+                className={[
+                  'rounded-lg border px-3 py-2.5 text-[13px]',
+                  p.alert_level === 'critical'
+                    ? 'border-[#fecaca] bg-[#fef2f2] text-[#991b1b]'
+                    : p.alert_level === 'overdue'
+                      ? 'border-[#fed7aa] bg-[#fffbeb] text-[#9a3412]'
+                      : 'border-[#fde68a] bg-[#fffbeb] text-[#854d0e]',
+                ].join(' ')}
+                role="status"
+              >
+                <p className="font-medium">
+                  {p.alert_level === 'critical'
+                    ? 'Your probation review is more than one week overdue.'
+                    : p.alert_level === 'overdue'
+                      ? 'Your probation end date has passed — your manager should complete the probation review.'
+                      : 'Your probation period is ending soon — speak with your manager about your probation review.'}
+                </p>
+                <p className="mt-0.5 text-[12px] opacity-90">Probation ends {p.probation_end_date}.</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
         {!fileRow ? (
           <p className="mt-3 rounded-xl border border-[#e8e8e8] bg-white p-5 text-[13px] text-[#6b6b6b]">
             No HR job record yet. Your HR administrator can add this under Employee records.

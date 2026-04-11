@@ -154,6 +154,7 @@ export function LeaveHubClient({
   const [pendingForMe, setPendingForMe] = useState<LeaveRequest[]>([]);
   const [pendingToilForMe, setPendingToilForMe] = useState<ToilCreditRequest[]>([]);
   const [sickness, setSickness] = useState<SicknessRow[]>([]);
+  const [sspSummary, setSspSummary] = useState<Record<string, unknown> | null>(null);
   const [absenceScore, setAbsenceScore] = useState<{ spell_count: number; total_days: number; bradford_score: number } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -197,11 +198,13 @@ export function LeaveHubClient({
 
   const load = useCallback(async () => {
     setMsg(null);
-    const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }] = await Promise.all([
+    const toIso = new Date().toISOString().slice(0, 10);
+    const fromIso = new Date(Date.now() - 730 * 86400000).toISOString().slice(0, 10);
+    const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }] = await Promise.all([
       supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
       supabase.from('leave_requests').select('id, kind, start_date, end_date, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
       supabase.from('sickness_absences').select('id, start_date, end_date, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
-      supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: new Date().toISOString().slice(0, 10) }),
+      supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: toIso }),
       supabase
         .from('toil_credit_requests')
         .select('id, work_date, minutes_earned, note, status, decision_note, created_at')
@@ -209,12 +212,14 @@ export function LeaveHubClient({
         .eq('requester_id', userId)
         .order('created_at', { ascending: false })
         .limit(40),
+      supabase.rpc('ssp_calculation_summary', { p_user_id: userId, p_from: fromIso, p_to: toIso }),
     ]);
 
     setAllowance(al ? { leave_year: String(al.leave_year), annual_entitlement_days: Number(al.annual_entitlement_days ?? 0), toil_balance_days: Number(al.toil_balance_days ?? 0) } : { leave_year: year, annual_entitlement_days: 0, toil_balance_days: 0 });
     setMyRequests((mine ?? []) as LeaveRequest[]);
     setMyToilCreditRequests((mineToil ?? []) as ToilCreditRequest[]);
     setSickness((sick ?? []) as SicknessRow[]);
+    setSspSummary(ssp && typeof ssp === 'object' ? (ssp as Record<string, unknown>) : null);
 
     const b0 = Array.isArray(bf) ? bf[0] : bf;
     if (b0 && typeof b0 === 'object' && 'spell_count' in b0) {
@@ -1097,6 +1102,52 @@ export function LeaveHubClient({
           </div>
         )}
       </section>
+
+      {/* SSP estimate (UK) */}
+      {canSubmit && sspSummary ? (
+        <section className="mb-6">
+          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">
+            Statutory Sick Pay (estimate)
+          </h2>
+          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white px-5 py-4 text-[13px] text-[#6b6b6b]">
+            <p className="text-[12px] text-[#9b9b9b]">
+              Indicative SSP from sickness episodes in the last two years (HMRC-style PIW linking). Not payroll advice.
+            </p>
+            <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Scheme</dt>
+                <dd className="text-[#121212]">{String(sspSummary.scheme ?? '—')}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Total SSP (£)</dt>
+                <dd className="text-[18px] font-semibold text-[#121212]">
+                  £{Number(sspSummary.total_ssp_gbp ?? 0).toFixed(2)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Weekly rate used (£)</dt>
+                <dd>{Number(sspSummary.ssp_weekly_payable_gbp ?? 0).toFixed(2)}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Daily rate (£)</dt>
+                <dd>{Number(sspSummary.ssp_daily_rate_gbp ?? 0).toFixed(4)}</dd>
+              </div>
+            </dl>
+            {sspSummary.ineligible_below_lel ? (
+              <p className="mt-3 text-[12px] text-[#b45309]">
+                Below Lower Earnings Limit — SSP not payable under legacy LEL rules. Clear LEL in leave settings for 2026 reform.
+              </p>
+            ) : null}
+            {Array.isArray(sspSummary.notes) && (sspSummary.notes as unknown[]).length > 0 ? (
+              <ul className="mt-2 list-inside list-disc text-[12px] text-[#9b9b9b]">
+                {(sspSummary.notes as string[]).map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       {/* Sickness history */}
       {canSubmit && sickness.length > 0 ? (

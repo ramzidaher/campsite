@@ -37,7 +37,15 @@ type DashStats = {
   onboarding_active: number;
   by_contract: { contract_type: string; count: number }[];
   by_location: { work_location: string; count: number }[];
-  probation_ending_soon: { user_id: string; full_name: string; preferred_name?: string | null; display_name?: string | null; probation_end_date: string }[];
+  probation_ending_soon: {
+    user_id: string;
+    full_name: string;
+    preferred_name?: string | null;
+    display_name?: string | null;
+    probation_end_date: string;
+    reports_to_user_id?: string | null;
+    alert_level?: 'due_soon' | 'overdue' | 'critical';
+  }[];
   review_cycles_active: { id: string; name: string; type: string; total: number; completed: number; manager_due: string | null }[];
   on_leave_today: { user_id: string; full_name: string; preferred_name?: string | null; display_name?: string | null; kind: string; end_date: string }[];
   bradford_alerts: { user_id: string; full_name: string; preferred_name?: string | null; display_name?: string | null; spell_count: number; total_days: number; bradford_score: number }[];
@@ -68,16 +76,45 @@ function initials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 }
 
-function StatCard({ label, value, sub, href, warn }: { label: string; value: string | number; sub?: string; href?: string; warn?: boolean }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  href,
+  warn,
+  danger,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  href?: string;
+  warn?: boolean;
+  /** Stronger than warn (e.g. compliance breach). */
+  danger?: boolean;
+}) {
   const inner = (
     <div
       className={[
         'flex h-full min-h-[5.5rem] flex-col rounded-xl border p-4',
-        warn ? 'border-[#fecaca] bg-[#fef2f2]' : 'border-[#d8d8d8] bg-white',
+        danger ? 'border-[#dc2626] bg-[#fef2f2]' : warn ? 'border-[#fecaca] bg-[#fef2f2]' : 'border-[#d8d8d8] bg-white',
       ].join(' ')}
     >
-      <p className={['text-[11.5px] font-medium uppercase tracking-wide', warn ? 'text-[#b91c1c]' : 'text-[#9b9b9b]'].join(' ')}>{label}</p>
-      <p className={['mt-1 text-[28px] font-bold leading-none', warn ? 'text-[#b91c1c]' : 'text-[#121212]'].join(' ')}>{value}</p>
+      <p
+        className={[
+          'text-[11.5px] font-medium uppercase tracking-wide',
+          danger ? 'text-[#991b1b]' : warn ? 'text-[#b91c1c]' : 'text-[#9b9b9b]',
+        ].join(' ')}
+      >
+        {label}
+      </p>
+      <p
+        className={[
+          'mt-1 text-[28px] font-bold leading-none',
+          danger ? 'text-[#991b1b]' : warn ? 'text-[#b91c1c]' : 'text-[#121212]',
+        ].join(' ')}
+      >
+        {value}
+      </p>
       {/* Fixed-height slot so cards align whether or not there is subtext */}
       {sub ? (
         <p className="mt-1 min-h-[2.75rem] text-[11.5px] leading-snug text-[#9b9b9b]">{sub}</p>
@@ -134,6 +171,12 @@ export function HRDirectoryClient({
   const columnPrefsKey = 'hr-directory-visible-columns-v1';
 
   const stats = dashStats as DashStats | null;
+
+  const probationCriticalCount = useMemo(() => {
+    const list = stats?.probation_ending_soon;
+    if (!list?.length) return 0;
+    return list.filter((p) => p.alert_level === 'critical').length;
+  }, [stats]);
 
   const [q, setQ] = useState(initialQuery);
   const [filterContract, setFilterContract] = useState('');
@@ -257,10 +300,17 @@ export function HRDirectoryClient({
               href="/hr/onboarding"
             />
             <StatCard
-              label="Probation ending soon"
+              label="Probation review due"
               value={stats.probation_ending_soon.length}
-              warn={stats.probation_ending_soon.length > 0}
-              sub="Next 60 days"
+              danger={probationCriticalCount > 0}
+              warn={stats.probation_ending_soon.length > 0 && probationCriticalCount === 0}
+              sub={
+                stats.probation_ending_soon.length === 0
+                  ? 'No pending probation checks in scope'
+                  : probationCriticalCount > 0
+                    ? `${probationCriticalCount} over one week overdue`
+                    : 'Within 30 days or overdue (check not recorded)'
+              }
             />
           </div>
 
@@ -350,17 +400,34 @@ export function HRDirectoryClient({
 
           {/* Bottom row: probation + leave + bradford */}
           <div className="grid gap-6 sm:grid-cols-3">
-            {/* Probation ending soon */}
+            {/* Probation review due / overdue */}
             <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
-              <h2 className="text-[13px] font-semibold text-[#121212]">Probation ending (60 days)</h2>
+              <h2 className="text-[13px] font-semibold text-[#121212]">Probation review</h2>
+              <p className="mt-0.5 text-[11px] text-[#9b9b9b]">Prompts from 30 days before end; red if over one week past end with no check.</p>
               {stats.probation_ending_soon.length === 0 ? (
-                <p className="mt-3 text-[12px] text-[#9b9b9b]">None due.</p>
+                <p className="mt-3 text-[12px] text-[#9b9b9b]">None in scope.</p>
               ) : (
                 <ul className="mt-3 divide-y divide-[#ececec]">
                   {stats.probation_ending_soon.map((p) => (
                     <li key={p.user_id} className="py-2">
                       <Link href={`/hr/records/${p.user_id}`} className="text-[12.5px] font-medium text-[#121212] hover:underline">{p.display_name ?? p.full_name}</Link>
-                      <p className="text-[11.5px] text-[#c2410c]">{p.probation_end_date}</p>
+                      <p
+                        className={[
+                          'text-[11.5px]',
+                          p.alert_level === 'critical'
+                            ? 'font-semibold text-[#b91c1c]'
+                            : p.alert_level === 'overdue'
+                              ? 'text-[#c2410c]'
+                              : 'text-[#a16207]',
+                        ].join(' ')}
+                      >
+                        Ends {p.probation_end_date}
+                        {p.alert_level === 'critical'
+                          ? ' · Over one week overdue'
+                          : p.alert_level === 'overdue'
+                            ? ' · Overdue'
+                            : ' · Due soon'}
+                      </p>
                     </li>
                   ))}
                 </ul>

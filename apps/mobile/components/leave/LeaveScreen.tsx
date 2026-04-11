@@ -16,9 +16,15 @@ import {
 } from 'react-native';
 
 import type { ProfileRow } from '@/lib/AuthContext';
+import { currentLeaveYearKey } from '@/lib/datetime';
 import { leaveRangeOverlapsExisting } from '@/lib/leaveDateOverlap';
 import { getSupabase } from '@/lib/supabase';
 import { formatToilMinutes, toilInputToMinutes } from '@/lib/toilDuration';
+import {
+  countOrgLeaveDaysInclusive,
+  overlapInclusiveRange,
+  type OrgLeaveDayOptions,
+} from '@/lib/workingDays';
 
 type LeaveRequest = {
   id: string;
@@ -56,6 +62,16 @@ function daysBetween(start: string, end: string): number {
   const a = new Date(`${start}T12:00:00Z`);
   const b = new Date(`${end}T12:00:00Z`);
   return Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
+}
+
+/** Annual leave that still reserves entitlement until rejected/cancelled/declined. */
+function annualCountsTowardUsage(status: string): boolean {
+  return (
+    status === 'approved' ||
+    status === 'pending' ||
+    status === 'pending_edit' ||
+    status === 'pending_cancel'
+  );
 }
 
 function fmtDate(iso: string): string {
@@ -124,18 +140,67 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
   const [toilEarnNote, setToilEarnNote] = useState('');
   const [showToilWorkPicker, setShowToilWorkPicker] = useState(false);
 
-  const year = String(new Date().getFullYear());
+  /** User-chosen leave year key; null = follow org leave year for “today”. */
+  const [yearOverride, setYearOverride] = useState<string | null>(null);
+  const [leaveYearStartMonth, setLeaveYearStartMonth] = useState(1);
+  const [leaveYearStartDay, setLeaveYearStartDay] = useState(1);
+  const [leaveUseWorkingDays, setLeaveUseWorkingDays] = useState(false);
+  const [nonWorkingIsoDows, setNonWorkingIsoDows] = useState<number[]>([6, 7]);
+  const [absenceScore, setAbsenceScore] = useState<{
+    spell_count: number;
+    total_days: number;
+    bradford_score: number;
+  } | null>(null);
+
   const orgId = profile.org_id ?? '';
   const userId = profile.id;
 
+  const defaultLeaveYearKey = currentLeaveYearKey(new Date(), leaveYearStartMonth, leaveYearStartDay);
+  const year = yearOverride ?? defaultLeaveYearKey;
+
+  const yearOptions = useMemo(() => {
+    const cy = new Date().getFullYear();
+    const base = [cy - 1, cy, cy + 1];
+    const yNum = Number(year);
+    if (Number.isFinite(yNum) && !base.includes(yNum)) {
+      base.push(yNum);
+      base.sort((a, b) => a - b);
+    }
+    return base.map(String);
+  }, [year]);
+
   const load = useCallback(async () => {
     if (!orgId) return;
+    const { data: os } = await supabase
+      .from('org_leave_settings')
+      .select(
+        'leave_year_start_month, leave_year_start_day, leave_use_working_days, non_working_iso_dows, toil_minutes_per_day',
+      )
+      .eq('org_id', orgId)
+      .maybeSingle();
+
+    const sm = Number(os?.leave_year_start_month ?? 1);
+    const sd = Number(os?.leave_year_start_day ?? 1);
+    setLeaveYearStartMonth(sm);
+    setLeaveYearStartDay(sd);
+    setLeaveUseWorkingDays(Boolean(os?.leave_use_working_days));
+    const dows = Array.isArray(os?.non_working_iso_dows)
+      ? (os.non_working_iso_dows as number[]).map((n) => Number(n))
+      : [6, 7];
+    setNonWorkingIsoDows(dows.length ? dows : [6, 7]);
+    setToilMinutesPerDay(Math.max(1, Number(os?.toil_minutes_per_day ?? 480)));
+
+    const naturalYear = currentLeaveYearKey(new Date(), sm, sd);
+    const activeYear = yearOverride ?? naturalYear;
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+
     const [
       { data: permsData },
       { data: al },
       { data: mine },
       { data: mineToil },
-      { data: leaveSettings },
+      bfRes,
     ] = await Promise.all([
       supabase.rpc('get_my_permissions', { p_org_id: orgId }),
       supabase
@@ -143,7 +208,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         .select('annual_entitlement_days, toil_balance_days')
         .eq('org_id', orgId)
         .eq('user_id', userId)
-        .eq('leave_year', year)
+        .eq('leave_year', activeYear)
         .maybeSingle(),
       supabase
         .from('leave_requests')
@@ -151,16 +216,33 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         .eq('org_id', orgId)
         .eq('requester_id', userId)
         .order('created_at', { ascending: false })
-        .limit(50),
+        .limit(80),
       supabase
         .from('toil_credit_requests')
         .select('id, work_date, minutes_earned, note, status, decision_note, created_at')
         .eq('org_id', orgId)
         .eq('requester_id', userId)
         .order('created_at', { ascending: false })
-        .limit(30),
-      supabase.from('org_leave_settings').select('toil_minutes_per_day').eq('org_id', orgId).maybeSingle(),
+        .limit(40),
+      supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: todayIso }),
     ]);
+
+    if (!bfRes.error && bfRes.data != null) {
+      const raw = bfRes.data as unknown;
+      const b0 = Array.isArray(raw) ? raw[0] : raw;
+      if (b0 && typeof b0 === 'object' && 'spell_count' in b0) {
+        const o = b0 as { spell_count: number; total_days: number; bradford_score: number };
+        setAbsenceScore({
+          spell_count: Number(o.spell_count),
+          total_days: Number(o.total_days),
+          bradford_score: Number(o.bradford_score),
+        });
+      } else {
+        setAbsenceScore(null);
+      }
+    } else {
+      setAbsenceScore(null);
+    }
 
     const keys = ((permsData ?? []) as Array<{ permission_key?: string }>).map((p) =>
       String(p.permission_key ?? ''),
@@ -170,8 +252,6 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
       keys.includes('leave.approve_direct_reports') || keys.includes('leave.manage_org');
     setCanSubmit(submit);
     setCanApprove(approve);
-
-    setToilMinutesPerDay(Math.max(1, Number(leaveSettings?.toil_minutes_per_day ?? 480)));
 
     setAllowance(
       al
@@ -193,7 +273,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
           .from('leave_requests')
           .select('id, requester_id, kind, start_date, end_date, status, note, created_at')
           .eq('org_id', orgId)
-          .eq('status', 'pending')
+          .in('status', ['pending', 'pending_cancel', 'pending_edit'])
           .order('created_at', { ascending: false });
         pend = (data ?? []) as LeaveRequest[];
         const { data: toilData } = await supabase
@@ -215,7 +295,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
             .from('leave_requests')
             .select('id, requester_id, kind, start_date, end_date, status, note, created_at')
             .eq('org_id', orgId)
-            .eq('status', 'pending')
+            .in('status', ['pending', 'pending_cancel', 'pending_edit'])
             .in('requester_id', ids)
             .order('created_at', { ascending: false });
           pend = (data ?? []) as LeaveRequest[];
@@ -251,7 +331,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
       setPendingForMe([]);
       setPendingToilForMe([]);
     }
-  }, [supabase, orgId, userId, year]);
+  }, [supabase, orgId, userId, yearOverride]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -264,23 +344,133 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
     load().finally(() => setLoading(false));
   }, [load]);
 
-  const usedAnnual = useMemo(() => {
-    const counts =
-      (s: string) =>
-        s === 'approved' || s === 'pending' || s === 'pending_edit' || s === 'pending_cancel';
-    return myRequests
-      .filter(
-        (r) =>
-          r.kind === 'annual' &&
-          counts(r.status) &&
-          (r.start_date.startsWith(year) || r.end_date.startsWith(year)),
-      )
-      .reduce((acc, r) => acc + daysBetween(r.start_date, r.end_date), 0);
-  }, [myRequests, year]);
+  const leaveYearStartIso = useMemo(() => {
+    const y = Number(year);
+    return `${String(y).padStart(4, '0')}-${String(leaveYearStartMonth).padStart(2, '0')}-${String(leaveYearStartDay).padStart(2, '0')}`;
+  }, [year, leaveYearStartMonth, leaveYearStartDay]);
+
+  const leaveYearEndIso = useMemo(() => {
+    const y = Number(year) + 1;
+    const d = new Date(Date.UTC(y, leaveYearStartMonth - 1, leaveYearStartDay));
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, [year, leaveYearStartMonth, leaveYearStartDay]);
+
+  const leaveDayOpts: OrgLeaveDayOptions = useMemo(
+    () => ({
+      leaveUseWorkingDays,
+      nonWorkingIsoDows: nonWorkingIsoDows.length ? nonWorkingIsoDows : [6, 7],
+    }),
+    [leaveUseWorkingDays, nonWorkingIsoDows],
+  );
+
+  const usedAnnual = useMemo(
+    () =>
+      myRequests
+        .filter((r) => r.kind === 'annual' && annualCountsTowardUsage(r.status))
+        .reduce((acc, r) => {
+          const seg = overlapInclusiveRange(r.start_date, r.end_date, leaveYearStartIso, leaveYearEndIso);
+          if (!seg) return acc;
+          return acc + countOrgLeaveDaysInclusive(seg.start, seg.end, leaveDayOpts);
+        }, 0),
+    [myRequests, leaveYearStartIso, leaveYearEndIso, leaveDayOpts],
+  );
 
   const entitlement = allowance?.annual_entitlement_days ?? 0;
   const remaining = Math.max(0, entitlement - usedAnnual);
   const toilBalance = allowance?.toil_balance_days ?? 0;
+
+  const formStartIso = toIsoDate(formStart);
+  const formEndIso = toIsoDate(formEnd);
+
+  const requestedDaysInLeaveYear = useMemo(() => {
+    if (!formStartIso || !formEndIso || formEndIso < formStartIso) return 0;
+    const seg = overlapInclusiveRange(formStartIso, formEndIso, leaveYearStartIso, leaveYearEndIso);
+    if (!seg) return 0;
+    return countOrgLeaveDaysInclusive(seg.start, seg.end, leaveDayOpts);
+  }, [formStartIso, formEndIso, leaveYearStartIso, leaveYearEndIso, leaveDayOpts]);
+
+  const formTripDays =
+    formStartIso && formEndIso && formEndIso >= formStartIso ? daysBetween(formStartIso, formEndIso) : 0;
+
+  const calendarDaysInLeaveYearForForm = useMemo(() => {
+    if (!formStartIso || !formEndIso || formEndIso < formStartIso) return 0;
+    const seg = overlapInclusiveRange(formStartIso, formEndIso, leaveYearStartIso, leaveYearEndIso);
+    if (!seg) return 0;
+    return daysBetween(seg.start, seg.end);
+  }, [formStartIso, formEndIso, leaveYearStartIso, leaveYearEndIso]);
+
+  const projectedAnnualRemaining =
+    formKind === 'annual' ? remaining - requestedDaysInLeaveYear : remaining;
+  const exceedsAnnualAllowance =
+    formKind === 'annual' && requestedDaysInLeaveYear > 0 && projectedAnnualRemaining < 0;
+
+  const newLeaveOverlaps = useMemo(
+    () =>
+      Boolean(
+        formStartIso &&
+          formEndIso &&
+          formEndIso >= formStartIso &&
+          leaveRangeOverlapsExisting(myRequests, formStartIso, formEndIso),
+      ),
+    [myRequests, formStartIso, formEndIso],
+  );
+
+  const bookingPreviewText = useMemo(() => {
+    if (!formStartIso || !formEndIso || formEndIso < formStartIso) return '';
+    const parts: string[] = [];
+    parts.push(`${formTripDays} calendar day${formTripDays === 1 ? '' : 's'} in range`);
+    if (formKind === 'annual' && leaveUseWorkingDays) {
+      if (requestedDaysInLeaveYear > 0) {
+        parts.push(
+          `${requestedDaysInLeaveYear} working leave day${requestedDaysInLeaveYear === 1 ? '' : 's'} in year ${year}`,
+        );
+      } else {
+        parts.push(`no working leave days in year ${year} for this range`);
+      }
+    }
+    if (formKind === 'annual' && !leaveUseWorkingDays && formTripDays !== calendarDaysInLeaveYearForForm) {
+      if (calendarDaysInLeaveYearForForm > 0) {
+        parts.push(
+          `${calendarDaysInLeaveYearForForm} calendar day${calendarDaysInLeaveYearForForm === 1 ? '' : 's'} in leave year ${year}`,
+        );
+      } else {
+        parts.push(`none of these days fall in leave year ${year}`);
+      }
+    }
+    if (formKind === 'toil' && leaveUseWorkingDays) {
+      parts.push(
+        `${requestedDaysInLeaveYear} working day${requestedDaysInLeaveYear === 1 ? '' : 's'} in year ${year} toward TOIL`,
+      );
+    }
+    if (formKind === 'annual') {
+      parts.push(
+        `${Math.max(0, projectedAnnualRemaining)} day${Math.max(0, projectedAnnualRemaining) === 1 ? '' : 's'} remaining after this`,
+      );
+    } else {
+      parts.push(`${toilBalance} TOIL day${toilBalance === 1 ? '' : 's'} available`);
+    }
+    if (newLeaveOverlaps) parts.push('overlaps another booking');
+    if (exceedsAnnualAllowance) {
+      parts.push(
+        `exceeds allowance by ${Math.abs(projectedAnnualRemaining)} day${Math.abs(projectedAnnualRemaining) === 1 ? '' : 's'}`,
+      );
+    }
+    return parts.join(' · ');
+  }, [
+    formStartIso,
+    formEndIso,
+    formTripDays,
+    formKind,
+    leaveUseWorkingDays,
+    requestedDaysInLeaveYear,
+    year,
+    calendarDaysInLeaveYearForForm,
+    projectedAnnualRemaining,
+    toilBalance,
+    newLeaveOverlaps,
+    exceedsAnnualAllowance,
+  ]);
 
   async function submitLeave() {
     const start = toIsoDate(formStart);
@@ -423,8 +613,6 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
     );
   }
 
-  const formDays = daysBetween(toIsoDate(formStart), toIsoDate(formEnd));
-
   return (
     <>
     <ScrollView
@@ -436,8 +624,52 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         <View style={styles.header}>
           <Text style={[styles.title, { color: textPrimary }]}>Time off</Text>
           <Text style={[styles.subtitle, { color: textSecondary }]}>
-            Your leave balances and requests for {year}.
+            Balances and usage for leave year {year}
+            {yearOverride == null ? ' (org default for today)' : ''}.
           </Text>
+        </View>
+
+        <View style={{ marginBottom: 14 }}>
+          <Text style={[styles.fieldLabel, { color: textSecondary, marginBottom: 8 }]}>Leave year</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Pressable
+              onPress={() => setYearOverride(null)}
+              style={[
+                styles.yearChip,
+                { borderColor: border, backgroundColor: yearOverride === null ? '#121212' : cardBg },
+              ]}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: yearOverride === null ? '#fff' : textPrimary,
+                }}
+              >
+                Default
+              </Text>
+            </Pressable>
+            {yearOptions.map((yk) => (
+              <Pressable
+                key={yk}
+                onPress={() => setYearOverride(yk)}
+                style={[
+                  styles.yearChip,
+                  { borderColor: border, backgroundColor: year === yk && yearOverride !== null ? '#121212' : cardBg },
+                ]}
+              >
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color: year === yk && yearOverride !== null ? '#fff' : textPrimary,
+                  }}
+                >
+                  {yk}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         {/* Balance cards */}
@@ -448,7 +680,9 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
           </View>
           <View style={[styles.balanceCard, { backgroundColor: cardBg, borderColor: border }]}>
             <Text style={[styles.balanceNum, { color: textPrimary }]}>{usedAnnual}</Text>
-            <Text style={[styles.balanceLabel, { color: textSecondary }]}>Days used</Text>
+            <Text style={[styles.balanceLabel, { color: textSecondary }]}>
+              Days used{leaveUseWorkingDays ? ' (working)' : ''}
+            </Text>
           </View>
           <View style={[styles.balanceCard, { backgroundColor: '#f0fdf9', borderColor: '#bbf7d0' }]}>
             <Text style={[styles.balanceNum, { color: '#166534' }]}>{remaining}</Text>
@@ -473,6 +707,51 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
             </Pressable>
           ) : null}
         </View>
+
+        {absenceScore ? (
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: cardBg,
+                borderColor: border,
+                marginBottom: 16,
+              },
+            ]}
+          >
+            <Text style={[styles.cardTitle, { color: textPrimary }]}>Absence score</Text>
+            <Text style={{ fontSize: 12, color: textSecondary, marginBottom: 10 }}>
+              Based on sickness episodes (Bradford-style S² × D). Annual leave and TOIL do not affect this score.
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              <View style={{ minWidth: '28%' }}>
+                <Text style={{ fontSize: 11, color: textSecondary, textTransform: 'uppercase' }}>Spells</Text>
+                <Text style={{ fontSize: 22, fontWeight: '700', color: textPrimary }}>{absenceScore.spell_count}</Text>
+              </View>
+              <View style={{ minWidth: '28%' }}>
+                <Text style={{ fontSize: 11, color: textSecondary, textTransform: 'uppercase' }}>Sick days</Text>
+                <Text style={{ fontSize: 22, fontWeight: '700', color: textPrimary }}>{absenceScore.total_days}</Text>
+              </View>
+              <View style={{ minWidth: '28%' }}>
+                <Text style={{ fontSize: 11, color: textSecondary, textTransform: 'uppercase' }}>Score</Text>
+                <Text
+                  style={{
+                    fontSize: 22,
+                    fontWeight: '700',
+                    color: absenceScore.bradford_score >= 200 ? '#b91c1c' : textPrimary,
+                  }}
+                >
+                  {absenceScore.bradford_score}
+                </Text>
+              </View>
+            </View>
+            {absenceScore.bradford_score >= 200 ? (
+              <Text style={{ marginTop: 10, fontSize: 13, color: '#b91c1c' }}>
+                Above the usual review threshold — HR may follow up.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* Section tabs */}
         {canApprove ? (
@@ -638,9 +917,19 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                   />
                 ) : null}
 
-                <Text style={[styles.dayPreview, { color: '#008B60' }]}>
-                  {formDays} day{formDays === 1 ? '' : 's'} selected
-                </Text>
+                {bookingPreviewText ? (
+                  <Text
+                    style={[
+                      styles.dayPreview,
+                      {
+                        color:
+                          newLeaveOverlaps || exceedsAnnualAllowance ? '#b91c1c' : '#008B60',
+                      },
+                    ]}
+                  >
+                    {bookingPreviewText}
+                  </Text>
+                ) : null}
 
                 <Text style={[styles.fieldLabel, { color: textSecondary }]}>Note (optional)</Text>
                 <TextInput
@@ -888,6 +1177,12 @@ const styles = StyleSheet.create({
   header: { marginBottom: 16 },
   title: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
   subtitle: { fontSize: 13, marginTop: 2 },
+  yearChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
   balanceRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   balanceCard: {
     flex: 1,

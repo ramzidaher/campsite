@@ -12,6 +12,14 @@ export type HomeUpcomingEvent = {
   color: string;
 };
 
+export type ProbationAlertItem = {
+  role: string;
+  user_id: string;
+  display_name: string;
+  probation_end_date: string;
+  alert_level: 'due_soon' | 'overdue' | 'critical';
+};
+
 export type MobileHomeData = {
   orgName: string;
   stats: Awaited<ReturnType<typeof fetchDashboardStatCounts>>;
@@ -20,6 +28,7 @@ export type MobileHomeData = {
   calendarEventDays: number[];
   calendarYear: number;
   calendarMonth: number;
+  probationAlerts: ProbationAlertItem[];
 };
 
 const EVENT_COLORS = ['#44403c', '#059669', '#7C3AED', '#C2410C', '#E11D48'];
@@ -33,7 +42,7 @@ export async function loadMobileHomeData(
   const now = new Date();
   const loadKpis = canViewDashboardStatTiles(role);
 
-  const [{ data: orgRow }, statCounts, feedPage, { data: eventsRaw }] = await Promise.all([
+  const [{ data: orgRow }, statCounts, feedPage, { data: eventsRaw }, probationRes] = await Promise.all([
     supabase.from('organisations').select('name').eq('id', orgId).single(),
     loadKpis
       ? fetchDashboardStatCounts(supabase, { userId, orgId, role })
@@ -46,9 +55,16 @@ export async function loadMobileHomeData(
       .gte('start_time', now.toISOString())
       .order('start_time', { ascending: true })
       .limit(8),
+    supabase.rpc('my_probation_alerts'),
   ]);
 
   const orgName = (orgRow?.name as string) ?? 'Organisation';
+
+  const rawProbation = (probationRes.data as { items?: ProbationAlertItem[] } | null)?.items ?? [];
+  const probationAlerts = rawProbation.filter((i) => {
+    if (i.user_id === userId) return true;
+    return i.role === 'manager';
+  });
 
   const upcomingEvents: HomeUpcomingEvent[] = (eventsRaw ?? []).map((e, i) => ({
     id: e.id as string,
@@ -73,5 +89,6 @@ export async function loadMobileHomeData(
     calendarEventDays,
     calendarYear: now.getFullYear(),
     calendarMonth: now.getMonth(),
+    probationAlerts,
   };
 }

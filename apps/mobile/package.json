@@ -34,6 +34,7 @@
     "expo": "~55.0.8",
     "expo-av": "^16.0.8",
     "expo-blur": "~55.0.10",
+    "expo-camera": "~16.1.6",
     "expo-constants": "~55.0.9",
     "expo-font": "~55.0.4",
     "expo-glass-effect": "~55.0.8",

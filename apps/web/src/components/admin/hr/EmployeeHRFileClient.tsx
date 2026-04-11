@@ -75,6 +75,11 @@ type Employee = {
   rtw_check_method?: string | null;
   rtw_document_url?: string | null;
   visa_type?: string | null;
+  pay_frequency?: string | null;
+  contracted_days_per_week?: number | null;
+  average_weekly_earnings_gbp?: number | null;
+  probation_check_completed_at?: string | null;
+  probation_check_completed_by?: string | null;
 };
 
 type AuditEvent = {
@@ -102,6 +107,15 @@ function locationLabel(wl: string) {
     case 'remote': return 'Remote';
     case 'hybrid': return 'Hybrid';
     default: return wl;
+  }
+}
+
+function payFrequencyLabel(pf: string) {
+  switch (pf) {
+    case 'weekly': return 'Weekly';
+    case 'monthly': return 'Monthly';
+    case 'four_weekly': return 'Four-weekly';
+    default: return pf || '—';
   }
 }
 
@@ -150,6 +164,11 @@ function fieldLabel(f: string) {
     rtw_check_method: 'Right-to-work check method',
     rtw_document_url: 'Right-to-work document URL',
     visa_type: 'Visa type',
+    pay_frequency: 'Pay frequency',
+    contracted_days_per_week: 'Contracted days per week',
+    average_weekly_earnings_gbp: 'Average weekly earnings (AWE)',
+    probation_check_completed_at: 'Probation check completed',
+    probation_check_completed_by: 'Probation check recorded by (user id)',
   };
   return map[f] ?? f;
 }
@@ -189,9 +208,28 @@ function fmt(v: string | null) {
   return v;
 }
 
+function probationAlertLevel(
+  end: string | null,
+  completedAt: string | null,
+  today: string,
+): 'due_soon' | 'overdue' | 'critical' | null {
+  if (!end || completedAt) return null;
+  const endD = new Date(`${end}T12:00:00`);
+  const t = new Date(`${today}T12:00:00`);
+  const startPrompt = new Date(endD);
+  startPrompt.setDate(startPrompt.getDate() - 30);
+  if (t < startPrompt) return null;
+  const overdue7 = new Date(endD);
+  overdue7.setDate(overdue7.getDate() + 7);
+  if (t > overdue7) return 'critical';
+  if (t > endD) return 'overdue';
+  return 'due_soon';
+}
+
 export function EmployeeHRFileClient({
   orgId: _orgId,
   canManage,
+  canMarkProbationCheck,
   canViewGrading,
   employee,
   auditEvents,
@@ -203,6 +241,8 @@ export function EmployeeHRFileClient({
 }: {
   orgId: string;
   canManage: boolean;
+  /** HR or line manager — can record probation review completion. */
+  canMarkProbationCheck: boolean;
   canViewGrading: boolean;
   employee: Employee;
   auditEvents: AuditEvent[];
@@ -219,6 +259,7 @@ export function EmployeeHRFileClient({
 
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [probationBusy, setProbationBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // form state — initialised from existing record or defaults
@@ -275,6 +316,13 @@ export function EmployeeHRFileClient({
   const [rtwCheckMethod, setRtwCheckMethod] = useState(employee.rtw_check_method ?? '');
   const [rtwDocumentUrl, setRtwDocumentUrl] = useState(employee.rtw_document_url ?? '');
   const [visaType, setVisaType] = useState(employee.visa_type ?? '');
+  const [payFrequency, setPayFrequency] = useState(employee.pay_frequency ?? 'monthly');
+  const [contractedDaysPerWeek, setContractedDaysPerWeek] = useState(
+    employee.contracted_days_per_week != null ? String(employee.contracted_days_per_week) : '',
+  );
+  const [averageWeeklyEarnings, setAverageWeeklyEarnings] = useState(
+    employee.average_weekly_earnings_gbp != null ? String(employee.average_weekly_earnings_gbp) : '',
+  );
   const [customFieldRows, setCustomFieldRows] = useState<CustomFieldRow[]>(() =>
     customFieldRowsFromEmployee(employee.custom_fields),
   );
@@ -323,6 +371,9 @@ export function EmployeeHRFileClient({
     setRtwCheckMethod(emp.rtw_check_method ?? '');
     setRtwDocumentUrl(emp.rtw_document_url ?? '');
     setVisaType(emp.visa_type ?? '');
+    setPayFrequency(emp.pay_frequency ?? 'monthly');
+    setContractedDaysPerWeek(emp.contracted_days_per_week != null ? String(emp.contracted_days_per_week) : '');
+    setAverageWeeklyEarnings(emp.average_weekly_earnings_gbp != null ? String(emp.average_weekly_earnings_gbp) : '');
     setCustomFieldRows(customFieldRowsFromEmployee(emp.custom_fields));
   }
 
@@ -377,6 +428,13 @@ export function EmployeeHRFileClient({
     setRtwCheckMethod(employee.rtw_check_method ?? '');
     setRtwDocumentUrl(employee.rtw_document_url ?? '');
     setVisaType(employee.visa_type ?? '');
+    setPayFrequency(employee.pay_frequency ?? 'monthly');
+    setContractedDaysPerWeek(
+      employee.contracted_days_per_week != null ? String(employee.contracted_days_per_week) : '',
+    );
+    setAverageWeeklyEarnings(
+      employee.average_weekly_earnings_gbp != null ? String(employee.average_weekly_earnings_gbp) : '',
+    );
     setCustomFieldRows(customFieldRowsFromEmployee(employee.custom_fields));
     setMsg(null);
     setEditing(false);
@@ -434,6 +492,11 @@ export function EmployeeHRFileClient({
         p_rtw_check_method: rtwCheckMethod.trim() || null,
         p_rtw_document_url: rtwDocumentUrl.trim() || null,
         p_visa_type: visaType.trim() || null,
+        p_pay_frequency: payFrequency || 'monthly',
+        p_contracted_days_per_week:
+          contractedDaysPerWeek.trim() === '' ? null : Number(contractedDaysPerWeek),
+        p_average_weekly_earnings_gbp:
+          averageWeeklyEarnings.trim() === '' ? null : Number(averageWeeklyEarnings),
       })
     );
     const error = (response as { error: { message: string } | null }).error;
@@ -447,8 +510,38 @@ export function EmployeeHRFileClient({
     router.refresh();
   }
 
+  async function markProbationComplete(clear: boolean) {
+    if (clear && !canManage) return;
+    if (!clear && !canMarkProbationCheck) return;
+    setProbationBusy(true);
+    setMsg(null);
+    const { error } = await supabase.rpc('employee_probation_check_set', {
+      p_user_id: employee.user_id,
+      p_clear: clear,
+    });
+    setProbationBusy(false);
+    if (error) {
+      setMsg({ type: 'error', text: error.message });
+      return;
+    }
+    setMsg({
+      type: 'success',
+      text: clear ? 'Probation completion cleared.' : 'Probation review marked complete.',
+    });
+    router.refresh();
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   const onProbation = employee.probation_end_date && employee.probation_end_date >= today;
+  const pbLevel = useMemo(
+    () =>
+      probationAlertLevel(
+        employee.probation_end_date ?? null,
+        employee.probation_check_completed_at ?? null,
+        today,
+      ),
+    [employee.probation_end_date, employee.probation_check_completed_at, today],
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
@@ -511,6 +604,31 @@ export function EmployeeHRFileClient({
         >
           {msg.text}
         </p>
+      ) : null}
+
+      {employee.probation_end_date && !employee.probation_check_completed_at && pbLevel ? (
+        <div
+          className={[
+            'mt-4 rounded-lg border px-3 py-2.5 text-[13px]',
+            pbLevel === 'critical'
+              ? 'border-[#fecaca] bg-[#fef2f2] text-[#991b1b]'
+              : pbLevel === 'overdue'
+                ? 'border-[#fed7aa] bg-[#fffbeb] text-[#9a3412]'
+                : 'border-[#fde68a] bg-[#fffbeb] text-[#854d0e]',
+          ].join(' ')}
+          role="status"
+        >
+          <p className="font-medium">
+            {pbLevel === 'critical'
+              ? 'Probation review is more than one week overdue.'
+              : pbLevel === 'overdue'
+                ? 'Probation end date has passed — complete the probation review as soon as possible.'
+                : 'Probation is ending soon — schedule the probation review before the end date.'}
+          </p>
+          <p className="mt-0.5 text-[12px] opacity-90">
+            Probation ends {employee.probation_end_date}. Completing a probation-cycle performance review also records this automatically.
+          </p>
+        </div>
       ) : null}
 
       {/* HR record — view or edit */}
@@ -608,6 +726,46 @@ export function EmployeeHRFileClient({
                 onChange={(e) => setWeeklyHours(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
                 placeholder="e.g. 37.5"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Pay frequency
+              <select
+                value={payFrequency}
+                onChange={(e) => setPayFrequency(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+              >
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="four_weekly">Four-weekly</option>
+              </select>
+              <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">
+                Weekly + contracted days drive statutory annual leave when enabled in leave settings.
+              </span>
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Contracted working days per week
+              <input
+                type="number"
+                min="0.5"
+                max="7"
+                step="0.5"
+                value={contractedDaysPerWeek}
+                onChange={(e) => setContractedDaysPerWeek(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="e.g. 5 (full-time), 3 (part-time)"
+              />
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Average weekly earnings — AWE (£)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={averageWeeklyEarnings}
+                onChange={(e) => setAverageWeeklyEarnings(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="For Statutory Sick Pay (8-week basis)"
               />
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
@@ -1083,6 +1241,24 @@ export function EmployeeHRFileClient({
                   </dd>
                 </div>
                 <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Pay frequency</dt>
+                  <dd className="mt-0.5 text-[#121212]">{payFrequencyLabel(employee.pay_frequency ?? 'monthly')}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contracted days / week</dt>
+                  <dd className="mt-0.5 text-[#121212]">
+                    {employee.contracted_days_per_week != null ? String(employee.contracted_days_per_week) : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">AWE (£/week)</dt>
+                  <dd className="mt-0.5 text-[#121212]">
+                    {employee.average_weekly_earnings_gbp != null
+                      ? `£${Number(employee.average_weekly_earnings_gbp).toFixed(2)}`
+                      : '—'}
+                  </dd>
+                </div>
+                <div>
                   <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">No. of positions</dt>
                   <dd className="mt-0.5 text-[#121212]">
                     {employee.positions_count != null ? String(employee.positions_count) : '—'}
@@ -1149,6 +1325,37 @@ export function EmployeeHRFileClient({
                     ) : (
                       '—'
                     )}
+                    {employee.probation_check_completed_at ? (
+                      <p className="mt-1 text-[12px] text-[#166534]">
+                        Probation review recorded
+                        {employee.probation_check_completed_at.includes('T')
+                          ? ` · ${employee.probation_check_completed_at.slice(0, 10)}`
+                          : ''}
+                      </p>
+                    ) : null}
+                    {canMarkProbationCheck && employee.probation_end_date && !editing ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {!employee.probation_check_completed_at ? (
+                          <button
+                            type="button"
+                            disabled={probationBusy}
+                            onClick={() => void markProbationComplete(false)}
+                            className="rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1 text-[12px] font-medium text-[#121212] hover:bg-[#fafafa] disabled:opacity-60"
+                          >
+                            {probationBusy ? 'Saving…' : 'Mark probation review complete'}
+                          </button>
+                        ) : canManage ? (
+                          <button
+                            type="button"
+                            disabled={probationBusy}
+                            onClick={() => void markProbationComplete(true)}
+                            className="rounded-lg border border-[#fecaca] bg-white px-2.5 py-1 text-[12px] text-[#991b1b] hover:bg-[#fef2f2] disabled:opacity-60"
+                          >
+                            Clear completion (HR)
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </dd>
                 </div>
               </dl>
