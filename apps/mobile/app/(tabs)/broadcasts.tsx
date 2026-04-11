@@ -26,6 +26,10 @@ import { type DeptRow, departmentsForBroadcast } from '@/lib/broadcastDeptScope'
 import { openBroadcastDetail } from '@/lib/broadcastCoverPrefetch';
 import { type MobileBroadcastRow, fetchMobileBroadcastFeedPage, searchMobileBroadcasts } from '@/lib/broadcastFeedQuery';
 import { useAuth } from '@/lib/AuthContext';
+import {
+  searchMobileStaffResources,
+  type MobileStaffResourceRow,
+} from '@/lib/staffResourceQuery';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const FILTER_KEY_PILL = 'campsite_broadcast_feed_pill_mobile';
@@ -145,6 +149,30 @@ export default function BroadcastsScreen() {
     },
   });
 
+  const resourceSearchQuery = useQuery({
+    queryKey: ['mobile-resource-search', orgId, qTrim],
+    enabled: configured && isSupabaseConfigured() && !!orgId && !!userId && searchActive,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const supabase = getSupabase();
+      return searchMobileStaffResources(supabase, qTrim, 50);
+    },
+  });
+
+  type SearchCombinedItem =
+    | { kind: 'resource'; resource: MobileStaffResourceRow }
+    | { kind: 'broadcast'; row: MobileBroadcastRow };
+
+  const searchCombined = useMemo((): SearchCombinedItem[] => {
+    if (!searchActive) return [];
+    const res = resourceSearchQuery.data ?? [];
+    const br = searchQueryResult.data ?? [];
+    return [
+      ...res.map((resource) => ({ kind: 'resource' as const, resource })),
+      ...br.map((row) => ({ kind: 'broadcast' as const, row })),
+    ];
+  }, [searchActive, resourceSearchQuery.data, searchQueryResult.data]);
+
   const baseRows = useMemo((): MobileBroadcastRow[] => {
     if (searchActive) return searchQueryResult.data ?? [];
     return infiniteFeed.data?.pages.flatMap((p) => p.rows) ?? [];
@@ -155,12 +183,22 @@ export default function BroadcastsScreen() {
     return baseRows.filter((r) => !r.read);
   }, [baseRows, feedPill]);
 
-  const loading = searchActive ? searchQueryResult.isLoading : infiniteFeed.isLoading;
-  const fetching = searchActive ? searchQueryResult.isFetching : infiniteFeed.isFetching;
-  const refetching = searchActive ? searchQueryResult.isRefetching : infiniteFeed.isRefetching;
-  const listError = searchActive ? searchQueryResult.error : infiniteFeed.error;
+  const loading = searchActive
+    ? searchQueryResult.isLoading || resourceSearchQuery.isLoading
+    : infiniteFeed.isLoading;
+  const fetching = searchActive
+    ? searchQueryResult.isFetching || resourceSearchQuery.isFetching
+    : infiniteFeed.isFetching;
+  const refetching = searchActive
+    ? searchQueryResult.isRefetching || resourceSearchQuery.isRefetching
+    : infiniteFeed.isRefetching;
+  const listError = searchActive
+    ? searchQueryResult.error ?? resourceSearchQuery.error
+    : infiniteFeed.error;
 
-  const trulyEmpty = !loading && baseRows.length === 0;
+  const trulyEmpty = searchActive
+    ? !loading && searchCombined.length === 0
+    : !loading && baseRows.length === 0;
   const filteredOutByUnread =
     feedPill === 'unread' && !loading && baseRows.length > 0 && displayRows.length === 0;
 
@@ -218,7 +256,7 @@ export default function BroadcastsScreen() {
             <Input
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search broadcasts…"
+              placeholder="Search resources or broadcasts…"
               style={styles.searchInput}
             />
             <View style={styles.toolbarRow}>
@@ -265,7 +303,7 @@ export default function BroadcastsScreen() {
           ) : null}
         </View>
 
-        {loading && !baseRows.length ? (
+        {loading && !(searchActive ? searchCombined.length : baseRows.length) ? (
           <ActivityIndicator style={{ marginTop: 24 }} color={tokens.textPrimary} />
         ) : listError ? (
           <Card style={styles.card}>
@@ -276,109 +314,220 @@ export default function BroadcastsScreen() {
           </Card>
         ) : trulyEmpty ? (
           <EmptyState
-            title="No broadcasts here"
+            title={searchActive ? 'No matches' : 'No broadcasts here'}
             description={
-              composeAllowed
-                ? 'Try another filter or compose a new broadcast.'
-                : 'Try another filter or check back later.'}
+              searchActive
+                ? 'Try different words or clear search.'
+                : composeAllowed
+                  ? 'Try another filter or compose a new broadcast.'
+                  : 'Try another filter or check back later.'}
           />
-        ) : filteredOutByUnread ? (
+        ) : !searchActive && filteredOutByUnread ? (
           <EmptyState
             title="No unread in loaded items"
             description="Load more below or switch to All."
           />
         ) : (
           <View style={styles.listSlot}>
-            <FlatList
-              data={displayRows}
-              keyExtractor={(item) => item.id}
-              style={styles.list}
-              removeClippedSubviews={Platform.OS !== 'android'}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refetching}
-                  onRefresh={() =>
-                    void (searchActive ? searchQueryResult.refetch() : infiniteFeed.refetch())
-                  }
-                  tintColor={tokens.textPrimary}
-                  colors={[tokens.textPrimary]}
-                />
-              }
-              onEndReached={() => {
-                if (!searchActive && infiniteFeed.hasNextPage && !infiniteFeed.isFetchingNextPage) {
-                  void infiniteFeed.fetchNextPage();
+            {searchActive ? (
+              <FlatList
+                data={searchCombined}
+                keyExtractor={(item) =>
+                  item.kind === 'resource' ? `r-${item.resource.id}` : `b-${item.row.id}`
                 }
-              }}
-              onEndReachedThreshold={0.3}
-              ListFooterComponent={
-                !searchActive && infiniteFeed.hasNextPage ? (
-                  <View style={styles.footerLoad}>
-                    {infiniteFeed.isFetchingNextPage ? (
-                      <ActivityIndicator color={tokens.textPrimary} />
-                    ) : (
-                      <Pressable onPress={() => void infiniteFeed.fetchNextPage()}>
-                        <Text style={{ color: tokens.accent, fontWeight: '600', textAlign: 'center' }}>Load more</Text>
+                style={styles.list}
+                removeClippedSubviews={Platform.OS !== 'android'}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refetching}
+                    onRefresh={() =>
+                      void Promise.all([searchQueryResult.refetch(), resourceSearchQuery.refetch()])
+                    }
+                    tintColor={tokens.textPrimary}
+                    colors={[tokens.textPrimary]}
+                  />
+                }
+                renderItem={({ item }) => {
+                  if (item.kind === 'resource') {
+                    const r = item.resource;
+                    return (
+                      <Pressable
+                        onPress={() => router.push(`/resources/${r.id}`)}
+                        style={({ pressed }) => [
+                          styles.itemOuter,
+                          { opacity: pressed ? 0.92 : 1 },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.item,
+                            {
+                              borderColor: tokens.border,
+                              backgroundColor: cardBg,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.itemTitle, { color: tokens.textPrimary }]} numberOfLines={2}>
+                            {r.title}
+                          </Text>
+                          <Text style={[styles.metaLine, { color: tokens.textMuted, marginTop: 4 }]} numberOfLines={1}>
+                            Resource · {r.file_name}
+                          </Text>
+                          {r.description ? (
+                            <Text style={[styles.preview, { color: tokens.textSecondary, marginTop: 6 }]} numberOfLines={2}>
+                              {r.description}
+                            </Text>
+                          ) : null}
+                        </View>
                       </Pressable>
-                    )}
-                  </View>
-                ) : null
-              }
-              renderItem={({ item }) => {
-                const unread = item.read === false;
-                return (
-                  <Pressable
-                    onPress={() => openBroadcastDetail(router, item)}
-                    style={({ pressed }) => [
-                      styles.itemOuter,
-                      { opacity: pressed ? 0.92 : 1 },
-                    ]}
-                  >
-                    {unread ? <View style={styles.unreadBar} /> : null}
-                    <View
-                      style={[
-                        styles.item,
-                        {
-                          borderColor: tokens.border,
-                          backgroundColor: cardBg,
-                        },
+                    );
+                  }
+                  const row = item.row;
+                  const unread = row.read === false;
+                  return (
+                    <Pressable
+                      onPress={() => openBroadcastDetail(router, row)}
+                      style={({ pressed }) => [
+                        styles.itemOuter,
+                        { opacity: pressed ? 0.92 : 1 },
                       ]}
                     >
-                      <View style={styles.itemHeader}>
-                        <Text
-                          style={[
-                            styles.itemTitle,
-                            { color: tokens.textPrimary },
-                            unread ? styles.itemTitleUnread : styles.itemTitleRead,
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {item.title}
+                      {unread ? <View style={styles.unreadBar} /> : null}
+                      <View
+                        style={[
+                          styles.item,
+                          {
+                            borderColor: tokens.border,
+                            backgroundColor: cardBg,
+                          },
+                        ]}
+                      >
+                        <View style={styles.itemHeader}>
+                          <Text
+                            style={[
+                              styles.itemTitle,
+                              { color: tokens.textPrimary },
+                              unread ? styles.itemTitleUnread : styles.itemTitleRead,
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {row.title}
+                          </Text>
+                          <Text style={[styles.itemTime, { color: tokens.textSecondary }]}>
+                            {formatSentAt(row.sent_at)}
+                          </Text>
+                        </View>
+                        <Text style={[styles.preview, { color: tokens.textSecondary }]} numberOfLines={2}>
+                          {preview(row.body)}
                         </Text>
-                        <Text style={[styles.itemTime, { color: tokens.textSecondary }]}>
-                          {formatSentAt(item.sent_at)}
-                        </Text>
+                        {row.dept_name || row.channel_name || row.team_name || row.is_org_wide ? (
+                          <Text style={[styles.metaLine, { color: tokens.textMuted }]} numberOfLines={1}>
+                            {[row.dept_name, row.is_org_wide ? 'All channels' : row.channel_name, row.team_name]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </Text>
+                        ) : null}
+                        {row.author_name ? (
+                          <Text style={[styles.authorLine, { color: tokens.textMuted }]} numberOfLines={1}>
+                            {row.author_name}
+                          </Text>
+                        ) : null}
+                        <BroadcastBadges row={row} />
                       </View>
-                      <Text style={[styles.preview, { color: tokens.textSecondary }]} numberOfLines={2}>
-                        {preview(item.body)}
-                      </Text>
-                      {item.dept_name || item.channel_name || item.team_name || item.is_org_wide ? (
-                        <Text style={[styles.metaLine, { color: tokens.textMuted }]} numberOfLines={1}>
-                          {[item.dept_name, item.is_org_wide ? 'All channels' : item.channel_name, item.team_name]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </Text>
-                      ) : null}
-                      {item.author_name ? (
-                        <Text style={[styles.authorLine, { color: tokens.textMuted }]} numberOfLines={1}>
-                          {item.author_name}
-                        </Text>
-                      ) : null}
-                      <BroadcastBadges row={item} />
+                    </Pressable>
+                  );
+                }}
+              />
+            ) : (
+              <FlatList
+                data={displayRows}
+                keyExtractor={(item) => item.id}
+                style={styles.list}
+                removeClippedSubviews={Platform.OS !== 'android'}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refetching}
+                    onRefresh={() => void infiniteFeed.refetch()}
+                    tintColor={tokens.textPrimary}
+                    colors={[tokens.textPrimary]}
+                  />
+                }
+                onEndReached={() => {
+                  if (infiniteFeed.hasNextPage && !infiniteFeed.isFetchingNextPage) {
+                    void infiniteFeed.fetchNextPage();
+                  }
+                }}
+                onEndReachedThreshold={0.3}
+                ListFooterComponent={
+                  infiniteFeed.hasNextPage ? (
+                    <View style={styles.footerLoad}>
+                      {infiniteFeed.isFetchingNextPage ? (
+                        <ActivityIndicator color={tokens.textPrimary} />
+                      ) : (
+                        <Pressable onPress={() => void infiniteFeed.fetchNextPage()}>
+                          <Text style={{ color: tokens.accent, fontWeight: '600', textAlign: 'center' }}>Load more</Text>
+                        </Pressable>
+                      )}
                     </View>
-                  </Pressable>
-                );
-              }}
-            />
+                  ) : null
+                }
+                renderItem={({ item }) => {
+                  const unread = item.read === false;
+                  return (
+                    <Pressable
+                      onPress={() => openBroadcastDetail(router, item)}
+                      style={({ pressed }) => [
+                        styles.itemOuter,
+                        { opacity: pressed ? 0.92 : 1 },
+                      ]}
+                    >
+                      {unread ? <View style={styles.unreadBar} /> : null}
+                      <View
+                        style={[
+                          styles.item,
+                          {
+                            borderColor: tokens.border,
+                            backgroundColor: cardBg,
+                          },
+                        ]}
+                      >
+                        <View style={styles.itemHeader}>
+                          <Text
+                            style={[
+                              styles.itemTitle,
+                              { color: tokens.textPrimary },
+                              unread ? styles.itemTitleUnread : styles.itemTitleRead,
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {item.title}
+                          </Text>
+                          <Text style={[styles.itemTime, { color: tokens.textSecondary }]}>
+                            {formatSentAt(item.sent_at)}
+                          </Text>
+                        </View>
+                        <Text style={[styles.preview, { color: tokens.textSecondary }]} numberOfLines={2}>
+                          {preview(item.body)}
+                        </Text>
+                        {item.dept_name || item.channel_name || item.team_name || item.is_org_wide ? (
+                          <Text style={[styles.metaLine, { color: tokens.textMuted }]} numberOfLines={1}>
+                            {[item.dept_name, item.is_org_wide ? 'All channels' : item.channel_name, item.team_name]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </Text>
+                        ) : null}
+                        {item.author_name ? (
+                          <Text style={[styles.authorLine, { color: tokens.textMuted }]} numberOfLines={1}>
+                            {item.author_name}
+                          </Text>
+                        ) : null}
+                        <BroadcastBadges row={item} />
+                      </View>
+                    </Pressable>
+                  );
+                }}
+              />
+            )}
           </View>
         )}
       </View>

@@ -57,6 +57,7 @@ export type ShellNavIconId =
   | 'calendar'
   | 'rota'
   | 'discount'
+  | 'resources'
   | 'settings'
   | 'home'
   | 'members'

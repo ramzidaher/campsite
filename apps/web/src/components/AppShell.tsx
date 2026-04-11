@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
+import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { AppTopBar } from '@/components/shell/AppTopBar';
 import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
@@ -241,9 +242,7 @@ export function AppShell({
           onClick={closeMobile}
           className="relative z-[1] flex items-center gap-2.5 border-b border-white/[0.07] px-5 py-5"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.12] text-[15px]">
-            ⛺
-          </div>
+          <CampsiteLogoMark className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white/[0.12]" />
           <span className="font-authSerif text-[19px] tracking-tight text-[#faf9f6]">Campsite</span>
         </Link>
 
@@ -292,6 +291,7 @@ export function AppShell({
               badge={unreadBroadcasts > 0 ? unreadBroadcasts : undefined}
               onNavigate={closeMobile}
             />
+            <NavLink href="/resources" icon="resources" label="Resource library" onNavigate={closeMobile} />
             <NavLink href="/calendar" icon="calendar" label="Calendar" onNavigate={closeMobile} />
             <NavLink
               href="/rota"

@@ -197,6 +197,25 @@ export default function HomeScreen() {
           ) : null}
         </View>
 
+        <Pressable
+          onPress={() => router.push('/resources')}
+          style={({ pressed }) => ({
+            marginBottom: 16,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            borderRadius: 12,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: tokens.border,
+            backgroundColor: cardBg,
+            opacity: pressed ? 0.94 : 1,
+          })}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '600', color: tokens.textPrimary }}>Resource library</Text>
+          <Text style={{ fontSize: 12, marginTop: 4, color: tokens.textSecondary }}>
+            Policies, handbooks, and reference files
+          </Text>
+        </Pressable>
+
         {homeQuery.isLoading ? (
           <ActivityIndicator style={{ marginVertical: 24 }} color={tokens.textPrimary} />
         ) : (

@@ -37,6 +37,7 @@ export function mainScreenTitle(pathname: string): string {
   const rules: [string, string][] = [
     ['broadcast-pending', 'Pending Broadcasts'],
     ['pending-approvals', 'Approvals'],
+    ['resources', 'Resource library'],
     ['broadcasts', 'Broadcasts'],
     ['calendar', 'Calendar'],
     ['rota', 'Rota'],

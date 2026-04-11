@@ -15,6 +15,7 @@ import {
   Home,
   Hourglass,
   LayoutDashboard,
+  Library,
   Link2,
   Megaphone,
   ClipboardCheck,
@@ -85,6 +86,7 @@ function tone(name: ShellNavIconId) {
 
     // Perks, taxonomy and integrations
     case 'discount':
+    case 'resources':
     case 'categories':
     case 'integrations':
       return 'text-emerald-300';
@@ -134,6 +136,8 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <Clock3 {...p} />;
     case 'discount':
       return <Ticket {...p} />;
+    case 'resources':
+      return <Library {...p} />;
     case 'home':
       return <Home {...p} />;
     case 'members':

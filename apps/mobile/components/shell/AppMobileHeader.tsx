@@ -85,6 +85,7 @@ export function AppMobileHeader() {
     pathname === '/settings' ||
     pathname === '/pending-approvals' ||
     pathname === '/broadcast-pending' ||
+    pathname?.startsWith('/resources') ||
     pathname?.endsWith('/settings') ||
     pathname?.endsWith('/pending-approvals') ||
     pathname?.endsWith('/broadcast-pending');

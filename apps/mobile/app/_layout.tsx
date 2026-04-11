@@ -82,6 +82,24 @@ function AuthNavigationShell() {
                       fullScreenGestureEnabled: true,
                     }}
                   />
+                  <Stack.Screen
+                    name="resources/index"
+                    options={{
+                      headerShown: false,
+                      title: 'Resources',
+                      animation: 'slide_from_right',
+                      gestureEnabled: true,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="resources/[id]"
+                    options={{
+                      headerShown: false,
+                      title: 'Resource',
+                      animation: 'slide_from_right',
+                      gestureEnabled: true,
+                    }}
+                  />
                   <Stack.Screen name="broadcast-compose" options={{ headerShown: true, title: 'Broadcast' }} />
                   <Stack.Screen name="settings" options={{ headerShown: false, title: 'Settings' }} />
                   <Stack.Screen name="pending-approvals" options={{ headerShown: false, title: 'Approvals' }} />

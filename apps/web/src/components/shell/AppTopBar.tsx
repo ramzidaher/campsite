@@ -40,6 +40,9 @@ export function AppTopBar({
   const [broadcastHits, setBroadcastHits] = useState<
     { id: string; title: string; status: string; created_at: string }[]
   >([]);
+  const [resourceHits, setResourceHits] = useState<
+    { id: string; title: string; updated_at: string }[]
+  >([]);
   const [memberHits, setMemberHits] = useState<
     { id: string; full_name: string | null; email: string | null; avatar_url: string | null }[]
   >([]);
@@ -51,8 +54,10 @@ export function AppTopBar({
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter' && q.trim().length >= 2) {
         const firstMember = memberHits[0];
+        const firstResource = resourceHits[0];
         const firstBroadcast = broadcastHits[0];
         if (firstMember && showMemberSearch) router.push(`/hr/records/${firstMember.id}`);
+        else if (firstResource) router.push(`/resources/${firstResource.id}`);
         else if (firstBroadcast) router.push(`/broadcasts/${firstBroadcast.id}`);
         else router.push(`/broadcasts?q=${encodeURIComponent(q.trim())}`);
         setSearchOpen(false);
@@ -61,7 +66,7 @@ export function AppTopBar({
         setSearchOpen(false);
       }
     },
-    [q, router, memberHits, broadcastHits, showMemberSearch]
+    [q, router, memberHits, resourceHits, broadcastHits, showMemberSearch]
   );
 
   useEffect(() => {
@@ -83,6 +88,7 @@ export function AppTopBar({
     if (!searchOpen || term.length < 2) {
       setSearchBusy(false);
       setBroadcastHits([]);
+      setResourceHits([]);
       setMemberHits([]);
       return;
     }
@@ -107,14 +113,27 @@ export function AppTopBar({
         .limit(5);
       if (orgId) mQuery = mQuery.eq('org_id', orgId);
 
-      const [bRes, mRes] = await Promise.all([
+      const resQuery = supabase.rpc('search_staff_resources', { q: term, limit_n: 5 });
+
+      const [bRes, mRes, resRes] = await Promise.all([
         bQuery,
         showMemberSearch ? mQuery : Promise.resolve({ data: [] as never[] }),
+        resQuery,
       ]);
       if (cancelled) return;
       setBroadcastHits((bRes.data ?? []) as { id: string; title: string; status: string; created_at: string }[]);
       setMemberHits(
         (mRes.data ?? []) as { id: string; full_name: string | null; email: string | null; avatar_url: string | null }[]
+      );
+      const rawRes = resRes.error
+        ? []
+        : ((resRes.data ?? []) as { id: string; title: string; updated_at: string }[]);
+      setResourceHits(
+        rawRes.map((r) => ({
+          id: r.id,
+          title: r.title,
+          updated_at: r.updated_at,
+        }))
       );
       setSearchBusy(false);
     }, 160);
@@ -125,7 +144,11 @@ export function AppTopBar({
     };
   }, [q, searchOpen, supabase, showMemberSearch, orgId]);
 
-  const noHits = !searchBusy && broadcastHits.length === 0 && (!showMemberSearch || memberHits.length === 0);
+  const noHits =
+    !searchBusy &&
+    broadcastHits.length === 0 &&
+    resourceHits.length === 0 &&
+    (!showMemberSearch || memberHits.length === 0);
 
   return (
     <header className="sticky top-0 z-50 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#d8d8d8] bg-[#faf9f6] px-5 sm:px-7">
@@ -144,9 +167,15 @@ export function AppTopBar({
             }}
             onFocus={() => setSearchOpen(true)}
             onKeyDown={onSearchKey}
-            placeholder={showMemberSearch ? 'Search broadcasts or members...' : 'Search broadcasts...'}
+            placeholder={
+              showMemberSearch
+                ? 'Search members, resources, or broadcasts...'
+                : 'Search resources or broadcasts...'
+            }
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
-            aria-label={showMemberSearch ? 'Search broadcasts or members' : 'Search broadcasts'}
+            aria-label={
+              showMemberSearch ? 'Search members, resources, or broadcasts' : 'Search resources or broadcasts'
+            }
           />
         </div>
         {searchOpen && q.trim().length >= 2 ? (
@@ -194,6 +223,27 @@ export function AppTopBar({
                 </>
               ) : null}
 
+              {resourceHits.length > 0 ? (
+                <>
+                  <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                    Resources
+                  </p>
+                  {resourceHits.map((r) => (
+                    <Link
+                      key={r.id}
+                      href={`/resources/${r.id}`}
+                      onClick={() => setSearchOpen(false)}
+                      className="block rounded-lg px-2.5 py-2 hover:bg-[#f7f6f2]"
+                    >
+                      <p className="truncate text-[12.5px] font-medium text-[#121212]">{r.title}</p>
+                      <p className="mt-0.5 text-[11.5px] text-[#6b6b6b]">
+                        Updated {new Date(r.updated_at).toLocaleDateString()}
+                      </p>
+                    </Link>
+                  ))}
+                </>
+              ) : null}
+
               {broadcastHits.length > 0 ? (
                 <>
                   <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
@@ -216,7 +266,11 @@ export function AppTopBar({
               ) : null}
 
               {noHits ? (
-                <p className="px-3 py-2 text-[12px] text-[#6b6b6b]">No matching members or broadcasts.</p>
+                <p className="px-3 py-2 text-[12px] text-[#6b6b6b]">
+                  {showMemberSearch
+                    ? 'No matching members, resources, or broadcasts.'
+                    : 'No matching resources or broadcasts.'}
+                </p>
               ) : null}
             </div>
           </div>
