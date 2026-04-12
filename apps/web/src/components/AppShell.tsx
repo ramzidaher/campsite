@@ -9,6 +9,8 @@ import { AppTopBar } from '@/components/shell/AppTopBar';
 import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
 import type { MainShellAdminNavItem, ShellNavIconId } from '@/lib/adminGates';
+import { useShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
+import type { ShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
 import { useUiSound } from '@/lib/sound/useUiSound';
 import { ChevronDown } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
@@ -180,6 +182,62 @@ export function AppShell({
   const [userAvatarFailed, setUserAvatarFailed] = useState(false);
   const playUiSound = useUiSound();
 
+  // Live badge counts — polled every 60 s and on window focus.
+  // Server props provide the correct initial values (no flash of zeros);
+  // the hook takes over silently once it loads.
+  const { data: live } = useShellBadgeCounts();
+
+  const bc = (key: keyof ShellBadgeCounts, fallback: number) =>
+    live ? live[key] : fallback;
+
+  const liveUnreadBroadcasts          = bc('broadcast_unread',           unreadBroadcasts);
+  const livePendingBroadcastApprovals = bc('broadcast_pending_approvals', pendingBroadcastApprovals);
+  const livePendingApprovalCount      = bc('pending_approvals',           pendingApprovalCount);
+  const liveRotaPendingFinalCount     = bc('rota_pending_final',          rotaPendingFinalCount);
+  const liveRotaPendingPeerCount      = bc('rota_pending_peer',           rotaPendingPeerCount);
+  const liveRecruitmentPendingCount   = bc('recruitment_pending_review',  recruitmentPendingReviewCount);
+  const liveLeaveNavBadge             = bc('leave_pending_approval',      leaveNavBadge);
+  const livePerformanceNavBadge       = bc('performance_pending',         performanceNavBadge);
+  const liveShowOnboardingNav         = showOnboardingNav || (live?.onboarding_active ?? 0) > 0;
+
+  // Override badges embedded inside nav-item objects (admin/manager/HR lists).
+  const withLiveBadge = (item: MainShellAdminNavItem): MainShellAdminNavItem => {
+    if (!live) return item;
+    switch (item.href) {
+      case '/admin/pending':
+      case '/pending-approvals':
+        return { ...item, badge: live.pending_approvals || undefined };
+      case '/hr/recruitment':
+        return { ...item, badge: live.recruitment_pending_review || undefined };
+      case '/broadcasts':
+        return { ...item, secondaryBadge: live.broadcast_pending_approvals || undefined };
+      default:
+        return item;
+    }
+  };
+
+  // Top-bar notification bell — rebuilt from live counts so new items appear
+  // even if they were zero on the initial server render (and thus filtered out).
+  const liveTopBarNotifications = useMemo<TopBarNotificationItem[]>(() => {
+    if (!live) return topBarNotifications;
+    const isAdmin = adminNavItems !== null;
+    return (
+      [
+        { id: 'broadcast-unread',           label: 'Unread broadcasts',              href: '/broadcasts',                   count: live.broadcast_unread },
+        { id: 'broadcast-pending',          label: 'Broadcast approvals',            href: '/broadcasts?tab=pending',       count: live.broadcast_pending_approvals },
+        { id: 'profile-pending',            label: 'Pending member approvals',       href: isAdmin ? '/admin/pending' : '/pending-approvals', count: live.pending_approvals },
+        { id: 'rota-peer',                  label: 'Rota swaps awaiting your OK',    href: '/rota',                         count: live.rota_pending_peer },
+        { id: 'rota-final',                 label: 'Rota requests awaiting approval',href: '/rota',                         count: live.rota_pending_final },
+        { id: 'recruitment-pending',        label: 'Recruitment requests to review', href: '/hr/recruitment',               count: live.recruitment_pending_review },
+        { id: 'leave-pending',              label: 'Leave requests to approve',      href: '/leave',                        count: live.leave_pending_approval },
+        { id: 'recruitment-notifications',  label: 'Recruitment updates',            href: '/notifications/recruitment',    count: live.recruitment_notifications },
+        { id: 'application-notifications',  label: 'Application updates',            href: '/notifications/applications',   count: live.application_notifications },
+        { id: 'leave-notifications',        label: 'Time off updates',               href: '/notifications/leave',          count: live.leave_notifications },
+        { id: 'hr-metric-notifications',    label: 'HR metric alerts',               href: '/notifications/hr-metrics',     count: live.hr_metric_notifications },
+      ] satisfies TopBarNotificationItem[]
+    ).filter((item) => item.count > 0);
+  }, [live, topBarNotifications, adminNavItems]);
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(ADMIN_NAV_EXPANDED_KEY);
@@ -208,8 +266,8 @@ export function AppShell({
 
   const showApprovals = isApproverRole(profileRole);
   const totalNotifCount = useMemo(
-    () => topBarNotifications.reduce((sum, item) => sum + item.count, 0),
-    [topBarNotifications]
+    () => liveTopBarNotifications.reduce((sum, item) => sum + item.count, 0),
+    [liveTopBarNotifications]
   );
   const userInitials = useMemo(() => initials(userName), [userName]);
   const orgInitials = useMemo(() => initials(orgName), [orgName]);
@@ -287,9 +345,9 @@ export function AppShell({
               href="/broadcasts"
               icon="broadcasts"
               label="Broadcasts"
-              secondaryBadge={pendingBroadcastApprovals > 0 ? pendingBroadcastApprovals : undefined}
+              secondaryBadge={livePendingBroadcastApprovals > 0 ? livePendingBroadcastApprovals : undefined}
               secondaryBadgeTitle="Broadcasts awaiting your approval"
-              badge={unreadBroadcasts > 0 ? unreadBroadcasts : undefined}
+              badge={liveUnreadBroadcasts > 0 ? liveUnreadBroadcasts : undefined}
               onNavigate={closeMobile}
             />
             <NavLink href="/resources" icon="resources" label="Resource library" onNavigate={closeMobile} />
@@ -299,8 +357,8 @@ export function AppShell({
               icon="rota"
               label="Rota"
               badge={
-                rotaPendingFinalCount + rotaPendingPeerCount > 0
-                  ? rotaPendingFinalCount + rotaPendingPeerCount
+                liveRotaPendingFinalCount + liveRotaPendingPeerCount > 0
+                  ? liveRotaPendingFinalCount + liveRotaPendingPeerCount
                   : undefined
               }
               onNavigate={closeMobile}
@@ -311,7 +369,7 @@ export function AppShell({
                 href="/leave"
                 icon="leave"
                 label="Leave"
-                badge={leaveNavBadge > 0 ? leaveNavBadge : undefined}
+                badge={liveLeaveNavBadge > 0 ? liveLeaveNavBadge : undefined}
                 onNavigate={closeMobile}
               />
             ) : null}
@@ -320,14 +378,14 @@ export function AppShell({
                 href="/performance"
                 icon="performance"
                 label="Performance"
-                badge={performanceNavBadge > 0 ? performanceNavBadge : undefined}
+                badge={livePerformanceNavBadge > 0 ? livePerformanceNavBadge : undefined}
                 onNavigate={closeMobile}
               />
             ) : null}
             {showOneOnOneNav ? (
               <NavLink href="/one-on-ones" icon="manager" label="1:1 check-ins" onNavigate={closeMobile} />
             ) : null}
-            {showOnboardingNav ? (
+            {liveShowOnboardingNav ? (
               <NavLink
                 href="/onboarding"
                 icon="onboarding"
@@ -400,6 +458,7 @@ export function AppShell({
                 <div className="min-h-0 overflow-hidden" inert={!adminNavExpanded ? true : undefined}>
                   <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
                     {adminNavItems.map((item, idx) => {
+                      const item_ = withLiveBadge(item);
                       const prev = idx > 0 ? adminNavItems[idx - 1] : undefined;
                       const showSection =
                         Boolean(item.section) && (!prev || prev.section !== item.section);
@@ -411,13 +470,13 @@ export function AppShell({
                             </div>
                           ) : null}
                           <NavLink
-                            href={item.href}
-                            icon={item.icon}
-                            label={item.label}
-                            badge={item.badge}
-                            secondaryBadge={item.secondaryBadge}
-                            secondaryBadgeTitle={item.secondaryBadgeTitle}
-                            exact={item.exact ?? item.href === '/admin'}
+                            href={item_.href}
+                            icon={item_.icon}
+                            label={item_.label}
+                            badge={item_.badge}
+                            secondaryBadge={item_.secondaryBadge}
+                            secondaryBadgeTitle={item_.secondaryBadgeTitle}
+                            exact={item_.exact ?? item_.href === '/admin'}
                             onNavigate={closeMobile}
                           />
                         </Fragment>
@@ -492,6 +551,7 @@ export function AppShell({
                 <div className="min-h-0 overflow-hidden" inert={!managerNavExpanded ? true : undefined}>
                   <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
                     {managerNavItems.map((item, idx) => {
+                      const item_ = withLiveBadge(item);
                       const prev = idx > 0 ? managerNavItems[idx - 1] : undefined;
                       const showSection =
                         Boolean(item.section) && (!prev || prev.section !== item.section);
@@ -503,13 +563,13 @@ export function AppShell({
                             </div>
                           ) : null}
                           <NavLink
-                            href={item.href}
-                            icon={item.icon}
-                            label={item.label}
-                            badge={item.badge}
-                            secondaryBadge={item.secondaryBadge}
-                            secondaryBadgeTitle={item.secondaryBadgeTitle}
-                            exact={item.exact ?? item.href === '/manager'}
+                            href={item_.href}
+                            icon={item_.icon}
+                            label={item_.label}
+                            badge={item_.badge}
+                            secondaryBadge={item_.secondaryBadge}
+                            secondaryBadgeTitle={item_.secondaryBadgeTitle}
+                            exact={item_.exact ?? item_.href === '/manager'}
                             onNavigate={closeMobile}
                           />
                         </Fragment>
@@ -583,27 +643,30 @@ export function AppShell({
               >
                 <div className="min-h-0 overflow-hidden" inert={!hrNavExpanded ? true : undefined}>
                   <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
-                    {hrNavItems.map((item) => (
+                    {hrNavItems.map((item) => {
+                      const item_ = withLiveBadge(item);
+                      return (
                       <div
-                        key={item.href}
+                        key={item_.href}
                         className={
-                          item.nested
+                          item_.nested
                             ? 'ml-2 border-l border-white/[0.12] pl-2'
                             : undefined
                         }
                       >
                         <NavLink
-                          href={item.href}
-                          icon={item.icon}
-                          label={item.label}
-                          badge={item.badge}
-                          secondaryBadge={item.secondaryBadge}
-                          secondaryBadgeTitle={item.secondaryBadgeTitle}
-                          exact={item.exact}
+                          href={item_.href}
+                          icon={item_.icon}
+                          label={item_.label}
+                          badge={item_.badge}
+                          secondaryBadge={item_.secondaryBadge}
+                          secondaryBadgeTitle={item_.secondaryBadgeTitle}
+                          exact={item_.exact}
                           onNavigate={closeMobile}
                         />
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -616,7 +679,7 @@ export function AppShell({
                 href="/pending-approvals"
                 icon="pending"
                 label="Approvals"
-                badge={pendingApprovalCount > 0 ? pendingApprovalCount : undefined}
+                badge={livePendingApprovalCount > 0 ? livePendingApprovalCount : undefined}
                 onNavigate={closeMobile}
               />
             </div>
@@ -678,7 +741,7 @@ export function AppShell({
           avatarImageSrc={showUserAvatar ? safeUserAvatar! : null}
           onAvatarImageError={() => setUserAvatarFailed(true)}
           notificationCount={totalNotifCount}
-          notifications={topBarNotifications}
+          notifications={liveTopBarNotifications}
           showMemberSearch={showMemberSearch}
           orgId={orgId}
         />

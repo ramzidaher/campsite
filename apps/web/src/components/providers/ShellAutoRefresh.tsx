@@ -5,9 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-/** Keep in-app lists and badges aligned with new notifications / approvals within a few seconds. */
+// Interval for React Query invalidation + SHELL_REFRESH_EVENT (keeps client-side
+// lists fresh). router.refresh() is intentionally NOT called on the interval —
+// badge counts are now managed by useShellBadgeCounts (polls every 60 s), so a
+// 3-second server re-render per user would generate ~10 000 DB calls/second at
+// scale. router.refresh() still fires on focus/visibility change for structural
+// layout data (org name, nav permissions).
 const REFRESH_INTERVAL_MS = 3_000;
-const MIN_REFRESH_GAP_MS = 2_500;
+const MIN_REFRESH_GAP_MS  = 2_500;
 
 export function ShellAutoRefresh() {
   const router = useRouter();
@@ -24,20 +29,22 @@ export function ShellAutoRefresh() {
       return Date.now() - lastRefreshAtRef.current >= MIN_REFRESH_GAP_MS;
     };
 
-    const refresh = () => {
+    const refresh = (includeRouterRefresh = false) => {
       if (!shouldRefreshNow()) return;
       lastRefreshAtRef.current = Date.now();
       void queryClient.invalidateQueries({ refetchType: 'active' });
       window.dispatchEvent(new Event(SHELL_REFRESH_EVENT));
-      router.refresh();
+      // Only do a full server re-render when the user returns to the tab —
+      // not on the 3-second background interval.
+      if (includeRouterRefresh) router.refresh();
     };
 
-    const onFocus = () => refresh();
+    const onFocus = () => refresh(true);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
+      if (document.visibilityState === 'visible') refresh(true);
     };
 
-    const timer = window.setInterval(refresh, REFRESH_INTERVAL_MS);
+    const timer = window.setInterval(() => refresh(false), REFRESH_INTERVAL_MS);
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
 
