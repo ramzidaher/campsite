@@ -1,7 +1,11 @@
 'use client';
 
 import type { PermissionPickerItem } from '@/lib/authz/customRolePickerContract';
-import { buildEffectiveAccessSummary, groupPermissionPickerItems } from '@/lib/authz/memberOverrideUx';
+import {
+  buildEffectiveAccessSummary,
+  groupPermissionPickerItems,
+  permissionPickerMatchesQuery,
+} from '@/lib/authz/memberOverrideUx';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type OverrideRow = {
@@ -135,37 +139,24 @@ export function MemberPermissionOverridesPanel({
     (rows: OverrideRow[]) => {
       const q = existingSearch.trim().toLowerCase();
       if (!q) return rows;
+      const tokens = q.split(/\s+/).filter(Boolean);
       return rows.filter((row) => {
+        const pk = row.permission_key.toLowerCase();
         const label = permLabel(row.permission_key).toLowerCase();
-        const key = row.permission_key.toLowerCase();
-        return label.includes(q) || key.includes(q);
+        const desc = permDescription(row.permission_key).toLowerCase();
+        const haystack = `${pk} ${label} ${desc}`;
+        return tokens.every((t) => haystack.includes(t));
       });
     },
     [existingSearch, pickerItems],
   );
   const groupedItems = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const filtered = q
-      ? pickerItems.filter(
-          (item) =>
-            item.key.toLowerCase().includes(q) ||
-            item.label.toLowerCase().includes(q) ||
-            item.description.toLowerCase().includes(q),
-        )
-      : pickerItems;
+    const filtered = pickerItems.filter((item) => permissionPickerMatchesQuery(item, search));
     return groupPermissionPickerItems(filtered);
   }, [pickerItems, search]);
 
   const groupedReplaceItems = useMemo(() => {
-    const q = replaceSearch.trim().toLowerCase();
-    const filtered = q
-      ? pickerItems.filter(
-          (item) =>
-            item.key.toLowerCase().includes(q) ||
-            item.label.toLowerCase().includes(q) ||
-            item.description.toLowerCase().includes(q),
-        )
-      : pickerItems;
+    const filtered = pickerItems.filter((item) => permissionPickerMatchesQuery(item, replaceSearch));
     return groupPermissionPickerItems(filtered);
   }, [pickerItems, replaceSearch]);
 
@@ -282,6 +273,9 @@ export function MemberPermissionOverridesPanel({
         </label>
         <p className="mt-2 text-[12px] font-medium text-[#6b6b6b]">Permissions</p>
         <div className="mt-2 max-h-[min(420px,55vh)] space-y-3 overflow-y-auto pr-1">
+          {pickerItems.length > 0 && groupedItems.length === 0 ? (
+            <p className="text-[12px] text-[#9b9b9b]">No permissions match your search.</p>
+          ) : null}
           {groupedItems.map((group) => {
             const assignableInGroup = group.items.filter((i) => assignableKeys.has(i.key));
             const allAssignableSelected =
@@ -394,6 +388,9 @@ export function MemberPermissionOverridesPanel({
         </label>
         <p className="mt-2 text-[12px] font-medium text-[#6b6b6b]">Permissions to allow</p>
         <div className="mt-2 max-h-[min(320px,45vh)] space-y-3 overflow-y-auto pr-1">
+          {pickerItems.length > 0 && groupedReplaceItems.length === 0 ? (
+            <p className="text-[12px] text-[#9b9b9b]">No permissions match your search.</p>
+          ) : null}
           {groupedReplaceItems.map((group) => {
             const assignableInGroup = group.items.filter((i) => assignableKeys.has(i.key));
             const allAssignableSelected =

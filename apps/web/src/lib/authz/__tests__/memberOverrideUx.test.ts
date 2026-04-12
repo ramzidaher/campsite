@@ -1,6 +1,29 @@
-import { buildEffectiveAccessSummary, groupPermissionPickerItems } from '@/lib/authz/memberOverrideUx';
+import {
+  buildEffectiveAccessSummary,
+  groupPermissionPickerItems,
+  permissionPickerMatchesQuery,
+} from '@/lib/authz/memberOverrideUx';
 
 describe('memberOverrideUx', () => {
+  it('permissionPickerMatchesQuery matches all terms across key, label, description', () => {
+    const item = {
+      key: 'members.edit_roles',
+      label: 'Edit member roles',
+      description: 'Assign and update member role assignments.',
+    };
+    expect(permissionPickerMatchesQuery(item, '')).toBe(true);
+    expect(permissionPickerMatchesQuery(item, '  ')).toBe(true);
+    expect(permissionPickerMatchesQuery(item, 'edit')).toBe(true);
+    expect(permissionPickerMatchesQuery(item, 'roles member')).toBe(true);
+    expect(permissionPickerMatchesQuery(item, 'assign role')).toBe(true);
+    expect(permissionPickerMatchesQuery(item, 'xyz')).toBe(false);
+  });
+
+  it('permissionPickerMatchesQuery tolerates null label/description', () => {
+    const malformed = { key: 'rota.view', label: null, description: 'View rota schedules.' };
+    expect(permissionPickerMatchesQuery(malformed, 'rota')).toBe(true);
+  });
+
   it('groups permissions by key namespace', () => {
     const grouped = groupPermissionPickerItems([
       { key: 'offers.view', label: 'View offers', description: '', is_founder_only: false, assignable_into_custom_role: true },

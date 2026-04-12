@@ -1,6 +1,21 @@
 import { effectivePermissionWithOverrides, type OverrideRow } from '@/lib/authz/overrideComposition';
 import type { PermissionPickerItem } from '@/lib/authz/customRolePickerContract';
 
+/**
+ * Case-insensitive permission search: every whitespace-separated term must appear somewhere in
+ * key, label, or description (order-independent). Safe if label/description are null/undefined.
+ */
+export function permissionPickerMatchesQuery(
+  item: Pick<PermissionPickerItem, 'key' | 'label' | 'description'>,
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = `${item.key} ${item.label ?? ''} ${item.description ?? ''}`.toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
+  return tokens.every((t) => haystack.includes(t));
+}
+
 export type EffectiveAccessSummary = {
   inherited: string[];
   added: string[];
@@ -23,7 +38,7 @@ export function groupPermissionPickerItems(items: PermissionPickerItem[]): Array
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([group, groupedItems]) => ({
       group,
-      items: groupedItems.sort((a, b) => a.label.localeCompare(b.label)),
+      items: groupedItems.sort((a, b) => (a.label ?? '').localeCompare(b.label ?? '')),
     }));
 }
 

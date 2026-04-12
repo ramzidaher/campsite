@@ -31,7 +31,7 @@ export async function buildPermissionPickerItems(
 
   const items: PermissionPickerItem[] = (catalog ?? []).map((row) => ({
     key: row.key,
-    label: row.label,
+    label: row.label ?? '',
     description: row.description ?? '',
     is_founder_only: Boolean(row.is_founder_only),
     assignable_into_custom_role: granted.has(row.key),

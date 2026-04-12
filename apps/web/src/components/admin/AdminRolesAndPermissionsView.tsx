@@ -480,27 +480,35 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
               </div>
 
               <div className="max-h-[460px] space-y-4 overflow-y-auto pr-1">
-                {groupedPermissions.map((group) => (
+                {groupedPermissions.map((group) => {
+                  const groupAll = group.items.every((p) => selectedChecked.has(p.key));
+                  const groupSome = group.items.some((p) => selectedChecked.has(p.key));
+                  return (
                   <div key={`${selectedRole.id}-${group.title}`}>
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-[11px] uppercase tracking-[0.08em] text-[#A39E97]">{group.title}</p>
-                      <button
-                        type="button"
-                        className="text-[12px] text-[#1A5FA8] hover:underline"
-                        onClick={() =>
-                          setRoleDraftPerms((curr) => {
-                            const next = new Set(curr[selectedRole.id] ?? selectedChecked);
-                            const allSelected = group.items.every((p) => next.has(p.key));
-                            for (const p of group.items) {
-                              if (allSelected) next.delete(p.key);
-                              else next.add(p.key);
-                            }
-                            return { ...curr, [selectedRole.id]: next };
-                          })
-                        }
-                      >
-                        {group.items.every((p) => selectedChecked.has(p.key)) ? 'Clear all' : 'Select all'}
-                      </button>
+                    <div className="mb-2">
+                      <label className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 rounded border-black/20"
+                          aria-label={`Toggle all permissions in ${group.title}`}
+                          ref={(el) => {
+                            if (el) el.indeterminate = groupSome && !groupAll;
+                          }}
+                          checked={group.items.length > 0 && groupAll}
+                          onChange={() =>
+                            setRoleDraftPerms((curr) => {
+                              const next = new Set(curr[selectedRole.id] ?? selectedChecked);
+                              const allSelected = group.items.every((p) => next.has(p.key));
+                              for (const p of group.items) {
+                                if (allSelected) next.delete(p.key);
+                                else next.add(p.key);
+                              }
+                              return { ...curr, [selectedRole.id]: next };
+                            })
+                          }
+                        />
+                        <span className="text-[11px] uppercase tracking-[0.08em] text-[#A39E97]">{group.title}</span>
+                      </label>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {group.items.map((p) => (
@@ -533,7 +541,8 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                       ))}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="mt-4 flex items-center justify-between border-t border-black/10 pt-3">
@@ -664,27 +673,35 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                 </button>
               </div>
             ) : (
-              groupedCreatePermissions.map((group) => (
+              groupedCreatePermissions.map((group) => {
+                const groupAll = group.items.every((p) => newPerms.has(p.key));
+                const groupSome = group.items.some((p) => newPerms.has(p.key));
+                return (
                 <div key={`create-${group.title}`}>
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] uppercase tracking-[0.08em] text-[#A39E97]">{group.title}</p>
-                    <button
-                      type="button"
-                      className="text-[12px] text-[#1A5FA8] hover:underline"
-                      onClick={() =>
-                        setNewPerms((curr) => {
-                          const next = new Set(curr);
-                          const allSelected = group.items.every((p) => next.has(p.key));
-                          for (const p of group.items) {
-                            if (allSelected) next.delete(p.key);
-                            else next.add(p.key);
-                          }
-                          return next;
-                        })
-                      }
-                    >
-                      {group.items.every((p) => newPerms.has(p.key)) ? 'Clear all' : 'Select all'}
-                    </button>
+                  <div className="mb-2">
+                    <label className="flex cursor-pointer items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 rounded border-black/20"
+                        aria-label={`Toggle all permissions in ${group.title}`}
+                        ref={(el) => {
+                          if (el) el.indeterminate = groupSome && !groupAll;
+                        }}
+                        checked={group.items.length > 0 && groupAll}
+                        onChange={() =>
+                          setNewPerms((curr) => {
+                            const next = new Set(curr);
+                            const allSelected = group.items.every((p) => next.has(p.key));
+                            for (const p of group.items) {
+                              if (allSelected) next.delete(p.key);
+                              else next.add(p.key);
+                            }
+                            return next;
+                          })
+                        }
+                      />
+                      <span className="text-[11px] uppercase tracking-[0.08em] text-[#A39E97]">{group.title}</span>
+                    </label>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {group.items.map((p) => (
@@ -717,7 +734,8 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                     ))}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 
