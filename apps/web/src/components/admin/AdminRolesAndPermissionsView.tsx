@@ -291,7 +291,7 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
     : false;
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7" data-no-checkbox-sound>
       <div className="mb-6">
         <h1 className="text-[22px] font-medium tracking-[-0.02em] text-[#1A1917]">Roles & permissions</h1>
         <p className="mt-1 text-[14px] text-[#6B6963]">

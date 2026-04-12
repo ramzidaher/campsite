@@ -11,6 +11,7 @@ import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
 import type { MainShellAdminNavItem, ShellNavIconId } from '@/lib/adminGates';
 import { useShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
 import type { ShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
+import { CheckboxUiSoundCapture } from '@/components/sound/CheckboxUiSoundCapture';
 import { useUiSound } from '@/lib/sound/useUiSound';
 import { ChevronDown } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
@@ -281,6 +282,7 @@ export function AppShell({
 
   return (
     <div className="campsite-paper flex min-h-screen bg-[#faf9f6] text-[#121212]">
+      <CheckboxUiSoundCapture />
       {mobileNav ? (
         <button
           type="button"
@@ -414,7 +416,7 @@ export function AppShell({
                 onClick={() => {
                   setAdminNavExpanded((open) => {
                     const next = !open;
-                    playUiSound(next ? 'dropdown_open' : 'dropdown_close');
+                    playUiSound(next ? 'folder_open' : 'folder_close');
                     try {
                       localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, next ? '1' : '0');
                       if (next) {
@@ -507,7 +509,7 @@ export function AppShell({
                 onClick={() => {
                   setManagerNavExpanded((open) => {
                     const next = !open;
-                    playUiSound(next ? 'dropdown_open' : 'dropdown_close');
+                    playUiSound(next ? 'folder_open' : 'folder_close');
                     try {
                       localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, next ? '1' : '0');
                       if (next) {
@@ -600,7 +602,7 @@ export function AppShell({
                 onClick={() => {
                   setHrNavExpanded((open) => {
                     const next = !open;
-                    playUiSound(next ? 'dropdown_open' : 'dropdown_close');
+                    playUiSound(next ? 'folder_open' : 'folder_close');
                     try {
                       localStorage.setItem(HR_NAV_EXPANDED_KEY, next ? '1' : '0');
                       if (next) {

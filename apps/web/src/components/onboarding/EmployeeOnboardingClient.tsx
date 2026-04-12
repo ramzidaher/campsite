@@ -1,7 +1,8 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { HrNav } from '@/components/hr/HrNav';
+import { useCampfireAmbientPreferences } from '@/lib/sound/useCampfireAmbientPreferences';
+import { useUiSound } from '@/lib/sound/useUiSound';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -50,6 +51,8 @@ export function EmployeeOnboardingClient({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+  const playUiSound = useUiSound();
+  const { prefs: campfirePrefs, setEnabled: setCampfireEnabled } = useCampfireAmbientPreferences();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -77,6 +80,7 @@ export function EmployeeOnboardingClient({
     });
     setBusy(null);
     if (error) { setMsg(error.message); return; }
+    playUiSound(next === 'completed' ? 'checkbox_check' : 'checkbox_uncheck');
     router.refresh();
   }
 
@@ -92,7 +96,6 @@ export function EmployeeOnboardingClient({
   if (runStatus === 'completed') {
     return (
       <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
-        <HrNav />
         <div className="py-12 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#dcfce7]">
             <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#16a34a]" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -113,8 +116,6 @@ export function EmployeeOnboardingClient({
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
-      <HrNav />
-
       <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           Getting started
@@ -166,6 +167,28 @@ export function EmployeeOnboardingClient({
             {otherTasks.filter((t) => t.status !== 'pending').length} of {otherTasks.length} tasks for your manager/HR also completed
           </p>
         ) : null}
+      </div>
+
+      <div className="mb-6 rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            data-no-checkbox-sound
+            checked={campfirePrefs.enabled}
+            onChange={(e) => {
+              const enabled = e.target.checked;
+              setCampfireEnabled(enabled);
+              playUiSound(enabled ? 'toggle_on' : 'toggle_off');
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212]"
+          />
+          <span className="text-[13px] leading-snug text-[#121212]">
+            <span className="font-medium">Campfire on the home dashboard</span>
+            <span className="mt-0.5 block text-[12.5px] text-[#6b6b6b]">
+              Optional ambience on Dashboard — you can change this anytime in Settings → Notifications.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="space-y-8">

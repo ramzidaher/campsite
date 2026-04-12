@@ -13,6 +13,14 @@ function getAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
+/** Shared context for UI tones and optional ambient layers (e.g. dashboard campfire). */
+export async function ensureAudioContextReady(): Promise<AudioContext | null> {
+  const ctx = getAudioContext();
+  if (!ctx) return null;
+  await resumeAudioContext(ctx);
+  return ctx;
+}
+
 async function resumeAudioContext(ctx: AudioContext): Promise<void> {
   if (ctx.state === 'suspended') {
     try {
@@ -52,9 +60,8 @@ export async function playUiSound(event: UiSoundEvent): Promise<void> {
   if (nowMs - last < minInterval) return;
   lastPlayedAt.set(event, nowMs);
 
-  const ctx = getAudioContext();
+  const ctx = await ensureAudioContextReady();
   if (!ctx) return;
-  await resumeAudioContext(ctx);
   const baseGain = (prefs.volume / 100) * (preset.eventGain ?? 1);
   const gapSeconds = (preset.gapMs ?? 0) / 1000;
   let cursor = ctx.currentTime;

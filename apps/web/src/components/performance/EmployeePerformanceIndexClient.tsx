@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { HrNav } from '@/components/hr/HrNav';
 
 type ReviewSummary = {
   id: string;
@@ -129,8 +128,6 @@ export function EmployeePerformanceIndexClient({
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
-      <HrNav />
-
       <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Performance</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">

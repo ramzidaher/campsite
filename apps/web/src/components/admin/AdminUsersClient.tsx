@@ -469,7 +469,7 @@ export function AdminUsersClient({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7" data-no-checkbox-sound>
       <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">All Members</h1>

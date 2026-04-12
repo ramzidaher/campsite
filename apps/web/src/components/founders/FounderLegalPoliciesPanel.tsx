@@ -5,15 +5,12 @@ import { BroadcastBodyEditor } from '@/components/broadcasts/BroadcastBodyEditor
 import { LegalMarkdownArticle } from '@/components/legal/LegalMarkdownArticle';
 import { upsertPlatformLegalSettings } from '@/app/(founders)/founders/platform-actions';
 import { extractMarkdownHeadings, type MarkdownHeading } from '@/lib/legal/markdownHeadings';
+import { PUBLIC_LEGAL_DOCS, type LegalPublicDocId } from '@/lib/legal/publicLegalDocs';
 import type { PlatformLegalSettings } from '@/lib/legal/types';
 
-type DocTab = 'terms' | 'privacy' | 'data_processing';
+type DocTab = LegalPublicDocId;
 
-const DOC_LIST: { id: DocTab; label: string }[] = [
-  { id: 'terms', label: 'Terms of service' },
-  { id: 'privacy', label: 'Privacy policy' },
-  { id: 'data_processing', label: 'Data processing' },
-];
+const DOC_LIST = PUBLIC_LEGAL_DOCS.map(({ id, label }) => ({ id, label }));
 
 export function FounderLegalPoliciesPanel({
   initial,

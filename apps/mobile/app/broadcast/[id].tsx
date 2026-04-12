@@ -199,8 +199,21 @@ export default function BroadcastDetailScreen() {
       link: { color: tokens.accent },
       code_inline: { backgroundColor: tokens.surface, color: tokens.textPrimary },
       fence: { backgroundColor: tokens.surface, color: tokens.textPrimary },
+      /** Craft-style framed image blocks in body markdown */
+      image: {
+        marginVertical: 14,
+        alignSelf: 'center' as const,
+        maxWidth: '100%' as const,
+        width: '100%' as const,
+        borderRadius: 26,
+        borderWidth: 1,
+        borderColor: scheme === 'dark' ? 'rgba(255,255,255,0.12)' : '#ebe8e3',
+        backgroundColor: scheme === 'dark' ? 'rgba(255,255,255,0.06)' : '#f3f1ed',
+        padding: 14,
+        overflow: 'hidden' as const,
+      },
     }),
-    [tokens],
+    [tokens, scheme],
   );
 
   const pageBg = tokens.background;

@@ -49,6 +49,7 @@ const nextConfig: NextConfig = {
     '@tiptap/markdown',
     '@tiptap/extension-placeholder',
     '@tiptap/extension-bubble-menu',
+    '@tiptap/extension-image',
   ],
   async headers() {
     const base = [

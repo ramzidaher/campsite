@@ -6,6 +6,9 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+
+import { BroadcastCraftImage } from '@/components/broadcasts/broadcastCraftImageExtension';
+import '@/components/broadcasts/broadcastCraftImage.css';
 import {
   forwardRef,
   useEffect,
@@ -38,6 +41,8 @@ export type BroadcastBodyEditorHandle = {
   orderedList: () => void;
   undo: () => void;
   redo: () => void;
+  /** Inserts a block image (Craft-style frame in the editor). */
+  insertImage: (src: string, alt?: string) => void;
 };
 
 type Props = {
@@ -74,6 +79,10 @@ export const BroadcastBodyEditor = forwardRef<BroadcastBodyEditorHandle, Props>(
           }),
           Placeholder.configure({
             placeholder: placeholder ?? 'Write something…',
+          }),
+          BroadcastCraftImage.configure({
+            inline: false,
+            allowBase64: false,
           }),
           Markdown.configure({
             markedOptions: { gfm: true },
@@ -136,6 +145,10 @@ export const BroadcastBodyEditor = forwardRef<BroadcastBodyEditorHandle, Props>(
         },
         redo: () => {
           editor?.chain().focus().redo().run();
+        },
+        insertImage: (src: string, alt?: string) => {
+          if (!src.trim()) return;
+          editor?.chain().focus().setImage({ src: src.trim(), alt: alt?.trim() ?? '' }).run();
         },
       }),
       [editor],

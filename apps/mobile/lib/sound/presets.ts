@@ -12,6 +12,36 @@ export const UI_SOUND_PRESETS: Record<UiSoundEvent, UiSoundPreset> = {
   menu_close: { tones: [click(860), click(640)], gapMs: 18, eventGain: 0.72, minIntervalMs: 70 },
   dropdown_open: { tones: [click(680), click(820)], gapMs: 14, eventGain: 0.7, minIntervalMs: 70 },
   dropdown_close: { tones: [click(820), click(640)], gapMs: 14, eventGain: 0.65, minIntervalMs: 70 },
+  folder_open: {
+    tones: [click(640), click(780), click(900, 'sine')],
+    gapMs: 12,
+    eventGain: 0.74,
+    minIntervalMs: 80,
+  },
+  folder_close: {
+    tones: [click(880, 'sine'), click(700), click(560)],
+    gapMs: 12,
+    eventGain: 0.68,
+    minIntervalMs: 80,
+  },
+  checkbox_check: {
+    tones: [
+      { freqHz: 520, durationMs: 55, gain: 0.18, wave: 'sine' },
+      { freqHz: 740, durationMs: 60, gain: 0.16, wave: 'triangle' },
+    ],
+    gapMs: 10,
+    eventGain: 0.72,
+    minIntervalMs: 45,
+  },
+  checkbox_uncheck: {
+    tones: [
+      { freqHz: 720, durationMs: 58, gain: 0.16, wave: 'triangle' },
+      { freqHz: 520, durationMs: 62, gain: 0.15, wave: 'sine' },
+    ],
+    gapMs: 10,
+    eventGain: 0.64,
+    minIntervalMs: 45,
+  },
   toggle_on: { tones: [click(610), click(780)], gapMs: 16, eventGain: 0.68, minIntervalMs: 60 },
   toggle_off: { tones: [click(760), click(590)], gapMs: 16, eventGain: 0.62, minIntervalMs: 60 },
   broadcast_draft_saved: {

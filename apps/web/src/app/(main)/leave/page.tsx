@@ -31,25 +31,6 @@ export default async function LeavePage() {
   const canSubmit = keys.includes('leave.submit');
   const canApprove = keys.includes('leave.approve_direct_reports') || keys.includes('leave.manage_org');
   const canManage = keys.includes('leave.manage_org');
-  let showPerformanceTab = false;
-  let showOnboardingTab = false;
-
-  if (keys.includes('performance.view_own') || keys.includes('performance.review_direct_reports')) {
-    const { count: reviewCount } = await supabase
-      .from('performance_reviews')
-      .select('id', { count: 'exact', head: true })
-      .or(`reviewee_id.eq.${user.id},reviewer_id.eq.${user.id}`);
-    showPerformanceTab = (reviewCount ?? 0) > 0;
-  }
-
-  if (keys.includes('onboarding.complete_own_tasks')) {
-    const { count: runCount } = await supabase
-      .from('onboarding_runs')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('status', 'active');
-    showOnboardingTab = (runCount ?? 0) > 0;
-  }
 
   const { data: leaveSettings } = await supabase
     .from('org_leave_settings')
@@ -83,8 +64,6 @@ export default async function LeavePage() {
       leaveUseWorkingDays={leaveUseWorkingDays}
       nonWorkingIsoDows={nonWorkingIsoDows}
       toilMinutesPerDay={toilMinutesPerDay}
-      showPerformanceTab={showPerformanceTab}
-      showOnboardingTab={showOnboardingTab}
     />
   );
 }

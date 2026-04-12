@@ -1,6 +1,5 @@
 'use client';
 
-import { HrNav } from '@/components/hr/HrNav';
 import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { currentLeaveYearKey } from '@/lib/datetime';
 import { leaveRangeOverlapsExisting } from '@/lib/leaveDateOverlap';
@@ -121,8 +120,6 @@ export function LeaveHubClient({
   leaveUseWorkingDays,
   nonWorkingIsoDows,
   toilMinutesPerDay,
-  showPerformanceTab,
-  showOnboardingTab,
 }: {
   orgId: string;
   userId: string;
@@ -139,8 +136,6 @@ export function LeaveHubClient({
   nonWorkingIsoDows: number[];
   /** Minutes counted as one day when converting earned overtime into TOIL balance (e.g. 480 = 8h). */
   toilMinutesPerDay: number;
-  showPerformanceTab: boolean;
-  showOnboardingTab: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [year, setYear] = useState(initialYear);
@@ -528,8 +523,6 @@ export function LeaveHubClient({
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
-      <HrNav showLeave showPerformance={showPerformanceTab} showOnboarding={showOnboardingTab} showOrgChart={false} />
-
       {/* Page header */}
       <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>

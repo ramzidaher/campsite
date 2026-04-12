@@ -180,7 +180,7 @@ export function MemberPermissionOverridesPanel({
   }
 
   return (
-    <div className="mt-5 border-t border-[#e8e8e8] pt-4">
+    <div className="mt-5 border-t border-[#e8e8e8] pt-4" data-no-checkbox-sound>
       <h3 className="text-[13px] font-semibold text-[#121212]">Specific user access</h3>
       <p className="mt-1 text-[12px] leading-relaxed text-[#6b6b6b]">
         Keep their base role and add user-specific exceptions. This only affects this person and does not change the role template.

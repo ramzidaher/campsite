@@ -18,6 +18,7 @@ import {
   BroadcastBodyEditor,
   type BroadcastBodyEditorHandle,
 } from '@/components/broadcasts/BroadcastBodyEditor';
+import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
 
 type CatRow = { id: string; name: string; dept_id: string };
 
@@ -179,6 +180,7 @@ export function BroadcastComposer({
   const [teamsForDept, setTeamsForDept] = useState<TeamRow[]>([]);
   const dirty = useRef(false);
   const bodyEditorRef = useRef<BroadcastBodyEditorHandle>(null);
+  const bodyImageInputRef = useRef<HTMLInputElement>(null);
 
   const displayDeptId = useMemo(() => {
     if (departments.some((d) => d.id === deptId)) return deptId;
@@ -340,22 +342,27 @@ export function BroadcastComposer({
     return toDatetimeLocalValue(t);
   }, [schedule]);
 
-  const persistDraft = useCallback(async (): Promise<boolean> => {
-    if (!canCompose || !title.trim()) return true;
+  type PersistDraftResult =
+    | { status: 'saved'; broadcastId: string }
+    | { status: 'skipped' }
+    | { status: 'failed' };
+
+  const persistDraft = useCallback(async (): Promise<PersistDraftResult> => {
+    if (!canCompose || !title.trim()) return { status: 'skipped' };
 
     if (draftOnly) {
-      if (!displayDeptId || !displayCatId) return true;
+      if (!displayDeptId || !displayCatId) return { status: 'skipped' };
     } else if (isOrgWideActive) {
-      if (!displayAuthorityDeptId) return true;
+      if (!displayAuthorityDeptId) return { status: 'skipped' };
     } else {
-      if (!displayDeptId || !displayCatId) return true;
+      if (!displayDeptId || !displayCatId) return { status: 'skipped' };
     }
 
     if (!draftOnly && !isOrgWideActive) {
       const catRow = cats.find((c) => c.id === displayCatId);
       if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
         setError('This channel does not belong to the selected department. Refresh the page or pick the channel again.');
-        return false;
+        return { status: 'failed' };
       }
     }
 
@@ -375,24 +382,26 @@ export function BroadcastComposer({
         is_mandatory: isOrgWideActive ? false : isMandatory,
         is_pinned: isPinned,
       };
+      let broadcastId: string | undefined = draftId ?? undefined;
       if (draftId) {
         const { error: ue } = await supabase.from('broadcasts').update(row).eq('id', draftId).eq('created_by', userId);
         if (ue) throw ue;
         await syncCollaborationDepartments(draftId);
+        broadcastId = draftId;
       } else {
         const { data, error: e } = await supabase.from('broadcasts').insert(row).select('id');
         if (e) throw e;
         const id = data?.[0]?.id as string | undefined;
-        if (id) {
-          setDraftId(id);
-          await syncCollaborationDepartments(id);
-        }
+        if (!id) throw new Error('Draft was not assigned an id.');
+        setDraftId(id);
+        await syncCollaborationDepartments(id);
+        broadcastId = id;
       }
       dirty.current = false;
-      return true;
+      return { status: 'saved', broadcastId };
     } catch (e: unknown) {
       setError(formatSupabaseWriteError(e));
-      return false;
+      return { status: 'failed' };
     } finally {
       setSaving(false);
     }
@@ -423,6 +432,56 @@ export function BroadcastComposer({
     }, 30_000);
     return () => window.clearInterval(t);
   }, [persistDraft, canCompose, title]);
+
+  const insertBodyImageFromFile = useCallback(
+    async (file: File) => {
+      if (!canCompose) return;
+      if (!title.trim()) {
+        setError('Add a title first so we can save a draft and upload images.');
+        playUiSound('error_soft');
+        return;
+      }
+      setError(null);
+      const r = await persistDraft();
+      if (r.status !== 'saved') {
+        if (r.status === 'failed') {
+          playUiSound('error_soft');
+        } else {
+          setError('Choose department, channel, and other required fields so we can save a draft, then add images.');
+          playUiSound('error_soft');
+        }
+        return;
+      }
+      const up = await uploadBroadcastCover(supabase, userId, r.broadcastId, file);
+      if (!up.ok) {
+        setError(up.message);
+        playUiSound('error_soft');
+        return;
+      }
+      bodyEditorRef.current?.insertImage(up.publicUrl);
+    },
+    [canCompose, title, persistDraft, supabase, userId, playUiSound],
+  );
+
+  const insertBodyImageFromUrl = useCallback(() => {
+    const raw = typeof window !== 'undefined' ? window.prompt('Paste an image URL (https only)') : null;
+    if (raw == null) return;
+    const u = raw.trim();
+    if (!u) return;
+    try {
+      const parsed = new URL(u);
+      if (parsed.protocol !== 'https:') {
+        setError('Image URLs must use https://');
+        playUiSound('error_soft');
+        return;
+      }
+    } catch {
+      setError('That URL could not be read.');
+      playUiSound('error_soft');
+      return;
+    }
+    bodyEditorRef.current?.insertImage(u);
+  }, [playUiSound]);
 
   const submit = async (mode: 'draft' | 'pending' | 'send' | 'schedule') => {
     if (draftOnly) {
@@ -462,7 +521,7 @@ export function BroadcastComposer({
     try {
       if (mode === 'draft') {
         const saved = await persistDraft();
-        if (saved) {
+        if (saved.status === 'saved') {
           playUiSound('broadcast_draft_saved');
           onCreated?.('draft_saved');
         }
@@ -862,7 +921,8 @@ export function BroadcastComposer({
           <div>
             <p className="text-sm font-medium text-[#121212]">Write</p>
             <p className="mt-0.5 text-[12px] leading-snug text-[#6b6b6b]">
-              Edit visually like Notion — content is stored as markdown for the feed. Select text for a quick format bar.
+              Edit visually like Notion — content is stored as markdown for the feed. Add images as framed blocks; uploads need a
+              title and saved draft. Select text for a quick format bar.
             </p>
           </div>
         </div>
@@ -916,7 +976,35 @@ export function BroadcastComposer({
             >
               Redo
             </button>
+            <span className="mx-0.5 hidden h-4 w-px shrink-0 bg-[#ddd9d4] sm:block" aria-hidden />
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[#504e49] transition hover:bg-[#ebe8e3] active:bg-[#e3dfd9]"
+              onClick={() => bodyImageInputRef.current?.click()}
+            >
+              Image
+            </button>
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1.5 text-[13px] font-medium text-[#504e49] transition hover:bg-[#ebe8e3] active:bg-[#e3dfd9]"
+              onClick={() => insertBodyImageFromUrl()}
+            >
+              Image URL
+            </button>
           </div>
+          <input
+            ref={bodyImageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="sr-only"
+            aria-hidden
+            tabIndex={-1}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) void insertBodyImageFromFile(f);
+            }}
+          />
           <BroadcastBodyEditor
             ref={bodyEditorRef}
             markdown={body}
@@ -927,7 +1015,9 @@ export function BroadcastComposer({
           <p className="border-t border-[#f0ebe6] px-5 py-2.5 text-[12px] leading-snug text-[#9b9b9b] sm:px-6">
             <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">⌘/Ctrl+B</kbd> bold,{' '}
             <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">⌘/Ctrl+I</kbd> italic,{' '}
-            <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">⌘/Ctrl+Z</kbd> undo. Type{' '}
+            <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">⌘/Ctrl+Z</kbd> undo. Use{' '}
+            <span className="font-medium text-[#504e49]">Image</span> for uploads or{' '}
+            <span className="font-medium text-[#504e49]">Image URL</span> for https links. Type{' '}
             <kbd className="rounded bg-[#f0ebe6] px-1 py-0.5 font-sans text-[11px] text-[#504e49]">#</kbd> then space for a
             heading.
           </p>
