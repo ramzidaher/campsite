@@ -27,9 +27,9 @@ export function AppTopBar({
   /** Sum of items surfaced in the notifications menu (badge on bell). */
   notificationCount?: number;
   notifications?: TopBarNotificationItem[];
-  /** Enables "Members" as a top-bar search target. */
+  /** When true, include people (HR) in live suggestions. */
   showMemberSearch?: boolean;
-  /** Used to scope live search results to the current organisation. */
+  /** Used to scope live search to the current organisation. */
   orgId?: string | null;
 }) {
   const router = useRouter();
@@ -50,6 +50,16 @@ export function AppTopBar({
   const searchRef = useRef<HTMLDivElement | null>(null);
   const notifRef = useRef<HTMLDivElement | null>(null);
 
+  const placeholder =
+    showMemberSearch
+      ? 'Search people, broadcasts, files, and more…'
+      : 'Search broadcasts, files, and more…';
+
+  const ariaSearchLabel =
+    showMemberSearch
+      ? 'Search across people, broadcasts, resource files, and more'
+      : 'Search across broadcasts, resource files, and more';
+
   const onSearchKey = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter' && q.trim().length >= 2) {
@@ -66,7 +76,7 @@ export function AppTopBar({
         setSearchOpen(false);
       }
     },
-    [q, router, memberHits, resourceHits, broadcastHits, showMemberSearch]
+    [q, router, memberHits, resourceHits, broadcastHits, showMemberSearch],
   );
 
   useEffect(() => {
@@ -85,7 +95,7 @@ export function AppTopBar({
 
   useEffect(() => {
     const term = q.trim();
-    if (!searchOpen || term.length < 2) {
+    if (!searchOpen || term.length < 2 || !orgId) {
       setSearchBusy(false);
       setBroadcastHits([]);
       setResourceHits([]);
@@ -102,7 +112,7 @@ export function AppTopBar({
         .ilike('title', `%${term}%`)
         .order('created_at', { ascending: false })
         .limit(5);
-      if (orgId) bQuery = bQuery.eq('org_id', orgId);
+      bQuery = bQuery.eq('org_id', orgId);
 
       let mQuery = supabase
         .from('profiles')
@@ -111,7 +121,7 @@ export function AppTopBar({
         .or(`full_name.ilike.%${term}%,email.ilike.%${term}%`)
         .order('full_name', { ascending: true })
         .limit(5);
-      if (orgId) mQuery = mQuery.eq('org_id', orgId);
+      mQuery = mQuery.eq('org_id', orgId);
 
       const resQuery = supabase.rpc('search_staff_resources', { q: term, limit_n: 5 });
 
@@ -123,7 +133,7 @@ export function AppTopBar({
       if (cancelled) return;
       setBroadcastHits((bRes.data ?? []) as { id: string; title: string; status: string; created_at: string }[]);
       setMemberHits(
-        (mRes.data ?? []) as { id: string; full_name: string | null; email: string | null; avatar_url: string | null }[]
+        (mRes.data ?? []) as { id: string; full_name: string | null; email: string | null; avatar_url: string | null }[],
       );
       const rawRes = resRes.error
         ? []
@@ -133,7 +143,7 @@ export function AppTopBar({
           id: r.id,
           title: r.title,
           updated_at: r.updated_at,
-        }))
+        })),
       );
       setSearchBusy(false);
     }, 160);
@@ -167,31 +177,25 @@ export function AppTopBar({
             }}
             onFocus={() => setSearchOpen(true)}
             onKeyDown={onSearchKey}
-            placeholder={
-              showMemberSearch
-                ? 'Search members, resources, or broadcasts...'
-                : 'Search resources or broadcasts...'
-            }
+            placeholder={placeholder}
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
-            aria-label={
-              showMemberSearch ? 'Search members, resources, or broadcasts' : 'Search resources or broadcasts'
-            }
+            aria-label={ariaSearchLabel}
           />
         </div>
         {searchOpen && q.trim().length >= 2 ? (
           <div className="absolute left-0 right-0 top-10 z-[70] overflow-hidden rounded-xl border border-[#d8d8d8] bg-white shadow-[0_6px_22px_rgba(0,0,0,0.12)]">
             <div className="border-b border-[#ececec] bg-[#2f3440] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/90">
-              Search Results
+              Quick suggestions
             </div>
             <div className="max-h-[320px] overflow-y-auto p-1.5">
               {searchBusy ? (
-                <p className="px-3 py-2 text-[12px] text-[#6b6b6b]">Searching...</p>
+                <p className="px-3 py-2 text-[12px] text-[#6b6b6b]">Searching…</p>
               ) : null}
 
               {showMemberSearch && memberHits.length > 0 ? (
                 <>
                   <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
-                    Members
+                    People
                   </p>
                   {memberHits.map((m) => (
                     <Link
@@ -226,7 +230,7 @@ export function AppTopBar({
               {resourceHits.length > 0 ? (
                 <>
                   <p className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
-                    Resources
+                    Resource library
                   </p>
                   {resourceHits.map((r) => (
                     <Link
@@ -267,9 +271,11 @@ export function AppTopBar({
 
               {noHits ? (
                 <p className="px-3 py-2 text-[12px] text-[#6b6b6b]">
-                  {showMemberSearch
-                    ? 'No matching members, resources, or broadcasts.'
-                    : 'No matching resources or broadcasts.'}
+                  No quick suggestions. Press Enter to search broadcasts — use{' '}
+                  <Link href="/resources" className="font-medium text-[#121212] underline" onClick={() => setSearchOpen(false)}>
+                    Resource library
+                  </Link>{' '}
+                  for a full file search.
                 </p>
               ) : null}
             </div>

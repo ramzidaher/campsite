@@ -27,14 +27,17 @@ export function ResourcesListClient({
   orgId,
   canManage,
   folderFilter,
+  initialSearch = '',
 }: {
   orgId: string;
   canManage: boolean;
   /** `null` = all (grouped by folder); UUID = that folder; `none` = uncategorised only */
   folderFilter: string | null | 'none';
+  /** Prefill from top bar or shared links, e.g. `?q=handbook` */
+  initialSearch?: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(initialSearch);
   const [debounced, setDebounced] = useState('');
   const [rows, setRows] = useState<StaffResourceRow[]>([]);
   const [folders, setFolders] = useState<StaffResourceFolderRow[]>([]);
@@ -42,6 +45,10 @@ export function ResourcesListClient({
   const [err, setErr] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [folderBusy, setFolderBusy] = useState(false);
+
+  useEffect(() => {
+    setQ(initialSearch);
+  }, [initialSearch]);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(q.trim()), q.trim().length >= 2 ? 300 : 0);

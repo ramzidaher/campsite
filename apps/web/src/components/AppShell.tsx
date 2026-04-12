@@ -159,6 +159,7 @@ export function AppShell({
   showOnboardingNav?: boolean;
   showOneOnOneNav?: boolean;
   showMyHrRecordNav?: boolean;
+  /** When true, top bar search includes people (HR). */
   showMemberSearch?: boolean;
   orgId?: string | null;
   /** Collapsible “Manager” links (same pattern as `adminNavItems`). */

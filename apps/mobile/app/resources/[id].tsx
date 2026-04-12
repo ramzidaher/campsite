@@ -1,9 +1,8 @@
-import { Card, useCampsiteTheme } from '@campsite/ui';
+import { useCampsiteTheme } from '@campsite/ui';
 import { ResizeMode, Video } from 'expo-av';
-import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -15,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { ResourceDocumentAssistant } from '@/components/resources/ResourceDocumentAssistant';
 import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
 import { useAuth } from '@/lib/AuthContext';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -55,19 +55,10 @@ export default function ResourceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { tokens, scheme } = useCampsiteTheme();
-  const { profile, session, configured } = useAuth();
-  const [summary, setSummary] = useState<string | null>(null);
-  const [summaryNote, setSummaryNote] = useState<string | null>(null);
-  const [summaryErr, setSummaryErr] = useState<string | null>(null);
-  const [summaryBusy, setSummaryBusy] = useState(true);
+  const { profile, configured } = useAuth();
   const [textBody, setTextBody] = useState<string | null>(null);
   const [textErr, setTextErr] = useState<string | null>(null);
   const [textBusy, setTextBusy] = useState(false);
-
-  const siteUrl = useMemo(() => {
-    const raw = (Constants.expoConfig?.extra as { siteUrl?: string } | undefined)?.siteUrl?.trim() ?? '';
-    return raw.replace(/\/$/, '');
-  }, []);
 
   const detailQuery = useQuery({
     queryKey: ['mobile-staff-resource', id],
@@ -169,62 +160,6 @@ export default function ResourceDetailScreen() {
       cancelled = true;
     };
   }, [previewKind, signedUrl, row]);
-
-  useEffect(() => {
-    if (!detailQuery.data || !siteUrl || !session?.access_token) {
-      setSummaryBusy(false);
-      return;
-    }
-    let cancelled = false;
-    setSummaryBusy(true);
-    setSummaryErr(null);
-    setSummary(null);
-    setSummaryNote(null);
-    void (async () => {
-      try {
-        const res = await fetch(`${siteUrl}/api/resources/summarize`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ resourceId: detailQuery.data!.id }),
-        });
-        let data: { summary?: string; note?: string; error?: string; message?: string } = {};
-        try {
-          data = (await res.json()) as typeof data;
-        } catch {
-          /* ignore */
-        }
-        if (cancelled) return;
-        if (!res.ok) {
-          const msg =
-            data.error === 'not_configured' && typeof data.message === 'string'
-              ? data.message
-              : typeof data.error === 'string'
-                ? data.error
-                : 'Could not summarise.';
-          setSummaryErr(msg);
-          return;
-        }
-        if (typeof data.summary === 'string' && data.summary.trim()) {
-          setSummary(data.summary.trim());
-        } else {
-          setSummaryErr('No summary returned.');
-        }
-        if (typeof data.note === 'string' && data.note.trim()) {
-          setSummaryNote(data.note.trim());
-        }
-      } catch {
-        if (!cancelled) setSummaryErr('Network error.');
-      } finally {
-        if (!cancelled) setSummaryBusy(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [detailQuery.data, siteUrl, session?.access_token]);
 
   const cardBg = scheme === 'dark' ? tokens.surface : '#ffffff';
 
@@ -352,21 +287,7 @@ export default function ResourceDetailScreen() {
           {row.file_name} · {formatBytes(row.byte_size)} · {new Date(row.updated_at).toLocaleString()}
         </Text>
 
-        <Card style={{ marginTop: 20, backgroundColor: cardBg, borderColor: tokens.border }}>
-          <Text style={[styles.aiKicker, { color: tokens.textMuted }]}>AI SUMMARY</Text>
-          {summaryBusy ? (
-            <Text style={{ color: tokens.textSecondary, marginTop: 8 }}>Generating summary…</Text>
-          ) : summaryErr ? (
-            <Text style={{ color: tokens.warning, marginTop: 8 }}>{summaryErr}</Text>
-          ) : summary ? (
-            <Text style={{ color: tokens.textPrimary, marginTop: 8, lineHeight: 22 }}>{summary}</Text>
-          ) : (
-            <Text style={{ color: tokens.textSecondary, marginTop: 8 }}>No summary.</Text>
-          )}
-          {summaryNote ? (
-            <Text style={{ color: tokens.textMuted, marginTop: 8, fontSize: 12 }}>{summaryNote}</Text>
-          ) : null}
-        </Card>
+        {row.id ? <ResourceDocumentAssistant resourceId={row.id} /> : null}
       </ScrollView>
     </TabSafeScreen>
   );
@@ -383,5 +304,4 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
   },
-  aiKicker: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
 });

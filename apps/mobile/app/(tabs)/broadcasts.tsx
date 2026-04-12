@@ -26,10 +26,6 @@ import { type DeptRow, departmentsForBroadcast } from '@/lib/broadcastDeptScope'
 import { openBroadcastDetail } from '@/lib/broadcastCoverPrefetch';
 import { type MobileBroadcastRow, fetchMobileBroadcastFeedPage, searchMobileBroadcasts } from '@/lib/broadcastFeedQuery';
 import { useAuth } from '@/lib/AuthContext';
-import {
-  searchMobileStaffResources,
-  type MobileStaffResourceRow,
-} from '@/lib/staffResourceQuery';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const FILTER_KEY_PILL = 'campsite_broadcast_feed_pill_mobile';
@@ -149,30 +145,6 @@ export default function BroadcastsScreen() {
     },
   });
 
-  const resourceSearchQuery = useQuery({
-    queryKey: ['mobile-resource-search', orgId, qTrim],
-    enabled: configured && isSupabaseConfigured() && !!orgId && !!userId && searchActive,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const supabase = getSupabase();
-      return searchMobileStaffResources(supabase, qTrim, 50);
-    },
-  });
-
-  type SearchCombinedItem =
-    | { kind: 'resource'; resource: MobileStaffResourceRow }
-    | { kind: 'broadcast'; row: MobileBroadcastRow };
-
-  const searchCombined = useMemo((): SearchCombinedItem[] => {
-    if (!searchActive) return [];
-    const res = resourceSearchQuery.data ?? [];
-    const br = searchQueryResult.data ?? [];
-    return [
-      ...res.map((resource) => ({ kind: 'resource' as const, resource })),
-      ...br.map((row) => ({ kind: 'broadcast' as const, row })),
-    ];
-  }, [searchActive, resourceSearchQuery.data, searchQueryResult.data]);
-
   const baseRows = useMemo((): MobileBroadcastRow[] => {
     if (searchActive) return searchQueryResult.data ?? [];
     return infiniteFeed.data?.pages.flatMap((p) => p.rows) ?? [];
@@ -183,21 +155,13 @@ export default function BroadcastsScreen() {
     return baseRows.filter((r) => !r.read);
   }, [baseRows, feedPill]);
 
-  const loading = searchActive
-    ? searchQueryResult.isLoading || resourceSearchQuery.isLoading
-    : infiniteFeed.isLoading;
-  const fetching = searchActive
-    ? searchQueryResult.isFetching || resourceSearchQuery.isFetching
-    : infiniteFeed.isFetching;
-  const refetching = searchActive
-    ? searchQueryResult.isRefetching || resourceSearchQuery.isRefetching
-    : infiniteFeed.isRefetching;
-  const listError = searchActive
-    ? searchQueryResult.error ?? resourceSearchQuery.error
-    : infiniteFeed.error;
+  const loading = searchActive ? searchQueryResult.isLoading : infiniteFeed.isLoading;
+  const fetching = searchActive ? searchQueryResult.isFetching : infiniteFeed.isFetching;
+  const refetching = searchActive ? searchQueryResult.isRefetching : infiniteFeed.isRefetching;
+  const listError = searchActive ? searchQueryResult.error : infiniteFeed.error;
 
   const trulyEmpty = searchActive
-    ? !loading && searchCombined.length === 0
+    ? !loading && (searchQueryResult.data ?? []).length === 0
     : !loading && baseRows.length === 0;
   const filteredOutByUnread =
     feedPill === 'unread' && !loading && baseRows.length > 0 && displayRows.length === 0;
@@ -256,7 +220,7 @@ export default function BroadcastsScreen() {
             <Input
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search resources or broadcasts…"
+              placeholder="Search broadcasts…"
               style={styles.searchInput}
             />
             <View style={styles.toolbarRow}>
@@ -303,7 +267,7 @@ export default function BroadcastsScreen() {
           ) : null}
         </View>
 
-        {loading && !(searchActive ? searchCombined.length : baseRows.length) ? (
+        {loading && !(searchActive ? (searchQueryResult.data ?? []).length : baseRows.length) ? (
           <ActivityIndicator style={{ marginTop: 24 }} color={tokens.textPrimary} />
         ) : listError ? (
           <Card style={styles.card}>
@@ -331,58 +295,19 @@ export default function BroadcastsScreen() {
           <View style={styles.listSlot}>
             {searchActive ? (
               <FlatList
-                data={searchCombined}
-                keyExtractor={(item) =>
-                  item.kind === 'resource' ? `r-${item.resource.id}` : `b-${item.row.id}`
-                }
+                data={searchQueryResult.data ?? []}
+                keyExtractor={(row) => row.id}
                 style={styles.list}
                 removeClippedSubviews={Platform.OS !== 'android'}
                 refreshControl={
                   <RefreshControl
                     refreshing={refetching}
-                    onRefresh={() =>
-                      void Promise.all([searchQueryResult.refetch(), resourceSearchQuery.refetch()])
-                    }
+                    onRefresh={() => void searchQueryResult.refetch()}
                     tintColor={tokens.textPrimary}
                     colors={[tokens.textPrimary]}
                   />
                 }
-                renderItem={({ item }) => {
-                  if (item.kind === 'resource') {
-                    const r = item.resource;
-                    return (
-                      <Pressable
-                        onPress={() => router.push(`/resources/${r.id}`)}
-                        style={({ pressed }) => [
-                          styles.itemOuter,
-                          { opacity: pressed ? 0.92 : 1 },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.item,
-                            {
-                              borderColor: tokens.border,
-                              backgroundColor: cardBg,
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.itemTitle, { color: tokens.textPrimary }]} numberOfLines={2}>
-                            {r.title}
-                          </Text>
-                          <Text style={[styles.metaLine, { color: tokens.textMuted, marginTop: 4 }]} numberOfLines={1}>
-                            Resource · {r.file_name}
-                          </Text>
-                          {r.description ? (
-                            <Text style={[styles.preview, { color: tokens.textSecondary, marginTop: 6 }]} numberOfLines={2}>
-                              {r.description}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </Pressable>
-                    );
-                  }
-                  const row = item.row;
+                renderItem={({ item: row }) => {
                   const unread = row.read === false;
                   return (
                     <Pressable

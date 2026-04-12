@@ -174,3 +174,150 @@ No machine-readable body was provided for this file type (${name}). Summarize on
 
   return { summary: text };
 }
+
+export type StaffResourceChatTurn = { role: 'user' | 'assistant'; content: string };
+
+const CHAT_PREAMBLE = (title: string, description: string) => {
+  const t = title.trim() || 'Untitled';
+  const d = description.trim();
+  return `You help staff find information in an internal organisation document (handbooks, policies, reference files).
+Answer using only the attached document content when it is provided below. If the answer is not in the document, say you cannot find it in this file and suggest what to look for. Be concise and clear. You may use short bullet points.
+
+Document title: ${t}
+${d ? `Description: ${d}\n` : ''}`;
+};
+
+/** Stateless chat: caller sends full history; first user turn includes the document (PDF inline or text body). */
+export async function chatStaffResourceWithGemini(opts: {
+  apiKey: string;
+  model?: string;
+  title: string;
+  description: string;
+  mode: 'pdf' | 'text' | 'metadata';
+  textBody?: string;
+  pdfBase64?: string;
+  fileName?: string;
+  messages: StaffResourceChatTurn[];
+}): Promise<{ reply: string } | { error: string }> {
+  const model = (opts.model ?? DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+  const preamble = CHAT_PREAMBLE(opts.title, opts.description);
+  const msgs = opts.messages;
+  if (msgs.length < 1 || msgs[msgs.length - 1]?.role !== 'user') {
+    return { error: 'Invalid conversation: last message must be from the user.' };
+  }
+
+  type Part = { text: string } | { inline_data: { mime_type: string; data: string } };
+  const contents: { role: 'user' | 'model'; parts: Part[] }[] = [];
+  let firstUserPlaced = false;
+
+  for (const m of msgs) {
+    if (m.role === 'user') {
+      if (!firstUserPlaced) {
+        firstUserPlaced = true;
+        const q = m.content.trim();
+        if (opts.mode === 'pdf' && opts.pdfBase64) {
+          contents.push({
+            role: 'user',
+            parts: [
+              {
+                text: `${preamble}
+
+Use the attached PDF as the only source of facts.
+
+Question:
+${q}`,
+              },
+              { inline_data: { mime_type: 'application/pdf', data: opts.pdfBase64 } },
+            ],
+          });
+        } else if (opts.mode === 'text' && opts.textBody != null) {
+          let body = opts.textBody;
+          if (body.length > MAX_INPUT_CHARS) {
+            body = `${body.slice(0, MAX_INPUT_CHARS)}\n\n[truncated]`;
+          }
+          const plain = stripForPrompt(body);
+          contents.push({
+            role: 'user',
+            parts: [
+              {
+                text: `${preamble}
+
+--- Document ---
+${plain}
+--- End ---
+
+Question:
+${q}`,
+              },
+            ],
+          });
+        } else {
+          const name = (opts.fileName ?? 'file').trim() || 'file';
+          contents.push({
+            role: 'user',
+            parts: [
+              {
+                text: `${preamble}
+
+Only the title and description are available for this file type (${name}). Answer from that context only, and say the full document must be opened for complete details.
+
+Question:
+${q}`,
+              },
+            ],
+          });
+        }
+      } else {
+        contents.push({
+          role: 'user',
+          parts: [{ text: m.content.trim() }],
+        });
+      }
+    } else {
+      contents.push({
+        role: 'model',
+        parts: [{ text: m.content.trim() }],
+      });
+    }
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(opts.apiKey)}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 1024,
+        },
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Request failed';
+    return { error: msg };
+  }
+
+  let json: GenerateResponse;
+  try {
+    json = (await res.json()) as GenerateResponse;
+  } catch {
+    return { error: 'Invalid response from AI service' };
+  }
+
+  if (!res.ok) {
+    const msg = json.error?.message ?? res.statusText ?? 'AI request failed';
+    return { error: msg };
+  }
+
+  const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('')?.trim();
+  if (!text) {
+    return { error: 'No reply returned; try a shorter question.' };
+  }
+
+  return { reply: text };
+}

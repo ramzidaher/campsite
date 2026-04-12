@@ -8,7 +8,7 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 export default async function ResourcesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ folder?: string }>;
+  searchParams: Promise<{ folder?: string; q?: string }>;
 }) {
   const supabase = await createClient();
   const user = await getAuthUser();
@@ -28,12 +28,14 @@ export default async function ResourcesPage({
 
   const sp = await searchParams;
   const folderFilter = parseResourcesFolderParam(sp.folder);
+  const initialSearch = typeof sp.q === 'string' ? sp.q : '';
 
   return (
     <ResourcesListClient
       orgId={profile.org_id as string}
       canManage={canManage}
       folderFilter={folderFilter}
+      initialSearch={initialSearch}
     />
   );
 }

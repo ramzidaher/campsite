@@ -6,6 +6,7 @@ import {
   TEXT_PREVIEW_MAX_BYTES,
   type ResourcePreviewKind,
 } from '@/lib/resourcePreview';
+import { ResourceDocumentAssistant } from '@/components/resources/ResourceDocumentAssistant';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -36,11 +37,6 @@ export function ResourceDetailClient({
   const [textBody, setTextBody] = useState<string | null>(null);
   const [textErr, setTextErr] = useState<string | null>(null);
   const [textBusy, setTextBusy] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [summaryNote, setSummaryNote] = useState<string | null>(null);
-  const [summaryErr, setSummaryErr] = useState<string | null>(null);
-  const [summaryBusy, setSummaryBusy] = useState(true);
-
   const previewKind: ResourcePreviewKind = getResourcePreviewKind(initial.mime_type, initial.file_name);
 
   useEffect(() => {
@@ -110,56 +106,6 @@ export function ResourceDetailClient({
       cancelled = true;
     };
   }, [previewKind, previewUrl, initial.byte_size]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setSummaryBusy(true);
-      setSummaryErr(null);
-      setSummary(null);
-      setSummaryNote(null);
-      try {
-        const res = await fetch('/api/resources/summarize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ resourceId: initial.id }),
-        });
-        let data: { summary?: string; note?: string; error?: string; message?: string } = {};
-        try {
-          data = (await res.json()) as typeof data;
-        } catch {
-          /* ignore */
-        }
-        if (cancelled) return;
-        if (!res.ok) {
-          const msg =
-            data.error === 'not_configured' && typeof data.message === 'string'
-              ? data.message
-              : typeof data.error === 'string'
-                ? data.error
-                : 'Could not generate summary.';
-          setSummaryErr(msg);
-          return;
-        }
-        if (typeof data.summary === 'string' && data.summary.trim()) {
-          setSummary(data.summary.trim());
-        } else {
-          setSummaryErr('No summary returned.');
-        }
-        if (typeof data.note === 'string' && data.note.trim()) {
-          setSummaryNote(data.note.trim());
-        }
-      } catch {
-        if (!cancelled) setSummaryErr('Network error.');
-      } finally {
-        if (!cancelled) setSummaryBusy(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [initial.id]);
 
   return (
     <div className="mx-auto max-w-3xl px-7 py-8">
@@ -264,19 +210,7 @@ export function ResourceDetailClient({
         </p>
       ) : null}
 
-      <div className="mt-8 rounded-xl border border-[#d8d8d8] bg-[#f5f4f1] p-4">
-        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">AI summary</h2>
-        {summaryBusy ? (
-          <p className="mt-2 text-[13px] text-[#6b6b6b]">Generating summary…</p>
-        ) : summaryErr ? (
-          <p className="mt-2 text-[13px] text-red-800">{summaryErr}</p>
-        ) : summary ? (
-          <div className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#121212]">{summary}</div>
-        ) : (
-          <p className="mt-2 text-[13px] text-[#6b6b6b]">No summary available.</p>
-        )}
-        {summaryNote ? <p className="mt-2 text-[12px] text-[#6b6b6b]">{summaryNote}</p> : null}
-      </div>
+      <ResourceDocumentAssistant resourceId={initial.id} />
     </div>
   );
 }
