@@ -42,8 +42,12 @@ export async function middleware(request: NextRequest) {
       },
     });
 
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
+    // Use session from cookies for routing only — avoids a full Auth HTTP round trip per
+    // request (getUser hits Supabase Auth). Server Components still call getUser() / RLS.
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    user = session?.user ?? null;
   }
 
   const pathname = request.nextUrl.pathname;

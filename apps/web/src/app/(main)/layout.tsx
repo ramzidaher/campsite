@@ -18,6 +18,29 @@ import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 
 export const dynamic = 'force-dynamic';
 
+function parseTopBarCountsBundle(raw: unknown): {
+  unreadBroadcasts: number;
+  recruitmentUnreadNotifications: number;
+  applicationUnreadNotifications: number;
+  leaveUnreadNotifications: number;
+  hrMetricUnreadNotifications: number;
+} {
+  const d = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const n = (k: string) => {
+    const v = d[k];
+    if (typeof v === 'number' && !Number.isNaN(v)) return Math.max(0, v);
+    if (v !== null && v !== undefined) return Math.max(0, Number(v));
+    return 0;
+  };
+  return {
+    unreadBroadcasts: n('broadcast_unread'),
+    recruitmentUnreadNotifications: n('recruitment_notifications'),
+    applicationUnreadNotifications: n('application_notifications'),
+    leaveUnreadNotifications: n('leave_notifications'),
+    hrMetricUnreadNotifications: n('hr_metric_notifications'),
+  };
+}
+
 function roleLabel(role: string): string {
   const m: Record<string, string> = {
     org_admin: 'Org admin',
@@ -73,14 +96,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Load profile without embedding `organisations`: nested selects can fail or behave inconsistently
     // under RLS/postgrest while a plain profile row is readable — that left hasTenantProfile false,
     // hid permissions/nav, and showed "Finish registration" despite a valid tenant profile.
-    const [profileRes, unreadRes] = await Promise.all([
+    const [profileRes, topBarBundleRes] = await Promise.all([
       supabase
         .from('profiles')
         .select('role, org_id, full_name, avatar_url, status')
         .eq('id', user.id)
         .maybeSingle(),
-      supabase.rpc('broadcast_unread_count'),
+      supabase.rpc('main_shell_top_bar_counts_bundle'),
     ]);
+
+    const topBarParsed = parseTopBarCountsBundle(topBarBundleRes.data);
+    unreadBroadcasts = topBarParsed.unreadBroadcasts;
+    recruitmentUnreadNotifications = topBarParsed.recruitmentUnreadNotifications;
+    applicationUnreadNotifications = topBarParsed.applicationUnreadNotifications;
+    leaveUnreadNotifications = topBarParsed.leaveUnreadNotifications;
+    hrMetricUnreadNotifications = topBarParsed.hrMetricUnreadNotifications;
 
     const profile = profileRes.data;
     hasTenantProfile = Boolean(profile);
@@ -97,23 +127,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const needsPendingBadge = Boolean(orgId);
     const needsBroadcastPendingBadge = Boolean(orgId);
 
-    if (orgId) {
-      const { data: orgRow } = await supabase
-        .from('organisations')
-        .select('name, logo_url')
-        .eq('id', orgId)
-        .maybeSingle();
-      if (orgRow?.name) orgName = orgRow.name as string;
-      orgLogoUrl = (orgRow?.logo_url as string | null) ?? null;
-    }
-
-    const uc = unreadRes.data;
-    if (typeof uc === 'number') unreadBroadcasts = uc;
-    else if (uc !== null && uc !== undefined) unreadBroadcasts = Number(uc);
-
-    // Round 3: fetch dept, pending counts, broadcast pending, AND permissions — all in parallel.
+    // Round 3: org row + dept, pending counts, broadcast pending, AND permissions — all in parallel.
     // get_my_permissions was previously sequential after this batch; moving it here saves one round trip.
-    const [udRes, pendingRes, broadcastPendingCount, permsRes] = await Promise.all([
+    const [orgRowRes, udRes, pendingRes, broadcastPendingCount, permsRes] = await Promise.all([
+      orgId
+        ? supabase.from('organisations').select('name, logo_url').eq('id', orgId).maybeSingle()
+        : Promise.resolve({ data: null }),
       orgId
         ? supabase
             .from('user_departments')
@@ -134,6 +153,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         : Promise.resolve(0),
       orgId ? getMyPermissions(orgId) : Promise.resolve([] as PermissionKey[]),
     ]);
+
+    const orgRow = orgRowRes.data as { name?: string; logo_url?: string | null } | null;
+    if (orgRow?.name) orgName = orgRow.name as string;
+    orgLogoUrl = (orgRow?.logo_url as string | null) ?? null;
 
     if (orgId) {
       const ud = udRes.data as { departments?: unknown } | null;
@@ -190,10 +213,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       rotaFinalRes,
       rotaPeerRes,
       recruitmentCountRes,
-      recruitmentNotifRes,
-      applicationNotifRes,
-      leaveNotifRes,
-      hrMetricNotifRes,
     ] = await Promise.all([
       needsLeaveApprovalBadge
         ? supabase.rpc('leave_pending_approval_count_for_me')
@@ -230,10 +249,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       needsRecruitmentBadge
         ? supabase.rpc('recruitment_requests_pending_review_count')
         : Promise.resolve({ data: null as number | null }),
-      supabase.rpc('recruitment_notifications_unread_count'),
-      supabase.rpc('application_notifications_unread_count'),
-      supabase.rpc('leave_notifications_unread_count'),
-      supabase.rpc('hr_metric_notifications_unread_count'),
     ]);
 
     const lc = leavePendingRes.data;
@@ -253,22 +268,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (typeof rc === 'number') recruitmentPendingReviewCount = rc;
     else if (rc !== null && rc !== undefined) recruitmentPendingReviewCount = Number(rc);
     recruitmentPendingReviewCount = Math.max(0, recruitmentPendingReviewCount);
-
-    const rn = recruitmentNotifRes.data;
-    if (typeof rn === 'number') recruitmentUnreadNotifications = Math.max(0, rn);
-    else if (rn !== null && rn !== undefined) recruitmentUnreadNotifications = Math.max(0, Number(rn));
-
-    const an = applicationNotifRes.data;
-    if (typeof an === 'number') applicationUnreadNotifications = Math.max(0, an);
-    else if (an !== null && an !== undefined) applicationUnreadNotifications = Math.max(0, Number(an));
-
-    const ln = leaveNotifRes.data;
-    if (typeof ln === 'number') leaveUnreadNotifications = Math.max(0, ln);
-    else if (ln !== null && ln !== undefined) leaveUnreadNotifications = Math.max(0, Number(ln));
-
-    const hm = hrMetricNotifRes.data;
-    if (typeof hm === 'number') hrMetricUnreadNotifications = Math.max(0, hm);
-    else if (hm !== null && hm !== undefined) hrMetricUnreadNotifications = Math.max(0, Number(hm));
   }
 
   const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
