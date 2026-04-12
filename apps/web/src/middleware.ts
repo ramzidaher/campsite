@@ -133,7 +133,8 @@ export async function middleware(request: NextRequest) {
     const candidateAllowed =
       pathname.startsWith('/jobs') ||
       pathname.startsWith('/auth/') ||
-      pathname === '/';
+      pathname === '/' ||
+      isPublicPath(pathname);
     if (!candidateAllowed) {
       const dest = request.nextUrl.clone();
       dest.pathname = '/jobs/me';
