@@ -123,7 +123,7 @@ export function FounderLegalPoliciesPanel({
               Editor
             </div>
             <div
-              className="rounded-lg border border-[var(--border)] bg-[#fafaf9] p-3"
+              className="campsite-paper rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-3"
               style={{ minHeight: 320 }}
             >
               <BroadcastBodyEditor
@@ -139,7 +139,7 @@ export function FounderLegalPoliciesPanel({
               Preview (member view)
             </div>
             <div
-              className="rounded-lg border border-[var(--border)] bg-white p-4"
+              className="campsite-paper rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-4"
               style={{ minHeight: 320, maxHeight: 480, overflow: 'auto' }}
             >
               <LegalMarkdownArticle markdown={currentMarkdown} />

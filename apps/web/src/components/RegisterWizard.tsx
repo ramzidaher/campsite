@@ -549,23 +549,32 @@ export function RegisterWizard({
             <input
               id="reg-legal-consent"
               type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d4d4d4] text-[#121212] focus:ring-[#121212]"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--campsite-border)] text-[var(--campsite-accent)] focus:ring-[var(--campsite-accent)]"
               checked={legalConsent}
               onChange={(e) => setLegalConsent(e.target.checked)}
             />
-            <label htmlFor="reg-legal-consent" className="text-[12.5px] leading-snug text-[#525252]">
+            <label
+              htmlFor="reg-legal-consent"
+              className="text-[12.5px] leading-snug text-[var(--campsite-text-secondary)]"
+            >
               I agree to the{' '}
-              <Link href="/terms" className="font-medium text-[#121212] underline underline-offset-2">
+              <Link
+                href="/terms"
+                className="font-medium text-[var(--campsite-text)] underline underline-offset-2"
+              >
                 Terms of service
               </Link>
               ,{' '}
-              <Link href="/privacy" className="font-medium text-[#121212] underline underline-offset-2">
+              <Link
+                href="/privacy"
+                className="font-medium text-[var(--campsite-text)] underline underline-offset-2"
+              >
                 Privacy policy
               </Link>
               , and{' '}
               <Link
                 href="/legal/data-processing"
-                className="font-medium text-[#121212] underline underline-offset-2"
+                className="font-medium text-[var(--campsite-text)] underline underline-offset-2"
               >
                 Data processing information
               </Link>{' '}
