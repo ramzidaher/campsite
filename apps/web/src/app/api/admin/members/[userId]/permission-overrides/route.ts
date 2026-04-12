@@ -117,6 +117,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
     }
   }
 
+  // Tenant member overrides must never surface platform founder-only catalog keys.
+  const founderOnlyKeys = new Set(
+    picker.items.filter((i) => i.is_founder_only).map((i) => i.key),
+  );
+  picker = {
+    schema_version: picker.schema_version,
+    items: picker.items.filter((i) => !i.is_founder_only),
+  };
+
   let baseRole:
     | {
         key: string;
@@ -139,7 +148,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
   }
 
   return NextResponse.json({
-    overrides: overrides ?? [],
+    overrides: (overrides ?? []).filter((o) => !founderOnlyKeys.has(o.permission_key)),
     permission_picker: { schema_version: picker.schema_version, items: picker.items },
     base_role: baseRole,
     base_role_permission_keys: baseRolePermissionKeys,
@@ -158,6 +167,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
   const g = await gateOverrides(supabase, user.id, me.org_id, userId);
   if (!g.ok) return g.response;
 
+  const { data: founderRows, error: founderErr } = await supabase
+    .from('permission_catalog')
+    .select('key')
+    .eq('is_founder_only', true);
+  if (founderErr) return NextResponse.json({ error: founderErr.message }, { status: 400 });
+  const founderOnlyKeys = new Set((founderRows ?? []).map((r) => r.key));
+
   const body = (await req.json().catch(() => null)) as
     | {
         op?: string;
@@ -171,6 +187,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
 
   if (body.op === 'upsert') {
     if (!body.mode || !body.permission_key) return NextResponse.json({ error: 'mode and permission_key required' }, { status: 400 });
+    if (founderOnlyKeys.has(body.permission_key)) {
+      return NextResponse.json(
+        { error: 'Founder-only permissions cannot be set via member overrides.' },
+        { status: 400 },
+      );
+    }
     const { error } = await supabase.rpc('user_permission_override_upsert', {
       p_org_id: me.org_id,
       p_target_user_id: userId,
@@ -187,6 +209,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
     }
     const keys = [...new Set(body.permission_keys.map((k) => String(k).trim()).filter(Boolean))];
     if (keys.length === 0) return NextResponse.json({ error: 'permission_keys required' }, { status: 400 });
+    const blocked = keys.filter((k) => founderOnlyKeys.has(k));
+    if (blocked.length > 0) {
+      return NextResponse.json(
+        { error: 'Founder-only permissions cannot be set via member overrides.', blocked_keys: blocked },
+        { status: 400 },
+      );
+    }
     for (const permission_key of keys) {
       const { error } = await supabase.rpc('user_permission_override_upsert', {
         p_org_id: me.org_id,
