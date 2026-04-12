@@ -1,12 +1,19 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BroadcastBodyEditor } from '@/components/broadcasts/BroadcastBodyEditor';
 import { LegalMarkdownArticle } from '@/components/legal/LegalMarkdownArticle';
 import { upsertPlatformLegalSettings } from '@/app/(founders)/founders/platform-actions';
+import { extractMarkdownHeadings, type MarkdownHeading } from '@/lib/legal/markdownHeadings';
 import type { PlatformLegalSettings } from '@/lib/legal/types';
 
 type DocTab = 'terms' | 'privacy' | 'data_processing';
+
+const DOC_LIST: { id: DocTab; label: string }[] = [
+  { id: 'terms', label: 'Terms of service' },
+  { id: 'privacy', label: 'Privacy policy' },
+  { id: 'data_processing', label: 'Data processing' },
+];
 
 export function FounderLegalPoliciesPanel({
   initial,
@@ -23,6 +30,8 @@ export function FounderLegalPoliciesPanel({
   const [tab, setTab] = useState<DocTab>('terms');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [tocQuery, setTocQuery] = useState('');
+  const pendingHeadingScroll = useRef<string | null>(null);
 
   const currentMarkdown = tab === 'terms' ? termsMd : tab === 'privacy' ? privacyMd : dataMd;
   const setCurrentMarkdown = useCallback(
@@ -33,6 +42,56 @@ export function FounderLegalPoliciesPanel({
     },
     [tab]
   );
+
+  const q = tocQuery.trim().toLowerCase();
+
+  const tocByDoc = useMemo(() => {
+    const map: Record<DocTab, MarkdownHeading[]> = {
+      terms: extractMarkdownHeadings(termsMd),
+      privacy: extractMarkdownHeadings(privacyMd),
+      data_processing: extractMarkdownHeadings(dataMd),
+    };
+    return map;
+  }, [termsMd, privacyMd, dataMd]);
+
+  const visibleDocs = useMemo(() => {
+    if (!q) return DOC_LIST;
+    return DOC_LIST.filter(({ id, label }) => {
+      if (id === tab) return true;
+      if (label.toLowerCase().includes(q)) return true;
+      return tocByDoc[id].some((h) => h.text.toLowerCase().includes(q));
+    });
+  }, [q, tocByDoc, tab]);
+
+  const filterHeading = useCallback(
+    (h: MarkdownHeading) => {
+      if (!q) return true;
+      return h.text.toLowerCase().includes(q);
+    },
+    [q]
+  );
+
+  const scrollToHeading = useCallback(
+    (headingId: string, doc: DocTab) => {
+      if (tab !== doc) {
+        pendingHeadingScroll.current = headingId;
+        setTab(doc);
+        return;
+      }
+      document.getElementById(headingId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    [tab]
+  );
+
+  useEffect(() => {
+    const id = pendingHeadingScroll.current;
+    if (!id) return;
+    pendingHeadingScroll.current = null;
+    const t = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [tab, currentMarkdown]);
 
   async function handleSave() {
     setMessage(null);
@@ -68,99 +127,237 @@ export function FounderLegalPoliciesPanel({
         Edit Terms, Privacy, and Data processing in Markdown (same format as broadcasts). Saving updates live public pages.
       </div>
 
-      <div className="card card-pad" style={{ marginBottom: 16 }}>
-        <div className="section-title" style={{ marginBottom: 14 }}>
-          Version
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div className="field">
-            <label htmlFor="legal-bundle">Bundle version</label>
-            <input
-              id="legal-bundle"
-              value={bundleVersion}
-              onChange={(e) => setBundleVersion(e.target.value)}
-              placeholder="e.g. 2026-06-01"
-            />
+      <div
+        style={{
+          display: 'flex',
+          gap: 0,
+          alignItems: 'flex-start',
+          marginBottom: 16,
+        }}
+      >
+        {/* Left: TOC + search (release-notes style) */}
+        <aside
+          className="legal-policies-toc"
+          style={{
+            width: 280,
+            flexShrink: 0,
+            marginRight: 20,
+            padding: '14px 12px',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 10,
+            maxHeight: 'calc(100vh - 160px)',
+            position: 'sticky',
+            top: 12,
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--text3)',
+              marginBottom: 10,
+            }}
+          >
+            Table of contents
           </div>
-          <div className="field">
-            <label htmlFor="legal-effective">Effective date (label)</label>
-            <input
-              id="legal-effective"
-              value={effectiveLabel}
-              onChange={(e) => setEffectiveLabel(e.target.value)}
-              placeholder="e.g. 1 June 2026"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="card card-pad">
-        <div className="section-title" style={{ marginBottom: 12 }}>
-          Documents
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-          {(
-            [
-              ['terms', 'Terms of service'],
-              ['privacy', 'Privacy policy'],
-              ['data_processing', 'Data processing'],
-            ] as const
-          ).map(([k, label]) => (
-            <button
-              key={k}
-              type="button"
-              className={`filter-pill${tab === k ? ' active' : ''}`}
-              onClick={() => setTab(k)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 11.5, color: 'var(--text3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Editor
-            </div>
-            <div
-              className="campsite-paper rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-3"
-              style={{ minHeight: 320 }}
-            >
-              <BroadcastBodyEditor
-                key={tab}
-                markdown={currentMarkdown}
-                onMarkdownChange={setCurrentMarkdown}
-                placeholder="Write Markdown…"
-              />
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11.5, color: 'var(--text3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Preview (member view)
-            </div>
-            <div
-              className="campsite-paper rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-4"
-              style={{ minHeight: 320, maxHeight: 480, overflow: 'auto' }}
-            >
-              <LegalMarkdownArticle markdown={currentMarkdown} />
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void handleSave()}>
-            {busy ? 'Saving…' : 'Save & publish'}
-          </button>
-          {message ? (
-            <span
-              style={{
-                fontSize: 13,
-                color: message.startsWith('Error:') ? 'var(--red)' : 'var(--green)',
-              }}
-            >
-              {message}
+          <div className="search-bar" style={{ marginBottom: 14 }}>
+            <span style={{ color: 'var(--text3)', fontSize: 12 }} aria-hidden>
+              🔍
             </span>
-          ) : null}
+            <input
+              type="search"
+              placeholder="Search"
+              value={tocQuery}
+              onChange={(e) => setTocQuery(e.target.value)}
+              aria-label="Filter table of contents"
+            />
+          </div>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {visibleDocs.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--text3)', padding: '8px 0' }}>No sections match.</div>
+            ) : (
+              visibleDocs.map(({ id, label }) => {
+                const headings = tocByDoc[id].filter(filterHeading);
+                const isActive = tab === id;
+                return (
+                  <div key={id}>
+                    <button
+                      type="button"
+                      onClick={() => setTab(id)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 10px',
+                        borderRadius: 8,
+                        border: 'none',
+                        background: isActive ? 'var(--surface3)' : 'transparent',
+                        color: 'var(--text)',
+                        fontSize: 13,
+                        fontWeight: isActive ? 600 : 500,
+                        cursor: 'pointer',
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {label}
+                    </button>
+                    {isActive && headings.length > 0 ? (
+                      <div style={{ paddingLeft: 8, marginTop: 2, marginBottom: 8 }}>
+                        {headings.map((h) => (
+                          <button
+                            key={`${id}-${h.id}`}
+                            type="button"
+                            onClick={() => scrollToHeading(h.id, id)}
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '5px 8px 5px',
+                              paddingLeft: h.level === 3 ? 18 : 10,
+                              border: 'none',
+                              background: 'transparent',
+                              color: 'var(--text2)',
+                              fontSize: 12,
+                              cursor: 'pointer',
+                              lineHeight: 1.35,
+                              borderRadius: 6,
+                            }}
+                          >
+                            {h.text}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
+          </nav>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--text3)',
+              marginTop: 16,
+              marginBottom: 8,
+              paddingTop: 12,
+              borderTop: '1px solid var(--border)',
+            }}
+          >
+            Bundle
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.45 }}>
+            <span style={{ color: 'var(--text3)' }}>Version</span> {bundleVersion}
+            <br />
+            <span style={{ color: 'var(--text3)' }}>Effective</span> {effectiveLabel}
+          </div>
+        </aside>
+
+        {/* Main column */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="card card-pad" style={{ marginBottom: 16 }}>
+            <div className="section-title" style={{ marginBottom: 14 }}>
+              Version
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="field">
+                <label htmlFor="legal-bundle">Bundle version</label>
+                <input
+                  id="legal-bundle"
+                  value={bundleVersion}
+                  onChange={(e) => setBundleVersion(e.target.value)}
+                  placeholder="e.g. 2026-06-01"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="legal-effective">Effective date (label)</label>
+                <input
+                  id="legal-effective"
+                  value={effectiveLabel}
+                  onChange={(e) => setEffectiveLabel(e.target.value)}
+                  placeholder="e.g. 1 June 2026"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="card card-pad">
+            <div className="section-title" style={{ marginBottom: 12 }}>
+              Editor & preview
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
+              Document: <strong style={{ color: 'var(--text)' }}>{DOC_LIST.find((d) => d.id === tab)?.label}</strong>
+              {' · '}
+              Use the left sidebar to switch documents or jump to a section in the preview.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    color: 'var(--text3)',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                  }}
+                >
+                  Editor
+                </div>
+                <div
+                  className="campsite-paper rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-3"
+                  style={{ minHeight: 320 }}
+                >
+                  <BroadcastBodyEditor
+                    key={tab}
+                    markdown={currentMarkdown}
+                    onMarkdownChange={setCurrentMarkdown}
+                    placeholder="Write Markdown…"
+                  />
+                </div>
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    color: 'var(--text3)',
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                  }}
+                >
+                  Preview (member view)
+                </div>
+                <div
+                  className="campsite-paper rounded-lg border border-[var(--campsite-border)] bg-[var(--campsite-bg)] p-4"
+                  style={{ minHeight: 320, maxHeight: 480, overflow: 'auto' }}
+                >
+                  <LegalMarkdownArticle markdown={currentMarkdown} withHeadingAnchors />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void handleSave()}>
+                {busy ? 'Saving…' : 'Save & publish'}
+              </button>
+              {message ? (
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: message.startsWith('Error:') ? 'var(--red)' : 'var(--green)',
+                  }}
+                >
+                  {message}
+                </span>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     </div>
