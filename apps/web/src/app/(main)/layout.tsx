@@ -8,38 +8,13 @@ import {
   getMainShellManagerNavItemsByPermissions,
   getMainShellManagerNavSectionLabel,
 } from '@/lib/adminGates';
-import { countPendingBroadcastApprovalsForViewer } from '@/lib/broadcasts/countPendingBroadcastApprovalsForViewer';
 import { createClient } from '@/lib/supabase/server';
 import {
   type PermissionKey,
 } from '@campsite/types';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 
+// Force-dynamic is required: layout data is fully user-specific (permissions, badge counts).
 export const dynamic = 'force-dynamic';
-
-function parseTopBarCountsBundle(raw: unknown): {
-  unreadBroadcasts: number;
-  recruitmentUnreadNotifications: number;
-  applicationUnreadNotifications: number;
-  leaveUnreadNotifications: number;
-  hrMetricUnreadNotifications: number;
-} {
-  const d = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const n = (k: string) => {
-    const v = d[k];
-    if (typeof v === 'number' && !Number.isNaN(v)) return Math.max(0, v);
-    if (v !== null && v !== undefined) return Math.max(0, Number(v));
-    return 0;
-  };
-  return {
-    unreadBroadcasts: n('broadcast_unread'),
-    recruitmentUnreadNotifications: n('recruitment_notifications'),
-    applicationUnreadNotifications: n('application_notifications'),
-    leaveUnreadNotifications: n('leave_notifications'),
-    hrMetricUnreadNotifications: n('hr_metric_notifications'),
-  };
-}
 
 function roleLabel(role: string): string {
   const m: Record<string, string> = {
@@ -58,217 +33,82 @@ function roleLabel(role: string): string {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const user = await getAuthUser();
 
-  let profileRole: string | null = null;
-  let orgName = 'Organisation';
-  let orgLogoUrl: string | null = null;
-  let userName = 'Account';
-  let userAvatarUrl: string | null = null;
-  let userRoleLabel = '';
-  let hasTenantProfile = false;
-  let deptLine: string | null = null;
-  let unreadBroadcasts = 0;
-  let pendingApprovalCount = 0;
-  let pendingBroadcastApprovals = 0;
-  let rotaPendingFinalCount = 0;
-  let rotaPendingPeerCount = 0;
-  let recruitmentPendingReviewCount = 0;
-  let recruitmentUnreadNotifications = 0;
-  let applicationUnreadNotifications = 0;
-  let leaveUnreadNotifications = 0;
-  let hrMetricUnreadNotifications = 0;
-  let hasAdminAreaAccess = false;
-  let canApproveRecruitment = false;
-  let permissionKeys: PermissionKey[] = [];
-  let showLeaveNav = false;
-  let leaveNavBadge = 0;
-  let showPerformanceNav = false;
-  let performanceNavBadge = 0;
-  let showOnboardingNav = false;
-  let showOneOnOneNav = false;
-  let showMyHrRecordNav = false;
-  let showMemberSearch = false;
-  let currentOrgId: string | null = null;
-  if (user) {
-    const emailLocal = user.email?.split('@')[0]?.trim() ?? '';
+  // Single round trip to Supabase — replaces the previous 3 sequential Promise.all
+  // batches that each depended on the prior batch's results (profile → org/permissions
+  // → badge counts). On Vercel → Frankfurt Supabase (~150 ms/round trip) the old
+  // waterfall added 450 ms+ of pure network latency per page load.
+  const { data: bundle } = await supabase.rpc('main_shell_layout_bundle');
+  const b = (bundle && typeof bundle === 'object' ? bundle : {}) as Record<string, unknown>;
 
-    // Load profile without embedding `organisations`: nested selects can fail or behave inconsistently
-    // under RLS/postgrest while a plain profile row is readable — that left hasTenantProfile false,
-    // hid permissions/nav, and showed "Finish registration" despite a valid tenant profile.
-    const [profileRes, topBarBundleRes] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('role, org_id, full_name, avatar_url, status')
-        .eq('id', user.id)
-        .maybeSingle(),
-      supabase.rpc('main_shell_top_bar_counts_bundle'),
-    ]);
+  const num = (k: string): number => {
+    const v = b[k];
+    if (typeof v === 'number' && !Number.isNaN(v)) return Math.max(0, v);
+    if (v !== null && v !== undefined) return Math.max(0, Number(v));
+    return 0;
+  };
+  const str = (k: string): string | null =>
+    typeof b[k] === 'string' ? (b[k] as string) : null;
 
-    const topBarParsed = parseTopBarCountsBundle(topBarBundleRes.data);
-    unreadBroadcasts = topBarParsed.unreadBroadcasts;
-    recruitmentUnreadNotifications = topBarParsed.recruitmentUnreadNotifications;
-    applicationUnreadNotifications = topBarParsed.applicationUnreadNotifications;
-    leaveUnreadNotifications = topBarParsed.leaveUnreadNotifications;
-    hrMetricUnreadNotifications = topBarParsed.hrMetricUnreadNotifications;
+  const hasProfile     = Boolean(b['has_profile']);
+  const emailLocal     = str('email')?.split('@')[0]?.trim() ?? '';
+  const profileRole    = str('profile_role')?.trim() || null;
+  const currentOrgId   = str('org_id');
 
-    const profile = profileRes.data;
-    hasTenantProfile = Boolean(profile);
-    const rawRole = profile?.role as string | null | undefined;
-    profileRole = rawRole != null && String(rawRole).trim() !== '' ? String(rawRole).trim() : null;
-    userName = hasTenantProfile
-      ? (profile?.full_name as string)?.trim() || emailLocal || 'Account'
-      : emailLocal || 'Finish setup';
-    userAvatarUrl = (profile?.avatar_url as string | null) ?? null;
-    userRoleLabel = profileRole ? roleLabel(profileRole) : '';
+  const hasTenantProfile = hasProfile;
+  const orgName          = str('org_name') ?? 'Organisation';
+  const orgLogoUrl       = str('org_logo_url');
+  const userAvatarUrl    = str('profile_avatar_url');
+  const userRoleLabel    = profileRole ? roleLabel(profileRole) : '';
+  const deptLine         = str('dept_name');
 
-    const orgId = profile?.org_id as string | undefined;
-    currentOrgId = orgId ?? null;
-    const needsPendingBadge = Boolean(orgId);
-    const needsBroadcastPendingBadge = Boolean(orgId);
+  const userName = hasProfile
+    ? str('profile_full_name')?.trim() || emailLocal || 'Account'
+    : emailLocal || 'Finish setup';
 
-    // Round 3: org row + dept, pending counts, broadcast pending, AND permissions — all in parallel.
-    // get_my_permissions was previously sequential after this batch; moving it here saves one round trip.
-    const [orgRowRes, udRes, pendingRes, broadcastPendingCount, permsRes] = await Promise.all([
-      orgId
-        ? supabase.from('organisations').select('name, logo_url').eq('id', orgId).maybeSingle()
-        : Promise.resolve({ data: null }),
-      orgId
-        ? supabase
-            .from('user_departments')
-            .select('departments(name)')
-            .eq('user_id', user.id)
-            .limit(1)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      needsPendingBadge
-        ? supabase.rpc('pending_approvals_nav_count')
-        : Promise.resolve({ data: null as number | null }),
-      needsBroadcastPendingBadge && orgId && profileRole
-        ? countPendingBroadcastApprovalsForViewer(supabase, {
-            userId: user.id,
-            orgId,
-            role: profileRole,
-          })
-        : Promise.resolve(0),
-      orgId ? getMyPermissions(orgId) : Promise.resolve([] as PermissionKey[]),
-    ]);
+  // Badge counts
+  const unreadBroadcasts              = num('broadcast_unread');
+  const pendingApprovalCount          = num('pending_approvals');
+  const pendingBroadcastApprovals     = num('broadcast_pending_approvals');
+  const rotaPendingFinalCount         = num('rota_pending_final');
+  const rotaPendingPeerCount          = num('rota_pending_peer');
+  const recruitmentPendingReviewCount = num('recruitment_pending_review');
+  const recruitmentUnreadNotifications = num('recruitment_notifications');
+  const applicationUnreadNotifications = num('application_notifications');
+  const leaveUnreadNotifications       = num('leave_notifications');
+  const hrMetricUnreadNotifications    = num('hr_metric_notifications');
+  const leaveNavBadge                  = num('leave_pending_approval');
+  const performanceNavBadge            = num('performance_pending');
+  const showOnboardingNav              = num('onboarding_active') > 0;
 
-    const orgRow = orgRowRes.data as { name?: string; logo_url?: string | null } | null;
-    if (orgRow?.name) orgName = orgRow.name as string;
-    orgLogoUrl = (orgRow?.logo_url as string | null) ?? null;
+  // Permissions
+  const rawPerms = b['permission_keys'];
+  const permissionKeys: PermissionKey[] = Array.isArray(rawPerms)
+    ? (rawPerms.map(String) as PermissionKey[])
+    : [];
 
-    if (orgId) {
-      const ud = udRes.data as { departments?: unknown } | null;
-      const d = ud?.departments as { name: string } | { name: string }[] | null;
-      deptLine = Array.isArray(d) ? d[0]?.name ?? null : d?.name ?? null;
-    }
-
-    const pc = pendingRes.data;
-    if (typeof pc === 'number') pendingApprovalCount = pc;
-    else if (pc !== null && pc !== undefined) pendingApprovalCount = Number(pc);
-
-    if (typeof broadcastPendingCount === 'number') pendingBroadcastApprovals = broadcastPendingCount;
-
-    // permsRes is now PermissionKey[] directly from the cached helper
-    if (orgId) permissionKeys = permsRes;
-
-    showLeaveNav =
-      permissionKeys.includes('leave.view_own') ||
-      permissionKeys.includes('leave.approve_direct_reports') ||
-      permissionKeys.includes('leave.manage_org');
-    showMyHrRecordNav = permissionKeys.includes('hr.view_own');
-    showOneOnOneNav =
-      permissionKeys.includes('one_on_one.view_own') || permissionKeys.includes('hr.view_records');
-    showMemberSearch =
-      permissionKeys.includes('hr.view_records') || permissionKeys.includes('hr.view_direct_reports');
-    hasAdminAreaAccess = permissionKeys.some(
-      (k) =>
-        k.startsWith('members.') ||
-        k.startsWith('roles.') ||
-        k.startsWith('recruitment.') ||
-        k.startsWith('jobs.') ||
-        k.startsWith('applications.') ||
-        k.startsWith('offers.') ||
-        k.startsWith('interviews.')
-    );
-    canApproveRecruitment = permissionKeys.includes('recruitment.approve_request');
-
-    const needsLeaveApprovalBadge =
-      showLeaveNav &&
-      (permissionKeys.includes('leave.approve_direct_reports') ||
-        permissionKeys.includes('leave.manage_org'));
-    const hasPerformanceAccess = permissionKeys.includes('performance.review_direct_reports');
-    const canReviewPerformance = permissionKeys.includes('performance.review_direct_reports');
-    const hasOnboardingAccess = permissionKeys.includes('onboarding.complete_own_tasks');
-    const canApproveRota = permissionKeys.includes('rota.final_approve');
-    const needsRecruitmentBadge = Boolean(orgId && canApproveRecruitment);
-
-    // Round 4: run ALL remaining badge/nav queries in a single parallel batch.
-    // Previously these were spread across 5+ sequential awaits; now they fire together.
-    const [
-      leavePendingRes,
-      performancePendingRes,
-      onboardingRes,
-      rotaFinalRes,
-      rotaPeerRes,
-      recruitmentCountRes,
-    ] = await Promise.all([
-      needsLeaveApprovalBadge
-        ? supabase.rpc('leave_pending_approval_count_for_me')
-        : Promise.resolve({ data: null as number | null }),
-      canReviewPerformance && orgId
-        ? supabase
-            .from('performance_reviews')
-            .select('id', { count: 'exact', head: true })
-            .eq('reviewer_id', user.id)
-            .eq('status', 'self_submitted')
-        : Promise.resolve({ count: 0 as number | null }),
-      hasOnboardingAccess
-        ? supabase
-            .from('onboarding_runs')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('status', 'active')
-        : Promise.resolve({ count: 0 as number | null }),
-      canApproveRota
-        ? supabase
-            .from('rota_change_requests')
-            .select('id', { count: 'exact', head: true })
-            .eq('org_id', orgId ?? '')
-            .eq('status', 'pending_final')
-        : Promise.resolve({ count: 0 as number | null }),
-      orgId
-        ? supabase
-            .from('rota_change_requests')
-            .select('id', { count: 'exact', head: true })
-            .eq('org_id', orgId ?? '')
-            .eq('counterparty_user_id', user.id)
-            .eq('status', 'pending_peer')
-        : Promise.resolve({ count: 0 as number | null }),
-      needsRecruitmentBadge
-        ? supabase.rpc('recruitment_requests_pending_review_count')
-        : Promise.resolve({ data: null as number | null }),
-    ]);
-
-    const lc = leavePendingRes.data;
-    if (lc !== null && lc !== undefined) leaveNavBadge = Math.max(0, Number(lc));
-
-    if (hasPerformanceAccess) {
-      showPerformanceNav = true;
-      performanceNavBadge = Math.max(0, Number(performancePendingRes.count ?? 0));
-    }
-
-    if ((onboardingRes.count ?? 0) > 0) showOnboardingNav = true;
-
-    rotaPendingFinalCount = Math.max(0, Number(rotaFinalRes.count ?? 0));
-    rotaPendingPeerCount = Math.max(0, Number(rotaPeerRes.count ?? 0));
-
-    const rc = recruitmentCountRes.data;
-    if (typeof rc === 'number') recruitmentPendingReviewCount = rc;
-    else if (rc !== null && rc !== undefined) recruitmentPendingReviewCount = Number(rc);
-    recruitmentPendingReviewCount = Math.max(0, recruitmentPendingReviewCount);
-  }
+  // Nav visibility derived from permissions (no extra round trips)
+  const showLeaveNav =
+    permissionKeys.includes('leave.view_own') ||
+    permissionKeys.includes('leave.approve_direct_reports') ||
+    permissionKeys.includes('leave.manage_org');
+  const showMyHrRecordNav = permissionKeys.includes('hr.view_own');
+  const showOneOnOneNav =
+    permissionKeys.includes('one_on_one.view_own') || permissionKeys.includes('hr.view_records');
+  const showMemberSearch =
+    permissionKeys.includes('hr.view_records') || permissionKeys.includes('hr.view_direct_reports');
+  const hasAdminAreaAccess = permissionKeys.some(
+    (k) =>
+      k.startsWith('members.') ||
+      k.startsWith('roles.') ||
+      k.startsWith('recruitment.') ||
+      k.startsWith('jobs.') ||
+      k.startsWith('applications.') ||
+      k.startsWith('offers.') ||
+      k.startsWith('interviews.')
+  );
+  const canApproveRecruitment = permissionKeys.includes('recruitment.approve_request');
+  const showPerformanceNav    = permissionKeys.includes('performance.review_direct_reports');
 
   const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
     pendingApprovalCount,
@@ -276,7 +116,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
 
   const adminNavItemsRaw = getMainShellAdminNavItemsByPermissions(permissionKeys);
-  const hrNavItemsRaw = getMainShellHrNavItemsByPermissions(permissionKeys);
+  const hrNavItemsRaw    = getMainShellHrNavItemsByPermissions(permissionKeys);
+
   const mapHrBadges = <T extends { href: string }>(items: T[] | null) =>
     items?.map((item) => {
       if (item.href === '/admin/pending' && pendingApprovalCount > 0) {
@@ -287,8 +128,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }
       return item;
     }) ?? null;
+
   const adminNavItems = mapHrBadges(adminNavItemsRaw);
-  const hrNavItems = mapHrBadges(hrNavItemsRaw);
+  const hrNavItems    = mapHrBadges(hrNavItemsRaw);
 
   const showStandaloneApprovals =
     permissionKeys.includes('approvals.members.review') && !hasAdminAreaAccess && !managerNavItems;
