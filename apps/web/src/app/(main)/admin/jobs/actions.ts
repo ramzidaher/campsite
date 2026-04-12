@@ -338,3 +338,75 @@ export async function archiveJobListing(jobId: string): Promise<JobActionState> 
   revalidateJobs(id);
   return { ok: true };
 }
+
+export async function unarchiveJobListing(jobId: string): Promise<JobActionState> {
+  const id = jobId?.trim();
+  if (!id) return { ok: false, error: 'Missing job.' };
+
+  const supabase = await createClient();
+  const user = await getAuthUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id, role, status')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { ok: false, error: 'Not allowed.' };
+  }
+  const { data: canArchive } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'jobs.archive',
+    p_context: {},
+  });
+  if (!canArchive) {
+    return { ok: false, error: 'Not allowed.' };
+  }
+
+  const orgId = profile.org_id as string;
+
+  const { data: row, error: fetchErr } = await supabase
+    .from('job_listings')
+    .select('id, status, recruitment_request_id')
+    .eq('id', id)
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  if (fetchErr || !row) return { ok: false, error: 'Job not found.' };
+  const st = row.status as string;
+  if (st === 'draft') return { ok: true };
+  if (st === 'live') {
+    return {
+      ok: false,
+      error: 'This listing is already live. Archive it first if you need to take it down.',
+    };
+  }
+  if (st !== 'archived') {
+    return { ok: false, error: 'Only archived listings can be restored to draft.' };
+  }
+
+  const { data: otherLive } = await supabase
+    .from('job_listings')
+    .select('id')
+    .eq('recruitment_request_id', row.recruitment_request_id as string)
+    .eq('status', 'live')
+    .neq('id', id)
+    .maybeSingle();
+  if (otherLive?.id) {
+    return { ok: false, error: 'Another live job already exists for this recruitment request.' };
+  }
+
+  const { error } = await supabase
+    .from('job_listings')
+    .update({ status: 'draft' })
+    .eq('id', id)
+    .eq('org_id', orgId)
+    .eq('status', 'archived');
+
+  if (error) return { ok: false, error: error.message };
+  revalidateJobs(id);
+  return { ok: true };
+}

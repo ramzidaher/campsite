@@ -3,6 +3,7 @@ import {
   chatStaffResourceWithGemini,
   type StaffResourceChatTurn,
 } from '@/lib/google-ai-studio/geminiSummarize';
+import { fetchStaffResourceRowForApi } from '@/lib/staffResourceArchiveCompat';
 import { createSupabaseForApiRequest, getUserFromApiRequest } from '@/lib/supabase/apiRouteAuth';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { NextResponse } from 'next/server';
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     process.env.GOOGLE_AI_STUDIO_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
-      { error: 'not_configured', message: 'Document assistant is not configured on this server.' },
+      { error: 'not_configured', message: 'Scout is not configured on this server.' },
       { status: 503 },
     );
   }
@@ -71,14 +72,16 @@ export async function POST(req: Request) {
   if (!supabase) {
     return NextResponse.json({ error: 'Server misconfigured.' }, { status: 503 });
   }
-  const { data: row, error: rowErr } = await supabase
-    .from('staff_resources')
-    .select('id, org_id, title, description, storage_path, file_name, mime_type, byte_size')
-    .eq('id', resourceId)
-    .maybeSingle();
+  const { data: row, error: rowErr } = await fetchStaffResourceRowForApi(supabase, resourceId);
 
   if (rowErr || !row) {
     return NextResponse.json({ error: 'Resource not found.' }, { status: 404 });
+  }
+  if (row.archived_at != null && row.archived_at !== '') {
+    return NextResponse.json(
+      { error: 'archived', message: 'Scout is not available for archived resources.' },
+      { status: 403 },
+    );
   }
 
   const title = String(row.title ?? '');
@@ -92,7 +95,7 @@ export async function POST(req: Request) {
     sr = createServiceRoleClient();
   } catch {
     return NextResponse.json(
-      { error: 'Server storage is not configured for the document assistant.' },
+      { error: 'Server storage is not configured for Scout.' },
       { status: 503 },
     );
   }
@@ -121,7 +124,7 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({
         reply: result.reply,
-        note: 'This PDF is too large to send to the assistant; answers use the title and description only.',
+        note: 'This PDF is too large to send to Scout; answers use the title and description only.',
       });
     }
     const result = await chatStaffResourceWithGemini({
@@ -155,7 +158,7 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({
         reply: result.reply,
-        note: 'This file is too large to send in full; answers use the title and description only.',
+        note: 'This file is too large to send to Scout in full; answers use the title and description only.',
       });
     }
     const textBody = buf.toString('utf8');
@@ -188,6 +191,6 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({
     reply: result.reply,
-    note: 'This file type is not read as text; answers use the title and description only.',
+    note: 'This file type is not read as text; Scout uses the title and description only.',
   });
 }

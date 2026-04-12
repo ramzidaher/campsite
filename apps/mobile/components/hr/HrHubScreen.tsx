@@ -2,6 +2,7 @@ import { useCampsiteTheme } from '@campsite/ui';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AttendanceScreen } from '@/components/attendance/AttendanceScreen';
 import { LeaveScreen } from '@/components/leave/LeaveScreen';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { OneOnOneListScreen } from '@/components/one-on-one/OneOnOneListScreen';
@@ -10,7 +11,7 @@ import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
 import type { ProfileRow } from '@/lib/AuthContext';
 import { getSupabase } from '@/lib/supabase';
 
-type HrTab = 'leave' | 'performance' | 'onboarding' | 'one_on_one';
+type HrTab = 'leave' | 'attendance' | 'performance' | 'onboarding' | 'one_on_one';
 
 export function HrHubScreen({ profile }: { profile: ProfileRow }) {
   const { tokens, scheme } = useCampsiteTheme();
@@ -42,6 +43,7 @@ export function HrHubScreen({ profile }: { profile: ProfileRow }) {
 
   const tabs: { key: HrTab; label: string }[] = [
     { key: 'leave', label: 'Time off' },
+    { key: 'attendance', label: 'Attendance' },
     { key: 'performance', label: 'Reviews' },
     ...(showOneOnOne ? [{ key: 'one_on_one' as const, label: '1:1' }] : []),
     { key: 'onboarding', label: 'Onboarding' },
@@ -76,6 +78,7 @@ export function HrHubScreen({ profile }: { profile: ProfileRow }) {
       {/* Content — each screen manages its own scroll + loading */}
       <View style={{ flex: 1 }}>
         {tab === 'leave' && <LeaveScreen profile={profile} />}
+        {tab === 'attendance' && <AttendanceScreen profile={profile} />}
         {tab === 'performance' && <PerformanceScreen profile={profile} />}
         {tab === 'one_on_one' && <OneOnOneListScreen profile={profile} />}
         {tab === 'onboarding' && <OnboardingScreen profile={profile} />}

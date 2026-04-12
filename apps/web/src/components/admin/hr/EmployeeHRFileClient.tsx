@@ -78,6 +78,8 @@ type Employee = {
   pay_frequency?: string | null;
   contracted_days_per_week?: number | null;
   average_weekly_earnings_gbp?: number | null;
+  timesheet_clock_enabled?: boolean | null;
+  hourly_pay_gbp?: number | null;
   probation_check_completed_at?: string | null;
   probation_check_completed_by?: string | null;
 };
@@ -323,6 +325,10 @@ export function EmployeeHRFileClient({
   const [averageWeeklyEarnings, setAverageWeeklyEarnings] = useState(
     employee.average_weekly_earnings_gbp != null ? String(employee.average_weekly_earnings_gbp) : '',
   );
+  const [timesheetClockEnabled, setTimesheetClockEnabled] = useState(Boolean(employee.timesheet_clock_enabled));
+  const [hourlyPayGbp, setHourlyPayGbp] = useState(
+    employee.hourly_pay_gbp != null ? String(employee.hourly_pay_gbp) : '',
+  );
   const [customFieldRows, setCustomFieldRows] = useState<CustomFieldRow[]>(() =>
     customFieldRowsFromEmployee(employee.custom_fields),
   );
@@ -374,6 +380,8 @@ export function EmployeeHRFileClient({
     setPayFrequency(emp.pay_frequency ?? 'monthly');
     setContractedDaysPerWeek(emp.contracted_days_per_week != null ? String(emp.contracted_days_per_week) : '');
     setAverageWeeklyEarnings(emp.average_weekly_earnings_gbp != null ? String(emp.average_weekly_earnings_gbp) : '');
+    setTimesheetClockEnabled(Boolean(emp.timesheet_clock_enabled));
+    setHourlyPayGbp(emp.hourly_pay_gbp != null ? String(emp.hourly_pay_gbp) : '');
     setCustomFieldRows(customFieldRowsFromEmployee(emp.custom_fields));
   }
 
@@ -435,6 +443,8 @@ export function EmployeeHRFileClient({
     setAverageWeeklyEarnings(
       employee.average_weekly_earnings_gbp != null ? String(employee.average_weekly_earnings_gbp) : '',
     );
+    setTimesheetClockEnabled(Boolean(employee.timesheet_clock_enabled));
+    setHourlyPayGbp(employee.hourly_pay_gbp != null ? String(employee.hourly_pay_gbp) : '');
     setCustomFieldRows(customFieldRowsFromEmployee(employee.custom_fields));
     setMsg(null);
     setEditing(false);
@@ -497,6 +507,8 @@ export function EmployeeHRFileClient({
           contractedDaysPerWeek.trim() === '' ? null : Number(contractedDaysPerWeek),
         p_average_weekly_earnings_gbp:
           averageWeeklyEarnings.trim() === '' ? null : Number(averageWeeklyEarnings),
+        p_timesheet_clock_enabled: timesheetClockEnabled,
+        p_hourly_pay_gbp: hourlyPayGbp.trim() === '' ? null : Number(hourlyPayGbp),
       })
     );
     const error = (response as { error: { message: string } | null }).error;
@@ -766,6 +778,27 @@ export function EmployeeHRFileClient({
                 onChange={(e) => setAverageWeeklyEarnings(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
                 placeholder="For Statutory Sick Pay (8-week basis)"
+              />
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-medium text-[#6b6b6b]">
+              <input
+                type="checkbox"
+                checked={timesheetClockEnabled}
+                onChange={(e) => setTimesheetClockEnabled(e.target.checked)}
+                className="rounded border-[#d8d8d8]"
+              />
+              Enable timesheet clock (mobile / web attendance)
+            </label>
+            <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+              Hourly pay (£)
+              <input
+                type="number"
+                min="0"
+                step="0.0001"
+                value={hourlyPayGbp}
+                onChange={(e) => setHourlyPayGbp(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
+                placeholder="For wagesheet basic pay"
               />
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
@@ -1256,6 +1289,16 @@ export function EmployeeHRFileClient({
                     {employee.average_weekly_earnings_gbp != null
                       ? `£${Number(employee.average_weekly_earnings_gbp).toFixed(2)}`
                       : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Timesheet clock</dt>
+                  <dd className="mt-0.5 text-[#121212]">{employee.timesheet_clock_enabled ? 'Enabled' : 'Off'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Hourly pay</dt>
+                  <dd className="mt-0.5 text-[#121212]">
+                    {employee.hourly_pay_gbp != null ? `£${Number(employee.hourly_pay_gbp).toFixed(4)}` : '—'}
                   </dd>
                 </div>
                 <div>

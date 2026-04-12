@@ -52,6 +52,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         photosPermission: 'Allow Campsite to access your photos to set a broadcast cover image.',
       },
     ],
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission: 'Campsite uses your location to verify clock in at work.',
+      },
+    ],
     '@react-native-community/datetimepicker',
     [
       'expo-notifications',

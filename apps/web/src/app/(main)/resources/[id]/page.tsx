@@ -1,9 +1,27 @@
 import { ResourceDetailClient } from '@/components/resources/ResourceDetailClient';
 import { parseStaffResourceFolderEmbed } from '@/lib/staffResourceFolderEmbed';
+import {
+  isMissingArchivedAtColumn,
+  STAFF_RESOURCE_DETAIL_SELECT_LEGACY,
+  STAFF_RESOURCE_DETAIL_SELECT_WITH_ARCHIVE,
+} from '@/lib/staffResourceArchiveCompat';
 import { createClient } from '@/lib/supabase/server';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { DM_Sans, Syne } from 'next/font/google';
 import { notFound, redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+
+const resourceDetailSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+});
+
+const resourceDetailDisplay = Syne({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  display: 'swap',
+});
 
 export default async function ResourceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,33 +38,47 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
   if (!profile?.org_id) redirect('/login');
   if (profile.status !== 'active') redirect('/pending');
 
-  const { data: row, error } = await supabase
+  let row = await supabase
     .from('staff_resources')
-    .select(
-      'id, title, description, file_name, mime_type, byte_size, storage_path, updated_at, folder_id, staff_resource_folders(id, name)',
-    )
+    .select(STAFF_RESOURCE_DETAIL_SELECT_WITH_ARCHIVE)
     .eq('id', id)
     .maybeSingle();
 
-  if (error || !row) notFound();
+  let archiveSupported = true;
+  if (row.error && isMissingArchivedAtColumn(row.error)) {
+    archiveSupported = false;
+    row = await supabase
+      .from('staff_resources')
+      .select(STAFF_RESOURCE_DETAIL_SELECT_LEGACY)
+      .eq('id', id)
+      .maybeSingle();
+  }
+
+  if (row.error || !row.data) notFound();
+  const data = row.data;
 
   const permissionKeys = await getMyPermissions(profile.org_id as string);
   const canManage = permissionKeys.includes('resources.manage');
 
   return (
-    <ResourceDetailClient
-      canManage={canManage}
-      initial={{
-        id: row.id as string,
-        title: row.title as string,
-        description: (row.description as string) ?? '',
-        file_name: row.file_name as string,
-        mime_type: row.mime_type as string,
-        byte_size: Number(row.byte_size ?? 0),
-        storage_path: row.storage_path as string,
-        updated_at: row.updated_at as string,
-        folder: parseStaffResourceFolderEmbed(row.staff_resource_folders),
-      }}
-    />
+    <div className={`${resourceDetailSans.className} min-h-0 bg-[#f5f4f0]`}>
+      <ResourceDetailClient
+        canManage={canManage}
+        archiveSupported={archiveSupported}
+        titleFontClassName={resourceDetailDisplay.className}
+        initial={{
+          id: data.id as string,
+          title: data.title as string,
+          description: (data.description as string) ?? '',
+          file_name: data.file_name as string,
+          mime_type: data.mime_type as string,
+          byte_size: Number(data.byte_size ?? 0),
+          storage_path: data.storage_path as string,
+          updated_at: data.updated_at as string,
+          archived_at: archiveSupported ? ((data.archived_at as string | null) ?? null) : null,
+          folder: parseStaffResourceFolderEmbed(data.staff_resource_folders),
+        }}
+      />
+    </div>
   );
 }

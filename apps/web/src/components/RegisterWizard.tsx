@@ -12,6 +12,7 @@ import {
   normalizeWorkspaceSlugInput,
   suggestSlugFromOrganisationName,
 } from '@/lib/org/slug';
+import { FALLBACK_LEGAL_SETTINGS } from '@/lib/legal/fallbackDefaults';
 
 type Org = { id: string; name: string; slug: string; logo_url: string | null };
 type Dept = { id: string; name: string; type: 'department' | 'society' | 'club' };
@@ -114,7 +115,14 @@ function StepProgress({ step, labels }: { step: number; labels: readonly string[
   );
 }
 
-export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | null }) {
+export function RegisterWizard({
+  initialOrgSlug,
+  initialLegalBundleVersion = FALLBACK_LEGAL_SETTINGS.bundle_version,
+}: {
+  initialOrgSlug: string | null;
+  /** From `platform_legal_settings` (server); must match signup metadata for stored acceptance. */
+  initialLegalBundleVersion?: string;
+}) {
   const router = useRouter();
   /** Invite link (`/register?org=slug`) - only then can users join an existing org from this wizard. */
   const inviteFlow = Boolean(initialOrgSlug);
@@ -141,6 +149,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [legalConsent, setLegalConsent] = useState(false);
 
   const strength = passwordStrength(password);
   const strengthVis = passwordStrengthScore(password);
@@ -222,6 +231,12 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
 
   async function submit() {
     setError(null);
+    if (!legalConsent) {
+      setError(
+        'You must agree to the Terms of service, Privacy policy, and Data processing information.'
+      );
+      return;
+    }
     if (password !== confirm) {
       setError('Passwords do not match.');
       return;
@@ -263,6 +278,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         full_name: fullName,
         register_create_org_name: nameTrim,
         register_create_org_slug: workspaceSlugNormalized,
+        register_legal_bundle_version: initialLegalBundleVersion,
       };
       const { data, error: signErr } = await supabase.auth.signUp({
         email,
@@ -297,6 +313,7 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
         full_name: fullName,
         register_org_id: orgId,
         register_dept_ids: JSON.stringify([...selectedDeptIds]),
+        register_legal_bundle_version: initialLegalBundleVersion,
       };
       const { data, error: signErr } = await supabase.auth.signUp({
         email,
@@ -528,6 +545,33 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
               required
             />
           </div>
+          <div className="mb-8 flex gap-3 rounded-[10px] border border-[#ebe9e6] bg-[#faf9f7] px-3 py-3">
+            <input
+              id="reg-legal-consent"
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d4d4d4] text-[#121212] focus:ring-[#121212]"
+              checked={legalConsent}
+              onChange={(e) => setLegalConsent(e.target.checked)}
+            />
+            <label htmlFor="reg-legal-consent" className="text-[12.5px] leading-snug text-[#525252]">
+              I agree to the{' '}
+              <Link href="/terms" className="font-medium text-[#121212] underline underline-offset-2">
+                Terms of service
+              </Link>
+              ,{' '}
+              <Link href="/privacy" className="font-medium text-[#121212] underline underline-offset-2">
+                Privacy policy
+              </Link>
+              , and{' '}
+              <Link
+                href="/legal/data-processing"
+                className="font-medium text-[#121212] underline underline-offset-2"
+              >
+                Data processing information
+              </Link>{' '}
+              (bundle {initialLegalBundleVersion}).
+            </label>
+          </div>
           <button
             type="button"
             className="auth-btn-primary"
@@ -535,6 +579,12 @@ export function RegisterWizard({ initialOrgSlug }: { initialOrgSlug: string | nu
               setError(null);
               if (!fullName.trim() || !email.trim()) {
                 setError('Please fill in all required fields.');
+                return;
+              }
+              if (!legalConsent) {
+                setError(
+                  'Please agree to the Terms of service, Privacy policy, and Data processing information.'
+                );
                 return;
               }
               if (password !== confirm) {

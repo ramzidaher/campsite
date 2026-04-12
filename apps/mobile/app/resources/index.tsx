@@ -12,9 +12,11 @@ import {
   Text,
   View,
 } from 'react-native';
+import type { PermissionKey } from '@campsite/types';
 
 import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
 import { useAuth } from '@/lib/AuthContext';
+import { isMissingArchivedAtColumn } from '@/lib/staffResourceArchiveCompat';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type ResourceRow = {
@@ -78,14 +80,21 @@ function formatBytes(n: number): string {
 export default function ResourcesIndexScreen() {
   const { tokens, scheme } = useCampsiteTheme();
   const router = useRouter();
-  const { folder: folderParam } = useLocalSearchParams<{ folder?: string }>();
+  const { folder: folderParam, archived: archivedParam } = useLocalSearchParams<{
+    folder?: string;
+    archived?: string;
+  }>();
   const folderFilter = parseFolderParam(
     typeof folderParam === 'string' ? folderParam : folderParam?.[0],
   );
+  const archivedRaw =
+    typeof archivedParam === 'string' ? archivedParam : Array.isArray(archivedParam) ? archivedParam[0] : undefined;
+  const wantsArchived = archivedRaw === '1' || archivedRaw === 'true';
   const { profile, configured } = useAuth();
   const orgId = profile?.org_id ?? null;
   const [q, setQ] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [archiveColumnOk, setArchiveColumnOk] = useState(true);
   useEffect(() => {
     const delay = q.trim().length >= 2 ? 300 : 0;
     const t = setTimeout(() => setDebouncedSearch(q.trim()), delay);
@@ -93,6 +102,30 @@ export default function ResourcesIndexScreen() {
   }, [q]);
 
   const debounced = debouncedSearch.length >= 2 ? debouncedSearch : '';
+
+  const permissionsQuery = useQuery({
+    queryKey: ['my-permissions', orgId],
+    enabled: configured && isSupabaseConfigured() && !!orgId && profile?.status === 'active',
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_my_permissions', { p_org_id: orgId! });
+      if (error) throw error;
+      const rows = (data ?? []) as { permission_key?: string }[];
+      return rows.map((r) => String(r.permission_key ?? '')) as PermissionKey[];
+    },
+    staleTime: 60_000,
+  });
+
+  const canManageResources = Boolean(permissionsQuery.data?.includes('resources.manage'));
+  const archiveOnly = canManageResources && wantsArchived && archiveColumnOk;
+
+  const buildResourcesPath = (opts: { folder?: string | null | 'none'; archived?: boolean }) => {
+    const qs: string[] = [];
+    if (opts.archived) qs.push('archived=1');
+    if (opts.folder === 'none') qs.push('folder=none');
+    else if (opts.folder) qs.push(`folder=${opts.folder}`);
+    return qs.length ? `/resources?${qs.join('&')}` : '/resources';
+  };
 
   const foldersQuery = useQuery({
     queryKey: ['mobile-staff-resource-folders', orgId],
@@ -112,10 +145,38 @@ export default function ResourcesIndexScreen() {
   });
 
   const listQuery = useQuery({
-    queryKey: ['mobile-staff-resources', orgId, debounced, folderFilter],
-    enabled: configured && isSupabaseConfigured() && !!orgId && profile?.status === 'active',
+    queryKey: ['mobile-staff-resources', orgId, debounced, folderFilter, archiveOnly, archiveColumnOk],
+    enabled:
+      configured &&
+      isSupabaseConfigured() &&
+      !!orgId &&
+      profile?.status === 'active' &&
+      permissionsQuery.isFetched,
     queryFn: async () => {
       const supabase = getSupabase();
+      const wantsArchiveList = canManageResources && wantsArchived;
+
+      if (wantsArchiveList && archiveColumnOk) {
+        let q = supabase
+          .from('staff_resources')
+          .select(
+            'id, title, description, file_name, mime_type, byte_size, updated_at, folder_id, staff_resource_folders(id, name)',
+          )
+          .eq('org_id', orgId!)
+          .not('archived_at', 'is', null)
+          .order('updated_at', { ascending: false })
+          .limit(200);
+        if (folderFilter === 'none') q = q.is('folder_id', null);
+        else if (folderFilter) q = q.eq('folder_id', folderFilter);
+        const { data, error } = await q;
+        if (error && isMissingArchivedAtColumn(error)) {
+          setArchiveColumnOk(false);
+          return [];
+        }
+        if (error) throw error;
+        const raw = (data ?? []) as Record<string, unknown>[];
+        return raw.map((r) => normalizeResourceRow(r));
+      }
       if (debounced) {
         const { data, error } = await supabase.rpc('search_staff_resources', {
           q: debounced,
@@ -133,11 +194,28 @@ export default function ResourcesIndexScreen() {
           'id, title, description, file_name, mime_type, byte_size, updated_at, folder_id, staff_resource_folders(id, name)',
         )
         .eq('org_id', orgId!)
+        .is('archived_at', null)
         .order('updated_at', { ascending: false })
         .limit(200);
       if (folderFilter === 'none') q = q.is('folder_id', null);
       else if (folderFilter) q = q.eq('folder_id', folderFilter);
-      const { data, error } = await q;
+      let { data, error } = await q;
+      if (error && isMissingArchivedAtColumn(error)) {
+        setArchiveColumnOk(false);
+        let q2 = supabase
+          .from('staff_resources')
+          .select(
+            'id, title, description, file_name, mime_type, byte_size, updated_at, folder_id, staff_resource_folders(id, name)',
+          )
+          .eq('org_id', orgId!)
+          .order('updated_at', { ascending: false })
+          .limit(200);
+        if (folderFilter === 'none') q2 = q2.is('folder_id', null);
+        else if (folderFilter) q2 = q2.eq('folder_id', folderFilter);
+        const second = await q2;
+        data = second.data;
+        error = second.error;
+      }
       if (error) throw error;
       const raw = (data ?? []) as Record<string, unknown>[];
       return raw.map((r) => normalizeResourceRow(r));
@@ -218,17 +296,56 @@ export default function ResourcesIndexScreen() {
   return (
     <TabSafeScreen>
       <View style={styles.pad}>
-        <Text style={[styles.h1, { color: tokens.textPrimary }]}>Resource library</Text>
-        <Text style={[styles.sub, { color: tokens.textSecondary }]}>
-          Policies and reference files for your organisation.
+        <Text style={[styles.h1, { color: tokens.textPrimary }]}>
+          Resource library
+          {archiveOnly ? (
+            <Text style={{ fontSize: 18, fontWeight: '400', color: tokens.textSecondary }}> · Archived</Text>
+          ) : null}
         </Text>
+        <Text style={[styles.sub, { color: tokens.textSecondary }]}>
+          {archiveOnly
+            ? 'Hidden from the main list. Open a file to restore or delete it.'
+            : 'Policies and reference files for your organisation.'}
+        </Text>
+
+        {canManageResources && archiveColumnOk ? (
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+            <Pressable
+              onPress={() => router.push(archiveOnly ? '/resources' : '/resources?archived=1')}
+              style={({ pressed }) => ({
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 10,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: tokens.border,
+                opacity: pressed ? 0.88 : 1,
+              })}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '600', color: tokens.textPrimary }}>
+                {archiveOnly ? 'Active library' : 'Archived'}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
           <View style={{ flexDirection: 'row', gap: 8, paddingRight: 16 }}>
-            {chip('All', folderFilter === null && !searchActive, '/resources')}
-            {chip('Uncategorised', folderFilter === 'none' && !searchActive, '/resources?folder=none')}
+            {chip(
+              'All',
+              folderFilter === null && !searchActive,
+              buildResourcesPath({ archived: archiveOnly }),
+            )}
+            {chip(
+              'Uncategorised',
+              folderFilter === 'none' && !searchActive,
+              buildResourcesPath({ archived: archiveOnly, folder: 'none' }),
+            )}
             {folders.map((f) =>
-              chip(f.name, folderFilter === f.id && !searchActive, `/resources?folder=${f.id}`),
+              chip(
+                f.name,
+                folderFilter === f.id && !searchActive,
+                buildResourcesPath({ archived: archiveOnly, folder: f.id }),
+              ),
             )}
           </View>
         </ScrollView>
@@ -239,12 +356,18 @@ export default function ResourcesIndexScreen() {
           </Text>
         ) : null}
 
-        <Input
-          value={q}
-          onChangeText={setQ}
-          placeholder="Search (2+ characters)…"
-          style={{ marginTop: 12 }}
-        />
+        {archiveOnly ? (
+          <Text style={{ marginTop: 12, fontSize: 12, color: tokens.textMuted }}>
+            Search applies to the active library only. Switch to Active library to search.
+          </Text>
+        ) : (
+          <Input
+            value={q}
+            onChangeText={setQ}
+            placeholder="Search (2+ characters)…"
+            style={{ marginTop: 12 }}
+          />
+        )}
         {listQuery.isLoading ? (
           <ActivityIndicator style={{ marginTop: 24 }} color={tokens.textPrimary} />
         ) : listQuery.error ? (
@@ -254,7 +377,16 @@ export default function ResourcesIndexScreen() {
             </Text>
           </Card>
         ) : rows.length === 0 ? (
-          <EmptyState title="No resources" description={debounced ? 'Try another search.' : 'Nothing uploaded yet.'} />
+          <EmptyState
+            title="No resources"
+            description={
+              debounced
+                ? 'Try another search.'
+                : archiveOnly
+                  ? 'No archived files.'
+                  : 'Nothing uploaded yet.'
+            }
+          />
         ) : grouped && grouped.length > 0 ? (
           <SectionList
             style={{ marginTop: 12 }}

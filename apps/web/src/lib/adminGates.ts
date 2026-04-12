@@ -83,7 +83,9 @@ export type ShellNavIconId =
   | 'performance'
   | 'orgChart'
   | 'systemOverview'
-  | 'absenceReport';
+  | 'absenceReport'
+  | 'attendance'
+  | 'payroll';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -296,7 +298,8 @@ export function getMainShellHrNavItemsByPermissions(
       k.startsWith('hr.') ||
       k.startsWith('onboarding.') ||
       k.startsWith('performance.') ||
-      k.startsWith('one_on_one.')
+      k.startsWith('one_on_one.') ||
+      k.startsWith('payroll.')
   );
   if (!canSeeAnyHr) return null;
 
@@ -359,6 +362,14 @@ export function getMainShellHrNavItemsByPermissions(
     items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding' });
   if (p.includes('performance.manage_cycles') || p.includes('performance.view_reports'))
     items.push({ href: '/hr/performance', label: 'Performance reviews', icon: 'performance' });
+  if (p.includes('leave.view_own'))
+    items.push({ href: '/attendance', label: 'Attendance', icon: 'attendance' });
+  if (p.includes('leave.approve_direct_reports') || p.includes('leave.manage_org'))
+    items.push({ href: '/hr/timesheets', label: 'Timesheet review', icon: 'calendar' });
+  if (p.includes('payroll.view') || p.includes('payroll.manage'))
+    items.push({ href: '/hr/wagesheets', label: 'Wagesheets', icon: 'payroll' });
+  if (p.includes('hr.manage_records'))
+    items.push({ href: '/hr/attendance-settings', label: 'Attendance sites', icon: 'orgSettings' });
   return items.length ? items : null;
 }
 

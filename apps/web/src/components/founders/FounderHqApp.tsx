@@ -32,6 +32,8 @@ import {
   normalizeWorkspaceSlugInput,
   suggestSlugFromOrganisationName,
 } from '@/lib/org/slug';
+import { FounderLegalPoliciesPanel } from '@/components/founders/FounderLegalPoliciesPanel';
+import type { PlatformLegalSettings } from '@/lib/legal/types';
 import { createClient } from '@/lib/supabase/client';
 import { tenantAdminDashboardUrl } from '@/lib/tenant/adminUrl';
 
@@ -54,6 +56,7 @@ const PAGE_LABELS: Record<string, string> = {
   'rota-hq': 'Rota Overview',
   'audit-hq': 'Audit Log',
   'rbac-hq': 'RBAC Catalog',
+  'legal-hq': 'Legal policies',
   'settings-hq': 'Platform Settings',
 };
 
@@ -156,6 +159,7 @@ export function FounderHqApp({
   initialAuditEvents,
   initialBroadcasts,
   initialRotaShifts,
+  initialLegalSettings,
   loadError,
 }: {
   user: FounderHqUser;
@@ -166,6 +170,7 @@ export function FounderHqApp({
   initialAuditEvents: FounderAuditEvent[];
   initialBroadcasts: FounderBroadcast[];
   initialRotaShifts: FounderRotaShift[];
+  initialLegalSettings: PlatformLegalSettings;
   loadError?: string;
 }) {
   const router = useRouter();
@@ -258,6 +263,7 @@ export function FounderHqApp({
   const [auditOrgFilter, setAuditOrgFilter] = useState('all');
   const [auditEventFilter, setAuditEventFilter] = useState('all');
   const [supportToken, setSupportToken] = useState<string | null>(null);
+  const [legalSettings, setLegalSettings] = useState<PlatformLegalSettings>(initialLegalSettings);
 
   useEffect(() => {
     if (broadcastDraft.siteId || !orgs[0]?.id) return;
@@ -909,6 +915,7 @@ export function FounderHqApp({
             Platform
           </div>
           <NavBtn page="rbac-hq" icon="🛡️" label="RBAC Catalog" />
+          <NavBtn page="legal-hq" icon="📜" label="Legal policies" />
           <NavBtn page="audit-hq" icon="🔎" label="Audit Log" />
           <NavBtn page="settings-hq" icon="⚙" label="Platform Settings" />
         </div>
@@ -2267,6 +2274,13 @@ export function FounderHqApp({
           </div>
         </div>
 
+        {/* Legal policies */}
+        <div className={`page${activePage === 'legal-hq' ? ' active' : ''}`}>
+          <div className="page-inner">
+            <FounderLegalPoliciesPanel initial={legalSettings} onSaved={setLegalSettings} />
+          </div>
+        </div>
+
         {/* Settings */}
         <div className={`page${activePage === 'settings-hq' ? ' active' : ''}`}>
           <div className="page-inner">
@@ -2325,6 +2339,21 @@ export function FounderHqApp({
                   Open Revenue &amp; Finance →
                 </button>
               </div>
+            </div>
+            <div className="card card-pad" style={{ marginTop: 16 }}>
+              <div className="section-title" style={{ marginBottom: 12 }}>
+                Legal &amp; compliance
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.55, marginBottom: 12 }}>
+                Policies and bundle version are stored in the database and edited under{' '}
+                <strong>Legal policies</strong> in the sidebar. Current bundle:{' '}
+                <code style={{ fontSize: 11.5, color: 'var(--text)' }}>{legalSettings.bundle_version}</code>
+                {' · '}
+                {legalSettings.effective_label}
+              </p>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => navTo('legal-hq')}>
+                Open Legal policies →
+              </button>
             </div>
           </div>
         </div>

@@ -1,10 +1,11 @@
 import { useCampsiteTheme } from '@campsite/ui';
 import { ResizeMode, Video } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Pressable,
@@ -13,10 +14,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import type { PermissionKey } from '@campsite/types';
 
 import { ResourceDocumentAssistant } from '@/components/resources/ResourceDocumentAssistant';
 import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
 import { useAuth } from '@/lib/AuthContext';
+import { isMissingArchivedAtColumn } from '@/lib/staffResourceArchiveCompat';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const TEXT_PREVIEW_MAX_BYTES = 512_000;
@@ -56,25 +59,45 @@ export default function ResourceDetailScreen() {
   const router = useRouter();
   const { tokens, scheme } = useCampsiteTheme();
   const { profile, configured } = useAuth();
+  const orgId = profile?.org_id ?? null;
   const [textBody, setTextBody] = useState<string | null>(null);
   const [textErr, setTextErr] = useState<string | null>(null);
   const [textBusy, setTextBusy] = useState(false);
+  const [manageBusy, setManageBusy] = useState(false);
+
+  const permissionsQuery = useQuery({
+    queryKey: ['my-permissions', orgId],
+    enabled: configured && isSupabaseConfigured() && !!orgId && profile?.status === 'active',
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_my_permissions', { p_org_id: orgId! });
+      if (error) throw error;
+      const rows = (data ?? []) as { permission_key?: string }[];
+      return rows.map((r) => String(r.permission_key ?? '')) as PermissionKey[];
+    },
+    staleTime: 60_000,
+  });
+
+  const canManageResources = Boolean(permissionsQuery.data?.includes('resources.manage'));
 
   const detailQuery = useQuery({
     queryKey: ['mobile-staff-resource', id],
     enabled: configured && isSupabaseConfigured() && !!id && profile?.status === 'active',
     queryFn: async () => {
       const supabase = getSupabase();
-      const { data, error } = await supabase
-        .from('staff_resources')
-        .select(
-          'id, title, description, file_name, mime_type, byte_size, storage_path, updated_at, folder_id, staff_resource_folders(id, name)',
-        )
-        .eq('id', id!)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error('Not found');
-      const raw = data as Record<string, unknown>;
+      const selWith =
+        'id, title, description, file_name, mime_type, byte_size, storage_path, updated_at, archived_at, folder_id, staff_resource_folders(id, name)';
+      const selLegacy =
+        'id, title, description, file_name, mime_type, byte_size, storage_path, updated_at, folder_id, staff_resource_folders(id, name)';
+      let res = await supabase.from('staff_resources').select(selWith).eq('id', id!).maybeSingle();
+      let archiveSupported = true;
+      if (res.error && isMissingArchivedAtColumn(res.error)) {
+        archiveSupported = false;
+        res = await supabase.from('staff_resources').select(selLegacy).eq('id', id!).maybeSingle();
+      }
+      if (res.error) throw res.error;
+      if (!res.data) throw new Error('Not found');
+      const raw = res.data as Record<string, unknown>;
       const folderRaw = raw.staff_resource_folders;
       let folder: { id: string; name: string } | null = null;
       if (folderRaw != null) {
@@ -95,15 +118,92 @@ export default function ResourceDetailScreen() {
         byte_size: Number(raw.byte_size ?? 0),
         storage_path: String(raw.storage_path ?? ''),
         updated_at: String(raw.updated_at ?? ''),
+        archived_at: archiveSupported ? (raw.archived_at != null ? String(raw.archived_at) : null) : null,
         folder_id: raw.folder_id != null ? String(raw.folder_id) : null,
         staff_resource_folders: folder,
+        archiveSupported,
       };
     },
     staleTime: 30_000,
   });
 
-  const storagePath = detailQuery.data?.storage_path;
+  const queryClient = useQueryClient();
   const row = detailQuery.data;
+  const storagePath = row?.storage_path;
+  const archiveSupported = row?.archiveSupported !== false;
+
+  const setArchived = (next: string | null) => {
+    const rid = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : '';
+    if (!rid || !canManageResources || !archiveSupported) return;
+    Alert.alert(
+      next ? 'Archive this file?' : 'Restore to library?',
+      next
+        ? 'It will be hidden from the resource library and search.'
+        : 'It will be visible to everyone again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: next ? 'Archive' : 'Restore',
+          onPress: () => {
+            void (async () => {
+              setManageBusy(true);
+              try {
+                const supabase = getSupabase();
+                const now = new Date().toISOString();
+                const { error } = await supabase
+                  .from('staff_resources')
+                  .update({ archived_at: next, updated_at: now })
+                  .eq('id', rid);
+                if (error) throw error;
+                await queryClient.invalidateQueries({ queryKey: ['mobile-staff-resources'] });
+                await queryClient.invalidateQueries({ queryKey: ['mobile-staff-resource', id] });
+              } catch (e) {
+                Alert.alert('Could not update', e instanceof Error ? e.message : 'Unknown error');
+              } finally {
+                setManageBusy(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  };
+
+  const deleteForever = () => {
+    const rid = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : '';
+    const title = row?.title ?? 'this file';
+    const path = row?.storage_path;
+    if (!rid || !path || !canManageResources) return;
+    Alert.alert(
+      'Delete permanently?',
+      `“${title}” will be removed from storage. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setManageBusy(true);
+              try {
+                const supabase = getSupabase();
+                const { error: delErr } = await supabase.from('staff_resources').delete().eq('id', rid);
+                if (delErr) throw delErr;
+                const { error: stErr } = await supabase.storage.from('staff-resources').remove([path]);
+                if (stErr) console.warn('storage remove', stErr.message);
+                await queryClient.invalidateQueries({ queryKey: ['mobile-staff-resources'] });
+                router.replace('/resources');
+              } catch (e) {
+                Alert.alert('Could not delete', e instanceof Error ? e.message : 'Unknown error');
+              } finally {
+                setManageBusy(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  };
 
   const previewKind = row ? getPreviewKind(row.mime_type, row.file_name) : null;
 
@@ -195,6 +295,7 @@ export default function ResourceDetailScreen() {
   }
 
   const folder = row.staff_resource_folders;
+  const isArchived = archiveSupported && row.archived_at != null;
 
   return (
     <TabSafeScreen>
@@ -205,6 +306,77 @@ export default function ResourceDetailScreen() {
         <Text style={[styles.h1, { color: tokens.textPrimary, marginTop: 12 }]}>{row.title}</Text>
         {row.description ? (
           <Text style={[styles.body, { color: tokens.textSecondary, marginTop: 8 }]}>{row.description}</Text>
+        ) : null}
+
+        {isArchived ? (
+          <View
+            style={{
+              marginTop: 12,
+              padding: 12,
+              borderRadius: 10,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: tokens.border,
+              backgroundColor: scheme === 'dark' ? 'rgba(245,158,11,0.12)' : '#fff8e6',
+            }}
+          >
+            <Text style={{ fontSize: 13, color: tokens.textPrimary, fontWeight: '600' }}>Archived</Text>
+            <Text style={{ fontSize: 13, color: tokens.textSecondary, marginTop: 4 }}>
+              Hidden from the library and search. Restore to bring it back, or delete permanently.
+            </Text>
+          </View>
+        ) : null}
+
+        {canManageResources ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+            {archiveSupported ? (
+              !isArchived ? (
+                <Pressable
+                  onPress={() => setArchived(new Date().toISOString())}
+                  disabled={manageBusy}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: tokens.border,
+                    opacity: pressed || manageBusy ? 0.75 : 1,
+                  })}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: tokens.textPrimary }}>Archive</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => setArchived(null)}
+                  disabled={manageBusy}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: tokens.border,
+                    opacity: pressed || manageBusy ? 0.75 : 1,
+                  })}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: tokens.textPrimary }}>Restore</Text>
+                </Pressable>
+              )
+            ) : null}
+            <Pressable
+              onPress={deleteForever}
+              disabled={manageBusy}
+              style={({ pressed }) => ({
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 10,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: '#fecaca',
+                backgroundColor: scheme === 'dark' ? 'rgba(220,38,38,0.15)' : '#fef2f2',
+                opacity: pressed || manageBusy ? 0.75 : 1,
+              })}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#b42318' }}>Delete permanently</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         {folder ? (
@@ -287,7 +459,12 @@ export default function ResourceDetailScreen() {
           {row.file_name} · {formatBytes(row.byte_size)} · {new Date(row.updated_at).toLocaleString()}
         </Text>
 
-        {row.id ? <ResourceDocumentAssistant resourceId={row.id} /> : null}
+        {row.id && !isArchived ? <ResourceDocumentAssistant resourceId={row.id} /> : null}
+        {row.id && isArchived ? (
+          <Text style={{ marginTop: 16, fontSize: 13, color: tokens.textMuted }}>
+            Scout is disabled for archived files. Restore the resource to use it.
+          </Text>
+        ) : null}
       </ScrollView>
     </TabSafeScreen>
   );

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     process.env.GOOGLE_AI_STUDIO_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
-      { error: 'not_configured', message: 'AI summary is not configured on this server.' },
+      { error: 'not_configured', message: 'Scout summaries are not configured on this server.' },
       { status: 503 }
     );
   }

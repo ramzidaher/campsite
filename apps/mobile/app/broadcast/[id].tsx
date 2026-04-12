@@ -444,9 +444,9 @@ export default function BroadcastDetailScreen() {
 
           {showAiSummary && siteUrl && session?.access_token ? (
             <View style={[styles.aiBox, { borderColor: tokens.border, backgroundColor: tokens.surface }]}>
-              <Text style={[styles.aiTitle, { color: tokens.textPrimary }]}>Quick summary</Text>
+              <Text style={[styles.aiTitle, { color: tokens.textPrimary }]}>Scout</Text>
               <Text style={[styles.aiHint, { color: tokens.textSecondary }]}>
-                Generated automatically. Confirm details in the full message below.
+                Scout summarises this broadcast automatically. Confirm details in the full message below.
               </Text>
               <Pressable
                 onPress={() => void requestAiSummary()}
@@ -468,7 +468,9 @@ export default function BroadcastDetailScreen() {
               {aiSummary ? (
                 <Text style={[styles.aiSummaryText, { color: tokens.textPrimary }]}>{aiSummary}</Text>
               ) : !aiSummaryBusy && !aiSummaryErr ? (
-                <Text style={[styles.aiHint, { color: tokens.textMuted, marginTop: 8 }]}>Summarise to see the main points.</Text>
+                <Text style={[styles.aiHint, { color: tokens.textMuted, marginTop: 8 }]}>
+                  Summarise with Scout to see the main points.
+                </Text>
               ) : null}
             </View>
           ) : null}

@@ -1,6 +1,7 @@
 import { Card, useCampsiteTheme } from '@campsite/ui';
 import Constants from 'expo-constants';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import Markdown from 'react-native-markdown-display';
 import {
   ActivityIndicator,
   Pressable,
@@ -87,11 +88,44 @@ export function ResourceDocumentAssistant({ resourceId }: { resourceId: string }
 
   const cardBg = scheme === 'dark' ? tokens.surface : '#ffffff';
 
+  const assistantMdStyles = useMemo(
+    () => ({
+      body: { color: tokens.textPrimary, fontSize: 13, lineHeight: 20 },
+      heading1: { color: tokens.textPrimary, fontSize: 16, fontWeight: '700' as const, marginVertical: 6 },
+      heading2: { color: tokens.textPrimary, fontSize: 15, fontWeight: '700' as const, marginVertical: 4 },
+      heading3: { color: tokens.textPrimary, fontSize: 14, fontWeight: '600' as const, marginVertical: 4 },
+      strong: { fontWeight: '700' as const, color: tokens.textPrimary },
+      em: { fontStyle: 'italic' as const },
+      bullet_list: { marginVertical: 4 },
+      ordered_list: { marginVertical: 4 },
+      list_item: { color: tokens.textPrimary, fontSize: 13, lineHeight: 20 },
+      link: { color: tokens.accent },
+      code_inline: {
+        backgroundColor: scheme === 'dark' ? tokens.background : '#f0f0ec',
+        color: tokens.textPrimary,
+      },
+      fence: { backgroundColor: tokens.surface, color: tokens.textPrimary },
+      paragraph: { marginTop: 0, marginBottom: 8 },
+      blockquote: { borderLeftColor: tokens.border, borderLeftWidth: 3, paddingLeft: 8, opacity: 0.9 },
+    }),
+    [scheme, tokens],
+  );
+
+  const noteMdStyles = useMemo(
+    () => ({
+      ...assistantMdStyles,
+      body: { ...assistantMdStyles.body, fontSize: 11, lineHeight: 16, color: tokens.textMuted },
+      list_item: { ...assistantMdStyles.list_item, fontSize: 11, lineHeight: 16, color: tokens.textMuted },
+      strong: { ...assistantMdStyles.strong, color: tokens.textMuted },
+    }),
+    [assistantMdStyles, tokens.textMuted],
+  );
+
   return (
     <Card style={{ marginTop: 20, backgroundColor: cardBg, borderColor: tokens.border }}>
-      <Text style={[styles.kicker, { color: tokens.textMuted }]}>ASK ABOUT THIS DOCUMENT</Text>
+      <Text style={[styles.kicker, { color: tokens.textMuted }]}>SCOUT</Text>
       <Text style={{ marginTop: 6, fontSize: 12, lineHeight: 17, color: tokens.textSecondary }}>
-        Ask in plain language. Follow-up questions keep context. Answers use this file when it can be read (PDF, text).
+        Scout answers in plain language; follow-ups keep context. Uses this file when it can be read (PDF, text).
       </Text>
 
       <ScrollView style={{ marginTop: 12, maxHeight: 280 }} nestedScrollEnabled>
@@ -110,15 +144,19 @@ export function ResourceDocumentAssistant({ resourceId }: { resourceId: string }
                   : { alignSelf: 'flex-start', borderWidth: StyleSheet.hairlineWidth, borderColor: tokens.border },
               ]}
             >
-              <Text
-                style={{
-                  fontSize: 13,
-                  lineHeight: 20,
-                  color: m.role === 'user' ? (scheme === 'dark' ? tokens.background : '#faf9f6') : tokens.textPrimary,
-                }}
-              >
-                {m.content}
-              </Text>
+              {m.role === 'assistant' ? (
+                <Markdown style={assistantMdStyles}>{m.content}</Markdown>
+              ) : (
+                <Text
+                  style={{
+                    fontSize: 13,
+                    lineHeight: 20,
+                    color: scheme === 'dark' ? tokens.background : '#faf9f6',
+                  }}
+                >
+                  {m.content}
+                </Text>
+              )}
             </View>
           ))
         )}
@@ -129,13 +167,15 @@ export function ResourceDocumentAssistant({ resourceId }: { resourceId: string }
         <Text style={{ marginTop: 8, color: tokens.warning, fontSize: 13 }}>{err}</Text>
       ) : null}
       {note ? (
-        <Text style={{ marginTop: 6, fontSize: 11, color: tokens.textMuted }}>{note}</Text>
+        <View style={{ marginTop: 6 }}>
+          <Markdown style={noteMdStyles}>{note}</Markdown>
+        </View>
       ) : null}
 
       <TextInput
         value={input}
         onChangeText={setInput}
-        placeholder="Type a question…"
+        placeholder="Ask Scout…"
         placeholderTextColor={tokens.textMuted}
         multiline
         editable={!busy && !!siteUrl && !!session?.access_token}
@@ -165,7 +205,7 @@ export function ResourceDocumentAssistant({ resourceId }: { resourceId: string }
       </Pressable>
       {!siteUrl || !session?.access_token ? (
         <Text style={{ marginTop: 8, fontSize: 12, color: tokens.textMuted }}>
-          {!siteUrl ? 'Set siteUrl in app config to use the assistant.' : 'Sign in to use the assistant.'}
+          {!siteUrl ? 'Set siteUrl in app config to use Scout.' : 'Sign in to use Scout.'}
         </Text>
       ) : null}
     </Card>

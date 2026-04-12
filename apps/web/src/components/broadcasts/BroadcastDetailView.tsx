@@ -465,10 +465,10 @@ export function BroadcastDetailView({
           <div className="mt-8 rounded-xl border border-[#e4e4e4] bg-[#fafaf9] px-4 py-4 sm:px-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[#121212]">Quick summary</p>
+                <p className="text-sm font-semibold text-[#121212]">Scout</p>
                 <p className="mt-1 text-xs leading-relaxed text-[#6b6b6b]">
-                  Generated automatically. Confirm dates, locations, and anything you need to act on in the full message
-                  below.
+                  Scout summarises this broadcast automatically. Confirm dates, locations, and anything you need to act on
+                  in the full message below.
                 </p>
               </div>
               <button
@@ -490,7 +490,7 @@ export function BroadcastDetailView({
                 {summary}
               </div>
             ) : !summaryBusy && !summaryErr ? (
-              <p className="mt-3 text-sm text-[#6b6b6b]">Summarise to pull out the main points from this broadcast.</p>
+              <p className="mt-3 text-sm text-[#6b6b6b]">Summarise with Scout to pull out the main points from this broadcast.</p>
             ) : null}
           </div>
         ) : null}

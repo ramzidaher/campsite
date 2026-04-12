@@ -8,7 +8,7 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 export default async function ResourcesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ folder?: string; q?: string }>;
+  searchParams: Promise<{ folder?: string; q?: string; archived?: string }>;
 }) {
   const supabase = await createClient();
   const user = await getAuthUser();
@@ -29,6 +29,7 @@ export default async function ResourcesPage({
   const sp = await searchParams;
   const folderFilter = parseResourcesFolderParam(sp.folder);
   const initialSearch = typeof sp.q === 'string' ? sp.q : '';
+  const viewArchived = canManage && (sp.archived === '1' || sp.archived === 'true');
 
   return (
     <ResourcesListClient
@@ -36,6 +37,7 @@ export default async function ResourcesPage({
       canManage={canManage}
       folderFilter={folderFilter}
       initialSearch={initialSearch}
+      viewArchived={viewArchived}
     />
   );
 }

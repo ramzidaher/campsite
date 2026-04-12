@@ -273,3 +273,23 @@ export async function startSupportViewAsSession(input: {
   if (error) return { ok: false, error: error.message };
   return { ok: true, data: { token: String(data ?? '') } };
 }
+
+export async function upsertPlatformLegalSettings(input: {
+  bundleVersion: string;
+  effectiveLabel: string;
+  termsMarkdown: string;
+  privacyMarkdown: string;
+  dataProcessingMarkdown: string;
+}): Promise<PlatformActionResult> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { error } = await ctx.userSupabase.rpc('platform_founder_upsert_legal_settings', {
+    p_bundle_version: input.bundleVersion,
+    p_effective_label: input.effectiveLabel,
+    p_terms_markdown: input.termsMarkdown,
+    p_privacy_markdown: input.privacyMarkdown,
+    p_data_processing_markdown: input.dataProcessingMarkdown,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}

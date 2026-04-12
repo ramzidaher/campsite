@@ -81,6 +81,9 @@ export const PERMISSION_KEYS = [
   'hr.view_direct_reports',
   'hr.view_records',
   'hr.manage_records',
+  // Payroll / wagesheets
+  'payroll.view',
+  'payroll.manage',
   // Staff resource library (upload/manage)
   'resources.manage',
   // Onboarding

@@ -19,6 +19,7 @@ import {
   Link2,
   Megaphone,
   ClipboardCheck,
+  CircleDollarSign,
   FolderOpen,
   GitBranch,
   Star,
@@ -28,6 +29,7 @@ import {
   Puzzle,
   Settings,
   Tag,
+  Timer,
   Ticket,
   UserCog,
   UserPlus,
@@ -65,6 +67,8 @@ function tone(name: ShellNavIconId) {
     case 'calendar':
     case 'rota':
     case 'leave':
+    case 'attendance':
+    case 'payroll':
     case 'pending':
     case 'interviews':
       return 'text-cyan-300';
@@ -156,6 +160,10 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <ClipboardList {...p} />;
     case 'absenceReport':
       return <BarChart3 {...p} />;
+    case 'attendance':
+      return <Timer {...p} />;
+    case 'payroll':
+      return <CircleDollarSign {...p} />;
     case 'orgSettings':
       return <Wrench {...p} />;
     case 'notifications':

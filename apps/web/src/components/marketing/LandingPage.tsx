@@ -189,6 +189,9 @@ export function LandingPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium text-[#5c5c5c] sm:justify-end">
+            <Link href="/terms" className="transition-colors hover:text-[#121212]">
+              Terms
+            </Link>
             <Link href="/privacy" className="transition-colors hover:text-[#121212]">
               Privacy
             </Link>

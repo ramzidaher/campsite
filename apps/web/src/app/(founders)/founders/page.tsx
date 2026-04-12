@@ -9,6 +9,7 @@ import {
   parseFounderRotaShifts,
 } from '@/components/founders/founderTypes';
 import { requirePlatformFounder } from '@/lib/platform/requirePlatformFounder';
+import { loadPlatformLegalSettings } from '@/lib/legal/loadPlatformLegalSettings';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -56,11 +57,10 @@ export default async function FoundersPage() {
       .filter(Boolean)
       .join(' - ') || undefined;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, avatar_url')
-    .eq('id', user.id)
-    .maybeSingle();
+  const [{ data: profile }, initialLegalSettings] = await Promise.all([
+    supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).maybeSingle(),
+    loadPlatformLegalSettings(supabase),
+  ]);
 
   const email = user.email ?? '';
   const metaName =
@@ -84,6 +84,7 @@ export default async function FoundersPage() {
       initialAuditEvents={initialAuditEvents}
       initialBroadcasts={initialBroadcasts}
       initialRotaShifts={initialRotaShifts}
+      initialLegalSettings={initialLegalSettings}
       loadError={loadError}
       user={{
         displayName,

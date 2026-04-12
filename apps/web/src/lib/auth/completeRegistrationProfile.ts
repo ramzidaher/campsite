@@ -10,6 +10,7 @@ type RegMeta = {
   register_dept_ids?: string;
   register_subscriptions?: string;
   register_avatar_url?: string;
+  register_legal_bundle_version?: string;
   full_name?: string;
 };
 
@@ -107,6 +108,12 @@ async function insertProfileFromJwtMetadata(
     (typeof rawName === 'string' && rawName.trim()) || (user.email?.split('@')[0] ?? 'Account');
   const email = user.email ?? '';
   const avatarUrl = trimRegistrationAvatarUrl(meta);
+  const legalRaw =
+    typeof meta.register_legal_bundle_version === 'string'
+      ? meta.register_legal_bundle_version.trim()
+      : '';
+  const legalBundle =
+    legalRaw.length > 256 ? legalRaw.slice(0, 256) : legalRaw.length > 0 ? legalRaw : null;
 
   const { error: pErr } = await supabase.from('profiles').insert({
     id: user.id,
@@ -116,6 +123,12 @@ async function insertProfileFromJwtMetadata(
     role: PROFILE_REGISTRATION_ROLE,
     status: 'pending',
     ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+    ...(legalBundle
+      ? {
+          legal_bundle_version: legalBundle,
+          legal_accepted_at: new Date().toISOString(),
+        }
+      : {}),
   });
   if (pErr) {
     if (isPostgresUniqueViolation(pErr) && (await profileRowExists(supabase, user.id))) {

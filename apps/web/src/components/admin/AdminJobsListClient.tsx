@@ -22,6 +22,8 @@ export type AdminJobListRow = {
 
 export type DeptFilterOption = { id: string; name: string };
 
+type ListScope = 'active' | 'archived' | 'all';
+
 export function AdminJobsListClient({
   rows,
   departments,
@@ -31,6 +33,7 @@ export function AdminJobsListClient({
   departments: DeptFilterOption[];
   orgSlug: string;
 }) {
+  const [listScope, setListScope] = useState<ListScope>('active');
   const [status, setStatus] = useState<string>('');
   const [deptId, setDeptId] = useState<string>('');
   const [grade, setGrade] = useState<string>('');
@@ -50,12 +53,14 @@ export function AdminJobsListClient({
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
+      if (listScope === 'active' && r.status !== 'live' && r.status !== 'draft') return false;
+      if (listScope === 'archived' && r.status !== 'archived') return false;
       if (search.trim()) {
         const q = search.trim().toLowerCase();
         const deptName = (Array.isArray(r.departments) ? r.departments[0]?.name : r.departments?.name) ?? '';
         if (!r.title.toLowerCase().includes(q) && !deptName.toLowerCase().includes(q)) return false;
       }
-      if (status && r.status !== status) return false;
+      if (listScope === 'all' && status && r.status !== status) return false;
       if (deptId && r.department_id !== deptId) return false;
       if (grade && r.grade_level !== grade) return false;
       if (salary && r.salary_band !== salary) return false;
@@ -63,10 +68,20 @@ export function AdminJobsListClient({
       if (year && String(r.posted_year ?? '') !== year) return false;
       return true;
     });
-  }, [rows, status, deptId, grade, salary, contract, year, search]);
+  }, [rows, listScope, status, deptId, grade, salary, contract, year, search]);
+
+  function setScope(next: ListScope) {
+    setListScope(next);
+    if (next !== 'all') setStatus('');
+  }
 
   const sel =
     'h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
+
+  const scopeBtn = (on: boolean) =>
+    `rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
+      on ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]'
+    }`;
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
@@ -74,11 +89,26 @@ export function AdminJobsListClient({
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Job listings</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
           HR publishes approved requests as shareable public job URLs. Filter by department, grade, contract,
-          salary band, and year posted.
+          salary band, and year posted. Use Active for live and draft listings, or Archived for closed roles.
         </p>
       </header>
 
       <div className="mb-5 flex flex-wrap items-center gap-2 sm:gap-3">
+        <div
+          className="inline-flex h-9 shrink-0 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] p-0.5"
+          role="group"
+          aria-label="Listing scope"
+        >
+          <button type="button" className={scopeBtn(listScope === 'active')} onClick={() => setScope('active')}>
+            Active
+          </button>
+          <button type="button" className={scopeBtn(listScope === 'archived')} onClick={() => setScope('archived')}>
+            Archived
+          </button>
+          <button type="button" className={scopeBtn(listScope === 'all')} onClick={() => setScope('all')}>
+            All
+          </button>
+        </div>
         <div className="flex h-9 w-full max-w-[260px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 transition-[box-shadow,border-color] focus-within:border-[#121212] focus-within:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]">
           <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
             🔍
@@ -90,12 +120,14 @@ export function AdminJobsListClient({
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
           />
         </div>
-        <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All states</option>
-          <option value="live">Live</option>
-          <option value="archived">Archived</option>
-          <option value="draft">Draft</option>
-        </select>
+        {listScope === 'all' ? (
+          <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
+            <option value="">All states</option>
+            <option value="live">Live</option>
+            <option value="archived">Archived</option>
+            <option value="draft">Draft</option>
+          </select>
+        ) : null}
         <select className={sel} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
           <option value="">All departments</option>
           {departments.map((d) => (

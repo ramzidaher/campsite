@@ -3,6 +3,7 @@
 import {
   archiveJobListing,
   publishJobListing,
+  unarchiveJobListing,
   updateJobListing,
 } from '@/app/(main)/admin/jobs/actions';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
@@ -144,6 +145,18 @@ export function AdminJobEditClient({
     });
   }
 
+  function restoreToDraft() {
+    setMsg(null);
+    startTransition(async () => {
+      const res = await unarchiveJobListing(job.id);
+      if (!res.ok) {
+        setMsg({ type: 'err', text: res.error });
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-5 py-7 sm:px-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -163,7 +176,7 @@ export function AdminJobEditClient({
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
             Status: {jobListingStatusLabel(job.status)}
             {job.status === 'draft' ? ' · Drafts use a temporary URL until you publish.' : null}
-            {isArchived ? ' · This listing is archived (read-only).' : null}
+            {isArchived ? ' · Archived — restore to draft to edit or publish again.' : null}
           </p>
           <p className="mt-2 text-[12px] text-[#9b9b9b]">
             Prefilled from approved recruitment brief: title, grade/level, salary band, contract type.
@@ -518,34 +531,47 @@ export function AdminJobEditClient({
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          disabled={pending || isArchived}
-          onClick={save}
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
-        >
-          {pending ? 'Saving…' : 'Save draft'}
-        </button>
-        {job.status === 'draft' ? (
+        {isArchived ? (
           <button
             type="button"
             disabled={pending}
-            onClick={publish}
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212] disabled:opacity-60"
+            onClick={restoreToDraft}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            Publish
+            {pending ? 'Restoring…' : 'Restore to draft'}
           </button>
-        ) : null}
-        {job.status === 'live' ? (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={archive}
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#b91c1c] hover:bg-red-50 disabled:opacity-60"
-          >
-            Archive
-          </button>
-        ) : null}
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={save}
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {pending ? 'Saving…' : 'Save draft'}
+            </button>
+            {job.status === 'draft' ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={publish}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212] disabled:opacity-60"
+              >
+                Publish
+              </button>
+            ) : null}
+            {job.status === 'live' ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={archive}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#b91c1c] hover:bg-red-50 disabled:opacity-60"
+              >
+                Archive
+              </button>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   );
