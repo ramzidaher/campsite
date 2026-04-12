@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { SentryInit } from '@/components/SentryInit';
 import { VercelAnalyticsGate } from '@/components/VercelAnalyticsGate';
+import { VercelSpeedInsightsGate } from '@/components/VercelSpeedInsightsGate';
 import { DM_Serif_Display, Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${dmSerif.variable} min-h-screen font-sans antialiased`}>
         <SentryInit />
         <VercelAnalyticsGate />
+        <VercelSpeedInsightsGate />
         {children}
       </body>
     </html>
