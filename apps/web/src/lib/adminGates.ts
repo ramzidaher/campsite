@@ -59,6 +59,7 @@ export type ShellNavIconId =
   | 'discount'
   | 'resources'
   | 'settings'
+  | 'accountSettings'
   | 'home'
   | 'members'
   | 'pending'
@@ -68,24 +69,29 @@ export type ShellNavIconId =
   | 'categories'
   | 'activity'
   | 'orgSettings'
+  | 'attendanceSites'
   | 'notifications'
   | 'integrations'
   | 'manager'
   | 'recruitment'
+  | 'recruitmentRequests'
   | 'jobs'
   | 'applications'
   | 'offerTemplates'
   | 'interviews'
   | 'leave'
+  | 'hrSection'
   | 'hrRecords'
   | 'userProfile'
   | 'onboarding'
+  | 'oneOnOnes'
   | 'performance'
   | 'orgChart'
   | 'systemOverview'
   | 'absenceReport'
   | 'attendance'
-  | 'payroll';
+  | 'payroll'
+  | 'timesheets';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -129,7 +135,7 @@ export function getMainShellAdminNavItems(
     { href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'HR' },
     { href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
     { href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' },
-    { href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'hrRecords', section: 'HR' },
+    { href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'oneOnOnes', section: 'HR' },
     { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
     { href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' },
     { href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' },
@@ -165,7 +171,7 @@ export function getMainShellManagerNavItems(
   const recruitment: MainShellAdminNavItem = {
     href: '/hr/recruitment',
     label: 'Recruitment requests',
-    icon: 'recruitment',
+    icon: 'recruitmentRequests',
     section: 'People',
   };
   const departments: MainShellAdminNavItem = {
@@ -343,7 +349,7 @@ export function getMainShellHrNavItemsByPermissions(
   else if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team records', icon: 'hrRecords' });
   if (p.includes('hr.view_records'))
-    items.push({ href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'hrRecords' });
+    items.push({ href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'oneOnOnes' });
   if (p.includes('hr.view_records') || p.includes('leave.manage_org') || p.includes('hr.view_direct_reports')) {
     items.push({ href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport' });
   }
@@ -365,11 +371,11 @@ export function getMainShellHrNavItemsByPermissions(
   if (p.includes('leave.view_own'))
     items.push({ href: '/attendance', label: 'Attendance', icon: 'attendance' });
   if (p.includes('leave.approve_direct_reports') || p.includes('leave.manage_org'))
-    items.push({ href: '/hr/timesheets', label: 'Timesheet review', icon: 'calendar' });
+    items.push({ href: '/hr/timesheets', label: 'Timesheet review', icon: 'timesheets' });
   if (p.includes('payroll.view') || p.includes('payroll.manage'))
     items.push({ href: '/hr/wagesheets', label: 'Wagesheets', icon: 'payroll' });
   if (p.includes('hr.manage_records'))
-    items.push({ href: '/hr/attendance-settings', label: 'Attendance sites', icon: 'orgSettings' });
+    items.push({ href: '/hr/attendance-settings', label: 'Attendance sites', icon: 'attendanceSites' });
   return items.length ? items : null;
 }
 
@@ -405,7 +411,12 @@ export function getMainShellManagerNavItemsByPermissions(
     });
   }
   if (p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request'))
-    items.push({ href: '/hr/recruitment', label: 'Recruitment requests', icon: 'recruitment', section: 'People' });
+    items.push({
+      href: '/hr/recruitment',
+      label: 'Recruitment requests',
+      icon: 'recruitmentRequests',
+      section: 'People',
+    });
   if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team HR records', icon: 'hrRecords', section: 'People' });
   if (canViewDepts)

@@ -385,7 +385,7 @@ export function AppShell({
               />
             ) : null}
             {showOneOnOneNav ? (
-              <NavLink href="/one-on-ones" icon="manager" label="1:1 check-ins" onNavigate={closeMobile} />
+              <NavLink href="/one-on-ones" icon="oneOnOnes" label="1:1 check-ins" onNavigate={closeMobile} />
             ) : null}
             {liveShowOnboardingNav ? (
               <NavLink
@@ -619,7 +619,7 @@ export function AppShell({
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="hrRecords" open={hrNavExpanded} />
+                  <ShellNavIcon name="hrSection" open={hrNavExpanded} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
                   HR
@@ -719,7 +719,7 @@ export function AppShell({
             </div>
           </div>
           <span className="flex shrink-0 text-white/30">
-            <ShellNavIcon name="settings" />
+            <ShellNavIcon name="accountSettings" />
           </span>
         </Link>
       </aside>

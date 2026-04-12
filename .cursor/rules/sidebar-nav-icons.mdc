@@ -1,0 +1,18 @@
+---
+description: Main app shell sidebar — Lucide nav icons and colours
+globs: apps/web/src/components/shell/ShellNavIcon.tsx,apps/web/src/lib/adminGates.ts,apps/web/src/components/AppShell.tsx
+---
+
+# Sidebar navigation icons
+
+The main shell sidebar (`AppShell` + `ShellNavIcon` + `ShellNavIconId` in `adminGates.ts`) must follow:
+
+1. **Unique glyph per entry** — Each `ShellNavIconId` maps to exactly one Lucide icon in `ShellNavIcon`. Do not reuse the same icon component for two different ids (including section headers like Admin / Manager / HR vs links inside them). If a new link would duplicate an icon, add a new `ShellNavIconId` and a distinct Lucide icon.
+
+2. **Unique colour per id** — `SHELL_NAV_TONE` in `ShellNavIcon.tsx` must assign a **distinct** Tailwind `text-*` class to every `ShellNavIconId`. Do not group ids by shared colour buckets; when adding a nav item, add both a new icon case and a new tone entry.
+
+3. **HR section header** — The collapsible “HR” row uses `hrSection`, not `hrRecords`. Employee files stay on `hrRecords`; 1:1s use `oneOnOnes`.
+
+4. **Footer settings** — The `/settings` row at the bottom of the sidebar uses `accountSettings` so it does not share the Admin section’s `settings` gear.
+
+When changing nav items, update `getMainShell*NavItems*` helpers and keep `ShellNavIcon` exhaustive (TypeScript `never` default).
