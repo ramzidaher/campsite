@@ -108,6 +108,28 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
     }
   }
 
+  const { data: hrDocRows } = await supabase
+    .from('employee_hr_documents')
+    .select('id, org_id, user_id, category, label, storage_path, file_name, mime_type, byte_size, uploaded_by, created_at')
+    .eq('org_id', orgId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  const docUploaderIds = [...new Set((hrDocRows ?? []).map((d) => d.uploaded_by as string))];
+  const docUploaderNames: Record<string, string> = {};
+  if (docUploaderIds.length) {
+    const { data: uploaders } = await supabase
+      .from('profiles')
+      .select('id, full_name, preferred_name')
+      .in('id', docUploaderIds);
+    for (const c of uploaders ?? []) {
+      docUploaderNames[c.id as string] = getDisplayName(
+        c.full_name as string,
+        (c.preferred_name as string | null) ?? null,
+      );
+    }
+  }
+
   // applications list for "hired from" dropdown
   const { data: applications } = await supabase
     .from('job_applications')
@@ -129,6 +151,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
   return (
     <EmployeeHRFileClient
       orgId={orgId}
+      currentUserId={user.id}
       canManage={canManage}
       canMarkProbationCheck={canMarkProbationCheck}
       canViewGrading={!!canViewAll || !!canManageLeaveOrg}
@@ -153,6 +176,20 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       absenceScore={absenceScore}
       showAbsenceReportingLink={!!canViewAll || !!canViewTeam || !!canManageLeaveOrg}
       applications={(applications ?? []) as { id: string; candidate_name: string; job_listing_id: string }[]}
+      initialDocuments={(hrDocRows ?? []).map((d) => ({
+        id: d.id as string,
+        org_id: d.org_id as string,
+        user_id: d.user_id as string,
+        category: d.category as string,
+        label: (d.label as string) ?? '',
+        storage_path: d.storage_path as string,
+        file_name: d.file_name as string,
+        mime_type: d.mime_type as string,
+        byte_size: Number(d.byte_size ?? 0),
+        uploaded_by: d.uploaded_by as string,
+        created_at: d.created_at as string,
+        uploader_name: docUploaderNames[d.uploaded_by as string] ?? 'Unknown',
+      }))}
     />
   );
 }

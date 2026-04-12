@@ -7,6 +7,47 @@ import { useEffect, useMemo, useState } from 'react';
 
 const MIN_PENDING_MS = 450;
 const BRADFORD_ALERT_THRESHOLD = 200;
+const DOC_MAX_BYTES = 20 * 1024 * 1024;
+const HR_DOC_BUCKET = 'employee-hr-documents';
+
+function safeFileSegment(name: string): string {
+  const base = name.replace(/[^a-zA-Z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
+  return base.slice(0, 180) || 'file';
+}
+
+function isAllowedHrDocMime(mime: string): boolean {
+  const m = mime.toLowerCase().split(';')[0]?.trim() ?? '';
+  if (m === 'application/pdf') return true;
+  if (m.startsWith('image/')) return true;
+  if (m === 'application/msword') return true;
+  if (m === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return true;
+  if (m === 'application/vnd.ms-excel') return true;
+  if (m === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') return true;
+  return false;
+}
+
+function categoryLabel(key: string): string {
+  switch (key) {
+    case 'right_to_work':
+      return 'Right to work';
+    case 'passport':
+      return 'Passport / ID';
+    case 'contract':
+      return 'Contract';
+    case 'signed_other':
+      return 'Signed document';
+    case 'other':
+      return 'Other';
+    default:
+      return key;
+  }
+}
+
+function formatFileSize(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 async function withMinimumDelay<T>(promise: PromiseLike<T>) {
   const [result] = await Promise.all([
@@ -91,6 +132,21 @@ type AuditEvent = {
   new_value: string | null;
   created_at: string;
   changer_name: string;
+};
+
+type HrEvidenceDoc = {
+  id: string;
+  org_id: string;
+  user_id: string;
+  category: string;
+  label: string;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  byte_size: number;
+  uploaded_by: string;
+  created_at: string;
+  uploader_name: string;
 };
 
 function contractLabel(ct: string) {
@@ -229,7 +285,8 @@ function probationAlertLevel(
 }
 
 export function EmployeeHRFileClient({
-  orgId: _orgId,
+  orgId,
+  currentUserId,
   canManage,
   canMarkProbationCheck,
   canViewGrading,
@@ -240,8 +297,10 @@ export function EmployeeHRFileClient({
   absenceScore,
   showAbsenceReportingLink = false,
   applications,
+  initialDocuments,
 }: {
   orgId: string;
+  currentUserId: string;
   canManage: boolean;
   /** HR or line manager — can record probation review completion. */
   canMarkProbationCheck: boolean;
@@ -255,9 +314,19 @@ export function EmployeeHRFileClient({
   /** Link to org / team Bradford report (HR and managers with leave visibility). */
   showAbsenceReportingLink?: boolean;
   applications: { id: string; candidate_name: string; job_listing_id: string }[];
+  initialDocuments: HrEvidenceDoc[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
+
+  const [documents, setDocuments] = useState(initialDocuments);
+  const [docCategory, setDocCategory] = useState('right_to_work');
+  const [docLabel, setDocLabel] = useState('');
+  const [docBusy, setDocBusy] = useState(false);
+
+  useEffect(() => {
+    setDocuments(initialDocuments);
+  }, [initialDocuments]);
 
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -541,6 +610,100 @@ export function EmployeeHRFileClient({
       text: clear ? 'Probation completion cleared.' : 'Probation review marked complete.',
     });
     router.refresh();
+  }
+
+  async function uploadHrDocument(file: File) {
+    if (!canManage) return;
+    setDocBusy(true);
+    setMsg(null);
+    if (file.size > DOC_MAX_BYTES) {
+      setMsg({ type: 'error', text: 'File must be 20 MB or smaller.' });
+      setDocBusy(false);
+      return;
+    }
+    if (!isAllowedHrDocMime(file.type || '')) {
+      setMsg({
+        type: 'error',
+        text: 'Use PDF, an image, Word, or Excel.',
+      });
+      setDocBusy(false);
+      return;
+    }
+    const documentId = crypto.randomUUID();
+    const safeName = safeFileSegment(file.name);
+    const path = `${orgId}/${documentId}/${safeName}`;
+    const { error: upErr } = await supabase.storage.from(HR_DOC_BUCKET).upload(path, file, {
+      upsert: false,
+      cacheControl: '3600',
+      contentType: file.type || 'application/octet-stream',
+    });
+    if (upErr) {
+      setMsg({ type: 'error', text: upErr.message });
+      setDocBusy(false);
+      return;
+    }
+    const { error: insErr } = await supabase.from('employee_hr_documents').insert({
+      id: documentId,
+      org_id: orgId,
+      user_id: employee.user_id,
+      category: docCategory,
+      label: docLabel.trim(),
+      storage_path: path,
+      file_name: file.name,
+      mime_type: file.type || 'application/octet-stream',
+      byte_size: file.size,
+      uploaded_by: currentUserId,
+    });
+    if (insErr) {
+      await supabase.storage.from(HR_DOC_BUCKET).remove([path]);
+      setMsg({ type: 'error', text: insErr.message });
+      setDocBusy(false);
+      return;
+    }
+    setDocLabel('');
+    setMsg({ type: 'success', text: 'Document uploaded.' });
+    setDocBusy(false);
+    router.refresh();
+  }
+
+  async function downloadHrDocument(d: HrEvidenceDoc) {
+    const { data, error } = await supabase.storage
+      .from(HR_DOC_BUCKET)
+      .createSignedUrl(d.storage_path, 3600);
+    if (error || !data?.signedUrl) {
+      setMsg({ type: 'error', text: error?.message ?? 'Could not open file.' });
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async function deleteHrDocument(d: HrEvidenceDoc) {
+    if (!canManage) return;
+    if (!window.confirm(`Remove “${d.file_name}” from this employee’s documents?`)) return;
+    setDocBusy(true);
+    setMsg(null);
+    const { error: rmErr } = await supabase.storage.from(HR_DOC_BUCKET).remove([d.storage_path]);
+    if (rmErr) {
+      setMsg({ type: 'error', text: rmErr.message });
+      setDocBusy(false);
+      return;
+    }
+    const { error: delErr } = await supabase.from('employee_hr_documents').delete().eq('id', d.id);
+    if (delErr) {
+      setMsg({ type: 'error', text: delErr.message });
+      setDocBusy(false);
+      return;
+    }
+    setDocuments((prev) => prev.filter((x) => x.id !== d.id));
+    setMsg({ type: 'success', text: 'Document removed.' });
+    setDocBusy(false);
+    router.refresh();
+  }
+
+  function onDocFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (f) void uploadHrDocument(f);
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -949,6 +1112,9 @@ export function EmployeeHRFileClient({
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
                 placeholder="https://..."
               />
+              <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">
+                Optional external link — use Documents below to upload files to secure storage.
+              </span>
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Right-to-work status
@@ -1012,6 +1178,9 @@ export function EmployeeHRFileClient({
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
                 placeholder="https://..."
               />
+              <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">
+                Optional external link — use Documents below for passport / RTW scans.
+              </span>
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
               Home address line 1
@@ -1476,6 +1645,95 @@ export function EmployeeHRFileClient({
           )}
         </section>
       )}
+
+      {/* Documents & evidence */}
+      <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
+        <h2 className="text-[15px] font-semibold text-[#121212]">Documents &amp; evidence</h2>
+        <p className="mt-1 text-[12px] text-[#9b9b9b]">
+          Private files for this employee (right-to-work, passport, signed forms). PDF, images, Word, or Excel — max 20 MB each.
+        </p>
+        {canManage ? (
+          <div className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3">
+            <label className="block min-w-[160px] text-[12.5px] font-medium text-[#6b6b6b]">
+              Category
+              <select
+                value={docCategory}
+                onChange={(e) => setDocCategory(e.target.value)}
+                disabled={docBusy}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+              >
+                <option value="right_to_work">Right to work</option>
+                <option value="passport">Passport / ID</option>
+                <option value="contract">Contract</option>
+                <option value="signed_other">Signed document</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label className="block min-w-[180px] flex-1 text-[12.5px] font-medium text-[#6b6b6b]">
+              Label (optional)
+              <input
+                type="text"
+                value={docLabel}
+                onChange={(e) => setDocLabel(e.target.value)}
+                disabled={docBusy}
+                placeholder="e.g. 2026 visa scan"
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+              />
+            </label>
+            <label className="inline-flex cursor-pointer items-center rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50">
+              <input
+                type="file"
+                className="sr-only"
+                disabled={docBusy}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
+                onChange={onDocFileChange}
+              />
+              {docBusy ? 'Uploading…' : 'Choose file'}
+            </label>
+          </div>
+        ) : null}
+        {documents.length === 0 ? (
+          <p className="mt-4 text-[13px] text-[#9b9b9b]">No documents uploaded yet.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-[#ececec] rounded-lg border border-[#ececec]">
+            {documents.map((d) => (
+              <li key={d.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-[13px]">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-[#121212]">
+                    {categoryLabel(d.category)}
+                    {d.label ? <span className="font-normal text-[#6b6b6b]"> · {d.label}</span> : null}
+                  </p>
+                  <p className="mt-0.5 truncate text-[12px] text-[#6b6b6b]">
+                    {d.file_name} · {formatFileSize(d.byte_size)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#9b9b9b]">
+                    {d.uploader_name} · {new Date(d.created_at).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void downloadHrDocument(d)}
+                    className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#121212] hover:bg-[#fafafa]"
+                  >
+                    Open
+                  </button>
+                  {canManage ? (
+                    <button
+                      type="button"
+                      disabled={docBusy}
+                      onClick={() => void deleteHrDocument(d)}
+                      className="rounded-lg border border-[#fecaca] bg-white px-3 py-1.5 text-[12.5px] text-[#991b1b] hover:bg-[#fef2f2] disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Leave & sickness summary */}
       <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
