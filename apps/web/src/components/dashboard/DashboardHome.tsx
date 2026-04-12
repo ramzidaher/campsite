@@ -311,10 +311,18 @@ export function DashboardHome({
                   <Link
                     key={b.id}
                     href={`/broadcasts/${b.id}`}
-                    className={[
-                      'relative rounded-xl border border-[#d8d8d8] bg-white px-[18px] py-4 transition-[box-shadow,border-color] hover:border-[#c8c8c8] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
+                    aria-label={
                       unread
-                        ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-[#121212] before:content-['']"
+                        ? `${b.title}. Unread broadcast. Sent ${relTime(b.sent_at)}.`
+                        : `${b.title}. Read. Sent ${relTime(b.sent_at)}.`
+                    }
+                    className={[
+                      'relative rounded-xl border px-[18px] py-4 transition-[box-shadow,border-color]',
+                      unread
+                        ? 'border-sky-200 bg-sky-50/90 hover:border-sky-300 hover:shadow-[0_1px_3px_rgba(14,165,233,0.12),0_4px_12px_rgba(0,0,0,0.04)]'
+                        : 'border-[#d8d8d8] bg-white hover:border-[#c8c8c8] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
+                      unread
+                        ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-sky-600 before:content-['']"
                         : '',
                     ].join(' ')}
                   >
@@ -327,7 +335,14 @@ export function DashboardHome({
                       >
                         {b.title}
                       </div>
-                      <div className="shrink-0 text-[11.5px] text-[#9b9b9b]">{relTime(b.sent_at)}</div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {unread ? (
+                          <span className="inline-flex items-center rounded-full border border-sky-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900">
+                            Unread
+                          </span>
+                        ) : null}
+                        <div className="text-[11.5px] text-[#9b9b9b]">{relTime(b.sent_at)}</div>
+                      </div>
                     </div>
                     <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">
                       {stripPreview(b.body)}
