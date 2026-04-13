@@ -35,6 +35,22 @@ export default async function AdminUsersPage({
     p_context: {},
   });
 
+  const [{ data: hrViewRecords }, { data: hrViewDirectReports }] = await Promise.all([
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'hr.view_records',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: profile.org_id,
+      p_permission_key: 'hr.view_direct_reports',
+      p_context: {},
+    }),
+  ]);
+  const canOpenHrFile = Boolean(hrViewRecords || hrViewDirectReports);
+
   const { data: assignableRows, error: assignableErr } = await supabase.rpc('list_assignable_org_roles', {
     p_org_id: profile.org_id,
   });
@@ -160,6 +176,7 @@ export default async function AdminUsersPage({
       orgName={orgName}
       orgSlug={orgSlug}
       totalMemberCount={totalMemberCount ?? 0}
+      canOpenHrFile={canOpenHrFile}
     />
   );
 }

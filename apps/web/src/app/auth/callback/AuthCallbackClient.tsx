@@ -79,6 +79,8 @@ export function AuthCallbackClient() {
         return;
       }
 
+      await supabase.rpc('profile_clear_reauth_required');
+
       window.history.replaceState(null, '', `${full.pathname}${full.search}`);
 
       const { data: { user } } = await supabase.auth.getUser();

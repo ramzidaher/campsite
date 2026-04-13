@@ -8,10 +8,14 @@ import {
   getMainShellManagerNavItemsByPermissions,
   getMainShellManagerNavSectionLabel,
 } from '@/lib/adminGates';
+import { normalizeCelebrationMode } from '@/lib/holidayThemes';
+import { resolveTenantGovernanceRedirect } from '@/lib/tenantGovernanceGate';
 import { createClient } from '@/lib/supabase/server';
 import {
   type PermissionKey,
 } from '@campsite/types';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 // Force-dynamic is required: layout data is fully user-specific (permissions, badge counts).
 export const dynamic = 'force-dynamic';
@@ -33,6 +37,8 @@ function roleLabel(role: string): string {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
+  const headerStore = await headers();
+  const pathname = headerStore.get('x-campsite-pathname') ?? '';
 
   // Single round trip to Supabase — replaces the previous 3 sequential Promise.all
   // batches that each depended on the prior batch's results (profile → org/permissions
@@ -41,19 +47,38 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: bundle } = await supabase.rpc('main_shell_layout_bundle');
   const b = (bundle && typeof bundle === 'object' ? bundle : {}) as Record<string, unknown>;
 
+  const str = (k: string): string | null =>
+    typeof b[k] === 'string' ? (b[k] as string) : null;
+
+  const isPlatformOperator = Boolean(b['is_platform_operator']);
+  const governanceRedirect = resolveTenantGovernanceRedirect({
+    pathname,
+    isPlatformOperator,
+    hasOrgId: Boolean(str('org_id')),
+    orgIsLocked: Boolean(b['org_is_locked']),
+    orgMaintenanceMode: Boolean(b['org_maintenance_mode']),
+    orgSubscriptionStatus: str('org_subscription_status'),
+    orgTrialEndsAtIso: str('org_subscription_trial_ends_at'),
+    now: new Date(),
+  });
+  if (governanceRedirect) {
+    redirect(governanceRedirect);
+  }
+
   const num = (k: string): number => {
     const v = b[k];
     if (typeof v === 'number' && !Number.isNaN(v)) return Math.max(0, v);
     if (v !== null && v !== undefined) return Math.max(0, Number(v));
     return 0;
   };
-  const str = (k: string): string | null =>
-    typeof b[k] === 'string' ? (b[k] as string) : null;
 
   const hasProfile     = Boolean(b['has_profile']);
   const emailLocal     = str('email')?.split('@')[0]?.trim() ?? '';
   const profileRole    = str('profile_role')?.trim() || null;
   const currentOrgId   = str('org_id');
+  const initialCelebrationMode = normalizeCelebrationMode(str('celebration_mode'));
+  const initialCelebrationAutoEnabled =
+    typeof b['celebration_auto_enabled'] === 'boolean' ? Boolean(b['celebration_auto_enabled']) : true;
 
   const hasTenantProfile = hasProfile;
   const orgName          = str('org_name') ?? 'Organisation';
@@ -204,9 +229,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     },
   ].filter((item) => item.count > 0);
 
+  const profileReauthRequiredAt = str('profile_reauth_required_at');
+
   return (
     <ThemeRoot>
-      <MainProviders>
+      <MainProviders
+        reauthRequiredAt={profileReauthRequiredAt}
+        skipTenantReauth={isPlatformOperator}
+      >
         <AppShell
           orgName={orgName}
           orgLogoUrl={orgLogoUrl}
@@ -239,6 +269,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           showMyHrRecordNav={showMyHrRecordNav}
           showMemberSearch={showMemberSearch}
           orgId={currentOrgId}
+          initialCelebrationMode={initialCelebrationMode}
+          initialCelebrationAutoEnabled={initialCelebrationAutoEnabled}
         >
           {children}
         </AppShell>

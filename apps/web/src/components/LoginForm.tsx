@@ -46,6 +46,8 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       return;
     }
 
+    await supabase.rpc('profile_clear_reauth_required');
+
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
     if (!uid) {

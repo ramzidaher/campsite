@@ -1,5 +1,6 @@
 'use client';
 
+import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewModal';
 import Link from 'next/link';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -76,6 +77,145 @@ function initials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 }
 
+function hrRoleLabel(role: string) {
+  return role ? role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
+}
+
+function hrStatusBadge(status: string) {
+  if (status === 'active') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[11px] font-medium text-[#166534]">
+        <span className="h-[5px] w-[5px] rounded-full bg-current" />
+        Active
+      </span>
+    );
+  }
+  if (status === 'pending') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#fff7ed] px-2.5 py-0.5 text-[11px] font-medium text-[#c2410c]">
+        <span className="h-[5px] w-[5px] rounded-full bg-current" />
+        Pending
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#9b9b9b]">
+      <span className="h-[5px] w-[5px] rounded-full bg-current" />
+      Inactive
+    </span>
+  );
+}
+
+function HRQuickViewSummary({
+  r,
+  today,
+  contractLabel,
+  locationLabel,
+}: {
+  r: HRDirectoryRow;
+  today: string;
+  contractLabel: (ct: string | null) => string;
+  locationLabel: (wl: string | null) => string;
+}) {
+  const onProbation = r.probation_end_date && r.probation_end_date >= today;
+  return (
+    <>
+      <div className="mb-5 flex items-center gap-3">
+        {r.avatar_url ? (
+          <img src={r.avatar_url} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] text-[14px] font-bold text-[#6b6b6b]">
+            {initials(r.full_name)}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold text-[#121212]">{r.display_name ?? r.full_name}</p>
+          {r.email ? <p className="truncate text-[12.5px] text-[#9b9b9b]">{r.email}</p> : null}
+        </div>
+      </div>
+      {!r.hr_record_id ? (
+        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-950">
+          No HR record on file yet. Open the full file to create one.
+        </p>
+      ) : null}
+      <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Job title</dt>
+          <dd className="mt-0.5 text-[#121212]">
+            {r.job_title || '—'}
+            {r.grade_level ? <span className="ml-1 text-[11px] text-[#9b9b9b]">({r.grade_level})</span> : null}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contract</dt>
+          <dd className="mt-0.5 text-[#121212]">
+            {r.contract_type ? contractLabel(r.contract_type) : '—'}
+            {r.fte != null && r.fte < 1 ? ` · ${Math.round(r.fte * 100)}% FTE` : ''}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Location</dt>
+          <dd className="mt-0.5 text-[#121212]">{r.work_location ? locationLabel(r.work_location) : '—'}</dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Start date</dt>
+          <dd className="mt-0.5 text-[#121212]">{r.employment_start_date ?? '—'}</dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Tenure</dt>
+          <dd className="mt-0.5 text-[#121212]">
+            {r.length_of_service_years != null && r.length_of_service_months != null
+              ? `${r.length_of_service_years}y ${r.length_of_service_months}m`
+              : '—'}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Hours / positions</dt>
+          <dd className="mt-0.5 text-[#121212]">
+            {r.weekly_hours != null ? `${r.weekly_hours}h` : '—'}
+            {r.positions_count != null && r.positions_count > 1 ? (
+              <span className="text-[#9b9b9b]"> · {r.positions_count} positions</span>
+            ) : null}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Probation ends</dt>
+          <dd className="mt-0.5">
+            {r.probation_end_date ? (
+              <span className={['text-[#121212]', onProbation ? 'font-medium text-[#c2410c]' : ''].join(' ')}>
+                {r.probation_end_date}
+                {onProbation ? ' (on probation)' : ''}
+              </span>
+            ) : (
+              '—'
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Salary band</dt>
+          <dd className="mt-0.5 text-[#121212]">{r.salary_band || '—'}</dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Departments</dt>
+          <dd className="mt-0.5 text-[#121212]">{r.department_names.length ? r.department_names.join(', ') : '—'}</dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Reports to</dt>
+          <dd className="mt-0.5 text-[#121212]">{r.reports_to_name || '—'}</dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Role</dt>
+          <dd className="mt-0.5 text-[#121212]">{hrRoleLabel(r.role)}</dd>
+        </div>
+        <div>
+          <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Account status</dt>
+          <dd className="mt-0.5">{hrStatusBadge(r.status)}</dd>
+        </div>
+      </dl>
+    </>
+  );
+}
+
 function StatCard({
   label,
   value,
@@ -129,7 +269,7 @@ function StatCard({
 
 export function HRDirectoryClient({
   orgId: _orgId,
-  canManage,
+  canManage: _canManage,
   canManagePerformanceCycles,
   canViewAll,
   initialRows,
@@ -200,7 +340,12 @@ export function HRDirectoryClient({
   const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
   const columnsMenuRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<'dashboard' | 'directory'>(stats ? 'dashboard' : 'directory');
+  const [previewRow, setPreviewRow] = useState<HRDirectoryRow | null>(null);
   const deferredQ = useDeferredValue(q);
+
+  useEffect(() => {
+    if (tab !== 'directory') setPreviewRow(null);
+  }, [tab]);
 
   useEffect(() => {
     if (!isColumnsMenuOpen) return;
@@ -593,7 +738,11 @@ export function HRDirectoryClient({
                 {filtered.map((r) => {
                   const onProbation = r.probation_end_date && r.probation_end_date >= today;
                   return (
-                    <tr key={r.user_id} className="group hover:bg-[#faf9f6]">
+                    <tr
+                      key={r.user_id}
+                      className="group cursor-pointer hover:bg-[#faf9f6]"
+                      onClick={() => setPreviewRow(r)}
+                    >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           {r.avatar_url ? (
@@ -676,10 +825,19 @@ export function HRDirectoryClient({
                           </div>
                         </td>
                       ) : null}
-                      <td className="px-4 py-3 text-right align-middle whitespace-nowrap">
-                        <Link href={`/hr/records/${r.user_id}`} className="inline-flex items-center whitespace-nowrap text-[12px] font-medium text-[#121212] underline underline-offset-2 opacity-70 transition-opacity group-hover:opacity-100">
-                          Open file →
-                        </Link>
+                      <td
+                        className="px-4 py-3 text-right align-middle whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[16px] font-medium text-[#121212] opacity-70 transition-opacity hover:bg-[#ececec] group-hover:opacity-100"
+                          aria-label="Preview employee"
+                          title="Preview"
+                          onClick={() => setPreviewRow(r)}
+                        >
+                          →
+                        </button>
                       </td>
                     </tr>
                   );
@@ -693,6 +851,24 @@ export function HRDirectoryClient({
             </p>
           ) : null}
         </>
+      ) : null}
+
+      {previewRow ? (
+        <EmployeeQuickViewModal
+          open
+          onClose={() => setPreviewRow(null)}
+          backLabel={canViewAll ? 'Employee records' : 'Team records'}
+          title={previewRow.display_name ?? previewRow.full_name}
+          subtitle={previewRow.email}
+          fullRecordHref={`/hr/records/${previewRow.user_id}`}
+        >
+          <HRQuickViewSummary
+            r={previewRow}
+            today={today}
+            contractLabel={contractLabel}
+            locationLabel={locationLabel}
+          />
+        </EmployeeQuickViewModal>
       ) : null}
     </div>
   );

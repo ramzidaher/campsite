@@ -1,5 +1,6 @@
 'use client';
 
+import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewModal';
 import { MemberPermissionOverridesPanel } from '@/components/admin/MemberPermissionOverridesPanel';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -88,6 +89,7 @@ export function AdminUsersClient({
   orgName,
   orgSlug,
   totalMemberCount,
+  canOpenHrFile,
 }: {
   currentUserId: string;
   canEditRoles: boolean;
@@ -101,6 +103,8 @@ export function AdminUsersClient({
   orgName: string;
   orgSlug: string;
   totalMemberCount: number;
+  /** When true, quick-view can link to `/hr/records/{id}` */
+  canOpenHrFile: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -118,6 +122,7 @@ export function AdminUsersClient({
   const [inviteRole, setInviteRole] = useState<string>('');
   const [inviteDepts, setInviteDepts] = useState<Set<string>>(new Set());
 
+  const [memberPreview, setMemberPreview] = useState<UserRow | null>(null);
   const [edit, setEdit] = useState<UserRow | null>(null);
   const [editRole, setEditRole] = useState<string>('');
   const [editDepts, setEditDepts] = useState<Set<string>>(new Set());
@@ -654,8 +659,12 @@ export function AdminUsersClient({
             </thead>
             <tbody>
               {slice.map((r) => (
-                <tr key={r.id} className="border-b border-[#d8d8d8] transition-colors last:border-0 hover:bg-[#f5f4f1]">
-                  <td className="px-3 py-3 align-middle">
+                <tr
+                  key={r.id}
+                  className="cursor-pointer border-b border-[#d8d8d8] transition-colors last:border-0 hover:bg-[#f5f4f1]"
+                  onClick={() => setMemberPreview(r)}
+                >
+                  <td className="px-3 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       className="rounded border-[#d8d8d8]"
@@ -696,7 +705,7 @@ export function AdminUsersClient({
                       year: 'numeric',
                     })}
                   </td>
-                  <td className="px-3 py-3 align-middle">
+                  <td className="px-3 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
                     <div className="flex flex-wrap gap-1.5">
                       {canEditRoles ? (
                         <button
@@ -781,6 +790,67 @@ export function AdminUsersClient({
           Next
         </button>
       </div>
+
+      {memberPreview ? (
+        <EmployeeQuickViewModal
+          open
+          onClose={() => setMemberPreview(null)}
+          backLabel="Members"
+          title={memberPreview.full_name}
+          subtitle={memberPreview.email}
+          fullRecordHref={canOpenHrFile ? `/hr/records/${memberPreview.id}` : undefined}
+        >
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[14px] font-semibold text-[#6b6b6b]">
+              {initials(memberPreview.full_name)}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[15px] font-semibold text-[#121212]">{memberPreview.full_name}</p>
+              {memberPreview.email ? <p className="truncate text-[12.5px] text-[#9b9b9b]">{memberPreview.email}</p> : null}
+            </div>
+          </div>
+          {!canOpenHrFile ? (
+            <p className="mb-4 rounded-lg border border-[#ececec] bg-[#faf9f6] px-3 py-2 text-[12.5px] text-[#6b6b6b]">
+              HR employee file is not available for your role. You can still use Edit and other actions in the table.
+            </p>
+          ) : null}
+          <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
+            <div>
+              <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Role</dt>
+              <dd className="mt-0.5">
+                <span
+                  className={[
+                    'inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                    rolePillClass(memberPreview.role),
+                  ].join(' ')}
+                >
+                  {ROLE_OPTION_LABEL[memberPreview.role] ?? memberPreview.role.replace(/_/g, ' ')}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Status</dt>
+              <dd className="mt-0.5">{statusBadge(memberPreview.status)}</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Departments</dt>
+              <dd className="mt-0.5 text-[#121212]">
+                {memberPreview.departments.length ? memberPreview.departments.join(', ') : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Joined</dt>
+              <dd className="mt-0.5 text-[#121212]">
+                {new Date(memberPreview.created_at).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </dd>
+            </div>
+          </dl>
+        </EmployeeQuickViewModal>
+      ) : null}
 
       {inviteOpen ? (
         <div

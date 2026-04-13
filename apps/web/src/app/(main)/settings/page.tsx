@@ -26,7 +26,7 @@ export default async function SettingsPage({
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'full_name,avatar_url,role,accent_preset,color_scheme,dnd_enabled,dnd_start,dnd_end,shift_reminder_before_minutes,rota_open_slot_alerts_enabled,org_id'
+      'full_name,avatar_url,role,accent_preset,color_scheme,celebration_mode,celebration_auto_enabled,dnd_enabled,dnd_start,dnd_end,shift_reminder_before_minutes,rota_open_slot_alerts_enabled,org_id'
     )
     .eq('id', user.id)
     .single();
@@ -105,10 +105,10 @@ export default async function SettingsPage({
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-5 pb-10 pt-6 sm:px-[28px]">
-      <header className="mb-8">
+    <div className="mx-auto max-w-4xl px-5 pb-10 pt-6 sm:px-[28px]">
+      <header className="mb-7">
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Settings</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">Profile, appearance, notifications, and security.</p>
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">Manage your profile, preferences, and account security.</p>
       </header>
       <ProfileSettings
         googleFlash={googleFlash}
@@ -123,6 +123,8 @@ export default async function SettingsPage({
                   role: profile.role,
                   accent_preset: profile.accent_preset,
                   color_scheme: profile.color_scheme,
+                  celebration_mode: profile.celebration_mode,
+                  celebration_auto_enabled: profile.celebration_auto_enabled,
                   dnd_enabled: profile.dnd_enabled,
                   dnd_start: profile.dnd_start,
                   dnd_end: profile.dnd_end,

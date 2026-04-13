@@ -7,6 +7,21 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      keyframes: {
+        'employee-modal-backdrop': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'employee-modal-panel': {
+          '0%': { opacity: '0', transform: 'translateY(14px) scale(0.98)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+      },
+      animation: {
+        'employee-modal-backdrop': 'employee-modal-backdrop 0.22s ease-out forwards',
+        'employee-modal-panel':
+          'employee-modal-panel 0.34s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both',
+      },
       fontFamily: {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         authSerif: ['var(--font-auth-serif)', 'Georgia', 'ui-serif', 'serif'],

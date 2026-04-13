@@ -17,6 +17,7 @@ export async function middleware(request: NextRequest) {
     nextHeaders.set('x-campsite-org-slug', orgSlug);
   }
   nextHeaders.set('x-campsite-platform-admin', isPlatformAdmin ? '1' : '0');
+  nextHeaders.set('x-campsite-pathname', request.nextUrl.pathname);
 
   let response = NextResponse.next({ request: { headers: nextHeaders } });
 

@@ -1462,6 +1462,11 @@ export function FounderHqApp({
               <div className="section-title" style={{ marginBottom: 10 }}>
                 Billing, security, and support controls
               </div>
+              <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12, maxWidth: 720 }}>
+                Changes to plan, subscription, trial date, lock, or maintenance apply after you click{' '}
+                <strong>Save</strong> for that row. <strong>Clear trial</strong> and <strong>Force logout</strong> apply
+                immediately.
+              </p>
               <div className="table-wrap">
                 <table>
                   <thead>

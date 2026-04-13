@@ -49,7 +49,7 @@ export function canManageOrgSettings(role: ProfileRole | string | null | undefin
 }
 
 /**
- * Sidebar nav icons (Lucide, monochrome). Keys are mapped in `ShellNavIcon`.
+ * Sidebar nav icons (Lucide, colored). Keys are mapped in `ShellNavIcon`.
  */
 export type ShellNavIconId =
   | 'dashboard'
@@ -59,7 +59,6 @@ export type ShellNavIconId =
   | 'discount'
   | 'resources'
   | 'settings'
-  | 'accountSettings'
   | 'home'
   | 'members'
   | 'pending'
@@ -69,29 +68,28 @@ export type ShellNavIconId =
   | 'categories'
   | 'activity'
   | 'orgSettings'
-  | 'attendanceSites'
   | 'notifications'
   | 'integrations'
   | 'manager'
+  | 'managerSection'
+  | 'hrSection'
+  | 'adminSection'
+  | 'oneOnOnes'
   | 'recruitment'
-  | 'recruitmentRequests'
   | 'jobs'
   | 'applications'
   | 'offerTemplates'
   | 'interviews'
   | 'leave'
-  | 'hrSection'
   | 'hrRecords'
   | 'userProfile'
   | 'onboarding'
-  | 'oneOnOnes'
   | 'performance'
   | 'orgChart'
   | 'systemOverview'
   | 'absenceReport'
   | 'attendance'
-  | 'payroll'
-  | 'timesheets';
+  | 'payroll';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -116,8 +114,8 @@ export function getMainShellAdminNavItems(
   if (!canAccessOrgAdminArea(r)) return null;
   return [
     { href: '/admin', label: 'Overview', icon: 'home' },
-    { href: '/admin/system-overview', label: 'System overview', icon: 'systemOverview' },
     { href: '/admin/users', label: 'All members', icon: 'members' },
+    { href: '/admin/system-overview', label: 'System overview', icon: 'systemOverview' },
     { href: '/admin/pending', label: 'Pending approval', icon: 'pending' },
     { href: '/admin/roles', label: 'Roles & permissions', icon: 'roles' },
     { href: '/admin/broadcasts', label: 'Broadcasts', icon: 'broadcasts', section: 'Content' },
@@ -135,7 +133,7 @@ export function getMainShellAdminNavItems(
     { href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'HR' },
     { href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
     { href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' },
-    { href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'oneOnOnes', section: 'HR' },
+    { href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'hrRecords', section: 'HR' },
     { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
     { href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' },
     { href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' },
@@ -171,7 +169,7 @@ export function getMainShellManagerNavItems(
   const recruitment: MainShellAdminNavItem = {
     href: '/hr/recruitment',
     label: 'Recruitment requests',
-    icon: 'recruitmentRequests',
+    icon: 'recruitment',
     section: 'People',
   };
   const departments: MainShellAdminNavItem = {
@@ -242,25 +240,29 @@ export function getMainShellAdminNavItemsByPermissions(
 
   const items: MainShellAdminNavItem[] = [{ href: '/admin', label: 'Overview', icon: 'home' }];
   if (p.includes('members.view')) items.push({ href: '/admin/users', label: 'All members', icon: 'members' });
-  if (
-    p.some(
-      (k) =>
-        k.startsWith('members.') ||
-        k.startsWith('roles.') ||
-        k.startsWith('approvals.') ||
-        k.startsWith('departments.') ||
-        k.startsWith('teams.') ||
-        k.startsWith('broadcasts.') ||
-        k.startsWith('discounts.') ||
-        k.startsWith('rota.') ||
-        k.startsWith('recruitment.') ||
-        k.startsWith('jobs.') ||
-        k.startsWith('applications.') ||
-        k.startsWith('offers.') ||
-        k.startsWith('interviews.')
-    )
-  ) {
-    items.push({ href: '/admin/system-overview', label: 'System overview', icon: 'systemOverview' });
+  const canSeeSystemOverview = p.some(
+    (k) =>
+      k.startsWith('members.') ||
+      k.startsWith('roles.') ||
+      k.startsWith('approvals.') ||
+      k.startsWith('departments.') ||
+      k.startsWith('teams.') ||
+      k.startsWith('broadcasts.') ||
+      k.startsWith('discounts.') ||
+      k.startsWith('rota.') ||
+      k.startsWith('recruitment.') ||
+      k.startsWith('jobs.') ||
+      k.startsWith('applications.') ||
+      k.startsWith('offers.') ||
+      k.startsWith('interviews.')
+  );
+  if (canSeeSystemOverview) {
+    // Keep this after members to match the sidebar visual order.
+    if (p.includes('members.view')) {
+      items.push({ href: '/admin/system-overview', label: 'System overview', icon: 'systemOverview' });
+    } else {
+      items.splice(1, 0, { href: '/admin/system-overview', label: 'System overview', icon: 'systemOverview' });
+    }
   }
   if (p.includes('approvals.members.review'))
     items.push({ href: '/admin/pending', label: 'Pending approval', icon: 'pending' });
@@ -318,15 +320,16 @@ export function getMainShellHrNavItemsByPermissions(
   const canSeeInterviews = p.includes('interviews.view') || p.includes('interviews.book_slot');
 
   if (canSeeRecruitment)
-    items.push({ href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment' });
+    items.push({ href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'Recruitment' });
   if (canSeeJobs)
-    items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs', nested: canSeeRecruitment });
+    items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs', nested: canSeeRecruitment, section: 'Recruitment' });
   if (canSeeApplications)
     items.push({
       href: '/hr/applications',
       label: 'Applications',
       icon: 'applications',
       nested: canSeeRecruitment,
+      section: 'Recruitment',
     });
   if (canSeeOffers)
     items.push({
@@ -334,6 +337,7 @@ export function getMainShellHrNavItemsByPermissions(
       label: 'Offer templates',
       icon: 'offerTemplates',
       nested: canSeeRecruitment,
+      section: 'Recruitment',
     });
   if (canSeeInterviews)
     items.push({
@@ -341,41 +345,42 @@ export function getMainShellHrNavItemsByPermissions(
       label: 'Interview schedule',
       icon: 'interviews',
       nested: canSeeRecruitment,
+      section: 'Recruitment',
     });
   if (p.includes('leave.manage_org') && !p.includes('hr.view_records'))
-    items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart' });
+    items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'People' });
   if (p.includes('hr.view_records'))
-    items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords' });
+    items.push({ href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'People' });
   else if (p.includes('hr.view_direct_reports'))
-    items.push({ href: '/hr/records', label: 'Team records', icon: 'hrRecords' });
+    items.push({ href: '/hr/records', label: 'Team records', icon: 'hrRecords', section: 'People' });
   if (p.includes('hr.view_records'))
-    items.push({ href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'oneOnOnes' });
+    items.push({ href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'hrRecords', section: 'People' });
   if (p.includes('hr.view_records') || p.includes('leave.manage_org') || p.includes('hr.view_direct_reports')) {
-    items.push({ href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport' });
+    items.push({ href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport', section: 'Reporting' });
   }
   if (p.includes('hr.view_records')) {
-    items.push({ href: '/hr/hr-metric-alerts', label: 'HR metric alerts', icon: 'notifications' });
+    items.push({ href: '/hr/hr-metric-alerts', label: 'HR metric alerts', icon: 'notifications', section: 'Reporting' });
   }
   if (p.includes('hr.view_own'))
-    items.push({ href: '/profile', label: 'My Profile', icon: 'userProfile' });
+    items.push({ href: '/profile', label: 'My Profile', icon: 'userProfile', section: 'People' });
   if (p.includes('hr.view_records'))
-    items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart' });
+    items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'People' });
   if (
     p.includes('onboarding.manage_runs') ||
     p.includes('onboarding.manage_templates') ||
     p.includes('onboarding.complete_own_tasks')
   )
-    items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding' });
+    items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'People' });
   if (p.includes('performance.manage_cycles') || p.includes('performance.view_reports'))
-    items.push({ href: '/hr/performance', label: 'Performance reviews', icon: 'performance' });
+    items.push({ href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'Reporting' });
   if (p.includes('leave.view_own'))
-    items.push({ href: '/attendance', label: 'Attendance', icon: 'attendance' });
+    items.push({ href: '/attendance', label: 'Attendance', icon: 'attendance', section: 'Reporting' });
   if (p.includes('leave.approve_direct_reports') || p.includes('leave.manage_org'))
-    items.push({ href: '/hr/timesheets', label: 'Timesheet review', icon: 'timesheets' });
+    items.push({ href: '/hr/timesheets', label: 'Timesheet review', icon: 'calendar', section: 'Payroll & time' });
   if (p.includes('payroll.view') || p.includes('payroll.manage'))
-    items.push({ href: '/hr/wagesheets', label: 'Wagesheets', icon: 'payroll' });
+    items.push({ href: '/hr/wagesheets', label: 'Wagesheets', icon: 'payroll', section: 'Payroll & time' });
   if (p.includes('hr.manage_records'))
-    items.push({ href: '/hr/attendance-settings', label: 'Attendance sites', icon: 'attendanceSites' });
+    items.push({ href: '/hr/attendance-settings', label: 'Attendance sites', icon: 'orgSettings', section: 'Payroll & time' });
   return items.length ? items : null;
 }
 
@@ -411,12 +416,7 @@ export function getMainShellManagerNavItemsByPermissions(
     });
   }
   if (p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request'))
-    items.push({
-      href: '/hr/recruitment',
-      label: 'Recruitment requests',
-      icon: 'recruitmentRequests',
-      section: 'People',
-    });
+    items.push({ href: '/hr/recruitment', label: 'Recruitment requests', icon: 'recruitment', section: 'People' });
   if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team HR records', icon: 'hrRecords', section: 'People' });
   if (canViewDepts)

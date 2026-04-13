@@ -13,12 +13,22 @@ import { useShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
 import type { ShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
 import { CheckboxUiSoundCapture } from '@/components/sound/CheckboxUiSoundCapture';
 import { useUiSound } from '@/lib/sound/useUiSound';
+import { HolidayOverlay } from '@/components/shell/HolidayOverlay';
+import {
+  getAutoCelebrationMode,
+  getCelebrationModeDef,
+  normalizeCelebrationMode,
+  type CelebrationMode,
+} from '@/lib/holidayThemes';
 import { ChevronDown } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
 const MANAGER_NAV_EXPANDED_KEY = 'campsite_nav_manager_expanded';
 const HR_NAV_EXPANDED_KEY = 'campsite_nav_hr_expanded';
+const SHELL_MODE_STORAGE_KEY = 'campsite_shell_mode';
+const SHELL_MODE_AUTO_STORAGE_KEY = 'campsite_shell_mode_auto_enabled';
+const LEGACY_PRIDE_MODE_STORAGE_KEY = 'campsite_pride_mode';
 
 function initials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -133,6 +143,8 @@ export function AppShell({
   hrNavItems = null,
   adminNavItems = null,
   showStandaloneApprovals = true,
+  initialCelebrationMode = 'off',
+  initialCelebrationAutoEnabled = true,
 }: {
   children: React.ReactNode;
   orgName: string;
@@ -174,11 +186,15 @@ export function AppShell({
   adminNavItems?: MainShellAdminNavItem[] | null;
   /** Managers use the Manager section; other approvers use this standalone link. */
   showStandaloneApprovals?: boolean;
+  initialCelebrationMode?: CelebrationMode;
+  initialCelebrationAutoEnabled?: boolean;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
   const [managerNavExpanded, setManagerNavExpanded] = useState(true);
   const [hrNavExpanded, setHrNavExpanded] = useState(true);
+  const [shellMode, setShellMode] = useState<CelebrationMode>(initialCelebrationMode);
+  const [shellModeAutoEnabled, setShellModeAutoEnabled] = useState<boolean>(initialCelebrationAutoEnabled);
   const [orgLogoFailed, setOrgLogoFailed] = useState(false);
   const [userAvatarFailed, setUserAvatarFailed] = useState(false);
   const playUiSound = useUiSound();
@@ -250,10 +266,51 @@ export function AppShell({
       const hr = localStorage.getItem(HR_NAV_EXPANDED_KEY);
       if (hr === '0') setHrNavExpanded(false);
       else if (hr === '1') setHrNavExpanded(true);
+      const savedMode = localStorage.getItem(SHELL_MODE_STORAGE_KEY);
+      const legacyPride = localStorage.getItem(LEGACY_PRIDE_MODE_STORAGE_KEY) === '1';
+      if (savedMode) setShellMode(normalizeCelebrationMode(savedMode));
+      else if (legacyPride) setShellMode('pride');
+      const savedAuto = localStorage.getItem(SHELL_MODE_AUTO_STORAGE_KEY);
+      if (savedAuto === '0') setShellModeAutoEnabled(false);
+      else if (savedAuto === '1') setShellModeAutoEnabled(true);
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [initialCelebrationMode, initialCelebrationAutoEnabled]);
+
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const saved = window.localStorage.getItem(SHELL_MODE_STORAGE_KEY);
+        const legacyPride = window.localStorage.getItem(LEGACY_PRIDE_MODE_STORAGE_KEY) === '1';
+        if (saved) {
+          setShellMode(normalizeCelebrationMode(saved));
+        } else if (legacyPride) {
+          setShellMode('pride');
+        } else {
+          setShellMode(initialCelebrationMode);
+        }
+        const savedAuto = window.localStorage.getItem(SHELL_MODE_AUTO_STORAGE_KEY);
+        if (savedAuto === '0') setShellModeAutoEnabled(false);
+        else if (savedAuto === '1') setShellModeAutoEnabled(true);
+        else setShellModeAutoEnabled(initialCelebrationAutoEnabled);
+      } catch {
+        setShellMode(initialCelebrationMode);
+        setShellModeAutoEnabled(initialCelebrationAutoEnabled);
+      }
+    };
+    sync();
+    window.addEventListener('storage', sync);
+    window.addEventListener('campsite:shell-mode-change', sync as EventListener);
+    return () => {
+      window.removeEventListener('storage', sync);
+      window.removeEventListener('campsite:shell-mode-change', sync as EventListener);
+    };
+  }, [initialCelebrationMode, initialCelebrationAutoEnabled]);
+  const effectiveMode = shellModeAutoEnabled ? getAutoCelebrationMode(new Date()) : shellMode;
+  const shellTheme = getCelebrationModeDef(effectiveMode);
+  const shellGradient = shellTheme.gradient;
+
 
   const safeOrgLogo = useMemo(() => safeHttpImageUrl(orgLogoUrl ?? null), [orgLogoUrl]);
   useEffect(() => {
@@ -265,6 +322,7 @@ export function AppShell({
     setUserAvatarFailed(false);
   }, [safeUserAvatar]);
 
+  const pathname = usePathname() ?? '';
   const showApprovals = isApproverRole(profileRole);
   const totalNotifCount = useMemo(
     () => liveTopBarNotifications.reduce((sum, item) => sum + item.count, 0),
@@ -283,6 +341,7 @@ export function AppShell({
   return (
     <div className="campsite-paper flex min-h-screen bg-[#faf9f6] text-[#121212]">
       <CheckboxUiSoundCapture />
+      <HolidayOverlay mode={effectiveMode} />
       {mobileNav ? (
         <button
           type="button"
@@ -297,6 +356,14 @@ export function AppShell({
           'fixed left-0 top-0 z-[100] flex h-screen w-[240px] shrink-0 flex-col overflow-hidden bg-[#121212] text-[#faf9f6] transition-transform md:translate-x-0',
           mobileNav ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         ].join(' ')}
+        style={
+          shellGradient
+            ? {
+                backgroundImage: `linear-gradient(rgba(17,17,19,0.84),rgba(17,17,19,0.84)), ${shellGradient}`,
+                backgroundBlendMode: 'multiply,normal',
+              }
+            : undefined
+        }
       >
         <Link
           href="/dashboard"
@@ -352,7 +419,6 @@ export function AppShell({
               badge={liveUnreadBroadcasts > 0 ? liveUnreadBroadcasts : undefined}
               onNavigate={closeMobile}
             />
-            <NavLink href="/resources" icon="resources" label="Resource library" onNavigate={closeMobile} />
             <NavLink href="/calendar" icon="calendar" label="Calendar" onNavigate={closeMobile} />
             <NavLink
               href="/rota"
@@ -387,6 +453,7 @@ export function AppShell({
             {showOneOnOneNav ? (
               <NavLink href="/one-on-ones" icon="oneOnOnes" label="1:1 check-ins" onNavigate={closeMobile} />
             ) : null}
+            <NavLink href="/resources" icon="resources" label="Resource library" onNavigate={closeMobile} />
             {liveShowOnboardingNav ? (
               <NavLink
                 href="/onboarding"
@@ -397,18 +464,29 @@ export function AppShell({
             ) : null}
           </div>
 
+          {Boolean(
+            (managerNavItems && managerNavItems.length > 0) ||
+            (hrNavItems && hrNavItems.length > 0) ||
+            (adminNavItems && adminNavItems.length > 0)
+          ) ? (
+            <div className="mt-3 mb-1 px-2">
+              <div className="h-px bg-white/[0.08]" />
+              <div className="pt-3 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-white/28">
+                Role access
+              </div>
+            </div>
+          ) : null}
+
           {adminNavItems && adminNavItems.length > 0 ? (
             <div
-              className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+              className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
               style={{ order: 30 }}
             >
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors',
-                  adminNavExpanded
-                    ? 'bg-white/[0.08] text-white/80'
-                    : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                  'flex w-full items-center gap-2 rounded-[14px] border px-3 py-3 text-left text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-colors',
+                  'border-[#5d342e] bg-[#2c1c1a] text-[#ff9a7c] hover:bg-[#33201e]',
                 ].join(' ')}
                 aria-expanded={adminNavExpanded}
                 aria-controls="admin-shell-nav-items"
@@ -433,14 +511,14 @@ export function AppShell({
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="settings" open={adminNavExpanded} />
+                  <ShellNavIcon name="adminSection" open={adminNavExpanded} />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
+                <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
                   Admin
                 </span>
                 <ChevronDown
                   className={[
-                    'shrink-0 text-white/45 transition-transform duration-200',
+                    'shrink-0 text-[#a86052] transition-transform duration-200',
                     adminNavExpanded ? 'rotate-0' : '-rotate-90',
                   ].join(' ')}
                   size={14}
@@ -458,29 +536,47 @@ export function AppShell({
                 ].join(' ')}
               >
                 <div className="min-h-0 overflow-hidden" inert={!adminNavExpanded ? true : undefined}>
-                  <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
+                  <div className="relative mt-1 space-y-0.5 px-1 pb-1">
                     {adminNavItems.map((item, idx) => {
                       const item_ = withLiveBadge(item);
                       const prev = idx > 0 ? adminNavItems[idx - 1] : undefined;
                       const showSection =
                         Boolean(item.section) && (!prev || prev.section !== item.section);
+                      const active = item_.exact ?? item_.href === '/admin'
+                        ? pathname === item_.href
+                        : pathname === item_.href || (item_.href !== '/' && pathname.startsWith(`${item_.href}/`));
+                      const isOverview = !item_.section;
                       return (
                         <Fragment key={item.href}>
                           {showSection ? (
-                            <div className="border-t border-white/[0.07] pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/38">
-                              {item.section}
+                            <div className="border-t border-white/[0.09] pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#8b5843]">
+                              {item_.section}
                             </div>
                           ) : null}
-                          <NavLink
+                          <Link
                             href={item_.href}
-                            icon={item_.icon}
-                            label={item_.label}
-                            badge={item_.badge}
-                            secondaryBadge={item_.secondaryBadge}
-                            secondaryBadgeTitle={item_.secondaryBadgeTitle}
-                            exact={item_.exact ?? item_.href === '/admin'}
-                            onNavigate={closeMobile}
-                          />
+                            onClick={closeMobile}
+                            className={
+                              isOverview
+                                ? [
+                                    'flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[13px] transition-colors',
+                                    active ? 'bg-white/[0.1] text-[#ffb9a6]' : 'text-[#b4978d] hover:bg-white/[0.06] hover:text-[#d9b2a4]',
+                                  ].join(' ')
+                                : [
+                                    'flex items-center gap-2 rounded-[7px] pl-[22px] pr-2.5 py-[5.5px] text-[12.5px] transition-colors',
+                                    active ? 'bg-white/[0.1] text-[#ffb9a6]' : 'text-[#b4978d] hover:bg-white/[0.05] hover:text-[#d9b2a4]',
+                                  ].join(' ')
+                            }
+                          >
+                            {isOverview ? (
+                              <span className="flex w-4 shrink-0 items-center justify-center text-current">
+                                <ShellNavIcon name={item_.icon} />
+                              </span>
+                            ) : (
+                              <span className={['h-[6px] w-[6px] shrink-0 rounded-full bg-[#ff8a65]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                            )}
+                            <span className="min-w-0 flex-1 truncate">{item_.label}</span>
+                          </Link>
                         </Fragment>
                       );
                     })}
@@ -492,16 +588,14 @@ export function AppShell({
 
           {managerNavItems && managerNavItems.length > 0 ? (
             <div
-              className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+              className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
               style={{ order: 10 }}
             >
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors',
-                  managerNavExpanded
-                    ? 'bg-white/[0.08] text-white/80'
-                    : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                  'flex w-full items-center gap-2 rounded-[14px] border px-3 py-3 text-left text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-colors',
+                  'border-[#3d3774] bg-[#201b3f] text-[#a89af7] hover:bg-[#262048]',
                 ].join(' ')}
                 aria-expanded={managerNavExpanded}
                 aria-controls="manager-shell-nav-items"
@@ -526,14 +620,14 @@ export function AppShell({
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="manager" open={managerNavExpanded} />
+                  <ShellNavIcon name="managerSection" open={managerNavExpanded} />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
+                <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
                   {managerNavSectionLabel}
                 </span>
                 <ChevronDown
                   className={[
-                    'shrink-0 text-white/45 transition-transform duration-200',
+                    'shrink-0 text-[#7e74d9] transition-transform duration-200',
                     managerNavExpanded ? 'rotate-0' : '-rotate-90',
                   ].join(' ')}
                   size={14}
@@ -551,29 +645,47 @@ export function AppShell({
                 ].join(' ')}
               >
                 <div className="min-h-0 overflow-hidden" inert={!managerNavExpanded ? true : undefined}>
-                  <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
+                  <div className="relative mt-1 space-y-0.5 px-1 pb-1">
                     {managerNavItems.map((item, idx) => {
                       const item_ = withLiveBadge(item);
                       const prev = idx > 0 ? managerNavItems[idx - 1] : undefined;
                       const showSection =
                         Boolean(item.section) && (!prev || prev.section !== item.section);
+                      const active = item_.exact ?? item_.href === '/manager'
+                        ? pathname === item_.href
+                        : pathname === item_.href || (item_.href !== '/' && pathname.startsWith(`${item_.href}/`));
+                      const isOverview = !item_.section;
                       return (
                         <Fragment key={`${item.href}-${item.label}`}>
                           {showSection ? (
-                            <div className="border-t border-white/[0.07] pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/38">
-                              {item.section}
+                            <div className="border-t border-white/[0.09] pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#7f75ad]">
+                              {item_.section}
                             </div>
                           ) : null}
-                          <NavLink
+                          <Link
                             href={item_.href}
-                            icon={item_.icon}
-                            label={item_.label}
-                            badge={item_.badge}
-                            secondaryBadge={item_.secondaryBadge}
-                            secondaryBadgeTitle={item_.secondaryBadgeTitle}
-                            exact={item_.exact ?? item_.href === '/manager'}
-                            onNavigate={closeMobile}
-                          />
+                            onClick={closeMobile}
+                            className={
+                              isOverview
+                                ? [
+                                    'flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[13px] transition-colors',
+                                    active ? 'bg-white/[0.1] text-[#d4ceff]' : 'text-[#b0b0bc] hover:bg-white/[0.06] hover:text-[#d4ceff]',
+                                  ].join(' ')
+                                : [
+                                    'flex items-center gap-2 rounded-[7px] pl-[22px] pr-2.5 py-[5.5px] text-[12.5px] transition-colors',
+                                    active ? 'bg-white/[0.1] text-[#d4ceff]' : 'text-[#b0b0bc] hover:bg-white/[0.05] hover:text-[#d4ceff]',
+                                  ].join(' ')
+                            }
+                          >
+                            {isOverview ? (
+                              <span className="flex w-4 shrink-0 items-center justify-center text-current">
+                                <ShellNavIcon name={item_.icon} />
+                              </span>
+                            ) : (
+                              <span className={['h-[6px] w-[6px] shrink-0 rounded-full bg-[#a89af7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                            )}
+                            <span className="min-w-0 flex-1 truncate">{item_.label}</span>
+                          </Link>
                         </Fragment>
                       );
                     })}
@@ -585,16 +697,14 @@ export function AppShell({
 
           {hrNavItems && hrNavItems.length > 0 ? (
             <div
-              className="mt-3 rounded-[10px] border border-white/[0.1] bg-white/[0.04] p-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+              className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
               style={{ order: 20 }}
             >
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors',
-                  hrNavExpanded
-                    ? 'bg-white/[0.08] text-white/80'
-                    : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                  'flex w-full items-center gap-2 rounded-[14px] border px-3 py-3 text-left text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-colors',
+                  'border-[#264e63] bg-[#142a36] text-[#4fc3f7] hover:bg-[#183243]',
                 ].join(' ')}
                 aria-expanded={hrNavExpanded}
                 aria-controls="hr-shell-nav-items"
@@ -621,12 +731,12 @@ export function AppShell({
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
                   <ShellNavIcon name="hrSection" open={hrNavExpanded} />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/50">
+                <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
                   HR
                 </span>
                 <ChevronDown
                   className={[
-                    'shrink-0 text-white/45 transition-transform duration-200',
+                    'shrink-0 text-[#368fb8] transition-transform duration-200',
                     hrNavExpanded ? 'rotate-0' : '-rotate-90',
                   ].join(' ')}
                   size={14}
@@ -644,29 +754,48 @@ export function AppShell({
                 ].join(' ')}
               >
                 <div className="min-h-0 overflow-hidden" inert={!hrNavExpanded ? true : undefined}>
-                  <div className="relative mt-0.5 space-y-0.5 border-l border-white/[0.14] pl-2.5 ml-2.5 pb-1 pt-0.5">
-                    {hrNavItems.map((item) => {
+                  <div className="relative mt-1 space-y-0.5 px-1 pb-1">
+                    {hrNavItems.map((item, idx) => {
                       const item_ = withLiveBadge(item);
+                      const prev = idx > 0 ? hrNavItems[idx - 1] : undefined;
+                      const showSection =
+                        Boolean(item.section) && (!prev || prev.section !== item.section);
+                      const active = item_.exact
+                        ? pathname === item_.href
+                        : pathname === item_.href || (item_.href !== '/' && pathname.startsWith(`${item_.href}/`));
+                      const isOverview = !item_.section;
                       return (
-                      <div
-                        key={item_.href}
-                        className={
-                          item_.nested
-                            ? 'ml-2 border-l border-white/[0.12] pl-2'
-                            : undefined
-                        }
-                      >
-                        <NavLink
-                          href={item_.href}
-                          icon={item_.icon}
-                          label={item_.label}
-                          badge={item_.badge}
-                          secondaryBadge={item_.secondaryBadge}
-                          secondaryBadgeTitle={item_.secondaryBadgeTitle}
-                          exact={item_.exact}
-                          onNavigate={closeMobile}
-                        />
-                      </div>
+                        <Fragment key={`${item_.href}-${item_.label}`}>
+                          {showSection ? (
+                            <div className="border-t border-white/[0.09] pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#2d6f86]">
+                              {item_.section}
+                            </div>
+                          ) : null}
+                          <Link
+                            href={item_.href}
+                            onClick={closeMobile}
+                            className={
+                              isOverview
+                                ? [
+                                    'flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[13px] transition-colors',
+                                    active ? 'bg-white/[0.1] text-[#b7e7fb]' : 'text-[#a4b5bf] hover:bg-white/[0.06] hover:text-[#b7e7fb]',
+                                  ].join(' ')
+                                : [
+                                    'flex items-center gap-2 rounded-[7px] pl-[22px] pr-2.5 py-[5.5px] text-[12.5px] transition-colors',
+                                    active ? 'bg-white/[0.1] text-[#b7e7fb]' : 'text-[#a4b5bf] hover:bg-white/[0.05] hover:text-[#b7e7fb]',
+                                  ].join(' ')
+                            }
+                          >
+                            {isOverview ? (
+                              <span className="flex w-4 shrink-0 items-center justify-center text-current">
+                                <ShellNavIcon name={item_.icon} />
+                              </span>
+                            ) : (
+                              <span className={['h-[6px] w-[6px] shrink-0 rounded-full bg-[#4fc3f7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                            )}
+                            <span className="min-w-0 flex-1 truncate">{item_.label}</span>
+                          </Link>
+                        </Fragment>
                       );
                     })}
                   </div>
@@ -719,12 +848,22 @@ export function AppShell({
             </div>
           </div>
           <span className="flex shrink-0 text-white/30">
-            <ShellNavIcon name="accountSettings" />
+            <ShellNavIcon name="settings" />
           </span>
         </Link>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col md:ml-[240px]">
+      <div
+        className="flex min-h-screen flex-1 flex-col md:ml-[240px]"
+        style={
+          shellGradient
+            ? {
+                backgroundImage: `linear-gradient(rgba(250,249,246,0.96),rgba(250,249,246,0.96)), ${shellGradient}`,
+                backgroundBlendMode: 'normal,normal',
+              }
+            : undefined
+        }
+      >
         <div className="flex h-[60px] items-center border-b border-[#d8d8d8] bg-[#121212] px-4 md:hidden">
           <button
             type="button"
