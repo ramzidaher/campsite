@@ -99,7 +99,8 @@ export async function loadDashboardHome(
   supabase: SupabaseClient,
   userId: string,
   orgId: string,
-  profile: { full_name: string | null; role: string }
+  profile: { full_name: string | null; role: string },
+  options?: { initialBroadcastUnread?: number }
 ): Promise<DashboardHomeModel> {
   const { data: orgRow } = await supabase.from('organisations').select('name').eq('id', orgId).single();
   const orgName = (orgRow?.name as string) ?? 'Organisation';
@@ -109,9 +110,13 @@ export async function loadDashboardHome(
   const w1 = endOfLocalWeek(now);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const unreadRpcPromise = canViewDashboardUnreadBroadcastKpi(profile.role)
-    ? supabase.rpc('broadcast_unread_count')
-    : Promise.resolve({ data: 0, error: null });
+  const canUnreadKpi = canViewDashboardUnreadBroadcastKpi(profile.role);
+  const useCachedUnread = canUnreadKpi && options?.initialBroadcastUnread !== undefined;
+  const unreadRpcPromise = useCachedUnread
+    ? Promise.resolve({ data: options!.initialBroadcastUnread!, error: null })
+    : canUnreadKpi
+      ? supabase.rpc('broadcast_unread_count')
+      : Promise.resolve({ data: 0, error: null });
 
   const [
     statCounts,

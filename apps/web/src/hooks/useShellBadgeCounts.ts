@@ -3,6 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 
+/** Shared with BroadcastFeed so unread refresh refetches this instead of `broadcast_unread_count`. */
+export const SHELL_BADGE_COUNTS_QUERY_KEY = ['shell-badge-counts'] as const;
+
 export type ShellBadgeCounts = {
   broadcast_unread: number;
   broadcast_pending_approvals: number;
@@ -53,14 +56,14 @@ function parseCounts(data: unknown): ShellBadgeCounts {
  */
 export function useShellBadgeCounts() {
   return useQuery<ShellBadgeCounts>({
-    queryKey: ['shell-badge-counts'],
+    queryKey: SHELL_BADGE_COUNTS_QUERY_KEY,
     queryFn: async () => {
       const supabase = createClient();
       const { data } = await supabase.rpc('main_shell_badge_counts_bundle');
       return parseCounts(data);
     },
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
+    refetchInterval: 90_000,
     refetchOnWindowFocus: true,
   });
 }

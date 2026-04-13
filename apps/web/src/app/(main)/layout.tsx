@@ -10,7 +10,7 @@ import {
 } from '@/lib/adminGates';
 import { normalizeCelebrationMode } from '@/lib/holidayThemes';
 import { resolveTenantGovernanceRedirect } from '@/lib/tenantGovernanceGate';
-import { createClient } from '@/lib/supabase/server';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import {
   type PermissionKey,
 } from '@campsite/types';
@@ -36,7 +36,6 @@ function roleLabel(role: string): string {
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
   const headerStore = await headers();
   const pathname = headerStore.get('x-campsite-pathname') ?? '';
 
@@ -44,8 +43,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // batches that each depended on the prior batch's results (profile → org/permissions
   // → badge counts). On Vercel → Frankfurt Supabase (~150 ms/round trip) the old
   // waterfall added 450 ms+ of pure network latency per page load.
-  const { data: bundle } = await supabase.rpc('main_shell_layout_bundle');
-  const b = (bundle && typeof bundle === 'object' ? bundle : {}) as Record<string, unknown>;
+  // Cached so child routes (e.g. dashboard) can reuse the same RPC result in one request.
+  const b = await getCachedMainShellLayoutBundle();
 
   const str = (k: string): string | null =>
     typeof b[k] === 'string' ? (b[k] as string) : null;

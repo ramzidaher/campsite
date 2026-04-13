@@ -1,8 +1,12 @@
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { loadDashboardHome } from '@/lib/dashboard/loadDashboardHome';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
+import {
+  broadcastUnreadFromShellBundle,
+  getCachedMainShellLayoutBundle,
+} from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
-import { canComposeBroadcastByPermissions } from '@campsite/types';
+import { canComposeBroadcastByPermissions, canViewDashboardUnreadBroadcastKpi } from '@campsite/types';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
@@ -34,10 +38,23 @@ export default async function DashboardPage() {
 
   // Cache hit — layout already called getMyPermissions for nav display.
   const permissionKeys = await getMyPermissions(profile.org_id as string);
-  const data = await loadDashboardHome(supabase, user.id, profile.org_id as string, {
-    full_name: profile.full_name as string | null,
-    role: profile.role as string,
-  });
+
+  const shellBundle = await getCachedMainShellLayoutBundle();
+  const role = profile.role as string;
+  const initialBroadcastUnread = canViewDashboardUnreadBroadcastKpi(role)
+    ? broadcastUnreadFromShellBundle(shellBundle)
+    : undefined;
+
+  const data = await loadDashboardHome(
+    supabase,
+    user.id,
+    profile.org_id as string,
+    {
+      full_name: profile.full_name as string | null,
+      role,
+    },
+    { initialBroadcastUnread }
+  );
 
   const hour = new Date().getHours();
   const greetingLine = `${greeting(hour, data.userName)} 👋`;

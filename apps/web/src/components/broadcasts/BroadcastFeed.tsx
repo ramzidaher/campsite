@@ -16,6 +16,11 @@ import { useCallback, useEffect, useImperativeHandle, useMemo, useState, forward
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  SHELL_BADGE_COUNTS_QUERY_KEY,
+  type ShellBadgeCounts,
+} from '@/hooks/useShellBadgeCounts';
+
 export type { FeedRow } from '@/lib/broadcasts/feedTypes';
 
 export type BroadcastFeedHandle = {
@@ -112,11 +117,10 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
   const qTrim = debouncedSearch.trim();
 
   const refreshUnread = useCallback(async () => {
-    const { data, error } = await supabase.rpc('broadcast_unread_count');
-    if (!error && data !== null && data !== undefined) {
-      onUnreadChange?.(typeof data === 'number' ? data : Number(data));
-    }
-  }, [supabase, onUnreadChange]);
+    await queryClient.refetchQueries({ queryKey: SHELL_BADGE_COUNTS_QUERY_KEY });
+    const d = queryClient.getQueryData<ShellBadgeCounts>(SHELL_BADGE_COUNTS_QUERY_KEY);
+    if (d) onUnreadChange?.(d.broadcast_unread);
+  }, [queryClient, onUnreadChange]);
 
   const searchQueryResult = useQuery({
     queryKey: ['broadcast-feed-search', orgId, userId, qTrim, deptKey, catKey],
@@ -175,7 +179,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
         broadcastFeedApiMode === 'legacy' ||
         readBroadcastFeedLegacyLs();
 
-      let mode: 'plan02' | 'legacy' = useLegacy ? 'legacy' : 'plan02';
+      const mode: 'plan02' | 'legacy' = useLegacy ? 'legacy' : 'plan02';
       let { data, error } = await run(mode);
 
       if (error && mode === 'plan02') {
