@@ -62,6 +62,7 @@ function mapUnsplashPhoto(p: Record<string, unknown>): UnsplashPhotoPayload | nu
       regular: urls.regular,
       full: typeof urls.full === 'string' ? urls.full : urls.regular,
     },
+    alt: typeof p.alt_description === 'string' ? p.alt_description : null,
     user: { name: uName, htmlProfile },
     downloadLocation,
   };

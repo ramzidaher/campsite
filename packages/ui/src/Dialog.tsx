@@ -50,9 +50,8 @@ export function Dialog({
         <Pressable
           style={[styles.sheet, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
           onPress={(e) => e.stopPropagation()}
-          accessibilityRole="dialog"
           accessibilityLabel={title}
-          aria-modal="true"
+          aria-modal={true}
           aria-labelledby={titleId}
         >
           <Text nativeID={titleId} style={[styles.title, { color: tokens.textPrimary }]} accessibilityRole="header">

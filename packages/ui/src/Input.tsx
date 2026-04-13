@@ -22,7 +22,6 @@ export function Input({ label, hint, error, style, secureTextEntry, ...rest }: I
       <TextInput
         accessibilityLabel={label}
         accessibilityHint={hint}
-        accessibilityState={error ? { invalid: true } : undefined}
         placeholderTextColor={tokens.textMuted}
         secureTextEntry={secureTextEntry}
         style={[
