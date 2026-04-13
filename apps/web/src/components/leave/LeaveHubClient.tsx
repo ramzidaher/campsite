@@ -264,7 +264,10 @@ export function LeaveHubClient({
       const nameIds = [...new Set([...pend.map((r) => r.requester_id as string), ...pendToil.map((t) => t.requester_id as string)])];
       const names: Record<string, string> = {};
       if (nameIds.length) {
-        const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', nameIds);
+        const { data: profs } = await supabase
+          .from('coworker_directory_public')
+          .select('id, full_name')
+          .in('id', nameIds);
         for (const p of profs ?? []) names[p.id as string] = (p.full_name as string) ?? '';
       }
       setPendingForMe(pend.map((r) => ({ ...r, profiles: { full_name: names[r.requester_id as string] ?? '' } })));

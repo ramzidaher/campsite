@@ -145,7 +145,13 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
         ) : null}
 
         <section className="rounded-xl border border-[#e8e8e8] bg-white shadow-sm">
-          <iframe title="Offer letter" className="h-[min(60vh,560px)] w-full rounded-t-xl border-0" srcDoc={srcDoc} />
+          <iframe
+            title="Offer letter"
+            className="h-[min(60vh,560px)] w-full rounded-t-xl border-0"
+            srcDoc={srcDoc}
+            sandbox=""
+            referrerPolicy="no-referrer"
+          />
         </section>
 
         <section className="mt-8 space-y-4 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">

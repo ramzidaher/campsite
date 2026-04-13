@@ -135,7 +135,28 @@ See the **Troubleshooting** table in [QA_SEED_AND_SCENARIOS.md](./QA_SEED_AND_SC
 | `npm run generate:test-checklist` | Regenerate FULL_APP_TEST_CHECKLIST*.csv |
 | `npm run add-platform-founder` | Platform founder user |
 | `npm test` | Unit tests |
+| `npm run test:a11y --workspace @campsite/web` | Accessibility automation (`jest-axe`) |
 | `npm run dev` | Web + packages via Turbo |
+
+---
+
+## 9. Accessibility validation (AA + selected AAA)
+
+Run this in addition to normal smoke checks:
+
+1. **Automation gate**
+   - `npm run test:a11y --workspace @campsite/web`
+   - `npm run test --workspace @campsite/web -- --runInBand`
+2. **Keyboard-only checks** (no mouse):
+   - Verify `Skip to main content` on first Tab from any route.
+   - Confirm visible focus rings on shell nav, top bar actions, and form controls.
+   - Validate modal dialogs close with `Escape` and return focus predictably.
+3. **Screen reader pass**
+   - **NVDA + Chrome (Windows)**: complete dashboard, broadcasts, rota, settings, admin departments.
+   - **VoiceOver + Safari (macOS/iOS)**: same flows; confirm status and error announcements.
+4. **Record evidence**
+   - Log pass/fail in `FULL_APP_TEST_CHECKLIST_GRANULAR.csv` rows `G-061` to `G-066`.
+   - Attach notes for any criterion regression and route/component owner.
 
 ---
 

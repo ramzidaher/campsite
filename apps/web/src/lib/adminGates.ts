@@ -1,7 +1,6 @@
 import {
   isDepartmentWorkspaceRole,
   isManagerRole,
-  isOrgAdminRole,
   PERMISSION_KEYS,
   type PermissionKey,
   type ProfileRole,
@@ -14,18 +13,20 @@ function normalizedProfileRole(role: ProfileRole | string | null | undefined): s
 }
 
 /**
- * Organisation-scoped admin area (`/admin`). Only org admins get the full shell; see ROLE-MAPPING.md.
+ * Deprecated role-based gate kept only for compatibility.
+ * Authorization is permission-key driven and must not depend on role strings.
  */
 export function canAccessOrgAdminArea(role: ProfileRole | string | null | undefined): boolean {
-  return isOrgAdminRole(normalizedProfileRole(role));
+  void role;
+  return false;
 }
 
 /**
- * Sub-gates for `/admin/*` pages. Today each maps to `isOrgAdminRole`; split here (not ad hoc in pages)
- * if product later allows e.g. settings-only delegates without full org admin.
+ * Deprecated role-based sub-gates kept only for compatibility signatures.
  */
 export function canManageOrgUsers(role: ProfileRole | string | null | undefined): boolean {
-  return isOrgAdminRole(role);
+  void role;
+  return false;
 }
 
 export function hasPermission(
@@ -37,15 +38,18 @@ export function hasPermission(
 }
 
 export function canManageOrgDepartments(role: ProfileRole | string | null | undefined): boolean {
-  return isOrgAdminRole(role);
+  void role;
+  return false;
 }
 
 export function canManageOrgBroadcastsAdmin(role: ProfileRole | string | null | undefined): boolean {
-  return isOrgAdminRole(role);
+  void role;
+  return false;
 }
 
 export function canManageOrgSettings(role: ProfileRole | string | null | undefined): boolean {
-  return isOrgAdminRole(role);
+  void role;
+  return false;
 }
 
 /**

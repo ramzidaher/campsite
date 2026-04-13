@@ -2,6 +2,7 @@ import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/Careers
 import { CandidateApplicationMessages } from '@/app/(public)/jobs/me/CandidateApplicationMessages';
 import { CandidateApplicationStageBadge } from '@/app/(public)/jobs/me/CandidateApplicationStageBadge';
 import { createClient } from '@/lib/supabase/server';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 export default async function CandidatePortalPage({ params }: { params: Promise<{ token: string }> }) {
@@ -10,6 +11,13 @@ export default async function CandidatePortalPage({ params }: { params: Promise<
   if (!token) notFound();
 
   const supabase = await createClient();
+  const h = await headers();
+  const actorKey = `${(h.get('x-forwarded-for') ?? '').split(',')[0]?.trim() || 'anon'}:candidate-status`;
+  const { data: rateAllowed } = await supabase.rpc('record_public_token_attempt', {
+    p_channel: 'candidate_status_view',
+    p_actor_key: actorKey,
+  });
+  if (!rateAllowed) notFound();
   const { data, error } = await supabase.rpc('get_candidate_application_portal', {
     p_portal_token: token,
   });

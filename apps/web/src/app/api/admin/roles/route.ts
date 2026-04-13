@@ -19,6 +19,7 @@ export async function GET() {
     p_context: {},
   });
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { data: isFounder } = await supabase.rpc('is_platform_founder', { p_user_id: user.id });
 
   const [
     { data: roles, error: rolesErr },
@@ -40,7 +41,7 @@ export async function GET() {
   if (permsErrUser) return NextResponse.json({ error: permsErrUser.message }, { status: 400 });
   if (presetsErr) return NextResponse.json({ error: presetsErr.message }, { status: 400 });
 
-  let allPermissions = allPermissionsUser ?? [];
+  let allPermissions = (allPermissionsUser ?? []).filter((p) => (isFounder ? true : !p?.is_founder_only));
   if (allPermissions.length === 0) {
     console.warn('[admin/roles] permission_catalog returned zero rows', {
       user_id: user.id,
@@ -61,7 +62,7 @@ export async function GET() {
         .select('key, label, description, is_founder_only')
         .order('key');
       if (!permsErrAdmin && allPermissionsAdmin?.length) {
-        allPermissions = allPermissionsAdmin;
+        allPermissions = allPermissionsAdmin.filter((p) => (isFounder ? true : !p?.is_founder_only));
       }
     } catch (e) {
       console.warn('[admin/roles] service role fallback failed', e);

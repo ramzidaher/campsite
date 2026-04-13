@@ -1,18 +1,44 @@
----
-description: Main app shell sidebar — Lucide nav icons and colours
-globs: apps/web/src/components/shell/ShellNavIcon.tsx,apps/web/src/lib/adminGates.ts,apps/web/src/components/AppShell.tsx
----
+# Sidebar nav icon colors
 
-# Sidebar navigation icons
+When adding or changing sidebar items in the main shell:
 
-The main shell sidebar (`AppShell` + `ShellNavIcon` + `ShellNavIconId` in `adminGates.ts`) must follow:
+1. **Always add/update the icon mapping** in `apps/web/src/components/shell/ShellNavIcon.tsx`.
+   - Any new `ShellNavIconId` must have:
+     - a concrete icon component mapping in `ShellNavIcon()`
+     - an explicit color mapping in `tone()`
+2. **Do not rely on default color fallback** for new icons.
+3. **Use the sidebar palette** (from the colored reference):
+   - `#7a7aff` (indigo)
+   - `#4fc3f7` (sky)
+   - `#f48fb1` (pink)
+   - `#f06292` (rose)
+   - `#9575cd` (violet)
+   - `#4dd0e1` (cyan)
+   - `#4db6ac` (teal)
+   - `#81c784` (green)
+   - `#a5d6a7` (mint)
+   - `#ffb74d` (amber)
+   - `#ff8a65` (orange)
+   - `#a89af7` (lilac)
+4. Keep icon stroke style consistent:
+   - `h-[18px] w-[18px]`
+   - `strokeWidth={1.9}`
+   - `absoluteStrokeWidth`
+   - rounded line caps/joins
 
-1. **Unique glyph per entry** — Each `ShellNavIconId` maps to exactly one Lucide icon in `ShellNavIcon`. Do not reuse the same icon component for two different ids (including section headers like Admin / Manager / HR vs links inside them). If a new link would duplicate an icon, add a new `ShellNavIconId` and a distinct Lucide icon.
+This keeps the sidebar visually consistent whenever nav items are added or renamed.
 
-2. **Unique colour per id** — `SHELL_NAV_TONE` in `ShellNavIcon.tsx` must assign a **distinct** Tailwind `text-*` class to every `ShellNavIconId`. Do not group ids by shared colour buckets; when adding a nav item, add both a new icon case and a new tone entry.
+## Expanded role sub-items (Manager / HR / Admin)
 
-3. **HR section header** — The collapsible “HR” row uses `hrSection`, not `hrRecords`. Employee files stay on `hrRecords`; 1:1s use `oneOnOnes`.
+When editing expanded role panels in `AppShell`:
 
-4. **Footer settings** — The `/settings` row at the bottom of the sidebar uses `accountSettings` so it does not share the Admin section’s `settings` gear.
-
-When changing nav items, update `getMainShell*NavItems*` helpers and keep `ShellNavIcon` exhaustive (TypeScript `never` default).
+1. Keep grouped sub-items in the HTML reference style:
+   - Section labels are uppercase, tight letter-spacing, role-tinted.
+   - Sub-items render with a **small colored dot** (5px) instead of a left icon.
+   - Active sub-item uses a soft row background + brighter role-tinted text.
+   - Section breaks include a subtle divider line before each new group.
+2. Keep role palettes consistent across headers + sub-items:
+   - Manager: base `#a89af7`, muted text `#7a7a84`, active text `#c4bef8`, section label `#524e6a`
+   - HR: base `#4fc3f7`, muted text `#6a7a84`, active text `#9fd8f0`, section label `#1e4a58`
+   - Admin: base `#ff8a65`, muted text `#8a7a74`, active text `#ffb09a`, section label `#5a3a2a`
+3. For role panel content items, set `section` on nav items (in `adminGates`) so grouping is explicit and stable.

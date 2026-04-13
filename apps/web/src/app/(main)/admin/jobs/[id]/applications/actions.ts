@@ -4,6 +4,7 @@ import {
   sendApplicationStageEmail,
 } from '@/lib/recruitment/sendApplicationCandidateEmails';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { issueCandidatePortalToken, issueOfferSigningPortalToken } from '@/lib/security/portalTokens';
 import { createClient } from '@/lib/supabase/server';
 import {
   isJobApplicationStage,
@@ -79,7 +80,7 @@ export async function updateJobApplicationStage(
   const { data: app, error: fetchErr } = await supabase
     .from('job_applications')
     .select(
-      'id, org_id, job_listing_id, candidate_email, candidate_name, portal_token, stage, job_listings(title), organisations(name)'
+      'id, org_id, job_listing_id, candidate_email, candidate_name, stage, job_listings(title), organisations(name)'
     )
     .eq('id', id)
     .eq('org_id', orgId)
@@ -128,6 +129,13 @@ export async function updateJobApplicationStage(
     if (insErr) {
       return { ok: false, error: insErr.message ?? 'Stage updated but message was not saved.' };
     }
+    let candidatePortalToken: string;
+    try {
+      const admin = createServiceRoleClient();
+      candidatePortalToken = await issueCandidatePortalToken(admin, { applicationId: id, orgId });
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : 'Could not issue tracker link.' };
+    }
 
     await sendApplicationStageEmail({
       candidateEmail: app.candidate_email as string,
@@ -136,7 +144,7 @@ export async function updateJobApplicationStage(
       jobTitle,
       stage: newStage,
       messageBody: body,
-      portalToken: app.portal_token as string,
+      portalToken: candidatePortalToken,
     });
   }
 
@@ -187,7 +195,7 @@ export async function sendCandidateOnlyMessage(
   const { data: app, error: fetchErr } = await supabase
     .from('job_applications')
     .select(
-      'candidate_email, candidate_name, portal_token, stage, job_listings(title), organisations(name)'
+      'candidate_email, candidate_name, stage, job_listings(title), organisations(name)'
     )
     .eq('id', id)
     .eq('org_id', orgId)
@@ -209,6 +217,14 @@ export async function sendCandidateOnlyMessage(
 
   if (insErr) return { ok: false, error: insErr.message };
 
+  let candidatePortalToken: string;
+  try {
+    const admin = createServiceRoleClient();
+    candidatePortalToken = await issueCandidatePortalToken(admin, { applicationId: id, orgId });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Could not issue tracker link.' };
+  }
+
   await sendApplicationStageEmail({
     candidateEmail: app.candidate_email as string,
     candidateName: (app.candidate_name as string)?.trim() || 'there',
@@ -216,7 +232,7 @@ export async function sendCandidateOnlyMessage(
     jobTitle,
     stage: (app.stage as string) ?? 'applied',
     messageBody: text,
-    portalToken: app.portal_token as string,
+    portalToken: candidatePortalToken,
   });
 
   revalidatePath(`/admin/jobs/${jobListingId}/applications`);
@@ -264,7 +280,6 @@ export type JobApplicationDetail = {
     cv_storage_path: string | null;
     loom_url: string | null;
     staffsavvy_score: number | null;
-    portal_token: string;
     offer_letter_status: string | null;
     interview_joining_instructions: string | null;
     job_listings: { title: string } | null;
@@ -272,7 +287,6 @@ export type JobApplicationDetail = {
   latest_offer: {
     id: string;
     status: string;
-    portal_token: string;
     signed_pdf_storage_path: string | null;
   } | null;
   notes: Array<{ id: string; body: string; created_at: string; created_by: string }>;
@@ -307,7 +321,6 @@ export async function loadJobApplicationDetail(
       cv_storage_path,
       loom_url,
       staffsavvy_score,
-      portal_token,
       offer_letter_status,
       interview_joining_instructions,
       job_listings ( title )
@@ -351,7 +364,6 @@ export async function loadJobApplicationDetail(
     cv_storage_path: (raw.cv_storage_path as string | null) ?? null,
     loom_url: (raw.loom_url as string | null) ?? null,
     staffsavvy_score: (raw.staffsavvy_score as number | null) ?? null,
-    portal_token: String(raw.portal_token),
     offer_letter_status: (raw.offer_letter_status as string | null) ?? null,
     interview_joining_instructions: (raw.interview_joining_instructions as string | null) ?? null,
     job_listings: jl ? { title: String(jl.title) } : null,
@@ -359,7 +371,7 @@ export async function loadJobApplicationDetail(
 
   const { data: offerRow } = await supabase
     .from('application_offers')
-    .select('id, status, portal_token, signed_pdf_storage_path')
+    .select('id, status, signed_pdf_storage_path')
     .eq('job_application_id', id)
     .neq('status', 'superseded')
     .order('created_at', { ascending: false })
@@ -371,7 +383,6 @@ export async function loadJobApplicationDetail(
     latestOffer = {
       id: offerRow.id as string,
       status: offerRow.status as string,
-      portal_token: offerRow.portal_token as string,
       signed_pdf_storage_path: (offerRow.signed_pdf_storage_path as string | null) ?? null,
     };
   }
@@ -382,4 +393,51 @@ export async function loadJobApplicationDetail(
     notes: notes ?? [],
     messages: messages ?? [],
   };
+}
+
+export async function generateCandidateTrackerLink(
+  applicationId: string
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const id = applicationId?.trim();
+  if (!id) return { ok: false, error: 'Missing application.' };
+  const { supabase, orgId } = await requireOrgPermission('applications.view');
+  if (!orgId) return { ok: false, error: 'Not allowed.' };
+  const { data: app } = await supabase
+    .from('job_applications')
+    .select('id')
+    .eq('id', id)
+    .eq('org_id', orgId)
+    .maybeSingle();
+  if (!app) return { ok: false, error: 'Application not found.' };
+  try {
+    const admin = createServiceRoleClient();
+    const token = await issueCandidatePortalToken(admin, { applicationId: id, orgId });
+    return { ok: true, url: `/jobs/status/${encodeURIComponent(token)}` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Could not issue tracker link.' };
+  }
+}
+
+export async function generateOfferSigningLink(
+  offerId: string
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const id = offerId?.trim();
+  if (!id) return { ok: false, error: 'Missing offer.' };
+  const { supabase, orgId } = await requireOrgPermission('offers.view');
+  if (!orgId) return { ok: false, error: 'Not allowed.' };
+  const { data: offer } = await supabase
+    .from('application_offers')
+    .select('id')
+    .eq('id', id)
+    .eq('org_id', orgId)
+    .eq('status', 'sent')
+    .maybeSingle();
+  if (!offer) return { ok: false, error: 'Offer not available for signing.' };
+  try {
+    const admin = createServiceRoleClient();
+    const token = await issueOfferSigningPortalToken(admin, { offerId: id, orgId });
+    return { ok: true, url: `/jobs/offer-sign/${encodeURIComponent(token)}` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Could not issue signing link.' };
+  }
 }

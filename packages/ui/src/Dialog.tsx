@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import {
   Modal,
   Pressable,
@@ -31,6 +31,7 @@ export function Dialog({
   onSecondary,
 }: DialogProps) {
   const { tokens } = useCampsiteTheme();
+  const titleId = useId();
 
   return (
     <Modal
@@ -49,8 +50,12 @@ export function Dialog({
         <Pressable
           style={[styles.sheet, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
           onPress={(e) => e.stopPropagation()}
+          accessibilityRole="dialog"
+          accessibilityLabel={title}
+          aria-modal="true"
+          aria-labelledby={titleId}
         >
-          <Text style={[styles.title, { color: tokens.textPrimary }]} accessibilityRole="header">
+          <Text nativeID={titleId} style={[styles.title, { color: tokens.textPrimary }]} accessibilityRole="header">
             {title}
           </Text>
           <View style={styles.body}>{children}</View>

@@ -255,7 +255,11 @@ export function RotaClient({ profile }: { profile: Profile }) {
       const [{ data: dm }, { data: deps }, { data: profs }, { data: ud }, { data: rotaRows }] = await Promise.all([
         supabase.from('dept_managers').select('dept_id').eq('user_id', profile.id),
         supabase.from('departments').select('id,name').eq('org_id', profile.org_id),
-        supabase.from('profiles').select('id,full_name,role').eq('org_id', profile.org_id).eq('status', 'active'),
+        supabase
+          .from('coworker_directory_public')
+          .select('id,full_name,role')
+          .eq('org_id', profile.org_id)
+          .eq('status', 'active'),
         supabase.from('user_departments').select('user_id,dept_id'),
         supabase.from('rotas').select('id,title,kind,dept_id,status').eq('org_id', profile.org_id).order('title'),
       ]);
@@ -604,6 +608,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
         <button
           type="button"
           onClick={() => setPageSection('schedule')}
+          aria-pressed={pageSection === 'schedule'}
           className={pageSection === 'schedule' ? SEGMENT_ACTIVE : SEGMENT_IDLE}
         >
           Schedule
@@ -611,6 +616,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
         <button
           type="button"
           onClick={() => setPageSection('requests')}
+          aria-pressed={pageSection === 'requests'}
           className={pageSection === 'requests' ? SEGMENT_ACTIVE : SEGMENT_IDLE}
         >
           Requests &amp; swaps
@@ -619,6 +625,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
           <button
             type="button"
             onClick={() => setPageSection('availability')}
+            aria-pressed={pageSection === 'availability'}
             className={pageSection === 'availability' ? SEGMENT_ACTIVE : SEGMENT_IDLE}
           >
             My availability
@@ -628,6 +635,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
           <button
             type="button"
             onClick={() => setPageSection('setup')}
+            aria-pressed={pageSection === 'setup'}
             className={pageSection === 'setup' ? SEGMENT_ACTIVE : SEGMENT_IDLE}
           >
             Rotas &amp; access
@@ -645,6 +653,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
             key={mode}
             type="button"
             onClick={() => setView(mode)}
+            aria-pressed={view === mode}
                   className={view === mode ? SEGMENT_ACTIVE : SEGMENT_IDLE}
           >
             {label}

@@ -61,7 +61,7 @@ export async function enrichBroadcastRows(
     teamIds.length
       ? client.from('department_teams').select('id,name').in('id', teamIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-    client.from('profiles').select('id,full_name').in('id', userIds),
+    client.from('coworker_directory_public').select('id,full_name').in('id', userIds),
   ]);
   const { data: collabDeps } = collabDeptIds.length
     ? await client.from('departments').select('id,name').in('id', collabDeptIds)

@@ -148,6 +148,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith('/jobs/offer-sign/')) {
+    response.headers.set(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"
+    );
+    response.headers.set('X-Frame-Options', 'DENY');
+  }
+
   return response;
 }
 

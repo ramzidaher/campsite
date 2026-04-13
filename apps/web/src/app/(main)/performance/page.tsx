@@ -53,7 +53,10 @@ export default async function EmployeePerformancePage() {
   const revieweeIds = [...new Set((reviews ?? []).filter((r) => r.reviewer_id === user.id).map((r) => r.reviewee_id as string))];
   const revieweeNames: Record<string, string> = {};
   if (revieweeIds.length) {
-    const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', revieweeIds);
+    const { data: profs } = await supabase
+      .from('coworker_directory_public')
+      .select('id, full_name')
+      .in('id', revieweeIds);
     for (const p of profs ?? []) revieweeNames[p.id as string] = p.full_name as string;
   }
 

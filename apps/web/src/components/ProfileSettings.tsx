@@ -17,6 +17,14 @@ import {
   normalizeCelebrationMode,
   type CelebrationMode,
 } from '@/lib/holidayThemes';
+import {
+  DEFAULT_ACCESSIBILITY_PREFERENCES,
+  applyAccessibilityPreferencesToDocument,
+  loadAccessibilityPreferences,
+  saveAccessibilityPreferences,
+  type AccessibilityPreferences,
+  type AccessibilityTextSize,
+} from '@/lib/accessibilityPreferences';
 
 type Profile = {
   full_name: string;
@@ -33,11 +41,20 @@ type Profile = {
   rota_open_slot_alerts_enabled: boolean;
 };
 
-type Tab = 'profile' | 'appearance' | 'notifications' | 'channels' | 'integrations' | 'security' | 'account';
+type Tab =
+  | 'profile'
+  | 'appearance'
+  | 'accessibility'
+  | 'notifications'
+  | 'channels'
+  | 'integrations'
+  | 'security'
+  | 'account';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'profile', label: 'Profile', icon: 'M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z' },
   { id: 'appearance', label: 'Appearance', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z' },
+  { id: 'accessibility', label: 'Accessibility', icon: 'M12 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 5h-4.5v15h-3V15h-1v7h-3V7H2V4h16v3z' },
   { id: 'notifications', label: 'Notifications', icon: 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z' },
   { id: 'channels', label: 'Channels', icon: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z' },
   { id: 'integrations', label: 'Integrations', icon: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z' },
@@ -191,6 +208,7 @@ export function ProfileSettings({
   const [avatarPreviewFailed, setAvatarPreviewFailed] = useState(false);
   const [channelPrefs, setChannelPrefs] = useState<BroadcastChannelPref[]>(initialBroadcastChannels);
   const [channelBusyId, setChannelBusyId] = useState<string | null>(null);
+  const [a11yPrefs, setA11yPrefs] = useState<AccessibilityPreferences>(DEFAULT_ACCESSIBILITY_PREFERENCES);
   const { prefs: uiSoundPrefs, setEnabled: setUiSoundEnabled, setVolume: setUiSoundVolume } =
     useUiSoundPreferences();
   const {
@@ -239,6 +257,12 @@ export function ProfileSettings({
     if (googleFlash != null) setActiveTab('integrations');
   }, [googleFlash, googleFlashTone]);
 
+  useEffect(() => {
+    const prefs = loadAccessibilityPreferences();
+    setA11yPrefs(prefs);
+    applyAccessibilityPreferencesToDocument(prefs);
+  }, []);
+
   const navigate = useCallback((tab: Tab) => {
     setActiveTab(tab);
     setMsg(null);
@@ -279,6 +303,24 @@ export function ProfileSettings({
     }
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [channelPrefs]);
+
+  function setAccessibilityPref<K extends keyof AccessibilityPreferences>(
+    key: K,
+    value: AccessibilityPreferences[K]
+  ) {
+    setA11yPrefs((prev) => {
+      const next = { ...prev, [key]: value };
+      saveAccessibilityPreferences(next);
+      applyAccessibilityPreferencesToDocument(next);
+      return next;
+    });
+  }
+
+  function resetAccessibilityPrefs() {
+    setA11yPrefs(DEFAULT_ACCESSIBILITY_PREFERENCES);
+    saveAccessibilityPreferences(DEFAULT_ACCESSIBILITY_PREFERENCES);
+    applyAccessibilityPreferencesToDocument(DEFAULT_ACCESSIBILITY_PREFERENCES);
+  }
 
   async function toggleBroadcastChannel(channelId: string, next: boolean) {
     const snapshot = channelPrefs;
@@ -384,7 +426,7 @@ export function ProfileSettings({
   return (
     <div className="flex flex-col gap-0 sm:flex-row sm:gap-7">
       {/* Sidebar nav */}
-      <nav className="mb-4 sm:mb-0 sm:w-44 sm:shrink-0">
+      <nav className="mb-4 sm:mb-0 sm:w-44 sm:shrink-0" aria-label="Settings sections">
         {/* Mobile: horizontal scrollable pills */}
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:hidden">
           {TABS.map((t) => (
@@ -392,6 +434,7 @@ export function ProfileSettings({
               key={t.id}
               type="button"
               onClick={() => navigate(t.id)}
+              aria-pressed={activeTab === t.id}
               className={`shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition ${
                 activeTab === t.id
                   ? 'bg-[#121212] text-white'
@@ -409,6 +452,7 @@ export function ProfileSettings({
               <button
                 type="button"
                 onClick={() => navigate(t.id)}
+                aria-current={activeTab === t.id ? 'page' : undefined}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition ${
                   activeTab === t.id
                     ? 'bg-[#121212] text-white'
@@ -571,6 +615,187 @@ export function ProfileSettings({
               <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnPrimary}>
                 {loading ? 'Saving…' : 'Save appearance'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'accessibility' && (
+          <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+            <h2 className={sectionTitle}>Accessibility</h2>
+            <p className={sectionDesc}>
+              Adjust visual and motion settings to match your needs. Changes apply instantly across the app.
+            </p>
+            <div className="space-y-4">
+              <label className={fieldLabel}>
+                Text size
+                <select
+                  className={selectClass}
+                  value={a11yPrefs.largerText}
+                  onChange={(e) =>
+                    setAccessibilityPref('largerText', e.target.value as AccessibilityTextSize)
+                  }
+                >
+                  <option value="default">Default</option>
+                  <option value="large">Large</option>
+                  <option value="xlarge">Extra Large</option>
+                </select>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.boldText}
+                  onChange={(e) => setAccessibilityPref('boldText', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Bold text</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Increases text weight throughout the interface.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.increaseContrast}
+                  onChange={(e) => setAccessibilityPref('increaseContrast', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Increase contrast</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Strengthens foreground/background separation.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.reduceTransparency}
+                  onChange={(e) => setAccessibilityPref('reduceTransparency', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Reduce transparency</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Uses more opaque surfaces for overlays and translucent UI.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.reduceMotion}
+                  onChange={(e) => setAccessibilityPref('reduceMotion', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Reduce motion</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Minimises animations and transition effects.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.dimFlashingLights}
+                  onChange={(e) => setAccessibilityPref('dimFlashingLights', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Dim flashing lights (video)</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Lowers brightness of video playback to reduce visual strain.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.differentiateWithoutColor}
+                  onChange={(e) => setAccessibilityPref('differentiateWithoutColor', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Differentiate without colour</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Adds non-colour visual cues where possible.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.buttonShapes}
+                  onChange={(e) => setAccessibilityPref('buttonShapes', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Button shapes</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Emphasises tappable controls with underlined action text.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.onOffLabels}
+                  onChange={(e) => setAccessibilityPref('onOffLabels', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">On/Off labels</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Adds explicit state labels in settings style controls.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.grayscale}
+                  onChange={(e) => setAccessibilityPref('grayscale', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Greyscale filter</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Displays the interface in greyscale to reduce colour load.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                <input
+                  type="checkbox"
+                  checked={a11yPrefs.preferNonBlinkingCursor}
+                  onChange={(e) => setAccessibilityPref('preferNonBlinkingCursor', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                />
+                <span className="text-[13px] leading-snug text-[#121212]">
+                  <span className="font-medium">Prefer non-blinking cursor</span>
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                    Reduces caret flicker in text entry fields.
+                  </span>
+                </span>
+              </label>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" className={btnSecondary} onClick={() => resetAccessibilityPrefs()}>
+                  Reset accessibility defaults
+                </button>
+              </div>
             </div>
           </div>
         )}

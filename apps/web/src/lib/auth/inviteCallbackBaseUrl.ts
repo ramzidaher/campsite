@@ -14,6 +14,41 @@ function trimBaseUrl(raw: string | undefined): string | null {
   return t?.length ? t : null;
 }
 
+function parseHost(rawUrl: string): string | null {
+  try {
+    return new URL(rawUrl).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function allowedHostsFromEnv(): Set<string> {
+  const allowed = new Set<string>();
+  const siteUrl = trimBaseUrl(process.env.SITE_URL);
+  const nextPublic = trimBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
+  if (siteUrl) {
+    const host = parseHost(siteUrl);
+    if (host) allowed.add(host);
+  }
+  if (nextPublic) {
+    const host = parseHost(nextPublic);
+    if (host) allowed.add(host);
+  }
+  allowed.add(`admin.${getTenantRootDomain().toLowerCase()}`);
+  return allowed;
+}
+
+function isAllowedForwardedHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase();
+  const hostNoPort = normalized.split(':')[0] ?? '';
+  if (!hostNoPort) return false;
+  if (isLocalHostname(hostNoPort)) return process.env.NODE_ENV !== 'production';
+  const allowedHosts = allowedHostsFromEnv();
+  if (allowedHosts.has(normalized) || allowedHosts.has(hostNoPort)) return true;
+  const root = getTenantRootDomain().toLowerCase();
+  return hostNoPort.endsWith(`.${root}`) || hostNoPort === root;
+}
+
 function isLocalHostname(hostname: string): boolean {
   const h = hostname.toLowerCase();
   return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
@@ -26,14 +61,16 @@ function isLocalHostname(hostname: string): boolean {
 export function inviteCallbackBaseUrl(req: NextRequest): string | null {
   const siteUrl = trimBaseUrl(process.env.SITE_URL);
   const nextPublic = trimBaseUrl(process.env.NEXT_PUBLIC_SITE_URL);
+  const isProd = process.env.NODE_ENV === 'production';
 
   if (siteUrl) return siteUrl;
+  if (isProd) return null;
 
   const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
+  const proto = req.headers.get('x-forwarded-proto') === 'http' ? 'http' : 'https';
   const hostnameOnly = hostHeader?.split(':')[0] ?? '';
   const forwardedBase =
-    hostHeader && hostnameOnly && !isLocalHostname(hostnameOnly) ? `${proto}://${hostHeader}` : null;
+    hostHeader && hostnameOnly && isAllowedForwardedHost(hostHeader) ? `${proto}://${hostHeader}` : null;
 
   if (nextPublic) {
     const isLocal = LOCALHOST_SITE_RE.test(nextPublic);

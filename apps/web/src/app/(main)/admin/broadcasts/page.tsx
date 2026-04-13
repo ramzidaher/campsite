@@ -3,7 +3,7 @@ import {
   type AdminBroadcastRow,
 } from '@/components/admin/AdminBroadcastsClient';
 import { createClient } from '@/lib/supabase/server';
-import { canManageOrgBroadcastsAdmin } from '@/lib/adminGates';
+import { hasPermission } from '@/lib/adminGates';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -19,7 +19,9 @@ export default async function AdminBroadcastsPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canManageOrgBroadcastsAdmin(profile.role)) redirect('/admin');
+  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id });
+  const permissionKeys = ((perms ?? []) as Array<{ permission_key?: string }>).map((p) => String(p.permission_key ?? ''));
+  if (!hasPermission(permissionKeys, 'broadcasts.view')) redirect('/admin');
 
   const { data: rows } = await supabase
     .from('broadcasts')

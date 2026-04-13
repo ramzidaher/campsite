@@ -4,11 +4,12 @@ import { useCampsiteTheme } from './ThemeProvider';
 
 export interface InputProps extends TextInputProps {
   label?: string;
+  hint?: string;
   error?: string;
   secureTextEntry?: boolean;
 }
 
-export function Input({ label, error, style, secureTextEntry, ...rest }: InputProps) {
+export function Input({ label, hint, error, style, secureTextEntry, ...rest }: InputProps) {
   const { tokens } = useCampsiteTheme();
 
   return (
@@ -20,6 +21,8 @@ export function Input({ label, error, style, secureTextEntry, ...rest }: InputPr
       ) : null}
       <TextInput
         accessibilityLabel={label}
+        accessibilityHint={hint}
+        accessibilityState={error ? { invalid: true } : undefined}
         placeholderTextColor={tokens.textMuted}
         secureTextEntry={secureTextEntry}
         style={[
@@ -33,6 +36,11 @@ export function Input({ label, error, style, secureTextEntry, ...rest }: InputPr
         ]}
         {...rest}
       />
+      {hint && !error ? (
+        <Text style={[styles.hint, { color: tokens.textMuted }]} accessibilityRole="text">
+          {hint}
+        </Text>
+      ) : null}
       {error ? (
         <Text style={[styles.error, { color: tokens.warning }]} accessibilityRole="alert">
           {error}
@@ -53,5 +61,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 44,
   },
+  hint: { fontSize: 12 },
   error: { fontSize: 13 },
 });

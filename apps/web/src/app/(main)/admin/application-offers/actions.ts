@@ -5,8 +5,10 @@ import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { sendOfferLetterSigningEmail } from '@/lib/recruitment/sendOfferLetterEmails';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { sanitizeOfferHtml } from '@/lib/security/htmlSanitizer';
 import { revalidatePath } from 'next/cache';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { createHash } from 'crypto';
 
 function relationOne<T>(rel: T | T[] | null | undefined): T | null {
   if (rel == null) return null;
@@ -17,6 +19,10 @@ function newOfferPortalToken(): string {
   const a = crypto.randomUUID().replace(/-/g, '');
   const b = crypto.randomUUID().replace(/-/g, '');
   return `${a}${b}`;
+}
+
+function hashPortalToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
 }
 
 async function requireOrgPermission(permissionKey: string) {
@@ -109,6 +115,7 @@ export async function sendOfferLetterForApplication(args: {
   const tid = args.templateId?.trim();
   const html = args.bodyHtml?.trim();
   if (!appId || !jid || !tid || !html) return { ok: false, error: 'Letter content is required.' };
+  const sanitizedHtml = sanitizeOfferHtml(html);
 
   const { data: app, error: appErr } = await supabase
     .from('job_applications')
@@ -148,6 +155,7 @@ export async function sendOfferLetterForApplication(args: {
     .eq('status', 'sent');
 
   const portalToken = newOfferPortalToken();
+  const portalTokenHash = hashPortalToken(portalToken);
 
   const { data: inserted, error: insErr } = await admin
     .from('application_offers')
@@ -155,8 +163,9 @@ export async function sendOfferLetterForApplication(args: {
       org_id: orgId,
       job_application_id: appId,
       template_id: tid,
-      body_html: html,
-      portal_token: portalToken,
+      body_html: sanitizedHtml,
+      portal_token_hash: portalTokenHash,
+      portal_token_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
       status: 'sent',
       created_by: user.id,
       offer_start_date: args.offerStartDate?.trim() || null,

@@ -737,7 +737,10 @@ function PendingBroadcastList({
     const authorIds = [...new Set(list.map((r) => r.created_by as string))];
     let names = new Map<string, string>();
     if (authorIds.length) {
-      const { data: profs } = await supabase.from('profiles').select('id,full_name').in('id', authorIds);
+      const { data: profs } = await supabase
+        .from('coworker_directory_public')
+        .select('id,full_name')
+        .in('id', authorIds);
       names = new Map((profs ?? []).map((p) => [p.id as string, p.full_name as string]));
     }
     setRows(

@@ -1,6 +1,6 @@
 import { AdminCategoriesClient } from '@/components/admin/AdminCategoriesClient';
 import { createClient } from '@/lib/supabase/server';
-import { canManageOrgDepartments } from '@/lib/adminGates';
+import { hasPermission } from '@/lib/adminGates';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -16,7 +16,9 @@ export default async function AdminCategoriesPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canManageOrgDepartments(profile.role)) redirect('/admin');
+  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id });
+  const permissionKeys = ((perms ?? []) as Array<{ permission_key?: string }>).map((p) => String(p.permission_key ?? ''));
+  if (!hasPermission(permissionKeys, 'departments.view')) redirect('/admin');
 
   const { data: departments } = await supabase
     .from('departments')

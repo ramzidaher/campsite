@@ -45,7 +45,10 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
     }
     const raw = (data ?? []) as Omit<Row, 'profiles'>[];
     const ids = [...new Set(raw.map((r) => r.user_id))];
-    const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', ids);
+    const { data: profs } = await supabase
+      .from('coworker_directory_public')
+      .select('id, full_name')
+      .in('id', ids);
     const nameById = new Map((profs as { id: string; full_name: string | null }[] | null)?.map((p) => [p.id, p.full_name]) ?? []);
     const list: Row[] = raw.map((r) => ({
       ...r,

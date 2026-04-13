@@ -16,14 +16,18 @@ export interface ButtonProps extends Omit<PressableProps, 'children'> {
   children: React.ReactNode;
   variant?: ButtonVariant;
   loading?: boolean;
+  loadingLabel?: string;
 }
 
 export function Button({
   children,
   variant = 'primary',
   loading,
+  loadingLabel = 'Loading',
   disabled,
   style,
+  accessibilityLabel,
+  accessibilityState,
   ...rest
 }: ButtonProps) {
   const { tokens } = useCampsiteTheme();
@@ -48,9 +52,19 @@ export function Button({
   const borderColor =
     variant === 'secondary' ? tokens.border : variant === 'ghost' ? tokens.border : bg;
 
+  const resolvedA11yLabel =
+    accessibilityLabel ?? (typeof children === 'string' ? children : undefined);
+
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={resolvedA11yLabel}
+      accessibilityState={{
+        ...(accessibilityState ?? {}),
+        disabled: Boolean(isDisabled),
+        busy: Boolean(loading),
+      }}
+      accessibilityHint={loading ? loadingLabel : undefined}
       disabled={isDisabled}
       style={(state: PressableStateCallbackType) => {
         const { pressed } = state;

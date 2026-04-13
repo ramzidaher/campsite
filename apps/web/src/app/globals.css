@@ -52,6 +52,106 @@ body {
   color: var(--campsite-text);
   background: var(--campsite-bg);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: calc(16px * var(--a11y-font-scale, 1));
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 0.5rem;
+  z-index: 300;
+  border-radius: 0.5rem;
+  background: #121212;
+  color: #faf9f6;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transform: translateY(-140%);
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid #faf9f6;
+  outline-offset: 2px;
+}
+
+html[data-a11y-reduce-motion='1'] *,
+html[data-a11y-reduce-motion='1'] *::before,
+html[data-a11y-reduce-motion='1'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-a11y-increase-contrast='1'] {
+  --campsite-text: #000000;
+  --campsite-text-secondary: #222222;
+  --campsite-border: #6a6a6a;
+}
+
+html[data-a11y-bold-text='1'] body {
+  font-weight: 600;
+}
+
+html[data-a11y-reduce-transparency='1'] .bg-black\/20,
+html[data-a11y-reduce-transparency='1'] .bg-black\/40,
+html[data-a11y-reduce-transparency='1'] .bg-white\/10,
+html[data-a11y-reduce-transparency='1'] .bg-white\/\[0\.07\],
+html[data-a11y-reduce-transparency='1'] .bg-white\/\[0\.12\] {
+  background-color: rgba(18, 18, 18, 0.88) !important;
+}
+
+html[data-a11y-grayscale='1'] {
+  filter: grayscale(100%);
+}
+
+html[data-a11y-button-shapes='1'] button,
+html[data-a11y-button-shapes='1'] [role='button'],
+html[data-a11y-button-shapes='1'] a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+html[data-a11y-differentiate-without-color='1'] [aria-selected='true'],
+html[data-a11y-differentiate-without-color='1'] [aria-pressed='true'],
+html[data-a11y-differentiate-without-color='1'] [aria-current='page'] {
+  outline: 2px dashed #111111 !important;
+  outline-offset: 2px;
+}
+
+html[data-a11y-onoff-labels='1'] [role='switch'][aria-checked='true']::after {
+  content: ' ON';
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  position: absolute;
+  left: 6px;
+  top: 7px;
+}
+
+html[data-a11y-onoff-labels='1'] [role='switch'][aria-checked='false']::after {
+  content: ' OFF';
+  font-size: 10px;
+  font-weight: 700;
+  color: #121212;
+  position: absolute;
+  right: 6px;
+  top: 7px;
+}
+
+html[data-a11y-prefer-non-blinking-cursor='1'] * {
+  caret-color: #111111;
+}
+
+html[data-a11y-prefer-non-blinking-cursor='1'] input,
+html[data-a11y-prefer-non-blinking-cursor='1'] textarea {
+  animation: none !important;
+}
+
+html[data-a11y-dim-flashing-lights='1'] video {
+  filter: brightness(0.85);
 }
 
 /* Keep sidebar scrollbar subtle on dark nav. */

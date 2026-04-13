@@ -9,6 +9,7 @@ import {
 import { sendInterviewScheduledEmail } from '@/lib/recruitment/sendInterviewScheduledEmail';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import { issueCandidatePortalToken } from '@/lib/security/portalTokens';
 import { revalidatePath } from 'next/cache';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -449,7 +450,7 @@ export async function bookInterviewForApplication(opts: {
   const { data: app, error: appErr } = await supabase
     .from('job_applications')
     .select(
-      'id, candidate_name, candidate_email, portal_token, job_listing_id, job_listings(title), organisations(name)'
+      'id, candidate_name, candidate_email, job_listing_id, job_listings(title), organisations(name)'
     )
     .eq('id', appId)
     .eq('org_id', orgId)
@@ -577,6 +578,7 @@ export async function bookInterviewForApplication(opts: {
   const endsLabel = endsAt.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
 
   if (canNotifyCandidate) {
+    const candidatePortalToken = await issueCandidatePortalToken(admin, { applicationId: appId, orgId });
     await sendInterviewScheduledEmail({
       candidateEmail: candEmail,
       candidateName: candName,
@@ -585,7 +587,7 @@ export async function bookInterviewForApplication(opts: {
       startsAtLabel: startsLabel,
       endsAtLabel: endsLabel,
       joiningInstructions: joining,
-      portalToken: app.portal_token as string,
+      portalToken: candidatePortalToken,
     });
   }
 

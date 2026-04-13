@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 type Dept = {
   id: string;
@@ -603,18 +603,12 @@ function DeptGridCard({
   const more = catNames.length - show.length;
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
+      aria-label={`Open ${dept.name} settings`}
       className={[
-        'cursor-pointer rounded-xl border border-[#d8d8d8] bg-white p-[18px] text-left transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
+        'w-full cursor-pointer rounded-xl border border-[#d8d8d8] bg-white p-[18px] text-left transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]',
         dept.is_archived ? 'opacity-75' : '',
       ].join(' ')}
     >
@@ -666,7 +660,7 @@ function DeptGridCard({
           ) : null}
         </div>
       ) : null}
-    </div>
+    </button>
   );
 }
 
@@ -683,6 +677,14 @@ function ModalOverlay({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const titleId = useId();
+  const subtitleId = useId();
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
@@ -690,21 +692,27 @@ function ModalOverlay({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="dept-modal-title"
+        aria-labelledby={titleId}
+        aria-describedby={subtitle ? subtitleId : undefined}
+        tabIndex={-1}
         className={[
           'max-h-[min(90vh,800px)] w-full overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.07)]',
           wide ? 'max-w-2xl' : 'max-w-lg',
         ].join(' ')}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 border-b border-[#d8d8d8] px-6 py-4">
           <div className="min-w-0 flex-1">
-            <h2 id="dept-modal-title" className="font-authSerif text-[19px] tracking-tight text-[#121212]">
+            <h2 id={titleId} className="font-authSerif text-[19px] tracking-tight text-[#121212]">
               {title}
             </h2>
-            {subtitle ? <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{subtitle}</p> : null}
+            {subtitle ? <p id={subtitleId} className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{subtitle}</p> : null}
           </div>
           <button
             type="button"

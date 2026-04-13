@@ -10,6 +10,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ro
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();
   if (!me?.org_id || me.status !== 'active') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { data: canManageRoles } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: me.org_id,
+    p_permission_key: 'roles.manage',
+    p_context: {},
+  });
+  if (!canManageRoles) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = (await req.json().catch(() => null)) as
     | { label?: string; description?: string; permission_keys?: string[] }

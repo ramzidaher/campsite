@@ -27,7 +27,6 @@ type DetailRow = {
   submitted_at: string;
   interview_joining_instructions: string | null;
   messages: PortalMessage[] | null;
-  portal_token: string;
 };
 
 export default async function CandidateApplicationDetailPage({ params }: { params: Promise<{ applicationId: string }> }) {
@@ -64,7 +63,7 @@ export default async function CandidateApplicationDetailPage({ params }: { param
   const messages = Array.isArray(row.messages) ? row.messages : [];
 
   const listingHref = tenantJobListingRelativePath(row.job_slug, row.org_slug, host);
-  const trackerHref = `/jobs/status/${encodeURIComponent(row.portal_token)}`;
+  const trackerHref = `/jobs/status/new/${encodeURIComponent(applicationId)}`;
   const backToListHref = tenantJobsSubrouteRelativePath('me', orgSlug, host);
 
   return (

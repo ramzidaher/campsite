@@ -1,3 +1,7 @@
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <main id="main-content" tabIndex={-1}>
+      {children}
+    </main>
+  );
 }

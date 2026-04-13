@@ -9,6 +9,13 @@ export async function POST(req: NextRequest) {
 
   const { data: me } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle();
   if (!me?.org_id || me.status !== 'active') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { data: canEditRoles } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: me.org_id,
+    p_permission_key: 'members.edit_roles',
+    p_context: {},
+  });
+  if (!canEditRoles) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = (await req.json().catch(() => null)) as
     | { user_id?: string; reports_to_user_id?: string | null }

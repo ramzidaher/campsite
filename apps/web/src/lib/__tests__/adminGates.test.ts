@@ -8,27 +8,24 @@ import {
 } from '@/lib/adminGates';
 
 describe('adminGates', () => {
-  it('allows org_admin and super_admin into admin area', () => {
-    expect(canAccessOrgAdminArea('org_admin')).toBe(true);
-    expect(canAccessOrgAdminArea('super_admin')).toBe(true);
-  });
-
-  it('denies manager, coordinator, and CSA', () => {
+  it('disables deprecated role-based admin access checks', () => {
+    expect(canAccessOrgAdminArea('org_admin')).toBe(false);
+    expect(canAccessOrgAdminArea('super_admin')).toBe(false);
     expect(canAccessOrgAdminArea('manager')).toBe(false);
     expect(canAccessOrgAdminArea('coordinator')).toBe(false);
     expect(canAccessOrgAdminArea('csa')).toBe(false);
   });
 
-  it('maps all canManage* helpers to org admin today', () => {
-    expect(canManageOrgUsers('org_admin')).toBe(true);
-    expect(canManageOrgDepartments('org_admin')).toBe(true);
-    expect(canManageOrgBroadcastsAdmin('org_admin')).toBe(true);
-    expect(canManageOrgSettings('org_admin')).toBe(true);
+  it('keeps deprecated canManage* helpers disabled', () => {
+    expect(canManageOrgUsers('org_admin')).toBe(false);
+    expect(canManageOrgDepartments('org_admin')).toBe(false);
+    expect(canManageOrgBroadcastsAdmin('org_admin')).toBe(false);
+    expect(canManageOrgSettings('org_admin')).toBe(false);
     expect(canManageOrgUsers('manager')).toBe(false);
   });
 
-  it('returns nav items only for org admin', () => {
-    expect(getMainShellAdminNavItems('org_admin')?.length).toBeGreaterThan(5);
+  it('disables legacy role-based admin nav builder', () => {
+    expect(getMainShellAdminNavItems('org_admin')).toBeNull();
     expect(getMainShellAdminNavItems('manager')).toBeNull();
   });
 });

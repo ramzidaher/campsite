@@ -1,6 +1,8 @@
 import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { OfferSignClient } from '@/app/(public)/jobs/offer-sign/[token]/OfferSignClient';
+import { sanitizeOfferHtml } from '@/lib/security/htmlSanitizer';
 import { createClient } from '@/lib/supabase/server';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 export default async function OfferSignPage({ params }: { params: Promise<{ token: string }> }) {
@@ -9,6 +11,13 @@ export default async function OfferSignPage({ params }: { params: Promise<{ toke
   if (!token) notFound();
 
   const supabase = await createClient();
+  const h = await headers();
+  const actorKey = `${(h.get('x-forwarded-for') ?? '').split(',')[0]?.trim() || 'anon'}:offer-sign-view`;
+  const { data: rateAllowed } = await supabase.rpc('record_public_token_attempt', {
+    p_channel: 'offer_sign_view',
+    p_actor_key: actorKey,
+  });
+  if (!rateAllowed) notFound();
   const { data, error } = await supabase.rpc('get_application_offer_for_signing', {
     p_portal_token: token,
   });
@@ -22,6 +31,7 @@ export default async function OfferSignPage({ params }: { params: Promise<{ toke
     candidate_name: string;
     job_title: string;
   };
+  row.body_html = sanitizeOfferHtml(row.body_html);
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-[#121212]">

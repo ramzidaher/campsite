@@ -1,3 +1,5 @@
+import { sanitizeOfferHtml } from '@/lib/security/htmlSanitizer';
+
 /** Merge field keys supported in offer HTML templates. */
 export const OFFER_MERGE_FIELD_KEYS = [
   'candidate_name',
@@ -30,9 +32,8 @@ export function mergeOfferTemplateHtml(
 }
 
 export function htmlToPlainTextForPdf(html: string): string {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
+  const sanitized = sanitizeOfferHtml(html);
+  return sanitized
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')

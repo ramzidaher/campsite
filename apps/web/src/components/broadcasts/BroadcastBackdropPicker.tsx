@@ -1,7 +1,7 @@
 'use client';
 
 import type { UnsplashPhotoPayload } from '@/lib/unsplash/types';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 
 type BackdropMode = 'none' | 'image';
 
@@ -64,6 +64,7 @@ export function BroadcastBackdropPicker({
   onRemoveCover: () => void;
   onUploadClick: () => void;
 }) {
+  const dialogTitleId = useId();
   const [photos, setPhotos] = useState<UnsplashPhotoPayload[]>([]);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [photosErr, setPhotosErr] = useState<string | null>(null);
@@ -132,11 +133,11 @@ export function BroadcastBackdropPicker({
         className="flex max-h-[min(90vh,640px)] w-full max-w-[400px] flex-col overflow-hidden rounded-[20px] border border-[#e8e8e8] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="backdrop-picker-title"
+        aria-labelledby={dialogTitleId}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 pb-2 pt-4">
-          <h2 id="backdrop-picker-title" className="text-[17px] font-semibold tracking-tight text-[#121212]">
+          <h2 id={dialogTitleId} className="text-[17px] font-semibold tracking-tight text-[#121212]">
             Backdrop
           </h2>
           <button
@@ -197,7 +198,7 @@ export function BroadcastBackdropPicker({
                 {photosErr}
               </p>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2" role="list" aria-label="Backdrop image choices">
                 {photos.map((p) => {
                   const selected = coverImageUrl === p.urls.regular;
                   return (
@@ -206,13 +207,15 @@ export function BroadcastBackdropPicker({
                       type="button"
                       disabled={!canSetCover || coverBusy}
                       onClick={() => onApplyImageUrl(p.urls.regular, p.downloadLocation)}
+                      aria-label={`Use backdrop image by ${p.user?.name ?? 'Unsplash contributor'}`}
+                      aria-pressed={selected}
                       className={[
                         'aspect-[4/3] overflow-hidden rounded-xl bg-[#ecebe8] ring-2 ring-offset-2 ring-offset-white transition',
                         selected ? 'ring-[#121212]' : 'ring-transparent hover:ring-[#d0d0d0]',
                         !canSetCover || coverBusy ? 'opacity-50' : '',
                       ].join(' ')}
                     >
-                      <img src={p.urls.small} alt="" className="h-full w-full object-cover" />
+                      <img src={p.urls.small} alt={p.alt ?? 'Backdrop preview'} className="h-full w-full object-cover" />
                     </button>
                   );
                 })}

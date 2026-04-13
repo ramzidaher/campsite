@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { sanitizeOfferHtml } from '@/lib/security/htmlSanitizer';
 import { revalidatePath } from 'next/cache';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -55,12 +56,13 @@ export async function createOfferTemplate(
   const n = name?.trim();
   if (!n) return { ok: false, error: 'Name is required.' };
 
+  const sanitizedBodyHtml = sanitizeOfferHtml(bodyHtml);
   const { data, error } = await supabase
     .from('offer_letter_templates')
     .insert({
       org_id: orgId,
       name: n,
-      body_html: bodyHtml ?? '',
+      body_html: sanitizedBodyHtml,
       created_by: user.id,
       updated_at: new Date().toISOString(),
     })
@@ -87,11 +89,12 @@ export async function updateOfferTemplate(
   const n = name?.trim();
   if (!n) return { ok: false, error: 'Name is required.' };
 
+  const sanitizedBodyHtml = sanitizeOfferHtml(bodyHtml);
   const { error } = await supabase
     .from('offer_letter_templates')
     .update({
       name: n,
-      body_html: bodyHtml ?? '',
+      body_html: sanitizedBodyHtml,
       updated_at: new Date().toISOString(),
     })
     .eq('id', tid)

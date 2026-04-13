@@ -27,3 +27,6 @@ supabase/supabase/
 coverage
 *.log
 .vercel
+Chrome Passwords.csv
+*Passwords*.csv
+*Staff List*.xlsx

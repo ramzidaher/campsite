@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { SentryInit } from '@/components/SentryInit';
+import { AccessibilityPreferencesSync } from '@/components/AccessibilityPreferencesSync';
 import { VercelAnalyticsGate } from '@/components/VercelAnalyticsGate';
 import { VercelSpeedInsightsGate } from '@/components/VercelSpeedInsightsGate';
 import { DM_Serif_Display, Inter } from 'next/font/google';
@@ -29,7 +30,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${dmSerif.variable} min-h-screen font-sans antialiased`}>
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <SentryInit />
+        <AccessibilityPreferencesSync />
         <VercelAnalyticsGate />
         <VercelSpeedInsightsGate />
         {children}

@@ -5,6 +5,8 @@ import { htmlToPlainTextForPdf } from '@/lib/offers/mergeOfferTemplate';
 import { sendSignedOfferPdfEmail } from '@/lib/recruitment/sendOfferLetterEmails';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { revalidatePath } from 'next/cache';
+import { createHash } from 'crypto';
+import { headers } from 'next/headers';
 
 function escapeHtml(s: string): string {
   return s
@@ -20,6 +22,7 @@ export async function submitOfferSignature(
 ): Promise<{ ok: boolean; error?: string }> {
   const t = token?.trim();
   if (!t) return { ok: false, error: 'Invalid link.' };
+  const tokenHash = createHash('sha256').update(t).digest('hex');
 
   let admin;
   try {
@@ -27,14 +30,25 @@ export async function submitOfferSignature(
   } catch {
     return { ok: false, error: 'Server misconfigured.' };
   }
+  const h = await headers();
+  const actorKey = `${(h.get('x-forwarded-for') ?? '').split(',')[0]?.trim() || 'anon'}:offer-sign-submit`;
+  const { data: rateAllowed } = await admin.rpc('record_public_token_attempt', {
+    p_channel: 'offer_sign_submit',
+    p_actor_key: actorKey,
+  });
+  if (!rateAllowed) return { ok: false, error: 'Too many attempts. Please retry shortly.' };
 
   const { data: row, error } = await admin
     .from('application_offers')
-    .select('id, org_id, status, job_application_id, body_html')
-    .eq('portal_token', t)
+    .select('id, org_id, status, job_application_id, body_html, portal_token_expires_at, portal_token_revoked_at')
+    .eq('portal_token_hash', tokenHash)
     .maybeSingle();
 
   if (error || !row) return { ok: false, error: 'Offer not found.' };
+  if (row.portal_token_revoked_at) return { ok: false, error: 'This offer link is no longer valid.' };
+  if (row.portal_token_expires_at && new Date(row.portal_token_expires_at as string).getTime() <= Date.now()) {
+    return { ok: false, error: 'This offer link has expired.' };
+  }
   if ((row.status as string) !== 'sent') {
     return { ok: false, error: 'This offer is no longer open for signing.' };
   }
@@ -64,6 +78,11 @@ export async function submitOfferSignature(
       .update({
         status: 'declined',
         declined_at: new Date().toISOString(),
+        portal_token: null,
+        portal_token_hash: null,
+        portal_token_revoked_at: new Date().toISOString(),
+        portal_token_last_used_at: new Date().toISOString(),
+        portal_token_use_count: 1,
         updated_at: new Date().toISOString(),
       })
       .eq('id', offerId);
@@ -138,6 +157,11 @@ export async function submitOfferSignature(
       signature_storage_path: signaturePath,
       signed_pdf_storage_path: pdfPath,
       signed_at: signedAt.toISOString(),
+      portal_token: null,
+      portal_token_hash: null,
+      portal_token_revoked_at: new Date().toISOString(),
+      portal_token_last_used_at: new Date().toISOString(),
+      portal_token_use_count: 1,
       updated_at: new Date().toISOString(),
     })
     .eq('id', offerId);

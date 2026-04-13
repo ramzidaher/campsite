@@ -11,7 +11,6 @@ import { redirect } from 'next/navigation';
 
 type CandidateApplicationRow = {
   application_id: string;
-  portal_token: string;
   org_name: string;
   job_title: string;
   stage: string;
@@ -104,10 +103,10 @@ export default async function CandidateApplicationsPage() {
                         View detail
                       </Link>
                       <Link
-                        href={`/jobs/status/${encodeURIComponent(row.portal_token)}`}
+                        href={`/jobs/status/new/${encodeURIComponent(row.application_id)}`}
                         className="inline-flex justify-center rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] hover:bg-[#f5f4f1]"
                       >
-                        Open tracker
+                        Open private tracker
                       </Link>
                     </div>
                   </div>

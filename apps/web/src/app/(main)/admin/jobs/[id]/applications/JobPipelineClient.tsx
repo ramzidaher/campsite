@@ -8,6 +8,8 @@ import {
 } from '@/app/(main)/admin/interviews/actions';
 import {
   loadJobApplicationDetail,
+  generateCandidateTrackerLink,
+  generateOfferSigningLink,
   addJobApplicationNote,
   sendCandidateOnlyMessage,
   setInterviewJoiningInstructions,
@@ -31,7 +33,7 @@ import {
 } from '@dnd-kit/core';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 
 export type PipelineApplicationRow = {
   id: string;
@@ -692,22 +694,25 @@ export function JobPipelineClient({
                       </p>
                       {detail.latest_offer?.status === 'sent' ? (
                         <div className="mt-2">
-                          <p className="text-[11px] text-[#6b6b6b]">Candidate signing link (same as email):</p>
+                          <p className="text-[11px] text-[#6b6b6b]">Candidate signing link:</p>
                           <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <code className="max-w-[220px] truncate rounded bg-white px-2 py-1 text-[11px]">
-                              {typeof window !== 'undefined'
-                                ? `${window.location.origin}/jobs/offer-sign/${detail.latest_offer.portal_token}`
-                                : `/jobs/offer-sign/${detail.latest_offer.portal_token}`}
-                            </code>
                             <button
                               type="button"
                               className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                               onClick={() => {
-                                const u = `${window.location.origin}/jobs/offer-sign/${detail.latest_offer?.portal_token}`;
-                                void navigator.clipboard.writeText(u);
+                                startDetailTransition(async () => {
+                                  const res = await generateOfferSigningLink(detail.latest_offer!.id);
+                                  if (!res.ok) {
+                                    alert(res.error);
+                                    return;
+                                  }
+                                  const absolute = `${window.location.origin}${res.url}`;
+                                  void navigator.clipboard.writeText(absolute);
+                                  alert('Fresh signing link copied.');
+                                });
                               }}
                             >
-                              Copy
+                              Generate & copy
                             </button>
                           </div>
                         </div>
@@ -885,6 +890,24 @@ export function JobPipelineClient({
                     <h4 className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                       Previous candidate messages
                     </h4>
+                    <button
+                      type="button"
+                      className="mt-2 text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+                      onClick={() => {
+                        startDetailTransition(async () => {
+                          const res = await generateCandidateTrackerLink(detail.application.id);
+                          if (!res.ok) {
+                            alert(res.error);
+                            return;
+                          }
+                          const absolute = `${window.location.origin}${res.url}`;
+                          void navigator.clipboard.writeText(absolute);
+                          alert('Fresh tracker link copied.');
+                        });
+                      }}
+                    >
+                      Generate & copy tracker link
+                    </button>
                     <ul className="mt-2 space-y-2">
                       {detail.messages.map((m) => (
                         <li key={m.id} className="rounded-md border border-[#e8f5f0] bg-[#f6fdfb] p-2 text-[13px]">

@@ -1,6 +1,6 @@
 import { OrgSettingsClient } from '@/components/admin/OrgSettingsClient';
 import { createClient } from '@/lib/supabase/server';
-import { canManageOrgSettings } from '@/lib/adminGates';
+import { hasPermission } from '@/lib/adminGates';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -16,7 +16,9 @@ export default async function OrgAdminSettingsPage() {
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!canManageOrgSettings(profile.role)) redirect('/admin');
+  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id });
+  const permissionKeys = ((perms ?? []) as Array<{ permission_key?: string }>).map((p) => String(p.permission_key ?? ''));
+  if (!hasPermission(permissionKeys, 'roles.manage')) redirect('/admin');
 
   const { data: org } = await supabase
     .from('organisations')

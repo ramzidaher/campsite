@@ -91,7 +91,11 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </p>
       </aside>
 
-      <main className="auth-shell-main flex min-h-screen flex-1 items-start justify-center overflow-y-auto px-6 py-10 sm:px-8 sm:py-12 lg:items-center">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="auth-shell-main flex min-h-screen flex-1 items-start justify-center overflow-y-auto px-6 py-10 sm:px-8 sm:py-12 lg:items-center"
+      >
         <div className="w-full max-w-[460px]">
           <Link href="/" className="mb-6 flex items-center gap-2.5 lg:hidden">
             <CampsiteLogoMark className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] bg-[#121212]" />
