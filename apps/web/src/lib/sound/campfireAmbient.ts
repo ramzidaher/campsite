@@ -2,6 +2,8 @@ import { ensureAudioContextReady } from './player';
 
 type StopFn = () => void;
 
+const RECORDED_CAMPFIRE_SRC = '/sounds/campfire.mp3';
+
 let active: { stop: StopFn } | null = null;
 let lastAppliedKey = '';
 let requestId = 0;
@@ -37,9 +39,71 @@ function playCrackleBurst(ctx: AudioContext, master: GainNode): void {
   osc.stop(t + dur + 0.02);
 }
 
+async function startRecordedCampfire(volume: number): Promise<StopFn | null> {
+  if (typeof window === 'undefined') return null;
+  const audio = new Audio(RECORDED_CAMPFIRE_SRC);
+  audio.loop = true;
+  audio.preload = 'auto';
+  audio.volume = Math.max(0, Math.min(1, (volume / 100) * 0.55));
+  try {
+    await audio.play();
+  } catch {
+    return null;
+  }
+
+  return () => {
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+  };
+}
+
+function startSyntheticCampfire(ctx: AudioContext, volume: number): StopFn {
+  const master = ctx.createGain();
+  master.gain.value = (volume / 100) * 0.11;
+  master.connect(ctx.destination);
+
+  const buf = buildBrownNoiseBuffer(ctx, 2.8);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 720;
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 95;
+  src.connect(lp);
+  lp.connect(hp);
+  hp.connect(master);
+  src.start();
+
+  const tick = () => {
+    if (Math.random() < 0.62) playCrackleBurst(ctx, master);
+  };
+  const id = window.setInterval(tick, 160 + Math.random() * 380);
+
+  return () => {
+    window.clearInterval(id);
+    try {
+      src.stop();
+    } catch {
+      /* already stopped */
+    }
+    try {
+      src.disconnect();
+      lp.disconnect();
+      hp.disconnect();
+      master.disconnect();
+    } catch {
+      /* noop */
+    }
+  };
+}
+
 /**
- * Loops a soft brown-noise bed with occasional crackles. Stops any previous instance.
- * `volume` is 0–100 (not tied to UI SFX mute — ambient has its own toggle).
+ * Plays `/sounds/campfire.mp3` when available, with a synthetic fallback.
+ * Stops any previous instance. `volume` is 0–100.
  */
 export function setCampfireAmbientActive(enabled: boolean, volume: number): void {
   if (!enabled || volume <= 0) {
@@ -63,50 +127,8 @@ export function setCampfireAmbientActive(enabled: boolean, volume: number): void
     const ctx = await ensureAudioContextReady();
     if (rid !== requestId || !ctx) return;
 
-    const master = ctx.createGain();
-    master.gain.value = (volume / 100) * 0.11;
-    master.connect(ctx.destination);
-
-    const buf = buildBrownNoiseBuffer(ctx, 2.8);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.loop = true;
-    const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 720;
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 95;
-    src.connect(lp);
-    lp.connect(hp);
-    hp.connect(master);
-    src.start();
-
-    const tick = () => {
-      if (Math.random() < 0.62) playCrackleBurst(ctx, master);
-    };
-    const id = window.setInterval(tick, 160 + Math.random() * 380);
-
-    const stop: StopFn = () => {
-      window.clearInterval(id);
-      try {
-        src.stop();
-      } catch {
-        /* already stopped */
-      }
-      try {
-        src.disconnect();
-        lp.disconnect();
-        hp.disconnect();
-        master.disconnect();
-      } catch {
-        /* noop */
-      }
-      if (active?.stop === stop) {
-        active = null;
-        lastAppliedKey = '';
-      }
-    };
+    const recordedStop = await startRecordedCampfire(volume);
+    const stop = recordedStop ?? startSyntheticCampfire(ctx, volume);
 
     if (rid === requestId) active = { stop };
   })();
