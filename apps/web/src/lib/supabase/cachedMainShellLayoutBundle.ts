@@ -3,14 +3,24 @@ import { cache } from 'react';
 import { createClient } from './server';
 
 /**
- * One `main_shell_layout_bundle` RPC per request. Layout + data loaders that need
- * the same payload share this via React `cache()` — avoids duplicate round trips
- * (e.g. dashboard previously called `broadcast_unread_count` again).
+ * Two parallel RPCs (`main_shell_layout_structural` + `main_shell_badge_counts_bundle`)
+ * merged to the same shape as legacy `main_shell_layout_bundle`, shared via React `cache()`.
  */
 export const getCachedMainShellLayoutBundle = cache(async (): Promise<Record<string, unknown>> => {
   const supabase = await createClient();
-  const { data: bundle } = await supabase.rpc('main_shell_layout_bundle');
-  return (bundle && typeof bundle === 'object' ? bundle : {}) as Record<string, unknown>;
+  const [structural, badge] = await Promise.all([
+    supabase.rpc('main_shell_layout_structural'),
+    supabase.rpc('main_shell_badge_counts_bundle'),
+  ]);
+  if (structural.error) throw structural.error;
+  if (badge.error) throw badge.error;
+  const s =
+    structural.data && typeof structural.data === 'object'
+      ? (structural.data as Record<string, unknown>)
+      : {};
+  const b =
+    badge.data && typeof badge.data === 'object' ? (badge.data as Record<string, unknown>) : {};
+  return { ...s, ...b };
 });
 
 export function broadcastUnreadFromShellBundle(b: Record<string, unknown>): number {

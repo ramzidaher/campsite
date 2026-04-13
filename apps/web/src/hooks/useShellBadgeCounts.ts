@@ -2,68 +2,39 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import {
+  type ShellBadgeCounts,
+  parseShellBadgeCounts,
+} from '@/lib/shell/shellBadgeCounts';
+
+export type { ShellBadgeCounts };
 
 /** Shared with BroadcastFeed so unread refresh refetches this instead of `broadcast_unread_count`. */
 export const SHELL_BADGE_COUNTS_QUERY_KEY = ['shell-badge-counts'] as const;
 
-export type ShellBadgeCounts = {
-  broadcast_unread: number;
-  broadcast_pending_approvals: number;
-  recruitment_notifications: number;
-  application_notifications: number;
-  leave_notifications: number;
-  hr_metric_notifications: number;
-  pending_approvals: number;
-  leave_pending_approval: number;
-  recruitment_pending_review: number;
-  performance_pending: number;
-  onboarding_active: number;
-  rota_pending_final: number;
-  rota_pending_peer: number;
-};
-
-function parseCounts(data: unknown): ShellBadgeCounts {
-  const b = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
-  const n = (k: string): number => {
-    const v = b[k];
-    if (typeof v === 'number' && !Number.isNaN(v)) return Math.max(0, v);
-    if (v !== null && v !== undefined) return Math.max(0, Number(v));
-    return 0;
-  };
-  return {
-    broadcast_unread:             n('broadcast_unread'),
-    broadcast_pending_approvals:  n('broadcast_pending_approvals'),
-    recruitment_notifications:    n('recruitment_notifications'),
-    application_notifications:    n('application_notifications'),
-    leave_notifications:          n('leave_notifications'),
-    hr_metric_notifications:      n('hr_metric_notifications'),
-    pending_approvals:            n('pending_approvals'),
-    leave_pending_approval:       n('leave_pending_approval'),
-    recruitment_pending_review:   n('recruitment_pending_review'),
-    performance_pending:          n('performance_pending'),
-    onboarding_active:            n('onboarding_active'),
-    rota_pending_final:           n('rota_pending_final'),
-    rota_pending_peer:            n('rota_pending_peer'),
-  };
-}
-
 /**
  * Fetches shell badge counts client-side via React Query.
  *
- * - Polls every 60 s in the background (replaces router.refresh() every 3 s)
- * - Immediately refetches on window focus / tab visibility
- * - Initial values come from the server-rendered layout (no flash of zeros)
+ * - Polls on an interval only while the tab is visible
+ * - Server `initialData` avoids an immediate duplicate refetch after hydration when fresh
  */
-export function useShellBadgeCounts() {
+export function useShellBadgeCounts(initialData?: ShellBadgeCounts) {
   return useQuery<ShellBadgeCounts>({
     queryKey: SHELL_BADGE_COUNTS_QUERY_KEY,
     queryFn: async () => {
       const supabase = createClient();
       const { data } = await supabase.rpc('main_shell_badge_counts_bundle');
-      return parseCounts(data);
+      return parseShellBadgeCounts(data);
     },
+    initialData,
+    initialDataUpdatedAt: initialData ? Date.now() : undefined,
     staleTime: 60_000,
-    refetchInterval: 90_000,
+    refetchInterval: () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return false;
+      }
+      return 90_000;
+    },
     refetchOnWindowFocus: true,
   });
 }

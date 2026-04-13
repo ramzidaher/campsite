@@ -10,6 +10,7 @@ import {
 } from '@/lib/adminGates';
 import { normalizeCelebrationMode } from '@/lib/holidayThemes';
 import { resolveTenantGovernanceRedirect } from '@/lib/tenantGovernanceGate';
+import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import {
   type PermissionKey,
@@ -39,12 +40,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const headerStore = await headers();
   const pathname = headerStore.get('x-campsite-pathname') ?? '';
 
-  // Single round trip to Supabase — replaces the previous 3 sequential Promise.all
-  // batches that each depended on the prior batch's results (profile → org/permissions
-  // → badge counts). On Vercel → Frankfurt Supabase (~150 ms/round trip) the old
-  // waterfall added 450 ms+ of pure network latency per page load.
-  // Cached so child routes (e.g. dashboard) can reuse the same RPC result in one request.
+  // Two parallel shell RPCs (structural + badge counts), merged to one bundle shape.
+  // Cached so child routes (e.g. dashboard) reuse the same result in one request.
   const b = await getCachedMainShellLayoutBundle();
+  const initialShellBadgeCounts = parseShellBadgeCounts(b);
 
   const str = (k: string): string | null =>
     typeof b[k] === 'string' ? (b[k] as string) : null;
@@ -245,6 +244,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           hasTenantProfile={hasTenantProfile}
           deptLine={deptLine}
           profileRole={profileRole}
+          initialShellBadgeCounts={initialShellBadgeCounts}
           unreadBroadcasts={unreadBroadcasts}
           pendingBroadcastApprovals={pendingBroadcastApprovals}
           pendingApprovalCount={pendingApprovalCount}

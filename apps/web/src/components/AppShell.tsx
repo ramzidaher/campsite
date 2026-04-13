@@ -9,8 +9,8 @@ import { AppTopBar } from '@/components/shell/AppTopBar';
 import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
 import type { MainShellAdminNavItem, ShellNavIconId } from '@/lib/adminGates';
+import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { useShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
-import type { ShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
 import { CheckboxUiSoundCapture } from '@/components/sound/CheckboxUiSoundCapture';
 import { useUiSound } from '@/lib/sound/useUiSound';
 import { HolidayOverlay } from '@/components/shell/HolidayOverlay';
@@ -145,6 +145,7 @@ export function AppShell({
   showStandaloneApprovals = true,
   initialCelebrationMode = 'off',
   initialCelebrationAutoEnabled = true,
+  initialShellBadgeCounts,
 }: {
   children: React.ReactNode;
   orgName: string;
@@ -188,6 +189,8 @@ export function AppShell({
   showStandaloneApprovals?: boolean;
   initialCelebrationMode?: CelebrationMode;
   initialCelebrationAutoEnabled?: boolean;
+  /** Hydrated from merged server shell bundle — avoids duplicate badge RPC right after load. */
+  initialShellBadgeCounts?: ShellBadgeCounts;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
@@ -199,10 +202,9 @@ export function AppShell({
   const [userAvatarFailed, setUserAvatarFailed] = useState(false);
   const playUiSound = useUiSound();
 
-  // Live badge counts — polled every 60 s and on window focus.
-  // Server props provide the correct initial values (no flash of zeros);
-  // the hook takes over silently once it loads.
-  const { data: live } = useShellBadgeCounts();
+  // Live badge counts — polled while the tab is visible; focus refetch for freshness.
+  // Server bundle seeds React Query so the first client fetch is not redundant.
+  const { data: live } = useShellBadgeCounts(initialShellBadgeCounts);
 
   const bc = (key: keyof ShellBadgeCounts, fallback: number) =>
     live ? live[key] : fallback;

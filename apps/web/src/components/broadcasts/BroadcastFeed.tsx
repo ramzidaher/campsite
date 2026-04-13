@@ -16,10 +16,8 @@ import { useCallback, useEffect, useImperativeHandle, useMemo, useState, forward
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import {
-  SHELL_BADGE_COUNTS_QUERY_KEY,
-  type ShellBadgeCounts,
-} from '@/hooks/useShellBadgeCounts';
+import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
+import { SHELL_BADGE_COUNTS_QUERY_KEY } from '@/hooks/useShellBadgeCounts';
 
 export type { FeedRow } from '@/lib/broadcasts/feedTypes';
 
