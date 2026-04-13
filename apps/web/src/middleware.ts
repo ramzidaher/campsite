@@ -160,5 +160,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  // Keep middleware off Next internals, API routes, and static assets.
+  // This avoids running Supabase auth/session logic on requests that do not
+  // participate in app routing (significant latency reduction in dev/prod).
+  matcher: [
+    '/((?!api|_next|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|woff|woff2|ttf|eot)$).*)',
+  ],
 };
