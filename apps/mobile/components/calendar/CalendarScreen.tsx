@@ -3,7 +3,8 @@ import { useCampsiteTheme } from '@campsite/ui';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
-import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,13 +22,16 @@ import {
 import { Picker } from '@react-native-picker/picker';
 
 import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
+import { TimeGridMobile } from '@/components/calendar/TimeGridMobile';
 import {
+  addDays,
   addMonths,
   addWeeks,
   endOfWeekExclusive,
   formatDateTimeRangeLocal,
   formatDayLabel,
   monthCalendarWeeks,
+  startOfDayLocal,
   startOfMonth,
   startOfWeekMonday,
 } from '@/lib/calendarDatetime';
@@ -45,16 +49,53 @@ export type CalItem = {
   start: Date;
   end: Date | null;
   allDay: boolean;
-  source: 'rota' | 'broadcast' | 'manual';
+  source: 'rota' | 'broadcast' | 'manual' | 'one_on_one';
   googleEventId: string | null;
   broadcastId: string | null;
 };
 
-type ViewMode = 'month' | 'week' | 'day';
+type OneOnOneCalMeetingRow = {
+  id: string;
+  manager_user_id: string;
+  report_user_id: string;
+  manager_name: string;
+  report_name: string;
+  starts_at: string;
+  ends_at: string | null;
+  status: string;
+};
+
+type ViewMode = 'month' | 'time1' | 'time4' | 'time7' | 'list';
 
 const ROTA_CHIP = { bg: '#dcfce7', border: '#bbf7d0', text: '#166534' };
 const BROADCAST_CHIP = { bg: '#e7e5e4', border: '#d6d3d1', text: '#44403c' };
 const MANUAL_CHIP = { bg: '#f3e8ff', border: '#e9d5ff', text: '#6d28d9' };
+const ONE_ON_ONE_CHIP = { bg: '#e0f2fe', border: '#bae6fd', text: '#0369a1' };
+
+function mapOneOnOneMeetingToCalItem(m: OneOnOneCalMeetingRow, profileId: string): CalItem {
+  const isManager = m.manager_user_id === profileId;
+  const otherName = (isManager ? m.report_name : m.manager_name)?.trim() || 'Colleague';
+  const start = new Date(m.starts_at);
+  const end = m.ends_at ? new Date(m.ends_at) : new Date(start.getTime() + 3600000);
+  return {
+    key: `oo-${m.id}`,
+    kind: 'event',
+    id: m.id,
+    title: `1:1 · ${otherName}`,
+    description: 'Scheduled 1:1 check-in.',
+    start,
+    end,
+    allDay: false,
+    source: 'one_on_one',
+    googleEventId: null,
+    broadcastId: null,
+  };
+}
+
+function calendarSourceLabel(source: CalItem['source']): string {
+  if (source === 'one_on_one') return '1:1';
+  return source;
+}
 
 function sourceChipStyle(source: CalItem['source'], todayCell: boolean) {
   if (todayCell) {
@@ -62,6 +103,7 @@ function sourceChipStyle(source: CalItem['source'], todayCell: boolean) {
   }
   if (source === 'rota') return { bg: ROTA_CHIP.bg, text: ROTA_CHIP.text };
   if (source === 'broadcast') return { bg: BROADCAST_CHIP.bg, text: BROADCAST_CHIP.text };
+  if (source === 'one_on_one') return { bg: ONE_ON_ONE_CHIP.bg, text: ONE_ON_ONE_CHIP.text };
   return { bg: MANUAL_CHIP.bg, text: MANUAL_CHIP.text };
 }
 
@@ -115,8 +157,16 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
     t.setHours(0, 0, 0, 0);
     return t;
   });
+  const [gridStart, setGridStart] = useState(() => startOfWeekMonday(new Date()));
   const [detail, setDetail] = useState<CalItem | null>(null);
   const [eventFormOpen, setEventFormOpen] = useState(false);
+  const [composeKey, setComposeKey] = useState(0);
+  const [draftRange, setDraftRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [initialCompose, setInitialCompose] = useState(() => ({
+    start: new Date(),
+    end: new Date(Date.now() + 3600000),
+    allDay: false,
+  }));
 
   const range = useMemo(() => {
     if (view === 'month') {
@@ -124,16 +174,26 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
       const end = addMonths(start, 1);
       return { from: start, to: end };
     }
-    if (view === 'week') {
-      const start = startOfWeekMonday(anchor);
+    if (view === 'time7') {
+      const start = startOfWeekMonday(gridStart);
       return { from: start, to: endOfWeekExclusive(start) };
+    }
+    if (view === 'time4') {
+      const start = startOfDayLocal(gridStart);
+      const end = addDays(start, 4);
+      return { from: start, to: end };
+    }
+    if (view === 'time1') {
+      const start = startOfDayLocal(gridStart);
+      const end = addDays(start, 1);
+      return { from: start, to: end };
     }
     const start = new Date(selectedDay);
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
     return { from: start, to: end };
-  }, [view, anchor, selectedDay]);
+  }, [view, anchor, selectedDay, gridStart]);
 
   const fromIso = range.from.toISOString();
   const toIso = range.to.toISOString();
@@ -153,11 +213,11 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
   });
 
   const calendarQuery = useQuery({
-    queryKey: ['mobile-calendar-items', profile.org_id, fromIso, toIso],
+    queryKey: ['mobile-calendar-items', profile.org_id, profile.id, fromIso, toIso],
     enabled: Boolean(profile.org_id && isSupabaseConfigured()),
     queryFn: async () => {
       const supabase = getSupabase();
-      const [deptRes, shRes, evRes] = await Promise.all([
+      const [deptRes, shRes, evRes, ooRes] = await Promise.all([
         supabase.from('departments').select('id,name').eq('org_id', profile.org_id!),
         supabase
           .from('rota_shifts')
@@ -176,10 +236,12 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
           .gte('start_time', fromIso)
           .lt('start_time', toIso)
           .order('start_time'),
+        supabase.rpc('one_on_one_meetings_for_calendar', { p_from: fromIso, p_to: toIso }),
       ]);
       if (deptRes.error) throw deptRes.error;
       if (shRes.error) throw shRes.error;
       if (evRes.error) throw evRes.error;
+      if (ooRes.error) console.warn(ooRes.error);
 
       const dm = new Map((deptRes.data ?? []).map((d) => [d.id as string, d.name as string]));
       const shiftItems: CalItem[] = (shRes.data ?? []).map((r) => {
@@ -227,7 +289,14 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
         };
       });
 
-      return [...shiftItems, ...eventItems].sort((a, b) => a.start.getTime() - b.start.getTime());
+      let ooItems: CalItem[] = [];
+      if (!ooRes.error && ooRes.data != null) {
+        const raw = ooRes.data as unknown;
+        const rows = Array.isArray(raw) ? (raw as OneOnOneCalMeetingRow[]) : [];
+        ooItems = rows.map((m) => mapOneOnOneMeetingToCalItem(m, profile.id));
+      }
+
+      return [...shiftItems, ...eventItems, ...ooItems].sort((a, b) => a.start.getTime() - b.start.getTime());
     },
   });
 
@@ -250,32 +319,51 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
     [items],
   );
 
-  const weekDays = useMemo(() => {
-    const s = startOfWeekMonday(view === 'week' ? anchor : selectedDay);
-    const days: Date[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(s);
-      d.setDate(d.getDate() + i);
-      days.push(d);
+  const timeGridDays = useMemo(() => {
+    if (view === 'time7') {
+      const s = startOfWeekMonday(gridStart);
+      return Array.from({ length: 7 }, (_, i) => addDays(s, i));
     }
-    return days;
-  }, [view, anchor, selectedDay]);
+    if (view === 'time4') {
+      const s = startOfDayLocal(gridStart);
+      return Array.from({ length: 4 }, (_, i) => addDays(s, i));
+    }
+    if (view === 'time1') {
+      return [startOfDayLocal(gridStart)];
+    }
+    return [];
+  }, [view, gridStart]);
 
   const cardTitleLabel =
     view === 'month'
       ? anchor.toLocaleString(undefined, { month: 'long', year: 'numeric' })
-      : view === 'week'
-        ? `Week of ${formatDayLabel(startOfWeekMonday(anchor))}`
-        : selectedDay.toLocaleDateString(undefined, {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-          });
+      : view === 'time7'
+        ? `Week of ${formatDayLabel(startOfWeekMonday(gridStart))}`
+        : view === 'time4'
+          ? (() => {
+              const a = startOfDayLocal(gridStart);
+              const b = addDays(a, 3);
+              return `${formatDayLabel(a)} – ${formatDayLabel(b)}`;
+            })()
+          : view === 'time1'
+            ? gridStart.toLocaleDateString(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : selectedDay.toLocaleDateString(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              });
 
   function goPrev() {
     if (view === 'month') setAnchor((a) => addMonths(a, -1));
-    else if (view === 'week') setAnchor((a) => addWeeks(a, -1));
+    else if (view === 'time7') setGridStart((g) => addWeeks(g, -1));
+    else if (view === 'time4') setGridStart((g) => addDays(g, -4));
+    else if (view === 'time1') setGridStart((g) => addDays(g, -1));
     else
       setSelectedDay((d) => {
         const x = new Date(d);
@@ -286,7 +374,9 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
 
   function goNext() {
     if (view === 'month') setAnchor((a) => addMonths(a, 1));
-    else if (view === 'week') setAnchor((a) => addWeeks(a, 1));
+    else if (view === 'time7') setGridStart((g) => addWeeks(g, 1));
+    else if (view === 'time4') setGridStart((g) => addDays(g, 4));
+    else if (view === 'time1') setGridStart((g) => addDays(g, 1));
     else
       setSelectedDay((d) => {
         const x = new Date(d);
@@ -298,11 +388,16 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
   function goToday() {
     const t = new Date();
     setAnchor(startOfMonth(t));
-    setSelectedDay(() => {
-      const x = new Date(t);
-      x.setHours(0, 0, 0, 0);
-      return x;
-    });
+    const day = startOfDayLocal(t);
+    setSelectedDay(day);
+    setGridStart(view === 'time7' ? startOfWeekMonday(t) : day);
+  }
+
+  function openComposeFromSlot(start: Date, end: Date) {
+    setInitialCompose({ start, end, allDay: false });
+    setDraftRange({ start, end });
+    setComposeKey((k) => k + 1);
+    setEventFormOpen(true);
   }
 
   const invalidate = () => void qc.invalidateQueries({ queryKey: ['mobile-calendar-items'] });
@@ -344,7 +439,17 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
           {canManage ? (
             <Pressable
               style={[styles.primaryBtn, { backgroundColor: tokens.textPrimary }]}
-              onPress={() => setEventFormOpen((o) => !o)}
+              onPress={() => {
+                if (eventFormOpen) {
+                  setEventFormOpen(false);
+                  setDraftRange(null);
+                  return;
+                }
+                const s = new Date(view === 'list' ? selectedDay : gridStart);
+                s.setHours(9, 0, 0, 0);
+                const e = new Date(s.getTime() + 3600000);
+                openComposeFromSlot(s, e);
+              }}
             >
               <Text style={{ color: tokens.background, fontSize: 13, fontWeight: '600' }}>
                 {eventFormOpen ? 'Hide new event' : '+ Add event'}
@@ -375,15 +480,20 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
             {(
               [
                 { mode: 'month' as const, label: 'Month' },
-                { mode: 'week' as const, label: 'Week' },
-                { mode: 'day' as const, label: 'Agenda' },
+                { mode: 'time7' as const, label: 'Week' },
+                { mode: 'time4' as const, label: '4d' },
+                { mode: 'time1' as const, label: 'Day' },
+                { mode: 'list' as const, label: 'List' },
               ] as const
             ).map(({ mode, label }, i, arr) => (
               <Pressable
                 key={mode}
                 onPress={() => {
-                  if (mode === 'week') setAnchor(startOfWeekMonday(selectedDay));
+                  const day = startOfDayLocal(selectedDay);
                   if (mode === 'month') setAnchor(startOfMonth(selectedDay));
+                  if (mode === 'time7') setGridStart(startOfWeekMonday(selectedDay));
+                  if (mode === 'time4') setGridStart(day);
+                  if (mode === 'time1') setGridStart(day);
                   setView(mode);
                 }}
                 style={[
@@ -394,7 +504,7 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
               >
                 <Text
                   style={{
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: '600',
                     color: view === mode ? tokens.background : tokens.textSecondary,
                   }}
@@ -409,6 +519,7 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
             <LegendDot color="#059669" label="Rota shift" textColor={tokens.textSecondary} />
             <LegendDot color="#44403c" label="Broadcast" textColor={tokens.textSecondary} />
             <LegendDot color="#7C3AED" label="Manual" textColor={tokens.textSecondary} />
+            <LegendDot color="#0284c7" label="1:1" textColor={tokens.textSecondary} />
           </View>
 
           <View style={{ padding: 16 }}>
@@ -422,17 +533,26 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
                 todayStart={todayStart}
                 itemsForDay={itemsForDay}
                 onSelectDay={(d) => {
-                  setSelectedDay(d);
-                  setView('day');
+                  const d0 = startOfDayLocal(d);
+                  setSelectedDay(d0);
+                  setGridStart(d0);
+                  const s = new Date(d0);
+                  s.setHours(9, 0, 0, 0);
+                  const e = new Date(s.getTime() + 3600000);
+                  setView('time1');
+                  openComposeFromSlot(s, e);
                 }}
               />
-            ) : view === 'week' ? (
-              <WeekColumns
-                weekDays={weekDays}
-                itemsForDay={itemsForDay}
-                onSelectDay={(d) => {
-                  setSelectedDay(d);
-                  setView('day');
+            ) : view === 'time7' || view === 'time4' || view === 'time1' ? (
+              <TimeGridMobile
+                days={timeGridDays}
+                items={items}
+                draftRange={eventFormOpen ? draftRange : null}
+                canManage={canManage}
+                onBackgroundPress={(dayStart, start, end) => {
+                  setSelectedDay(dayStart);
+                  setGridStart(startOfDayLocal(dayStart));
+                  openComposeFromSlot(start, end);
                 }}
                 onOpenItem={setDetail}
                 tokens={tokens}
@@ -447,9 +567,20 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
           <ManualEventFormMobile
             profile={profile}
             departments={departmentsQuery.data ?? []}
-            defaultDay={selectedDay}
+            defaultDay={view === 'list' ? selectedDay : gridStart}
             open={eventFormOpen}
-            onOpenChange={setEventFormOpen}
+            onOpenChange={(o) => {
+              setEventFormOpen(o);
+              if (!o) setDraftRange(null);
+            }}
+            composeKey={composeKey}
+            initialStart={initialCompose.start}
+            initialEnd={initialCompose.end}
+            initialAllDay={initialCompose.allDay}
+            onDraftTimesChange={(start, end, allDay) => {
+              if (allDay) setDraftRange(null);
+              else setDraftRange({ start, end });
+            }}
             onSaved={invalidate}
             tokens={tokens}
           />
@@ -459,8 +590,11 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
       <DetailModalMobile
         visible={detail !== null}
         item={detail}
+        profile={profile}
         orgTimezone={orgTz}
         onClose={() => setDetail(null)}
+        onDeleted={invalidate}
+        onRsvpChanged={invalidate}
         tokens={tokens}
       />
     </TabSafeScreen>
@@ -572,71 +706,6 @@ function MonthGrid({
   );
 }
 
-function WeekColumns({
-  weekDays,
-  itemsForDay,
-  onSelectDay,
-  onOpenItem,
-  tokens,
-}: {
-  weekDays: Date[];
-  itemsForDay: (d: Date) => CalItem[];
-  onSelectDay: (d: Date) => void;
-  onOpenItem: (it: CalItem) => void;
-  tokens: { border: string; textPrimary: string; textSecondary: string; surface: string };
-}) {
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {weekDays.map((day) => {
-          const list = itemsForDay(day);
-          return (
-            <View
-              key={day.toISOString()}
-              style={{
-                width: 120,
-                minHeight: 140,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: tokens.border,
-                backgroundColor: '#f5f4f1',
-                padding: 8,
-              }}
-            >
-              <Pressable onPress={() => onSelectDay(day)}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: tokens.textSecondary }}>
-                  {formatDayLabel(day)}
-                </Text>
-              </Pressable>
-              <View style={{ marginTop: 8, gap: 4 }}>
-                {list.map((it) => {
-                  const st = sourceChipStyle(it.source, false);
-                  return (
-                    <Pressable
-                      key={it.key}
-                      onPress={() => onOpenItem(it)}
-                      style={{
-                        borderRadius: 4,
-                        paddingHorizontal: 6,
-                        paddingVertical: 4,
-                        backgroundColor: st.bg,
-                      }}
-                    >
-                      <Text numberOfLines={2} style={{ fontSize: 11, fontWeight: '600', color: st.text }}>
-                        {it.title}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          );
-        })}
-      </View>
-    </ScrollView>
-  );
-}
-
 function DayAgenda({
   items,
   onOpen,
@@ -680,7 +749,9 @@ function DayAgenda({
                 backgroundColor: st.bg,
               }}
             >
-              <Text style={{ fontSize: 11, fontWeight: '600', color: st.text }}>{it.source}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: st.text }}>
+                {calendarSourceLabel(it.source)}
+              </Text>
             </View>
           </Pressable>
         );
@@ -692,23 +763,103 @@ function DayAgenda({
 function DetailModalMobile({
   visible,
   item,
+  profile,
   orgTimezone,
   onClose,
+  onDeleted,
+  onRsvpChanged,
   tokens,
 }: {
   visible: boolean;
   item: CalItem | null;
+  profile: ProfileRow;
   orgTimezone: string | null;
   onClose: () => void;
+  onDeleted: () => void;
+  onRsvpChanged: () => void;
   tokens: { background: string; textPrimary: string; textSecondary: string; border: string };
 }) {
+  const router = useRouter();
+  const [attendees, setAttendees] = useState<{ profile_id: string; status: string; full_name: string | null }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const canManage = canManageCalendarManualEvents(profile.role as ProfileRole);
+  const isManualEvent = item?.kind === 'event' && item?.source === 'manual';
+  const isOneOnOne = item?.source === 'one_on_one';
+
+  useEffect(() => {
+    if (!visible || !item || !isManualEvent) {
+      setAttendees([]);
+      return;
+    }
+    void (async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from('calendar_event_attendees')
+        .select('profile_id, status, profiles(full_name)')
+        .eq('event_id', item.id);
+      if (error) return;
+      const rows = (data ?? []) as {
+        profile_id: string;
+        status: string;
+        profiles: { full_name: string | null } | null;
+      }[];
+      setAttendees(
+        rows.map((r) => ({
+          profile_id: r.profile_id,
+          status: r.status,
+          full_name: r.profiles?.full_name ?? null,
+        })),
+      );
+    })();
+  }, [visible, item, isManualEvent]);
+
   if (!item) return null;
   const timeLine =
     item.allDay
       ? item.start.toLocaleDateString()
       : item.source === 'rota'
         ? formatDateTimeRangeLocal(item.start, item.end ?? item.start, orgTimezone)
-        : `${item.start.toLocaleString()} - ${(item.end ?? item.start).toLocaleString()}`;
+        : item.source === 'one_on_one'
+          ? formatDateTimeRangeLocal(
+              item.start,
+              item.end ?? new Date(item.start.getTime() + 3600000),
+              orgTimezone,
+            )
+          : `${item.start.toLocaleString()} - ${(item.end ?? item.start).toLocaleString()}`;
+
+  const myAtt = attendees.find((a) => a.profile_id === profile.id);
+  const isAttendee = !!myAtt;
+
+  async function setRsvp(status: 'accepted' | 'declined' | 'tentative') {
+    if (!item) return;
+    setBusy(true);
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('calendar_event_attendees')
+      .update({ status })
+      .eq('event_id', item.id)
+      .eq('profile_id', profile.id);
+    setBusy(false);
+    if (!error) onRsvpChanged();
+  }
+
+  async function deleteEvent() {
+    if (!item) return;
+    Alert.alert('Delete event?', 'Attendees will be notified.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(true);
+          const supabase = getSupabase();
+          const { error } = await supabase.from('calendar_events').delete().eq('id', item.id);
+          setBusy(false);
+          if (!error) onDeleted();
+        },
+      },
+    ]);
+  }
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -716,13 +867,64 @@ function DetailModalMobile({
         <Pressable style={[styles.modalCard, { backgroundColor: tokens.background }]} onPress={(e) => e.stopPropagation()}>
           <Text style={[styles.modalTitle, { color: tokens.textPrimary }]}>{item.title}</Text>
           <Text style={{ fontSize: 11, fontWeight: '700', color: tokens.textSecondary, marginTop: 4 }}>
-            {item.source}
+            {calendarSourceLabel(item.source)}
           </Text>
           <Text style={{ fontSize: 14, color: tokens.textSecondary, marginTop: 12 }}>{timeLine}</Text>
           {item.description ? (
             <Text style={{ fontSize: 14, color: tokens.textPrimary, marginTop: 12 }}>{item.description}</Text>
           ) : null}
-          {item.googleEventId ? (
+
+          {isManualEvent && attendees.length > 0 ? (
+            <View style={{ marginTop: 12 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: tokens.textPrimary }}>Attendees</Text>
+              {attendees.map((a) => (
+                <Text key={a.profile_id} style={{ fontSize: 13, color: tokens.textSecondary, marginTop: 4 }}>
+                  {a.full_name?.trim() || 'Member'} — {a.status}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          {isManualEvent && isAttendee ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+              <Text style={{ fontSize: 12, color: tokens.textSecondary }}>RSVP:</Text>
+              <Pressable
+                disabled={busy}
+                onPress={() => void setRsvp('accepted')}
+                style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: tokens.border }}
+              >
+                <Text style={{ fontSize: 12, color: tokens.textPrimary }}>Going</Text>
+              </Pressable>
+              <Pressable
+                disabled={busy}
+                onPress={() => void setRsvp('tentative')}
+                style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: tokens.border }}
+              >
+                <Text style={{ fontSize: 12, color: tokens.textPrimary }}>Maybe</Text>
+              </Pressable>
+              <Pressable
+                disabled={busy}
+                onPress={() => void setRsvp('declined')}
+                style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: tokens.border }}
+              >
+                <Text style={{ fontSize: 12, color: tokens.textPrimary }}>Decline</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {isOneOnOne ? (
+            <Pressable
+              style={[styles.primaryBtn, { backgroundColor: tokens.textPrimary, marginTop: 16, alignSelf: 'flex-start' }]}
+              onPress={() => {
+                onClose();
+                router.push(`/one-on-one/${item.id}`);
+              }}
+            >
+              <Text style={{ color: tokens.background, fontSize: 13, fontWeight: '600' }}>
+                Open 1:1 check-in
+              </Text>
+            </Pressable>
+          ) : item.googleEventId ? (
             <Text style={{ fontSize: 14, color: tokens.textSecondary, marginTop: 12 }}>
               Synced to Google Calendar
             </Text>
@@ -736,6 +938,17 @@ function DetailModalMobile({
               </Text>
             </Pressable>
           )}
+
+          {canManage && isManualEvent ? (
+            <Pressable
+              disabled={busy}
+              style={[styles.outlineBtn, { borderColor: '#fecaca', marginTop: 12, backgroundColor: '#fef2f2' }]}
+              onPress={() => void deleteEvent()}
+            >
+              <Text style={{ color: '#b91c1c', textAlign: 'center' }}>Delete event</Text>
+            </Pressable>
+          ) : null}
+
           <Pressable
             style={[styles.outlineBtn, { borderColor: tokens.border, marginTop: 12, alignSelf: 'stretch' }]}
             onPress={onClose}
@@ -754,6 +967,11 @@ function ManualEventFormMobile({
   defaultDay,
   open,
   onOpenChange,
+  composeKey,
+  initialStart,
+  initialEnd,
+  initialAllDay,
+  onDraftTimesChange,
   onSaved,
   tokens,
 }: {
@@ -762,6 +980,11 @@ function ManualEventFormMobile({
   defaultDay: Date;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  composeKey: number;
+  initialStart: Date;
+  initialEnd: Date;
+  initialAllDay: boolean;
+  onDraftTimesChange: (start: Date, end: Date, allDay: boolean) => void;
   onSaved: () => void;
   tokens: {
     border: string;
@@ -782,6 +1005,53 @@ function ManualEventFormMobile({
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [inviteeIds, setInviteeIds] = useState<string[]>([]);
+  const [memberOptions, setMemberOptions] = useState<{ id: string; full_name: string | null }[]>([]);
+  const lastComposeKey = useRef(-1);
+
+  useEffect(() => {
+    void (async () => {
+      const supabase = getSupabase();
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('org_id', profile.org_id!)
+        .eq('status', 'active')
+        .order('full_name');
+      setMemberOptions((data ?? []).filter((r) => r.id !== profile.id));
+    })();
+  }, [profile.org_id, profile.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (composeKey === lastComposeKey.current) return;
+    lastComposeKey.current = composeKey;
+    setTitle('');
+    setDescription('');
+    setDeptId('');
+    setInviteeIds([]);
+    setMsg(null);
+    setAllDay(initialAllDay);
+    setStartDate(new Date(initialStart));
+    setEndDate(new Date(initialEnd));
+  }, [open, composeKey, initialAllDay, initialStart, initialEnd]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (allDay) {
+      const start = new Date(defaultDay);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      onDraftTimesChange(start, end, true);
+      return;
+    }
+    if (endDate > startDate) onDraftTimesChange(startDate, endDate, false);
+  }, [open, allDay, startDate, endDate, defaultDay, onDraftTimesChange]);
+
+  function toggleInvitee(id: string) {
+    setInviteeIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
 
   async function save() {
     setMsg(null);
@@ -807,20 +1077,39 @@ function ManualEventFormMobile({
     setSaving(true);
     try {
       const supabase = getSupabase();
-      const { error } = await supabase.from('calendar_events').insert({
-        org_id: profile.org_id!,
-        dept_id: deptId || null,
-        title: title.trim(),
-        description: description.trim() || null,
-        start_time: start.toISOString(),
-        end_time: end?.toISOString() ?? null,
-        all_day: allDay,
-        source: 'manual',
-        created_by: profile.id,
-      });
+      const { data: row, error } = await supabase
+        .from('calendar_events')
+        .insert({
+          org_id: profile.org_id!,
+          dept_id: deptId || null,
+          title: title.trim(),
+          description: description.trim() || null,
+          start_time: start.toISOString(),
+          end_time: end?.toISOString() ?? null,
+          all_day: allDay,
+          source: 'manual',
+          created_by: profile.id,
+        })
+        .select('id')
+        .single();
       if (error) {
         setMsg(error.message);
         return;
+      }
+      const evId = row?.id as string | undefined;
+      if (evId && inviteeIds.length > 0) {
+        const rows = inviteeIds.map((pid) => ({
+          org_id: profile.org_id!,
+          event_id: evId,
+          profile_id: pid,
+          status: 'invited' as const,
+          invited_by: profile.id,
+        }));
+        const { error: attErr } = await supabase.from('calendar_event_attendees').insert(rows);
+        if (attErr) {
+          setMsg(attErr.message);
+          return;
+        }
       }
       onOpenChange(false);
       setTitle('');
@@ -885,7 +1174,7 @@ function ManualEventFormMobile({
         </>
       ) : (
         <Text style={{ fontSize: 12, color: tokens.textSecondary, marginTop: 8 }}>
-          Uses the selected agenda day — switch to Agenda view and pick the day first.
+          Uses the day from the calendar (List view or the visible day in Day / 4d / Week).
         </Text>
       )}
       <Text style={{ fontSize: 12, color: tokens.textSecondary, marginTop: 12 }}>Department (optional)</Text>
@@ -896,6 +1185,24 @@ function ManualEventFormMobile({
             <Picker.Item key={d.id} label={d.name} value={d.id} />
           ))}
         </Picker>
+      </View>
+      <Text style={{ fontSize: 12, color: tokens.textSecondary, marginTop: 12 }}>Invite (tap to toggle)</Text>
+      <View style={{ marginTop: 8, gap: 6 }}>
+        {memberOptions.map((m) => (
+          <Pressable
+            key={m.id}
+            onPress={() => toggleInvitee(m.id)}
+            style={{
+              padding: 10,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: inviteeIds.includes(m.id) ? tokens.textPrimary : tokens.border,
+              backgroundColor: inviteeIds.includes(m.id) ? tokens.surface : tokens.background,
+            }}
+          >
+            <Text style={{ color: tokens.textPrimary }}>{m.full_name?.trim() || 'Member'}</Text>
+          </Pressable>
+        ))}
       </View>
       <Text style={{ fontSize: 12, color: tokens.textSecondary, marginTop: 12 }}>Description</Text>
       <TextInput

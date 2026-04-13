@@ -50,6 +50,8 @@ export function ResourcesListClient({
   const [err, setErr] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [folderBusy, setFolderBusy] = useState(false);
+  const [folderMsg, setFolderMsg] = useState<string | null>(null);
+  const [folderErr, setFolderErr] = useState<string | null>(null);
   /** Set false when remote DB has no `archived_at` column (migration not applied). */
   const [archiveColumnOk, setArchiveColumnOk] = useState(true);
 
@@ -77,7 +79,7 @@ export function ResourcesListClient({
     [],
   );
 
-  const loadFolders = useCallback(async () => {
+  const fetchFolders = useCallback(async (): Promise<StaffResourceFolderRow[]> => {
     const { data, error } = await supabase
       .from('staff_resource_folders')
       .select('id, name, sort_order')
@@ -85,13 +87,21 @@ export function ResourcesListClient({
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true });
     if (error) throw error;
-    setFolders((data ?? []) as StaffResourceFolderRow[]);
+    return (data ?? []) as StaffResourceFolderRow[];
   }, [supabase, orgId]);
 
   const load = useCallback(async () => {
     setBusy(true);
     setErr(null);
     try {
+      let folderRows: StaffResourceFolderRow[] = [];
+      try {
+        folderRows = sortFolderRows(await fetchFolders());
+        setFolders(folderRows);
+      } catch {
+        /* folders load failure — still try resources; keep prior folders */
+      }
+
       const wantsArchiveList = Boolean(canManage && viewArchived);
 
       if (wantsArchiveList && archiveColumnOk) {
@@ -206,36 +216,52 @@ export function ResourcesListClient({
           })),
         );
       }
-      await loadFolders();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load resources.');
       setRows([]);
     } finally {
       setBusy(false);
     }
-  }, [supabase, orgId, searchActive, debounced, folderFilter, loadFolders, archiveOnly, archiveColumnOk, canManage, viewArchived]);
+  }, [supabase, orgId, searchActive, debounced, folderFilter, fetchFolders, archiveOnly, archiveColumnOk, canManage, viewArchived]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  function sortFolderRows(list: StaffResourceFolderRow[]): StaffResourceFolderRow[] {
+    return [...list].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  }
 
   async function addFolder(e: React.FormEvent) {
     e.preventDefault();
     const name = newFolderName.trim();
     if (!name || folderBusy) return;
     setFolderBusy(true);
-    setErr(null);
+    setFolderErr(null);
+    setFolderMsg(null);
     try {
-      const { error } = await supabase.from('staff_resource_folders').insert({
-        org_id: orgId,
-        name,
-        sort_order: 0,
-      });
+      const { data, error } = await supabase
+        .from('staff_resource_folders')
+        .insert({
+          org_id: orgId,
+          name,
+          sort_order: 0,
+        })
+        .select('id, name, sort_order')
+        .single();
       if (error) throw error;
+      if (!data) throw new Error('Could not create folder.');
+      const row = data as StaffResourceFolderRow;
       setNewFolderName('');
-      await loadFolders();
+      setFolderMsg(`“${name}” added.`);
+      setFolders((prev) => sortFolderRows([...prev.filter((f) => f.id !== row.id), row]));
+      void fetchFolders()
+        .then((fresh) => setFolders(sortFolderRows(fresh)))
+        .catch(() => {
+          /* keep optimistic list */
+        });
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not create folder.');
+      setFolderErr(e instanceof Error ? e.message : 'Could not create folder.');
     } finally {
       setFolderBusy(false);
     }
@@ -247,13 +273,13 @@ export function ResourcesListClient({
       return;
     }
     setFolderBusy(true);
-    setErr(null);
+    setFolderErr(null);
     try {
       const { error } = await supabase.from('staff_resource_folders').delete().eq('id', id);
       if (error) throw error;
       await load();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not delete folder.');
+      setFolderErr(e instanceof Error ? e.message : 'Could not delete folder.');
     } finally {
       setFolderBusy(false);
     }
@@ -268,9 +294,7 @@ export function ResourcesListClient({
     }
     for (const f of folders) {
       const items = rows.filter((r) => r.folder_id === f.id);
-      if (items.length > 0) {
-        sections.push({ key: f.id, title: f.name, items });
-      }
+      sections.push({ key: f.id, title: f.name, items });
     }
     return sections.length > 0 ? sections : null;
   }, [rows, folders, searchActive, folderFilter]);
@@ -288,6 +312,16 @@ export function ResourcesListClient({
       : folderFilter === 'none'
         ? '/resources/new?folder=none'
         : '/resources/new';
+
+  const fileCountByFolderId = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of rows) {
+      if (r.folder_id) m.set(r.folder_id, (m.get(r.folder_id) ?? 0) + 1);
+    }
+    return m;
+  }, [rows]);
+
+  const showFolderTiles = !archiveOnly && !searchActive && folderFilter === null && folders.length > 0;
 
   return (
     <div className="mx-auto max-w-3xl px-7 py-8">
@@ -330,39 +364,71 @@ export function ResourcesListClient({
       <div className="mb-4 flex flex-wrap gap-2">
         <Link
           href={resourcesHref({ archived: archiveOnly })}
-          className={`inline-flex h-8 items-center rounded-full border px-3 text-[12.5px] ${
+          className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-medium ${
             folderFilter === null && !searchActive
               ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
               : 'border-[#d8d8d8] bg-white text-[#121212] hover:bg-[#faf9f6]'
           }`}
         >
+          <FolderIconSmall className={folderFilter === null && !searchActive ? 'text-[#faf9f6]' : 'text-[#b45309]'} />
           All
         </Link>
         <Link
           href={resourcesHref({ archived: archiveOnly, folder: 'none' })}
-          className={`inline-flex h-8 items-center rounded-full border px-3 text-[12.5px] ${
+          className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-medium ${
             folderFilter === 'none' && !searchActive
               ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
               : 'border-[#d8d8d8] bg-white text-[#121212] hover:bg-[#faf9f6]'
           }`}
         >
+          <FolderOutlineIconSmall className={folderFilter === 'none' && !searchActive ? 'text-[#faf9f6]' : 'text-[#78716c]'} />
           Uncategorised
         </Link>
         {folders.map((f) => (
           <Link
             key={f.id}
             href={resourcesHref({ archived: archiveOnly, folder: f.id })}
-            className={`inline-flex h-8 max-w-[200px] items-center truncate rounded-full border px-3 text-[12.5px] ${
+            className={`inline-flex h-9 max-w-[220px] items-center gap-1.5 truncate rounded-lg border px-3 text-[12.5px] font-medium ${
               folderFilter === f.id && !searchActive
-                ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
-                : 'border-[#d8d8d8] bg-white text-[#121212] hover:bg-[#faf9f6]'
+                ? 'border-[#b45309] bg-[#fff7ed] text-[#121212] ring-1 ring-[#b45309]/25'
+                : 'border-[#e7e5e4] bg-gradient-to-b from-[#fdf8f0] to-[#f5ecd8] text-[#121212] hover:border-[#d6d3d1]'
             }`}
             title={f.name}
           >
-            {f.name}
+            <FolderIconSmall className="shrink-0 text-[#b45309]" />
+            <span className="truncate">{f.name}</span>
           </Link>
         ))}
       </div>
+
+      {showFolderTiles ? (
+        <div className="mb-6">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9b9b9b]">Folders</p>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {folders.map((f) => {
+              const n = fileCountByFolderId.get(f.id) ?? 0;
+              return (
+                <li key={f.id}>
+                  <Link
+                    href={resourcesHref({ archived: archiveOnly, folder: f.id })}
+                    className="flex items-start gap-3 rounded-xl border border-[#e8dcc8] bg-gradient-to-br from-[#fffbf5] via-[#fdf6e8] to-[#f3e9d7] p-4 shadow-sm transition hover:border-[#d4b896] hover:shadow-md"
+                  >
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#f0dcc0]/80 text-[#9a3412]">
+                      <FolderIconLarge className="h-7 w-7" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-semibold leading-snug text-[#121212]">{f.name}</span>
+                      <span className="mt-0.5 block text-[12px] text-[#78716c]">
+                        {n === 0 ? 'Empty folder · upload files here' : `${n} file${n === 1 ? '' : 's'}`}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
 
       {currentFolderLabel && !searchActive ? (
         <p className="mb-3 text-[13px] text-[#3d3d3d]">
@@ -394,21 +460,38 @@ export function ResourcesListClient({
           >
             {folderBusy ? '…' : 'Add'}
           </button>
+          {folderMsg ? (
+            <p className="w-full text-[12px] text-[#3d7c47]" role="status">
+              {folderMsg}
+            </p>
+          ) : null}
+          {folderErr ? (
+            <p className="w-full text-[12px] text-red-800" role="alert">
+              {folderErr}
+            </p>
+          ) : null}
           {folders.length > 0 ? (
-            <div className="w-full pt-1 text-[12px] text-[#6b6b6b]">
-              {folders.map((f) => (
-                <span key={f.id} className="mr-3 inline-flex items-center gap-1">
-                  {f.name}
-                  <button
-                    type="button"
-                    className="text-[#b42318] hover:underline"
-                    onClick={() => void deleteFolder(f.id, f.name)}
-                    disabled={folderBusy}
+            <div className="w-full pt-1">
+              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Manage folders</p>
+              <div className="flex flex-wrap gap-2">
+                {folders.map((f) => (
+                  <span
+                    key={f.id}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#e7e5e4] bg-white px-2.5 py-1.5 text-[12px] text-[#121212]"
                   >
-                    Remove
-                  </button>
-                </span>
-              ))}
+                    <FolderIconSmall className="shrink-0 text-[#b45309]" aria-hidden />
+                    <span className="max-w-[140px] truncate">{f.name}</span>
+                    <button
+                      type="button"
+                      className="text-[12px] text-[#b42318] hover:underline"
+                      onClick={() => void deleteFolder(f.id, f.name)}
+                      disabled={folderBusy}
+                    >
+                      Remove
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
           ) : null}
         </form>
@@ -438,6 +521,50 @@ export function ResourcesListClient({
 
       {busy ? (
         <p className="text-[13px] text-[#6b6b6b]">Loading…</p>
+      ) : groupedSections && groupedSections.length > 0 ? (
+        <div className="space-y-8">
+          {groupedSections.map((section) => (
+            <div key={section.key}>
+              <h2 className="mb-2 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
+                {section.key === 'none' ? (
+                  <FolderOutlineIconSmall className="text-[#78716c]" />
+                ) : (
+                  <FolderIconSmall className="text-[#b45309]" />
+                )}
+                {section.title}
+              </h2>
+              <ul className="divide-y divide-[#ececec] overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+                {section.items.length === 0 ? (
+                  <li className="flex items-start gap-3 border border-dashed border-[#e8dcc8] bg-[#fffbf7] px-4 py-4 text-[13px] text-[#6b6b6b]">
+                    <span className="mt-0.5 text-[#d4b896]">
+                      <FolderIconLarge className="h-8 w-8" />
+                    </span>
+                    <span>
+                      <span className="font-medium text-[#121212]">This folder is empty.</span>
+                      <span className="mt-1 block">
+                        {canManage && !archiveOnly && section.key !== 'none' ? (
+                          <>
+                            <Link
+                              href={`/resources/new?folder=${section.key}`}
+                              className="font-medium text-[#121212] underline"
+                            >
+                              Upload a file
+                            </Link>{' '}
+                            to fill this folder.
+                          </>
+                        ) : (
+                          'No files yet.'
+                        )}
+                      </span>
+                    </span>
+                  </li>
+                ) : (
+                  section.items.map((r) => <ResourceRow key={r.id} r={r} />)
+                )}
+              </ul>
+            </div>
+          ))}
+        </div>
       ) : rows.length === 0 ? (
         <p className="text-[13px] text-[#6b6b6b]">
           {searchActive
@@ -455,21 +582,6 @@ export function ResourcesListClient({
             </>
           ) : null}
         </p>
-      ) : groupedSections && groupedSections.length > 0 ? (
-        <div className="space-y-8">
-          {groupedSections.map((section) => (
-            <div key={section.key}>
-              <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6b6b6b]">
-                {section.title}
-              </h2>
-              <ul className="divide-y divide-[#ececec] overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
-                {section.items.map((r) => (
-                  <ResourceRow key={r.id} r={r} />
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
       ) : (
         <ul className="divide-y divide-[#ececec] overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
           {rows.map((r) => (
@@ -478,6 +590,34 @@ export function ResourcesListClient({
         </ul>
       )}
     </div>
+  );
+}
+
+function FolderIconSmall({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+    </svg>
+  );
+}
+
+function FolderOutlineIconSmall({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 7.5V18a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7.5L9.22 4.72A2 2 0 007.78 4H5a2 2 0 00-2 2v1.5z"
+      />
+    </svg>
+  );
+}
+
+function FolderIconLarge({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+    </svg>
   );
 }
 

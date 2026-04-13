@@ -127,10 +127,10 @@ export function getMainShellAdminNavItems(
     { href: '/admin/teams', label: 'Teams', icon: 'teams', section: 'Content' },
     { href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' },
     { href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' },
-    { href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'HR' },
+    { href: '/hr/recruitment', label: 'Requests', icon: 'recruitment', section: 'HR' },
     { href: '/hr/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' },
     { href: '/hr/applications', label: 'Applications', icon: 'applications', section: 'HR' },
-    { href: '/hr/offer-templates', label: 'Offer templates', icon: 'offerTemplates', section: 'HR' },
+    { href: '/hr/offer-templates', label: 'Templates', icon: 'offerTemplates', section: 'HR' },
     { href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' },
     { href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'HR' },
     { href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport', section: 'HR' },
@@ -157,11 +157,11 @@ export function getMainShellManagerNavSectionLabel(
 /** Collapsible department workspace in the main shell (managers + coordinators; same pattern as Admin). */
 export function getMainShellManagerNavItems(
   role: ProfileRole | string | null | undefined,
-  opts: { pendingApprovalCount: number; pendingBroadcastApprovals: number }
+  opts: { pendingApprovalCount: number }
 ): MainShellAdminNavItem[] | null {
   const r = normalizedProfileRole(role);
   if (!isDepartmentWorkspaceRole(r)) return null;
-  const { pendingApprovalCount, pendingBroadcastApprovals } = opts;
+  const { pendingApprovalCount } = opts;
 
   const pendingMembers: MainShellAdminNavItem = {
     href: '/pending-approvals',
@@ -172,7 +172,7 @@ export function getMainShellManagerNavItems(
   };
   const recruitment: MainShellAdminNavItem = {
     href: '/hr/recruitment',
-    label: 'Recruitment requests',
+    label: 'Requests',
     icon: 'recruitment',
     section: 'People',
   };
@@ -188,26 +188,6 @@ export function getMainShellManagerNavItems(
     icon: 'teams',
     section: 'Your departments',
   };
-  const subTeams: MainShellAdminNavItem = {
-    href: '/manager/sub-teams',
-    label: 'Sub-teams',
-    icon: 'categories',
-    section: 'Your departments',
-  };
-  const broadcasts: MainShellAdminNavItem = {
-    href: '/broadcasts',
-    label: 'Broadcasts',
-    icon: 'broadcasts',
-    section: 'Operations',
-    secondaryBadge: pendingBroadcastApprovals > 0 ? pendingBroadcastApprovals : undefined,
-    secondaryBadgeTitle: 'Broadcasts awaiting your approval',
-  };
-  const rota: MainShellAdminNavItem = {
-    href: '/rota',
-    label: 'Department rota',
-    icon: 'rota',
-    section: 'Operations',
-  };
 
   if (isManagerRole(r)) {
     return [
@@ -216,13 +196,10 @@ export function getMainShellManagerNavItems(
       recruitment,
       departments,
       teams,
-      subTeams,
-      broadcasts,
-      rota,
     ];
   }
 
-  return [pendingMembers, recruitment, departments, teams, broadcasts, rota];
+  return [pendingMembers, recruitment, departments, teams];
 }
 
 export function getMainShellAdminNavItemsByPermissions(
@@ -324,7 +301,7 @@ export function getMainShellHrNavItemsByPermissions(
   const canSeeInterviews = p.includes('interviews.view') || p.includes('interviews.book_slot');
 
   if (canSeeRecruitment)
-    items.push({ href: '/hr/recruitment', label: 'Recruitment', icon: 'recruitment', section: 'Recruitment' });
+    items.push({ href: '/hr/recruitment', label: 'Requests', icon: 'recruitment', section: 'Recruitment' });
   if (canSeeJobs)
     items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs', nested: canSeeRecruitment, section: 'Recruitment' });
   if (canSeeApplications)
@@ -338,7 +315,7 @@ export function getMainShellHrNavItemsByPermissions(
   if (canSeeOffers)
     items.push({
       href: '/hr/offer-templates',
-      label: 'Offer templates',
+      label: 'Templates',
       icon: 'offerTemplates',
       nested: canSeeRecruitment,
       section: 'Recruitment',
@@ -390,10 +367,10 @@ export function getMainShellHrNavItemsByPermissions(
 
 export function getMainShellManagerNavItemsByPermissions(
   permissions: readonly PermissionKey[] | null | undefined,
-  opts: { pendingApprovalCount: number; pendingBroadcastApprovals: number }
+  opts: { pendingApprovalCount: number }
 ): MainShellAdminNavItem[] | null {
   const p = permissions ?? [];
-  const { pendingApprovalCount, pendingBroadcastApprovals } = opts;
+  const { pendingApprovalCount } = opts;
   const items: MainShellAdminNavItem[] = [];
   const canManageWorkspace = p.includes('recruitment.create_request');
   const canViewDepts = p.includes('departments.view');
@@ -420,23 +397,12 @@ export function getMainShellManagerNavItemsByPermissions(
     });
   }
   if (p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request'))
-    items.push({ href: '/hr/recruitment', label: 'Recruitment requests', icon: 'recruitment', section: 'People' });
+    items.push({ href: '/hr/recruitment', label: 'Requests', icon: 'recruitment', section: 'People' });
   if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team HR records', icon: 'hrRecords', section: 'People' });
   if (canViewDepts)
     items.push({ href: '/manager/departments', label: 'Departments', icon: 'departments', section: 'Your departments' });
   if (canViewTeams)
     items.push({ href: '/manager/teams', label: 'Teams', icon: 'teams', section: 'Your departments' });
-  if (canManageWorkspace)
-    items.push({ href: '/manager/sub-teams', label: 'Sub-teams', icon: 'categories', section: 'Your departments' });
-  items.push({
-    href: '/broadcasts',
-    label: 'Broadcasts',
-    icon: 'broadcasts',
-    section: 'Operations',
-    secondaryBadge: pendingBroadcastApprovals > 0 ? pendingBroadcastApprovals : undefined,
-    secondaryBadgeTitle: 'Broadcasts awaiting your approval',
-  });
-  items.push({ href: '/rota', label: 'Department rota', icon: 'rota', section: 'Operations' });
   return items;
 }

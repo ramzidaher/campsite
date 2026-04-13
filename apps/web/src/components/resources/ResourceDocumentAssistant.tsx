@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { AssistantChatMarkdown } from '@/components/resources/AssistantChatMarkdown';
+import { userFacingScoutError } from '@campsite/types';
 
 export type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
@@ -58,13 +59,13 @@ export function ResourceDocumentAssistant({
           /* ignore */
         }
         if (!res.ok) {
-          const msg =
+          const raw =
             data.error === 'not_configured' && typeof data.message === 'string'
               ? data.message
               : typeof data.error === 'string'
                 ? data.error
                 : 'Could not get a reply.';
-          setErr(msg);
+          setErr(userFacingScoutError(raw));
           setMessages(previous);
           if (previous.length === 0) setChipsVisible(true);
           return;

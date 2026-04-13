@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 
 import type { ProfileRow } from '@/lib/AuthContext';
-import { currentLeaveYearKey } from '@/lib/datetime';
+import { currentLeaveYearKey, formatLeaveYearPeriodRange } from '@/lib/datetime';
 import { leaveRangeOverlapsExisting } from '@/lib/leaveDateOverlap';
 import { getSupabase } from '@/lib/supabase';
 import { formatToilMinutes, toilInputToMinutes } from '@/lib/toilDuration';
@@ -168,6 +168,11 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
     }
     return base.map(String);
   }, [year]);
+
+  const leavePeriodLabel = useMemo(
+    () => formatLeaveYearPeriodRange(year, leaveYearStartMonth, leaveYearStartDay),
+    [year, leaveYearStartMonth, leaveYearStartDay],
+  );
 
   const load = useCallback(async () => {
     if (!orgId) return;
@@ -631,6 +636,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
 
         <View style={{ marginBottom: 14 }}>
           <Text style={[styles.fieldLabel, { color: textSecondary, marginBottom: 8 }]}>Leave year</Text>
+          <Text style={{ fontSize: 11, lineHeight: 15, color: textSecondary, marginBottom: 8 }}>{leavePeriodLabel}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <Pressable
               onPress={() => setYearOverride(null)}

@@ -10,6 +10,7 @@ import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
 import type { MainShellAdminNavItem, ShellNavIconId } from '@/lib/adminGates';
 import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
+import { buildShellCommandPaletteSections } from '@/lib/shell/shellCommandPaletteSections';
 import { useShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
 import { CheckboxUiSoundCapture } from '@/components/sound/CheckboxUiSoundCapture';
 import { useUiSound } from '@/lib/sound/useUiSound';
@@ -20,7 +21,7 @@ import {
   normalizeCelebrationMode,
   type CelebrationMode,
 } from '@/lib/holidayThemes';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Menu } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
@@ -217,6 +218,7 @@ export function AppShell({
   const liveRecruitmentPendingCount   = bc('recruitment_pending_review',  recruitmentPendingReviewCount);
   const liveLeaveNavBadge             = bc('leave_pending_approval',      leaveNavBadge);
   const livePerformanceNavBadge       = bc('performance_pending',         performanceNavBadge);
+  const liveCalendarNotifications     = bc('calendar_event_notifications', 0);
   const liveShowOnboardingNav         = showOnboardingNav || (live?.onboarding_active ?? 0) > 0;
 
   // Override badges embedded inside nav-item objects (admin/manager/HR lists).
@@ -253,6 +255,7 @@ export function AppShell({
         { id: 'application-notifications',  label: 'Application updates',            href: '/notifications/applications',   count: live.application_notifications },
         { id: 'leave-notifications',        label: 'Time off updates',               href: '/notifications/leave',          count: live.leave_notifications },
         { id: 'hr-metric-notifications',    label: 'HR metric alerts',               href: '/notifications/hr-metrics',     count: live.hr_metric_notifications },
+        { id: 'calendar-notifications',     label: 'Calendar updates',               href: '/notifications/calendar',       count: liveCalendarNotifications },
       ] satisfies TopBarNotificationItem[]
     ).filter((item) => item.count > 0);
   }, [live, topBarNotifications, adminNavItems]);
@@ -334,6 +337,37 @@ export function AppShell({
   const orgInitials = useMemo(() => initials(orgName), [orgName]);
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
   const showUserAvatar = Boolean(safeUserAvatar) && !userAvatarFailed;
+
+  const paletteSections = useMemo(
+    () =>
+      buildShellCommandPaletteSections({
+        orgName,
+        showMyHrRecordNav,
+        showLeaveNav,
+        showPerformanceNav,
+        showOneOnOneNav,
+        showOnboardingNav: liveShowOnboardingNav,
+        showApprovalsStandalone: showApprovals && showStandaloneApprovals,
+        managerNavSectionLabel,
+        managerNavItems,
+        hrNavItems,
+        adminNavItems,
+      }),
+    [
+      orgName,
+      showMyHrRecordNav,
+      showLeaveNav,
+      showPerformanceNav,
+      showOneOnOneNav,
+      liveShowOnboardingNav,
+      showApprovals,
+      showStandaloneApprovals,
+      managerNavSectionLabel,
+      managerNavItems,
+      hrNavItems,
+      adminNavItems,
+    ],
+  );
 
   const closeMobile = () => {
     setMobileNav(false);
@@ -871,7 +905,8 @@ export function AppShell({
         <div className="flex h-[60px] items-center border-b border-[#d8d8d8] bg-[#121212] px-4 md:hidden">
           <button
             type="button"
-            className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/[0.14] active:bg-white/[0.18]"
+            aria-label="Open navigation"
             aria-expanded={mobileNav}
             aria-controls="primary-navigation"
             onClick={() => {
@@ -879,7 +914,11 @@ export function AppShell({
               playUiSound('menu_open');
             }}
           >
-            Menu
+            <Menu
+              className="h-[22px] w-[22px] text-[#faf9f6]"
+              strokeWidth={1.75}
+              aria-hidden
+            />
           </button>
           <span className="ml-3 font-authSerif text-lg text-white">Campsite</span>
         </div>
@@ -891,6 +930,8 @@ export function AppShell({
           notifications={liveTopBarNotifications}
           showMemberSearch={showMemberSearch}
           orgId={orgId}
+          orgName={orgName}
+          paletteSections={paletteSections}
         />
         <main id="main-content" tabIndex={-1} className="flex-1 overflow-x-hidden overflow-y-auto">
           {children}

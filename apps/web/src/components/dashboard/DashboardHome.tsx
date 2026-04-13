@@ -238,47 +238,6 @@ export function DashboardHome({
         </Link>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          {
-            href: composeHref,
-            icon: '✏️',
-            label: !canCompose ? 'Broadcasts' : showPrimaryComposeCta ? 'New broadcast' : 'New draft',
-            sub: !canCompose
-              ? 'View feed'
-              : showPrimaryComposeCta
-                ? isAdmin
-                  ? 'Send to your dept'
-                  : 'Send to your teams'
-                : 'Submit for approval',
-          },
-          { href: '/rota', icon: '🗓', label: 'View rota', sub: 'This week' },
-          { href: '/discount', icon: '🎫', label: 'Discount card', sub: 'Your QR code' },
-          data.pendingCount !== null
-            ? {
-                href: pendingHref,
-                icon: '⏳',
-                label: 'Pending members',
-                sub: data.pendingCount > 0 ? `${data.pendingCount} awaiting` : 'Approvals',
-              }
-            : { href: '/calendar', icon: '📅', label: 'Calendar', sub: 'Team events' },
-        ].map((qa) => (
-            <Link
-              key={qa.href + qa.label}
-              href={qa.href}
-              className="flex flex-col items-start gap-2.5 rounded-xl border border-[#d8d8d8] bg-white p-4 transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] text-[17px]">
-                {qa.icon}
-              </div>
-              <div>
-                <div className="text-[13px] font-medium leading-snug text-[#121212]">{qa.label}</div>
-                <div className="mt-0.5 text-[11.5px] text-[#9b9b9b]">{qa.sub}</div>
-              </div>
-            </Link>
-          ))}
-      </div>
-
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
         <div>
           <div className="mb-3.5 flex items-center justify-between">
@@ -417,67 +376,13 @@ export function DashboardHome({
             eventDays={data.calendarEventDays}
             initialYear={data.calendarYear}
             initialMonth={data.calendarMonth}
-            todayY={now.getFullYear()}
-            todayM={now.getMonth()}
-            todayD={now.getDate()}
+            todayY={data.calendarTodayY}
+            todayM={data.calendarTodayM}
+            todayD={data.calendarTodayD}
             upcomingEvents={data.upcomingEvents}
           />
-
-          {data.pendingCount !== null ? (
-            <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
-              <div className="flex items-center justify-between border-b border-[#d8d8d8] px-[18px] py-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-[#121212]">
-                  Pending verifications
-                  {data.pendingCount > 0 ? (
-                    <span className="rounded-full bg-[#E11D48] px-2 py-0.5 text-[10.5px] font-bold text-white">
-                      {data.pendingCount}
-                    </span>
-                  ) : null}
-                </div>
-                <Link
-                  href={pendingHref}
-                  className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-                >
-                  View all
-                </Link>
-              </div>
-              <div className="flex flex-col">
-                {data.pendingPreview.length === 0 ? (
-                  <p className="px-[18px] py-8 text-center text-sm text-[#9b9b9b]">No pending verifications</p>
-                ) : (
-                  data.pendingPreview.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center gap-3 border-b border-[#d8d8d8] px-[18px] py-3 last:border-0 hover:bg-[#f5f4f1]"
-                    >
-                      <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#121212]/10 text-[11px] font-semibold text-[#121212]">
-                        {initials(p.full_name ?? p.email ?? '?')}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[13px] font-medium text-[#121212]">{p.full_name ?? 'Member'}</div>
-                        <div className="text-[11.5px] text-[#9b9b9b]">{p.deptLine}</div>
-                      </div>
-                      <Link
-                        href={pendingHref}
-                        className="shrink-0 rounded-md bg-[#dcfce7] px-3 py-1 text-[12px] font-medium text-[#15803D] ring-1 ring-[#bbf7d0] hover:bg-[#bbf7d0]"
-                      >
-                        Review
-                      </Link>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
   );
-}
-
-function initials(name: string) {
-  const p = name.trim().split(/\s+/).filter(Boolean);
-  if (p.length === 0) return '?';
-  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
-  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
 }

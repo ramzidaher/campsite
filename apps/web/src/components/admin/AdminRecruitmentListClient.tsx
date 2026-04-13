@@ -92,9 +92,9 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Recruitment requests</h1>
+        <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Requests</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          HR queue for all hiring requests. Review, approve, and track through to filled.
+          Recruitment queue for all hiring requests. Review, approve, and track through to filled.
         </p>
       </div>
 

@@ -47,6 +47,31 @@ export function gridBandMinutesForShiftOnStartDay(start: Date, end: Date): { sta
   return clampToGrid(startMin, endMin);
 }
 
+/** Same as web — maps calendar rows for `layoutWeekShifts` on the week grid. */
+export function calendarEventForWeekLayout(row: {
+  id: string;
+  start_time: string;
+  end_time: string | null;
+  all_day: boolean;
+}): { id: string; start_time: string; end_time: string } | null {
+  const start = new Date(row.start_time);
+  if (Number.isNaN(start.getTime())) return null;
+  if (row.all_day) {
+    const y = start.getFullYear();
+    const m = start.getMonth();
+    const d = start.getDate();
+    const s = new Date(y, m, d, GRID_START_HOUR, 0, 0, 0);
+    const e = new Date(y, m, d, GRID_END_HOUR, 0, 0, 0);
+    return { id: row.id, start_time: s.toISOString(), end_time: e.toISOString() };
+  }
+  const end = row.end_time ? new Date(row.end_time) : new Date(start.getTime() + 3600000);
+  if (Number.isNaN(end.getTime())) return null;
+  if (end.getTime() <= start.getTime()) {
+    return { id: row.id, start_time: row.start_time, end_time: new Date(start.getTime() + 3600000).toISOString() };
+  }
+  return { id: row.id, start_time: row.start_time, end_time: end.toISOString() };
+}
+
 export function layoutWeekShifts(
   shifts: Array<{ id: string; start_time: string; end_time: string }>,
   weekDays: Date[],

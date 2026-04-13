@@ -100,6 +100,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const applicationUnreadNotifications = num('application_notifications');
   const leaveUnreadNotifications       = num('leave_notifications');
   const hrMetricUnreadNotifications    = num('hr_metric_notifications');
+  const calendarUnreadNotifications    = num('calendar_event_notifications');
   const leaveNavBadge                  = num('leave_pending_approval');
   const performanceNavBadge            = num('performance_pending');
   const showOnboardingNav              = num('onboarding_active') > 0;
@@ -135,7 +136,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
     pendingApprovalCount,
-    pendingBroadcastApprovals,
   });
 
   const adminNavItemsRaw = getMainShellAdminNavItemsByPermissions(permissionKeys);
@@ -224,6 +224,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       label: 'HR metric alerts',
       href: '/notifications/hr-metrics',
       count: hrMetricUnreadNotifications,
+    },
+    {
+      id: 'calendar-notifications',
+      label: 'Calendar updates',
+      href: '/notifications/calendar',
+      count: calendarUnreadNotifications,
     },
   ].filter((item) => item.count > 0);
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { userFacingScoutError } from '@campsite/types';
 import { BroadcastBackdropPicker } from '@/components/broadcasts/BroadcastBackdropPicker';
 import { BroadcastDetailStyleRail } from '@/components/broadcasts/BroadcastDetailStyleRail';
 import { cssBackgroundImageUrl } from '@/lib/broadcasts/cssBackgroundImageUrl';
@@ -203,22 +204,22 @@ export function BroadcastDetailView({
         /* ignore */
       }
       if (!res.ok) {
-        const msg =
+        const raw =
           data.error === 'not_configured' && typeof data.message === 'string'
             ? data.message
             : typeof data.error === 'string'
               ? data.error
               : 'Could not summarise this broadcast.';
-        setSummaryErr(msg);
+        setSummaryErr(userFacingScoutError(raw));
         return;
       }
       if (typeof data.summary === 'string' && data.summary.trim()) {
         setSummary(data.summary.trim());
       } else {
-        setSummaryErr('No summary was returned. Try again.');
+        setSummaryErr(userFacingScoutError('No summary was returned. Try again.'));
       }
     } catch {
-      setSummaryErr('Network error. Check your connection and try again.');
+      setSummaryErr(userFacingScoutError('Network error. Check your connection and try again.'));
     } finally {
       setSummaryBusy(false);
     }

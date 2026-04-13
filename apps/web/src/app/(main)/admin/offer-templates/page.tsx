@@ -4,6 +4,17 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
+/** Common recruitment / HR document types — use as template names (pill shortcuts below). */
+const SUGGESTED_TEMPLATE_TYPES = [
+  'Contracts',
+  'Offer letter',
+  'EDI form',
+  'Application forms',
+  'Rejection',
+  'Acceptance',
+  'Interviews selection email',
+] as const;
+
 export default async function OfferTemplatesPage() {
   const supabase = await createClient();
   const user = await getAuthUser();
@@ -32,11 +43,10 @@ export default async function OfferTemplatesPage() {
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
-            Offer letter templates
-          </h1>
+          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Templates</h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Create and manage templates for Offer Sent stage. Merge fields auto-fill from candidate and job data.
+            Offer letters, contracts, and recruitment emails. Merge fields auto-fill from candidate and job data where
+            applicable.
           </p>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
             Merge fields: <code className="text-[12px]">{`{{candidate_name}}`}</code>,{' '}
@@ -52,10 +62,26 @@ export default async function OfferTemplatesPage() {
         </Link>
       </div>
 
+      <div className="mt-8">
+        <p className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Suggested types</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {SUGGESTED_TEMPLATE_TYPES.map((label) => (
+            <Link
+              key={label}
+              href={`/hr/offer-templates/new?name=${encodeURIComponent(label)}`}
+              className="inline-flex items-center rounded-full border border-[#e4e4e4] bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-[#4a4a4a] shadow-[0_1px_0_rgba(0,0,0,0.03)] transition-colors hover:border-[#c8c8c8] hover:bg-[#fafafa]"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+        <p className="mt-2 text-[12px] text-[#9b9b9b]">Opens the editor with this name — adjust the body to match.</p>
+      </div>
+
       <ul className="mt-8 divide-y divide-[#f0f0f0] rounded-xl border border-[#d8d8d8] bg-white">
         {templates.length === 0 ? (
           <li className="px-4 py-10 text-center text-[13px] text-[#9b9b9b]">
-            No templates yet. Create one to start generating e-sign offer letters.
+            No templates yet. Pick a suggested type above or create a blank template to get started.
           </li>
         ) : (
           templates.map((t) => (

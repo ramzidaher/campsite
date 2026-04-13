@@ -64,6 +64,11 @@ type Props<T extends WeekGridShiftBase> = {
     primary: string;
     secondary: string;
   } | null;
+  /**
+   * Org calendar busy blocks for the signed-in user (manual / broadcast events), drawn behind shifts.
+   * Same coordinate system as shifts — use normalized `{ id, start_time, end_time }` from `calendarEventForWeekLayout`.
+   */
+  calendarBusyBlocks?: Array<{ id: string; title: string; start_time: string; end_time: string }>;
 };
 
 const HOUR_COUNT = GRID_END_HOUR - GRID_START_HOUR;
@@ -116,6 +121,7 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
   onShiftTimesUpdated,
   onBackgroundSlotClick,
   draftSlotHighlight,
+  calendarBusyBlocks,
 }: Props<T>) {
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [resizeLive, setResizeLive] = useState<{
@@ -135,6 +141,20 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
   }, [shifts, resizeLive]);
 
   const layout = useMemo(() => layoutWeekShifts(shiftsForLayout, days), [shiftsForLayout, days]);
+  const calendarLayout = useMemo(
+    () =>
+      calendarBusyBlocks?.length
+        ? layoutWeekShifts(
+            calendarBusyBlocks.map((c) => ({ id: c.id, start_time: c.start_time, end_time: c.end_time })),
+            days,
+          )
+        : [],
+    [calendarBusyBlocks, days],
+  );
+  const calendarById = useMemo(
+    () => new Map((calendarBusyBlocks ?? []).map((c) => [c.id, c])),
+    [calendarBusyBlocks],
+  );
   const shiftById = useMemo(() => new Map(shiftsForLayout.map((s) => [s.id, s])), [shiftsForLayout]);
 
   const resizeSessionRef = useRef<{
@@ -604,6 +624,12 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
   return (
     <div className="min-w-[720px] select-none">
       <p className="mb-2 text-[12px] leading-relaxed text-[#6b6b6b]">
+        {calendarBusyBlocks && calendarBusyBlocks.length > 0 ? (
+          <span className="mb-1 block">
+            <strong className="font-medium text-[#121212]">Lavender blocks</strong> are calendar events (from your org
+            calendar) so you can see other commitments alongside shifts.
+          </span>
+        ) : null}
         {canEdit ? (
           <>
             <strong className="font-medium text-[#121212]">Drag</strong> on an empty slot to select a time range (highlight
@@ -679,6 +705,30 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
                 style={{ top: (h - GRID_START_HOUR) * PX_PER_HOUR, height: PX_PER_HOUR }}
               />
             ))}
+
+            {calendarLayout
+              .filter((l) => l.dayIndex === dayIndex)
+              .map((l) => {
+                const c = calendarById.get(l.shiftId);
+                const label = c?.title?.trim() ? c.title : 'Calendar';
+                return (
+                  <div
+                    key={`cal-${l.shiftId}`}
+                    className="pointer-events-none absolute z-[2] box-border overflow-hidden rounded-md border border-[#c4b5fd]/90 bg-[repeating-linear-gradient(135deg,rgba(124,58,237,0.12),rgba(124,58,237,0.12)_6px,rgba(124,58,237,0.06)_6px,rgba(124,58,237,0.06)_12px)] px-1 py-0.5 text-[9px] text-[#5b21b6]/95 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]"
+                    style={{
+                      top: l.topPx,
+                      height: l.heightPx,
+                      left: 'calc(2px)',
+                      width: 'calc(100% - 4px)',
+                    }}
+                    title={label}
+                    role="img"
+                    aria-label={`Calendar: ${label}`}
+                  >
+                    <div className="truncate font-semibold leading-tight">{label}</div>
+                  </div>
+                );
+              })}
 
             {(() => {
               const draft =

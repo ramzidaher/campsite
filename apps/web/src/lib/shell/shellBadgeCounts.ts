@@ -5,6 +5,7 @@ export type ShellBadgeCounts = {
   application_notifications: number;
   leave_notifications: number;
   hr_metric_notifications: number;
+  calendar_event_notifications: number;
   pending_approvals: number;
   leave_pending_approval: number;
   recruitment_pending_review: number;
@@ -30,6 +31,7 @@ export function parseShellBadgeCounts(data: unknown): ShellBadgeCounts {
     application_notifications: n('application_notifications'),
     leave_notifications: n('leave_notifications'),
     hr_metric_notifications: n('hr_metric_notifications'),
+    calendar_event_notifications: n('calendar_event_notifications'),
     pending_approvals: n('pending_approvals'),
     leave_pending_approval: n('leave_pending_approval'),
     recruitment_pending_review: n('recruitment_pending_review'),

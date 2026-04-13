@@ -118,7 +118,7 @@ export function GenerateOfferModal({
           <p className="mt-4 text-[13px] text-amber-900">
             No templates yet.{' '}
             <Link href="/hr/offer-templates/new" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-              Create an offer template
+              Create a template
             </Link>
             .
           </p>

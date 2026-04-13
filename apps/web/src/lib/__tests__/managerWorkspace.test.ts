@@ -9,7 +9,7 @@ import {
   isOrgAdminRole,
 } from '@campsite/types';
 
-const navOpts = { pendingApprovalCount: 0, pendingBroadcastApprovals: 0 };
+const navOpts = { pendingApprovalCount: 0 };
 
 describe('manager workspace gate (isManagerRole)', () => {
   it('is true only for manager', () => {
@@ -36,13 +36,21 @@ describe('department workspace shell nav', () => {
     expect(getMainShellManagerNavSectionLabel('manager')).toBe('Manager');
   });
 
-  it('omits overview and sub-teams for coordinators', () => {
+  it('coordinator omits overview; teams live under /manager/teams (no separate sub-teams link)', () => {
     const mgr = getMainShellManagerNavItems('manager', navOpts) ?? [];
     const coord = getMainShellManagerNavItems('coordinator', navOpts) ?? [];
     expect(mgr.some((i) => i.href === '/manager' && i.exact)).toBe(true);
-    expect(mgr.some((i) => i.href === '/manager/sub-teams')).toBe(true);
+    expect(mgr.some((i) => i.href === '/manager/teams')).toBe(true);
+    expect(mgr.some((i) => i.href === '/manager/sub-teams')).toBe(false);
     expect(coord.some((i) => i.href === '/manager')).toBe(false);
     expect(coord.some((i) => i.href === '/manager/sub-teams')).toBe(false);
     expect(coord.some((i) => i.href === '/manager/teams')).toBe(true);
+  });
+
+  it('does not duplicate main-nav Broadcasts or Rota under Manager', () => {
+    const mgr = getMainShellManagerNavItems('manager', navOpts) ?? [];
+    const coord = getMainShellManagerNavItems('coordinator', navOpts) ?? [];
+    expect(mgr.filter((i) => i.href === '/broadcasts' || i.href === '/rota')).toHaveLength(0);
+    expect(coord.filter((i) => i.href === '/broadcasts' || i.href === '/rota')).toHaveLength(0);
   });
 });

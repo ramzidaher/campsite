@@ -16,6 +16,17 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/** pg_net / cron often sends `apikey` or a Bearer with stray whitespace; require service role only. */
+function isServiceRoleRequest(req: Request, serviceKey: string): boolean {
+  if (!serviceKey) return false;
+  const apikey = req.headers.get('apikey')?.trim();
+  if (apikey === serviceKey) return true;
+  const raw = req.headers.get('Authorization')?.trim() ?? '';
+  const m = /^Bearer\s+(.+)$/i.exec(raw);
+  const bearer = (m?.[1] ?? '').trim();
+  return bearer === serviceKey;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: cors });
@@ -23,9 +34,8 @@ Deno.serve(async (req) => {
 
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const url = Deno.env.get('SUPABASE_URL') ?? '';
-  const auth = req.headers.get('Authorization') ?? '';
 
-  if (!serviceKey || !url || auth !== `Bearer ${serviceKey}`) {
+  if (!serviceKey || !url || !isServiceRoleRequest(req, serviceKey)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...cors, 'Content-Type': 'application/json' },

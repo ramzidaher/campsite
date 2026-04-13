@@ -8,6 +8,7 @@ import {
   isApproverRole,
 } from '@campsite/types';
 
+import { calendarYmdInTimeZone } from '@/lib/datetime';
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
@@ -42,11 +43,14 @@ export type DashboardHomeModel = {
   shiftsThisWeek: number;
   nextShiftSummary: string | null;
   recentBroadcasts: FeedRow[];
-  pendingPreview: PendingPreviewRow[];
   upcomingEvents: UpcomingEventRow[];
   calendarEventDays: number[];
   calendarYear: number;
   calendarMonth: number;
+  /** "Today" in org timezone (mini-calendar highlight; aligns grid month with org-local date). */
+  calendarTodayY: number;
+  calendarTodayM: number;
+  calendarTodayD: number;
   /** When false, stat row uses a neutral broadcasts link instead of unread count (society_leader). */
   showBroadcastUnreadCount?: boolean;
 };
@@ -102,10 +106,16 @@ export async function loadDashboardHome(
   profile: { full_name: string | null; role: string },
   options?: { initialBroadcastUnread?: number }
 ): Promise<DashboardHomeModel> {
-  const { data: orgRow } = await supabase.from('organisations').select('name').eq('id', orgId).single();
+  const { data: orgRow } = await supabase
+    .from('organisations')
+    .select('name, timezone')
+    .eq('id', orgId)
+    .single();
   const orgName = (orgRow?.name as string) ?? 'Organisation';
+  const orgTz = ((orgRow as { timezone?: string | null })?.timezone ?? null)?.trim() || null;
 
   const now = new Date();
+  const calToday = calendarYmdInTimeZone(now, orgTz);
   const w0 = startOfLocalWeek(now);
   const w1 = endOfLocalWeek(now);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -149,7 +159,7 @@ export async function loadDashboardHome(
       .eq('org_id', orgId)
       .eq('status', 'sent')
       .order('sent_at', { ascending: false })
-      .limit(4),
+      .limit(3),
     supabase
       .from('calendar_events')
       .select('id,title,start_time')
@@ -174,12 +184,7 @@ export async function loadDashboardHome(
     (recentRaw ?? []) as RawBroadcast[]
   );
 
-  let pendingPreview: PendingPreviewRow[] = [];
   let pendingCount: number | null = null;
-  if (isApproverRole(profile.role)) {
-    const full = await loadPendingApprovalsPreview(supabase, userId, orgId, profile.role);
-    pendingPreview = full.slice(0, 3);
-  }
   if (isApproverRole(profile.role) || canFinalApproveRotaRequests(profile.role)) {
     const { data: navN } = await supabase.rpc('pending_approvals_nav_count');
     pendingCount =
@@ -217,9 +222,9 @@ export async function loadDashboardHome(
 
   const calendarEventDays = [...upcomingCalendarEvents, ...upcomingShiftRows]
     .map((e) => {
-      const dt = new Date(e.start_time);
-      if (dt.getFullYear() !== now.getFullYear() || dt.getMonth() !== now.getMonth()) return null;
-      return dt.getDate();
+      const ev = calendarYmdInTimeZone(new Date(e.start_time as string), orgTz);
+      if (ev.y !== calToday.y || ev.m !== calToday.m) return null;
+      return ev.d;
     })
     .filter((x): x is number => x !== null);
 
@@ -250,10 +255,12 @@ export async function loadDashboardHome(
     shiftsThisWeek: shiftsThisWeek ?? 0,
     nextShiftSummary,
     recentBroadcasts,
-    pendingPreview,
     upcomingEvents,
     calendarEventDays,
-    calendarYear: now.getFullYear(),
-    calendarMonth: now.getMonth(),
+    calendarYear: calToday.y,
+    calendarMonth: calToday.m - 1,
+    calendarTodayY: calToday.y,
+    calendarTodayM: calToday.m - 1,
+    calendarTodayD: calToday.d,
   };
 }

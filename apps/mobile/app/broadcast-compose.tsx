@@ -466,8 +466,8 @@ export default function BroadcastComposeScreen() {
 
       if (mode === 'schedule') {
         const when = scheduledAt;
-        if (when.getTime() < Date.now() + 5 * 60 * 1000) {
-          setError('Schedule at least 5 minutes from now.');
+        if (when.getTime() < Date.now() + 60 * 1000) {
+          setError('Schedule at least 1 minute from now.');
           playUiSound('error_soft');
           return;
         }

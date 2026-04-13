@@ -107,9 +107,9 @@ export function ManagerRecruitmentClient({
   return (
     <div className="space-y-10">
       <header>
-        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Recruitment requests</h1>
+        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Requests</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Raise Recruitment Request to HR using a structured brief. Your submissions are never deleted and keep full history.
+          Raise a recruitment request to HR using a structured brief. Your submissions are never deleted and keep full history.
         </p>
       </header>
 
@@ -360,7 +360,7 @@ export function ManagerRecruitmentClient({
             href="/admin/recruitment"
             className="text-[#008B60] underline decoration-[#008B60]/30 hover:decoration-[#008B60]"
           >
-            Admin → Recruitment
+            Admin → Requests
           </Link>
           .
         </p>

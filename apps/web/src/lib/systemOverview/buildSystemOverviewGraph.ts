@@ -106,7 +106,7 @@ export function buildSystemOverviewGraph(params: {
   const recruitmentNode = canRecruitment
     ? addNode({
         id: 'recruitment',
-        label: 'Recruitment',
+        label: 'Requests',
         group: 'module',
         tier: 'hr',
         href: '/hr/recruitment',
@@ -117,7 +117,7 @@ export function buildSystemOverviewGraph(params: {
     ? addNode({ id: 'applications', label: 'Applications', group: 'entity', tier: 'hr', href: '/hr/applications' })
     : null;
   const offersNode = canOffers
-    ? addNode({ id: 'offers', label: 'Offer templates', group: 'entity', tier: 'hr', href: '/hr/offer-templates' })
+    ? addNode({ id: 'offers', label: 'Templates', group: 'entity', tier: 'hr', href: '/hr/offer-templates' })
     : null;
   const interviewsNode = canInterviews
     ? addNode({ id: 'interviews', label: 'Interviews', group: 'entity', tier: 'hr', href: '/hr/interviews' })

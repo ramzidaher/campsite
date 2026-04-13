@@ -351,7 +351,7 @@ export function BroadcastComposer({
   );
 
   const minScheduleLocal = useMemo(() => {
-    const t = new Date(Date.now() + 5 * 60 * 1000);
+    const t = new Date(Date.now() + 60 * 1000);
     t.setSeconds(0, 0);
     return toDatetimeLocalValue(t);
   }, [schedule]);
@@ -583,8 +583,8 @@ export function BroadcastComposer({
           return;
         }
         const when = new Date(scheduledAt);
-        if (when.getTime() < Date.now() + 5 * 60 * 1000) {
-          setError('Schedule at least 5 minutes from now.');
+        if (when.getTime() < Date.now() + 60 * 1000) {
+          setError('Schedule at least 1 minute from now.');
           playUiSound('error_soft');
           return;
         }

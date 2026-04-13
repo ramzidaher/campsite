@@ -17,3 +17,22 @@ export function currentLeaveYearKey(
   }
   return String(y - 1);
 }
+
+/**
+ * Human-readable entitlement window for a DB `leave_year` (same bounds as web leave hub).
+ */
+export function formatLeaveYearPeriodRange(
+  leaveYearKey: string,
+  leaveYearStartMonth: number,
+  leaveYearStartDay: number,
+): string {
+  const y = Number(leaveYearKey);
+  const sm = Math.max(1, Math.min(12, leaveYearStartMonth));
+  const sd = Math.max(1, Math.min(31, leaveYearStartDay));
+  if (!Number.isFinite(y)) return leaveYearKey;
+  const start = new Date(Date.UTC(y, sm - 1, sd));
+  const end = new Date(Date.UTC(y + 1, sm - 1, sd));
+  end.setUTCDate(end.getUTCDate() - 1);
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
+}

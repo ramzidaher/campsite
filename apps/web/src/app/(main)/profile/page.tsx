@@ -1,4 +1,8 @@
-import { currentLeaveYearKeyUtc } from '@/lib/datetime';
+import {
+  currentLeaveYearKeyForOrgCalendar,
+  currentLeaveYearKeyUtc,
+  formatLeaveYearPeriodRange,
+} from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -51,17 +55,21 @@ export default async function MyProfilePage() {
     p_context: {},
   });
 
-  const { data: leaveSettingsForYear } = await supabase
-    .from('org_leave_settings')
-    .select('leave_year_start_month, leave_year_start_day')
-    .eq('org_id', orgId)
-    .maybeSingle();
+  const [{ data: leaveSettingsForYear }, { data: orgForTz }] = await Promise.all([
+    supabase
+      .from('org_leave_settings')
+      .select('leave_year_start_month, leave_year_start_day')
+      .eq('org_id', orgId)
+      .maybeSingle(),
+    supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
+  ]);
 
-  const profileLeaveYearKey = currentLeaveYearKeyUtc(
-    new Date(),
-    Number(leaveSettingsForYear?.leave_year_start_month ?? 1),
-    Number(leaveSettingsForYear?.leave_year_start_day ?? 1),
-  );
+  const orgTz = (orgForTz?.timezone as string | null) ?? null;
+  const sm = Number(leaveSettingsForYear?.leave_year_start_month ?? 1);
+  const sd = Number(leaveSettingsForYear?.leave_year_start_day ?? 1);
+  const profileLeaveYearKey = orgTz
+    ? currentLeaveYearKeyForOrgCalendar(new Date(), orgTz, sm, sd)
+    : currentLeaveYearKeyUtc(new Date(), sm, sd);
 
   const [
     fileRows,
@@ -341,7 +349,9 @@ export default async function MyProfilePage() {
 
       <section id="time-off" className="scroll-mt-24 pt-8">
         <h2 className="text-[15px] font-semibold text-[#121212]">Time off</h2>
-        <p className="mt-1 text-[12px] text-[#9b9b9b]">Leave year {profileLeaveYearKey}</p>
+        <p className="mt-1 text-[12px] text-[#9b9b9b]">
+          Leave year {profileLeaveYearKey} · {formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}
+        </p>
         <div className="mt-3 rounded-xl border border-[#e8e8e8] bg-white p-5">
           <div className="grid gap-3 sm:grid-cols-2 text-[13px]">
             <div className="rounded-lg bg-[#faf9f6] p-3">

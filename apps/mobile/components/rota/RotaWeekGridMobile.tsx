@@ -39,6 +39,8 @@ type Props<T extends GridShift> = {
   canEdit: boolean;
   onShiftPress: (s: T) => void;
   onBackgroundSlotPress?: (detail: { dayIndex: number; startMinutesFromMidnight: number }) => void;
+  /** Normalized org calendar busy blocks (My schedule); drawn behind shifts. */
+  calendarBusyBlocks?: Array<{ id: string; title: string; start_time: string; end_time: string }>;
 };
 
 export function RotaWeekGridMobile<T extends GridShift>({
@@ -50,6 +52,7 @@ export function RotaWeekGridMobile<T extends GridShift>({
   canEdit,
   onShiftPress,
   onBackgroundSlotPress,
+  calendarBusyBlocks,
 }: Props<T>) {
   const { width: windowW } = useWindowDimensions();
   const colWidth = useMemo(
@@ -60,6 +63,22 @@ export function RotaWeekGridMobile<T extends GridShift>({
   const layout = useMemo(
     () => layoutWeekShifts(shifts.map((s) => ({ id: s.id, start_time: s.start_time, end_time: s.end_time })), days),
     [shifts, days],
+  );
+
+  const calendarLayout = useMemo(
+    () =>
+      calendarBusyBlocks?.length
+        ? layoutWeekShifts(
+            calendarBusyBlocks.map((c) => ({ id: c.id, start_time: c.start_time, end_time: c.end_time })),
+            days,
+          )
+        : [],
+    [calendarBusyBlocks, days],
+  );
+
+  const calendarById = useMemo(
+    () => new Map((calendarBusyBlocks ?? []).map((c) => [c.id, c])),
+    [calendarBusyBlocks],
   );
 
   const shiftById = useMemo(() => new Map(shifts.map((s) => [s.id, s])), [shifts]);
@@ -96,6 +115,30 @@ export function RotaWeekGridMobile<T extends GridShift>({
                   ]}
                 />
               ))}
+              {calendarLayout
+                .filter((l) => l.dayIndex === dayIndex)
+                .map((l) => {
+                  const c = calendarById.get(l.shiftId);
+                  return (
+                    <View
+                      key={`cal-${l.shiftId}`}
+                      pointerEvents="none"
+                      style={[
+                        styles.calendarBlock,
+                        {
+                          top: l.topPx,
+                          height: l.heightPx,
+                          left: 2,
+                          width: colWidth - 4,
+                        },
+                      ]}
+                    >
+                      <Text numberOfLines={2} style={styles.calendarBlockText}>
+                        {c?.title?.trim() ? c.title : 'Calendar'}
+                      </Text>
+                    </View>
+                  );
+                })}
               {layout
                 .filter((l) => l.dayIndex === dayIndex)
                 .map((l) => {
@@ -169,6 +212,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 2,
     overflow: 'hidden',
+    zIndex: 10,
   },
   shiftPri: { fontSize: 10, fontWeight: '700' },
   shiftSec: { fontSize: 9, marginTop: 1, opacity: 0.88 },
@@ -177,5 +221,20 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#92400e',
     marginTop: 1,
+  },
+  calendarBlock: {
+    position: 'absolute',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(196, 181, 253, 0.95)',
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+    padding: 2,
+    overflow: 'hidden',
+    zIndex: 1,
+  },
+  calendarBlockText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#5b21b6',
   },
 });

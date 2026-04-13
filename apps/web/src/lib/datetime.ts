@@ -36,6 +36,84 @@ export function currentLeaveYearKeyUtc(
   return String(y - 1);
 }
 
+/**
+ * Calendar year / month / day for an instant in an IANA zone (or local browser/server date when null/invalid).
+ * Used so leave-year boundaries match the organisation’s “today”, not UTC alone.
+ */
+export function calendarYmdInTimeZone(
+  instant: Date,
+  timeZoneIana: string | null | undefined,
+): { y: number; m: number; d: number } {
+  const z = timeZoneIana?.trim();
+  if (!z) {
+    return {
+      y: instant.getFullYear(),
+      m: instant.getMonth() + 1,
+      d: instant.getDate(),
+    };
+  }
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: z,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    }).formatToParts(instant);
+    const y = Number(parts.find((p) => p.type === 'year')?.value);
+    const m = Number(parts.find((p) => p.type === 'month')?.value);
+    const d = Number(parts.find((p) => p.type === 'day')?.value);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) {
+      throw new Error('invalid parts');
+    }
+    return { y, m, d };
+  } catch {
+    return {
+      y: instant.getFullYear(),
+      m: instant.getMonth() + 1,
+      d: instant.getDate(),
+    };
+  }
+}
+
+/**
+ * Leave year key `YYYY` using the same boundary rule as {@link currentLeaveYearKey}, but with “today”
+ * evaluated in `orgTimeZoneIana` when set. Aligns SSR + client and avoids UTC-only off-by-one vs local.
+ */
+export function currentLeaveYearKeyForOrgCalendar(
+  instant: Date,
+  orgTimeZoneIana: string | null | undefined,
+  leaveYearStartMonth: number,
+  leaveYearStartDay: number,
+): string {
+  const { y, m, d } = calendarYmdInTimeZone(instant, orgTimeZoneIana);
+  const sm = leaveYearStartMonth;
+  const sd = leaveYearStartDay;
+  if (m > sm || (m === sm && d >= sd)) {
+    return String(y);
+  }
+  return String(y - 1);
+}
+
+/**
+ * Human-readable entitlement window for a DB `leave_year` and org start rule (matches leave hub bounds).
+ * Example: leave year "2025" with 1 Sep start → "1 Sep 2025 – 31 Aug 2026".
+ */
+export function formatLeaveYearPeriodRange(
+  leaveYearKey: string,
+  leaveYearStartMonth: number,
+  leaveYearStartDay: number,
+): string {
+  const y = Number(leaveYearKey);
+  const sm = Math.max(1, Math.min(12, leaveYearStartMonth));
+  const sd = Math.max(1, Math.min(31, leaveYearStartDay));
+  if (!Number.isFinite(y)) return leaveYearKey;
+  const start = new Date(Date.UTC(y, sm - 1, sd));
+  const end = new Date(Date.UTC(y + 1, sm - 1, sd));
+  end.setUTCDate(end.getUTCDate() - 1);
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
+}
+
 /** Monday 00:00:00 local time for the week containing `d`. */
 export function startOfWeekMonday(d: Date): Date {
   const x = new Date(d);
@@ -56,6 +134,19 @@ export function endOfWeekExclusive(startMonday: Date): Date {
 export function addWeeks(d: Date, n: number): Date {
   const x = new Date(d);
   x.setDate(x.getDate() + n * 7);
+  return x;
+}
+
+export function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+/** Local midnight for the given instant’s calendar day. */
+export function startOfDayLocal(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
   return x;
 }
 

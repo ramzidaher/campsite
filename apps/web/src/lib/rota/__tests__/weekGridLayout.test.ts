@@ -1,4 +1,5 @@
 import {
+  calendarEventForWeekLayout,
   GRID_START_HOUR,
   gridBandMinutesForShiftOnStartDay,
   layoutWeekShifts,
@@ -65,6 +66,20 @@ describe('weekGridLayout', () => {
     expect(heightPx).toBeGreaterThanOrEqual(20);
     const again = slotHighlightPx(lo + 7, lo + 22);
     expect(again.heightPx).toBeGreaterThanOrEqual(20);
+  });
+
+  test('calendarEventForWeekLayout maps all-day to grid window', () => {
+    const start = new Date(2026, 2, 31, 0, 0, 0, 0).toISOString();
+    const out = calendarEventForWeekLayout({
+      id: 'e1',
+      start_time: start,
+      end_time: null,
+      all_day: true,
+    });
+    expect(out).not.toBeNull();
+    if (!out) throw new Error('expected out');
+    expect(new Date(out.start_time).getHours()).toBe(GRID_START_HOUR);
+    expect(new Date(out.end_time).getHours()).toBe(22);
   });
 
   test('layoutWeekShifts assigns lanes for overlaps', () => {

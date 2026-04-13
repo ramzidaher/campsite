@@ -17,6 +17,7 @@ import {
   startOfWeekMonday,
 } from '@/lib/datetime';
 import { useShellRefresh } from '@/hooks/useShellRefresh';
+import { loadMyCalendarBusyForRotaWeek, type RotaCalendarBusyBlock } from '@/lib/rota/calendarBusyForRota';
 import { friendlyDbError } from '@/lib/rota/friendlyDbError';
 import { GRID_END_HOUR, localYmd } from '@/lib/rota/weekGridLayout';
 import Link from 'next/link';
@@ -178,6 +179,8 @@ export function RotaClient({ profile }: { profile: Profile }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(new Date()));
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
+  /** My schedule only: org calendar events (manual / broadcast) so open slots can be judged against other commitments. */
+  const [calendarBusy, setCalendarBusy] = useState<RotaCalendarBusyBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [managedDeptIds, setManagedDeptIds] = useState<string[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
@@ -325,15 +328,27 @@ export function RotaClient({ profile }: { profile: Profile }) {
     } else if (view === 'team' && profile.role === 'manager') {
       if (!managedDeptIds.length) {
         setShifts([]);
+        setCalendarBusy([]);
         return;
       }
       q = q.in('dept_id', managedDeptIds);
     }
 
-    const { data, error } = await q;
+    const busyPromise =
+      view === 'my'
+        ? loadMyCalendarBusyForRotaWeek(supabase, {
+            orgId: profile.org_id,
+            profileId: profile.id,
+            fromIso: from,
+            toIso: to,
+          })
+        : Promise.resolve([] as RotaCalendarBusyBlock[]);
+
+    const [{ data, error }, busyRows] = await Promise.all([q, busyPromise]);
     if (error) {
       console.error(error);
       setShifts([]);
+      setCalendarBusy([]);
     } else {
       let rows: ShiftRow[] = (data ?? []).map((r) => {
         const deptId = r.dept_id as string | null;
@@ -363,10 +378,12 @@ export function RotaClient({ profile }: { profile: Profile }) {
       if (filterUser) rows = rows.filter((r) => r.user_id === filterUser);
       if (filterDept) rows = rows.filter((r) => r.dept_id === filterDept);
       setShifts(rows);
+      setCalendarBusy(view === 'my' ? busyRows : []);
     }
     } catch (e) {
       console.error(e);
       setShifts([]);
+      setCalendarBusy([]);
     } finally {
       if (!silent) setLoading(false);
     }
@@ -395,13 +412,37 @@ export function RotaClient({ profile }: { profile: Profile }) {
 
   useEffect(() => {
     const ch = supabase
-      .channel(`rota-shifts-${profile.org_id}`)
+      .channel(`rota-shifts-cal-${profile.org_id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'rota_shifts',
+          filter: `org_id=eq.${profile.org_id}`,
+        },
+        () => {
+          void loadRef.current({ silent: true });
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'calendar_events',
+          filter: `org_id=eq.${profile.org_id}`,
+        },
+        () => {
+          void loadRef.current({ silent: true });
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'calendar_event_attendees',
           filter: `org_id=eq.${profile.org_id}`,
         },
         () => {
@@ -661,9 +702,9 @@ export function RotaClient({ profile }: { profile: Profile }) {
         ))}
             </div>
             {canTeam ? (
-              <p className="mt-3 max-w-2xl text-[12px] leading-relaxed text-[#6b6b6b]">
+              <p className="mt-3 max-w-2xl text-left text-pretty text-[12px] leading-relaxed text-[#6b6b6b]">
                 <strong className="font-semibold text-[#121212]">Department</strong> shows shifts in the departments
-                you work with. If you are a manager, that usually means departments you manage.
+                you work with. If you are a manager, that usually means departments you{'\u00A0'}manage.
               </p>
             ) : null}
             {!canTeam ? (
@@ -695,6 +736,14 @@ export function RotaClient({ profile }: { profile: Profile }) {
             >
               Today
             </button>
+            {view === 'my' && calendarBusy.length > 0 ? (
+              <Link
+                href="/calendar"
+                className="text-[12px] font-medium text-[#5b21b6] underline underline-offset-2 hover:text-[#4c1d95]"
+              >
+                Open calendar
+              </Link>
+            ) : null}
           </div>
           <button
             type="button"
@@ -780,7 +829,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
           <p className="text-sm text-[#6b6b6b]">Loading...</p>
         ) : listMode ? (
           <ul className="flex flex-col gap-3">
-            {shifts.length === 0 ? (
+            {shifts.length === 0 && calendarBusy.length === 0 ? (
               <li className="rounded-xl border border-dashed border-[#d4d2cc] bg-[#faf9f6] px-5 py-8 text-center">
                 <p className="text-[15px] font-medium text-[#121212]">No shifts this week</p>
                 <p className="mt-1 text-[13px] text-[#6b6b6b]">Try another week or switch to Department / Full rota.</p>
@@ -840,10 +889,30 @@ export function RotaClient({ profile }: { profile: Profile }) {
                 );
               })
             )}
+            {view === 'my' && calendarBusy.length > 0
+              ? calendarBusy.map((c) => (
+                  <li
+                    key={`cal-${c.id}`}
+                    className="flex items-start gap-3 rounded-xl border border-[#ddd6fe] bg-[#f5f3ff] px-[18px] py-3"
+                  >
+                    <span
+                      className="mt-1 h-8 w-1 shrink-0 rounded-full bg-[#a78bfa] ring-1 ring-[#c4b5fd]"
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11.5px] font-semibold text-[#5b21b6]">
+                        {formatShiftTimeRange(c.start_time, c.end_time, profile.org_timezone)}
+                      </div>
+                      <div className="mt-0.5 text-[14px] font-medium text-[#121212]">{c.title}</div>
+                      <div className="mt-0.5 text-[12.5px] text-[#6b6b6b]">From org calendar (not a shift)</div>
+                    </div>
+                  </li>
+                ))
+              : null}
           </ul>
         ) : (
           <div className="space-y-3">
-            {shifts.length === 0 ? (
+            {shifts.length === 0 && calendarBusy.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[#d4d2cc] bg-[#faf9f6] px-4 py-3 text-center sm:px-5">
                 <p className="text-[14px] font-medium text-[#121212]">No shifts this week</p>
                 <p className="mt-0.5 text-[13px] text-[#6b6b6b]">
@@ -877,6 +946,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
               onShiftTimesUpdated={(id, start, end) => persistShiftMove(id, start, end)}
               onBackgroundSlotClick={canEdit ? (d) => openQuickAddFromGrid(d) : undefined}
               draftSlotHighlight={canEdit ? draftSlotHighlight : null}
+              calendarBusyBlocks={view === 'my' ? calendarBusy : undefined}
             />
                     </div>
                   )}

@@ -126,7 +126,7 @@ export function AdminRecruitmentDetailClient({
 
       {/* Back + header */}
       <Link href="/hr/recruitment" className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-        ← Recruitment requests
+        ← Requests
       </Link>
 
       <div className="mt-5 mb-6 flex flex-wrap items-start justify-between gap-4">

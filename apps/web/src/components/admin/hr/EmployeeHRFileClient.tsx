@@ -121,6 +121,8 @@ type Employee = {
   average_weekly_earnings_gbp?: number | null;
   timesheet_clock_enabled?: boolean | null;
   hourly_pay_gbp?: number | null;
+  /** When true, person has no paid annual leave (pro-rata and org defaults yield 0). */
+  annual_leave_entitlement_exempt?: boolean | null;
   probation_check_completed_at?: string | null;
   probation_check_completed_by?: string | null;
 };
@@ -225,6 +227,7 @@ function fieldLabel(f: string) {
     pay_frequency: 'Pay frequency',
     contracted_days_per_week: 'Contracted days per week',
     average_weekly_earnings_gbp: 'Average weekly earnings (AWE)',
+    annual_leave_entitlement_exempt: 'No paid annual leave entitlement',
     probation_check_completed_at: 'Probation check completed',
     probation_check_completed_by: 'Probation check recorded by (user id)',
   };
@@ -398,6 +401,9 @@ export function EmployeeHRFileClient({
   const [hourlyPayGbp, setHourlyPayGbp] = useState(
     employee.hourly_pay_gbp != null ? String(employee.hourly_pay_gbp) : '',
   );
+  const [annualLeaveEntitlementExempt, setAnnualLeaveEntitlementExempt] = useState(
+    Boolean(employee.annual_leave_entitlement_exempt),
+  );
   const [customFieldRows, setCustomFieldRows] = useState<CustomFieldRow[]>(() =>
     customFieldRowsFromEmployee(employee.custom_fields),
   );
@@ -451,6 +457,7 @@ export function EmployeeHRFileClient({
     setAverageWeeklyEarnings(emp.average_weekly_earnings_gbp != null ? String(emp.average_weekly_earnings_gbp) : '');
     setTimesheetClockEnabled(Boolean(emp.timesheet_clock_enabled));
     setHourlyPayGbp(emp.hourly_pay_gbp != null ? String(emp.hourly_pay_gbp) : '');
+    setAnnualLeaveEntitlementExempt(Boolean(emp.annual_leave_entitlement_exempt));
     setCustomFieldRows(customFieldRowsFromEmployee(emp.custom_fields));
   }
 
@@ -514,6 +521,7 @@ export function EmployeeHRFileClient({
     );
     setTimesheetClockEnabled(Boolean(employee.timesheet_clock_enabled));
     setHourlyPayGbp(employee.hourly_pay_gbp != null ? String(employee.hourly_pay_gbp) : '');
+    setAnnualLeaveEntitlementExempt(Boolean(employee.annual_leave_entitlement_exempt));
     setCustomFieldRows(customFieldRowsFromEmployee(employee.custom_fields));
     setMsg(null);
     setEditing(false);
@@ -578,6 +586,7 @@ export function EmployeeHRFileClient({
           averageWeeklyEarnings.trim() === '' ? null : Number(averageWeeklyEarnings),
         p_timesheet_clock_enabled: timesheetClockEnabled,
         p_hourly_pay_gbp: hourlyPayGbp.trim() === '' ? null : Number(hourlyPayGbp),
+        p_annual_leave_entitlement_exempt: annualLeaveEntitlementExempt,
       })
     );
     const error = (response as { error: { message: string } | null }).error;
@@ -963,6 +972,22 @@ export function EmployeeHRFileClient({
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
                 placeholder="For wagesheet basic pay"
               />
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={annualLeaveEntitlementExempt}
+                onChange={(e) => setAnnualLeaveEntitlementExempt(e.target.checked)}
+                className="mt-0.5 rounded border-[#d8d8d8]"
+              />
+              <span>
+                No paid annual leave entitlement
+                <span className="mt-0.5 block text-[11px] font-normal text-[#9b9b9b]">
+                  Use for roles that do not accrue holiday (e.g. some hourly or casual contracts). Bulk leave
+                  defaults and pro-rata will show 0 days; turning this off does not restore entitlement automatically
+                  — use Leave settings or set an allowance manually.
+                </span>
+              </span>
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               No. of positions (headcount lines)
@@ -1471,6 +1496,12 @@ export function EmployeeHRFileClient({
                   </dd>
                 </div>
                 <div>
+                  <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Annual leave entitlement</dt>
+                  <dd className="mt-0.5 text-[#121212]">
+                    {employee.annual_leave_entitlement_exempt ? 'Not eligible (no paid annual leave)' : 'Standard'}
+                  </dd>
+                </div>
+                <div>
                   <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">No. of positions</dt>
                   <dd className="mt-0.5 text-[#121212]">
                     {employee.positions_count != null ? String(employee.positions_count) : '—'}
@@ -1762,7 +1793,11 @@ export function EmployeeHRFileClient({
           <div>
             <p className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Annual entitlement</p>
             <p className="mt-0.5 text-[#121212]">
-              {leaveAllowance ? `${leaveAllowance.annual_entitlement_days} days` : '—'}
+              {employee.annual_leave_entitlement_exempt
+                ? 'Not eligible'
+                : leaveAllowance
+                  ? `${leaveAllowance.annual_entitlement_days} days`
+                  : '—'}
             </p>
           </div>
           <div>

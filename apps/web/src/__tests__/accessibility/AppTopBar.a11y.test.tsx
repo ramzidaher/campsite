@@ -2,6 +2,21 @@ import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
 import type { AnchorHTMLAttributes } from 'react';
 import { AppTopBar } from '@/components/shell/AppTopBar';
+import { buildShellCommandPaletteSections } from '@/lib/shell/shellCommandPaletteSections';
+
+const testPalette = buildShellCommandPaletteSections({
+  orgName: 'Test Org',
+  showMyHrRecordNav: false,
+  showLeaveNav: false,
+  showPerformanceNav: false,
+  showOneOnOneNav: false,
+  showOnboardingNav: false,
+  showApprovalsStandalone: false,
+  managerNavSectionLabel: 'Manager',
+  managerNavItems: null,
+  hrNavItems: null,
+  adminNavItems: null,
+});
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -27,6 +42,8 @@ describe('AppTopBar accessibility', () => {
         ]}
         showMemberSearch={false}
         orgId="org-1"
+        orgName="Test Org"
+        paletteSections={testPalette}
       />
     );
     const results = await axe(container);

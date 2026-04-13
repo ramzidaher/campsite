@@ -75,7 +75,7 @@ export function OfferTemplateFormClient({
     <div className="mx-auto max-w-6xl space-y-6 px-5 py-7 sm:px-7">
       <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">
         <Link href="/hr/offer-templates" className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-          Offer templates
+          Templates
         </Link>
         <span className="mx-1.5 text-[#cfcfcf]">/</span>
         {mode === 'create' ? 'New' : 'Edit'}

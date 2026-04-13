@@ -1,5 +1,5 @@
 import { EmployeeHRFileClient } from '@/components/admin/hr/EmployeeHRFileClient';
-import { currentLeaveYearKeyUtc } from '@/lib/datetime';
+import { currentLeaveYearKeyForOrgCalendar, currentLeaveYearKeyUtc } from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
@@ -52,17 +52,21 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
     })
     .then(({ data }) => !!data);
 
-  const { data: leaveSettingsForYear } = await supabase
-    .from('org_leave_settings')
-    .select('leave_year_start_month, leave_year_start_day')
-    .eq('org_id', orgId)
-    .maybeSingle();
+  const [{ data: leaveSettingsForYear }, { data: orgForTz }] = await Promise.all([
+    supabase
+      .from('org_leave_settings')
+      .select('leave_year_start_month, leave_year_start_day')
+      .eq('org_id', orgId)
+      .maybeSingle(),
+    supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
+  ]);
 
-  const hrFileLeaveYearKey = currentLeaveYearKeyUtc(
-    new Date(),
-    Number(leaveSettingsForYear?.leave_year_start_month ?? 1),
-    Number(leaveSettingsForYear?.leave_year_start_day ?? 1),
-  );
+  const orgTz = (orgForTz?.timezone as string | null) ?? null;
+  const sm = Number(leaveSettingsForYear?.leave_year_start_month ?? 1);
+  const sd = Number(leaveSettingsForYear?.leave_year_start_day ?? 1);
+  const hrFileLeaveYearKey = orgTz
+    ? currentLeaveYearKeyForOrgCalendar(new Date(), orgTz, sm, sd)
+    : currentLeaveYearKeyUtc(new Date(), sm, sd);
 
   const [{ data: fileRows }, { data: leaveData }, { data: sickScore }] = await Promise.all([
     supabase.rpc('hr_employee_file', { p_user_id: userId }),

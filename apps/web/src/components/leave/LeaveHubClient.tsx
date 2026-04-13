@@ -1,7 +1,12 @@
 'use client';
 
 import { useShellRefresh } from '@/hooks/useShellRefresh';
-import { currentLeaveYearKey } from '@/lib/datetime';
+import {
+  calendarYmdInTimeZone,
+  currentLeaveYearKeyForOrgCalendar,
+  currentLeaveYearKeyUtc,
+  formatLeaveYearPeriodRange,
+} from '@/lib/datetime';
 import { leaveRangeOverlapsExisting } from '@/lib/leaveDateOverlap';
 import { formatToilMinutes, toilInputToMinutes } from '@/lib/toilDuration';
 import { countOrgLeaveDaysInclusive, overlapInclusiveRange, type OrgLeaveDayOptions } from '@/lib/workingDays';
@@ -114,6 +119,7 @@ export function LeaveHubClient({
   canApprove,
   canManage,
   initialYear,
+  orgTimezone,
   leaveYearStartMonth,
   leaveYearStartDay,
   approvedChangeWindowHours,
@@ -127,6 +133,8 @@ export function LeaveHubClient({
   canApprove: boolean;
   canManage: boolean;
   initialYear: string;
+  /** Org IANA zone for leave-year “today”; null falls back to UTC (matches server when unset). */
+  orgTimezone: string | null;
   leaveYearStartMonth: number;
   leaveYearStartDay: number;
   approvedChangeWindowHours: number;
@@ -141,8 +149,12 @@ export function LeaveHubClient({
   const [year, setYear] = useState(initialYear);
 
   useLayoutEffect(() => {
-    setYear(currentLeaveYearKey(new Date(), leaveYearStartMonth, leaveYearStartDay));
-  }, [leaveYearStartMonth, leaveYearStartDay]);
+    setYear(
+      orgTimezone
+        ? currentLeaveYearKeyForOrgCalendar(new Date(), orgTimezone, leaveYearStartMonth, leaveYearStartDay)
+        : currentLeaveYearKeyUtc(new Date(), leaveYearStartMonth, leaveYearStartDay),
+    );
+  }, [orgTimezone, leaveYearStartMonth, leaveYearStartDay]);
   const [allowance, setAllowance] = useState<AllowanceRow | null>(null);
   const [myRequests, setMyRequests] = useState<LeaveRequest[]>([]);
   const [myToilCreditRequests, setMyToilCreditRequests] = useState<ToilCreditRequest[]>([]);
@@ -180,8 +192,14 @@ export function LeaveHubClient({
   const [toilEarnUnit, setToilEarnUnit] = useState<'minutes' | 'hours' | 'days'>('hours');
   const [toilEarnNote, setToilEarnNote] = useState('');
 
+  const selectedLeavePeriodLabel = useMemo(
+    () => formatLeaveYearPeriodRange(year, leaveYearStartMonth, leaveYearStartDay),
+    [year, leaveYearStartMonth, leaveYearStartDay],
+  );
+
   const yearOptions = useMemo(() => {
-    const cy = new Date().getFullYear();
+    const now = new Date();
+    const cy = orgTimezone ? calendarYmdInTimeZone(now, orgTimezone).y : now.getUTCFullYear();
     const base = [cy - 1, cy, cy + 1];
     const yNum = Number(year);
     if (Number.isFinite(yNum) && !base.includes(yNum)) {
@@ -189,7 +207,7 @@ export function LeaveHubClient({
       base.sort((a, b) => a - b);
     }
     return base.map(String);
-  }, [year]);
+  }, [year, orgTimezone]);
 
   const load = useCallback(async () => {
     setMsg(null);
@@ -532,18 +550,21 @@ export function LeaveHubClient({
           <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Time off</h1>
           <p className="mt-1 text-[13.5px] text-[#6b6b6b]">Book leave, log sick days, and see your balances.</p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 text-[12px] text-[#6b6b6b]">
-            Year
-            <select value={year} onChange={(e) => setYear(e.target.value)} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] focus:border-[#121212] focus:outline-none">
-              {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </label>
-          {canManage ? (
-            <Link href="/hr/leave" className="inline-flex h-8 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]">
-              Admin settings
-            </Link>
-          ) : null}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <label className="flex flex-wrap items-center justify-end gap-2 text-[12px] text-[#6b6b6b]">
+              Leave year
+              <select value={year} onChange={(e) => setYear(e.target.value)} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] focus:border-[#121212] focus:outline-none">
+                {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </label>
+            {canManage ? (
+              <Link href="/hr/leave" className="inline-flex h-8 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]">
+                Admin settings
+              </Link>
+            ) : null}
+          </div>
+          <p className="max-w-[min(100%,320px)] text-right text-[11px] leading-snug text-[#9b9b9b]">{selectedLeavePeriodLabel}</p>
         </div>
       </div>
 

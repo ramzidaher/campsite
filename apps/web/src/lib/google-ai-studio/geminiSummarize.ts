@@ -1,3 +1,5 @@
+import { userFacingScoutError } from '@campsite/types';
+
 const DEFAULT_MODEL = 'gemini-2.0-flash';
 const MAX_INPUT_CHARS = 14_000;
 /** Inline PDFs cannot exceed Gemini request limits; keep conservative. */
@@ -61,8 +63,7 @@ ${plain}`;
       signal: AbortSignal.timeout(45_000),
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Request failed';
-    return { error: msg };
+    return { error: userFacingScoutError(e instanceof Error ? e.message : 'Request failed') };
   }
 
   let json: GenerateResponse;
@@ -73,8 +74,8 @@ ${plain}`;
   }
 
   if (!res.ok) {
-    const msg = json.error?.message ?? res.statusText ?? 'AI request failed';
-    return { error: msg };
+    const raw = json.error?.message ?? res.statusText ?? 'AI request failed';
+    return { error: userFacingScoutError(raw) };
   }
 
   const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('')?.trim();
@@ -151,8 +152,7 @@ No machine-readable body was provided for this file type (${name}). Summarize on
       signal: AbortSignal.timeout(90_000),
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Request failed';
-    return { error: msg };
+    return { error: userFacingScoutError(e instanceof Error ? e.message : 'Request failed') };
   }
 
   let json: GenerateResponse;
@@ -163,8 +163,8 @@ No machine-readable body was provided for this file type (${name}). Summarize on
   }
 
   if (!res.ok) {
-    const msg = json.error?.message ?? res.statusText ?? 'AI request failed';
-    return { error: msg };
+    const raw = json.error?.message ?? res.statusText ?? 'AI request failed';
+    return { error: userFacingScoutError(raw) };
   }
 
   const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('')?.trim();
@@ -298,8 +298,7 @@ ${q}`,
       signal: AbortSignal.timeout(90_000),
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Request failed';
-    return { error: msg };
+    return { error: userFacingScoutError(e instanceof Error ? e.message : 'Request failed') };
   }
 
   let json: GenerateResponse;
@@ -310,8 +309,8 @@ ${q}`,
   }
 
   if (!res.ok) {
-    const msg = json.error?.message ?? res.statusText ?? 'AI request failed';
-    return { error: msg };
+    const raw = json.error?.message ?? res.statusText ?? 'AI request failed';
+    return { error: userFacingScoutError(raw) };
   }
 
   const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('')?.trim();

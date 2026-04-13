@@ -1,3 +1,4 @@
+import { userFacingScoutError } from '@campsite/types';
 import { Card, useCampsiteTheme } from '@campsite/ui';
 import Constants from 'expo-constants';
 import { useCallback, useMemo, useState } from 'react';
@@ -59,13 +60,13 @@ export function ResourceDocumentAssistant({ resourceId }: { resourceId: string }
         /* ignore */
       }
       if (!res.ok) {
-        const msg =
+        const raw =
           data.error === 'not_configured' && typeof data.message === 'string'
             ? data.message
             : typeof data.error === 'string'
               ? data.error
               : 'Could not get a reply.';
-        setErr(msg);
+        setErr(userFacingScoutError(raw));
         setMessages(previous);
         return;
       }
@@ -79,7 +80,7 @@ export function ResourceDocumentAssistant({ resourceId }: { resourceId: string }
         setNote(data.note.trim());
       }
     } catch {
-      setErr('Network error.');
+      setErr(userFacingScoutError('Network error.'));
       setMessages(previous);
     } finally {
       setBusy(false);

@@ -31,6 +31,7 @@ import {
   formatShiftTimeRange,
   startOfWeekMonday,
 } from '@/lib/calendarDatetime';
+import { loadMyCalendarBusyForRotaWeek } from '@/lib/rota/calendarBusyForRota';
 import { friendlyDbError } from '@/lib/rota/friendlyDbError';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -263,6 +264,22 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
     },
   });
 
+  const calendarBusyQuery = useQuery({
+    queryKey: ['mobile-rota-calendar-busy', profile.org_id, profile.id, from, to],
+    enabled: Boolean(
+      profile.org_id && isSupabaseConfigured() && metaQuery.isSuccess && view === 'my',
+    ),
+    queryFn: async () => {
+      const supabase = getSupabase();
+      return loadMyCalendarBusyForRotaWeek(supabase, {
+        orgId: profile.org_id!,
+        profileId: profile.id,
+        fromIso: from,
+        toIso: to,
+      });
+    },
+  });
+
   const visibleShiftsQuery = useQuery({
     queryKey: ['mobile-rota-visible-week', profile.org_id, from, to],
     enabled: Boolean(profile.org_id && isSupabaseConfigured()),
@@ -324,6 +341,7 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
   });
 
   const shifts = shiftsQuery.data ?? EMPTY_SHIFTS;
+  const calendarBusy = calendarBusyQuery.data ?? [];
   const orgTz = orgTzQuery.data ?? null;
 
   const days = useMemo(() => {
@@ -361,6 +379,7 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
   const invalidateShifts = () => {
     void qc.invalidateQueries({ queryKey: ['mobile-rota-shifts-v2'] });
     void qc.invalidateQueries({ queryKey: ['mobile-rota-visible-week'] });
+    void qc.invalidateQueries({ queryKey: ['mobile-rota-calendar-busy'] });
   };
 
   const loadRef = useRef(invalidateShifts);
@@ -370,13 +389,33 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
     if (!profile.org_id || !isSupabaseConfigured()) return;
     const supabase = getSupabase();
     const ch = supabase
-      .channel(`rota-shifts-mobile-${profile.org_id}`)
+      .channel(`rota-shifts-cal-mobile-${profile.org_id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'rota_shifts',
+          filter: `org_id=eq.${profile.org_id}`,
+        },
+        () => loadRef.current(),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'calendar_events',
+          filter: `org_id=eq.${profile.org_id}`,
+        },
+        () => loadRef.current(),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'calendar_event_attendees',
           filter: `org_id=eq.${profile.org_id}`,
         },
         () => loadRef.current(),
@@ -518,7 +557,8 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
   const loading =
     shiftsQuery.isPending ||
     metaQuery.isPending ||
-    (view === 'team' && profile.role === 'manager' && metaQuery.isPending);
+    (view === 'team' && profile.role === 'manager' && metaQuery.isPending) ||
+    (view === 'my' && calendarBusyQuery.isPending);
 
   const scopeSegments = [
     { mode: 'my' as const, label: 'Mine', show: true },
@@ -552,7 +592,8 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
               metaQuery.isRefetching ||
               requestsQuery.isRefetching ||
               visibleShiftsQuery.isRefetching ||
-              orgTzQuery.isRefetching
+              orgTzQuery.isRefetching ||
+              calendarBusyQuery.isRefetching
             }
             onRefresh={() => {
               void shiftsQuery.refetch();
@@ -560,6 +601,7 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
               void requestsQuery.refetch();
               void visibleShiftsQuery.refetch();
               void orgTzQuery.refetch();
+              void calendarBusyQuery.refetch();
             }}
             tintColor={tokens.textPrimary}
             colors={[tokens.textPrimary]}
@@ -714,89 +756,114 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
             ) : loading ? (
               <ActivityIndicator style={{ marginTop: 24 }} color={tokens.textPrimary} />
             ) : listMode ? (
-              shifts.length === 0 ? (
+              shifts.length === 0 && calendarBusy.length === 0 ? (
                 <Text style={[styles.empty, { color: tokens.textSecondary }]}>No shifts this week.</Text>
               ) : (
-                shifts.map((s) => {
-                  const v = shiftVariant(s.dept_id ?? s.id);
-                  const { time, primary, secondary } = shiftTitleLines(s);
-                  const openSlot = s.user_id === null;
-                  const showClaim = openSlot;
-                  const showEdit = canEdit;
-                  const showFooter = showClaim || showEdit;
-                  return (
-                    <View
-                      key={s.id}
-                      style={[
-                        styles.listCardShell,
-                        styles.listCardElevated,
-                        { backgroundColor: tokens.surface },
-                      ]}
-                    >
-                      <View style={[styles.listCardAccent, { backgroundColor: v.border }]} />
-                      <View style={styles.listCardBody}>
-                        <Text style={[styles.listTime, { color: v.text }]}>{time}</Text>
-                        <View style={styles.listTitleRow}>
-                          <Text style={[styles.listTitle, { color: tokens.textPrimary }]} numberOfLines={2}>
-                            {primary}
-                          </Text>
-                          {overlapShiftIds.has(s.id) ? (
-                            <View style={styles.overlapChip}>
-                              <Text style={styles.overlapChipText}>Overlap</Text>
-                            </View>
+                <>
+                  {shifts.map((s) => {
+                    const v = shiftVariant(s.dept_id ?? s.id);
+                    const { time, primary, secondary } = shiftTitleLines(s);
+                    const openSlot = s.user_id === null;
+                    const showClaim = openSlot;
+                    const showEdit = canEdit;
+                    const showFooter = showClaim || showEdit;
+                    return (
+                      <View
+                        key={s.id}
+                        style={[
+                          styles.listCardShell,
+                          styles.listCardElevated,
+                          { backgroundColor: tokens.surface },
+                        ]}
+                      >
+                        <View style={[styles.listCardAccent, { backgroundColor: v.border }]} />
+                        <View style={styles.listCardBody}>
+                          <Text style={[styles.listTime, { color: v.text }]}>{time}</Text>
+                          <View style={styles.listTitleRow}>
+                            <Text style={[styles.listTitle, { color: tokens.textPrimary }]} numberOfLines={2}>
+                              {primary}
+                            </Text>
+                            {overlapShiftIds.has(s.id) ? (
+                              <View style={styles.overlapChip}>
+                                <Text style={styles.overlapChipText}>Overlap</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          {secondary ? (
+                            <Text
+                              style={[styles.listMeta, { color: tokens.textSecondary }]}
+                              numberOfLines={2}
+                            >
+                              {secondary}
+                            </Text>
                           ) : null}
-                        </View>
-                        {secondary ? (
-                          <Text
-                            style={[styles.listMeta, { color: tokens.textSecondary }]}
-                            numberOfLines={2}
-                          >
-                            {secondary}
-                          </Text>
-                        ) : null}
-                        {showFooter ? (
-                          <View style={[styles.listFooter, { borderTopColor: tokens.border }]}>
-                            <View style={styles.listFooterLeft}>
-                              {showClaim ? (
+                          {showFooter ? (
+                            <View style={[styles.listFooter, { borderTopColor: tokens.border }]}>
+                              <View style={styles.listFooterLeft}>
+                                {showClaim ? (
+                                  <Pressable
+                                    style={({ pressed }) => [
+                                      styles.listClaimBtn,
+                                      pressed && styles.listClaimBtnPressed,
+                                    ]}
+                                    onPress={() =>
+                                      claimMut.mutate(s.id, {
+                                        onError: (e: Error) => Alert.alert('Could not claim', e.message),
+                                      })
+                                    }
+                                  >
+                                    <Ionicons name="hand-left-outline" size={17} color="#fff" />
+                                    <Text style={styles.listClaimBtnText}>Claim slot</Text>
+                                  </Pressable>
+                                ) : null}
+                              </View>
+                              {showEdit ? (
                                 <Pressable
                                   style={({ pressed }) => [
-                                    styles.listClaimBtn,
-                                    pressed && styles.listClaimBtnPressed,
+                                    styles.listEditBtn,
+                                    pressed && { opacity: 0.65 },
                                   ]}
-                                  onPress={() =>
-                                    claimMut.mutate(s.id, {
-                                      onError: (e: Error) => Alert.alert('Could not claim', e.message),
-                                    })
-                                  }
+                                  onPress={() => openEditShift(s)}
+                                  hitSlop={10}
                                 >
-                                  <Ionicons name="hand-left-outline" size={17} color="#fff" />
-                                  <Text style={styles.listClaimBtnText}>Claim slot</Text>
+                                  <Ionicons name="create-outline" size={20} color={tokens.textPrimary} />
+                                  <Text style={[styles.listEditBtnText, { color: tokens.textPrimary }]}>Edit</Text>
                                 </Pressable>
                               ) : null}
                             </View>
-                            {showEdit ? (
-                              <Pressable
-                                style={({ pressed }) => [
-                                  styles.listEditBtn,
-                                  pressed && { opacity: 0.65 },
-                                ]}
-                                onPress={() => openEditShift(s)}
-                                hitSlop={10}
-                              >
-                                <Ionicons name="create-outline" size={20} color={tokens.textPrimary} />
-                                <Text style={[styles.listEditBtnText, { color: tokens.textPrimary }]}>Edit</Text>
-                              </Pressable>
-                            ) : null}
-                          </View>
-                        ) : null}
+                          ) : null}
+                        </View>
                       </View>
-                    </View>
-                  );
-                })
+                    );
+                  })}
+                  {view === 'my' && calendarBusy.length > 0
+                    ? calendarBusy.map((c) => (
+                        <View
+                          key={`cal-${c.id}`}
+                          style={[
+                            styles.listCardShell,
+                            styles.listCardElevated,
+                            { backgroundColor: '#f5f3ff', borderColor: '#ddd6fe', borderWidth: 1 },
+                          ]}
+                        >
+                          <View style={[styles.listCardAccent, { backgroundColor: '#a78bfa' }]} />
+                          <View style={styles.listCardBody}>
+                            <Text style={[styles.listTime, { color: '#5b21b6' }]}>
+                              {formatShiftTimeRange(c.start_time, c.end_time, orgTz)}
+                            </Text>
+                            <Text style={[styles.listTitle, { color: tokens.textPrimary }]} numberOfLines={2}>
+                              {c.title}
+                            </Text>
+                            <Text style={[styles.listMeta, { color: tokens.textSecondary }]}>Org calendar (not a shift)</Text>
+                          </View>
+                        </View>
+                      ))
+                    : null}
+                </>
               )
             ) : (
               <View style={{ marginTop: 16 }}>
-                {shifts.length === 0 ? (
+                {shifts.length === 0 && calendarBusy.length === 0 ? (
                   <Text style={[styles.empty, { color: tokens.textSecondary, marginBottom: 12 }]}>
                     No shifts this week. {canEdit ? 'Tap the grid or use Add shift.' : ''}
                   </Text>
@@ -810,6 +877,7 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
                   canEdit={canEdit}
                   onShiftPress={openEditShift}
                   onBackgroundSlotPress={canEdit ? handleGridSlot : undefined}
+                  calendarBusyBlocks={view === 'my' ? calendarBusy : undefined}
                 />
               </View>
             )}
