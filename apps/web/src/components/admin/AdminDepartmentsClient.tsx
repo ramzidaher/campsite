@@ -625,16 +625,12 @@ function DeptGridCard({
               Archived
             </span>
           ) : null}
-          <button
-            type="button"
+          <span
             className="rounded-md px-2 py-1 text-[11px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen();
-            }}
+            aria-hidden
           >
             Edit
-          </button>
+          </span>
         </div>
       </div>
       <div className="font-authSerif text-[22px] leading-none text-[#121212]">{memberCount}</div>

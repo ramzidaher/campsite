@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react';
 export const SHELL_REFRESH_EVENT = 'campsite:shell-refresh';
 
 /**
- * Re-run client-side data loaders when the app shell auto-refreshes (same cadence as `router.refresh()`).
- * Use for dashboards that fetch in the browser; server-rendered props update from `router.refresh()` alone.
+ * Re-run client-side data loaders when the app shell auto-refreshes (periodic tick + tab focus).
+ * Use for dashboards that fetch in the browser; server-rendered props update from `router.refresh()` on focus only.
  */
 export function useShellRefresh(onRefresh: () => void) {
   const cbRef = useRef(onRefresh);

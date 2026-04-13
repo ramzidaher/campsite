@@ -5,13 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-// Interval for React Query invalidation + SHELL_REFRESH_EVENT (keeps client-side
-// lists fresh). router.refresh() is intentionally NOT called on the interval —
-// badge counts are now managed by useShellBadgeCounts (polls every 60 s), so a
-// 3-second server re-render per user would generate ~10 000 DB calls/second at
-// scale. router.refresh() still fires on focus/visibility change for structural
-// layout data (org name, nav permissions).
-const REFRESH_INTERVAL_MS = 3_000;
+// Interval for targeted React Query invalidation + SHELL_REFRESH_EVENT (keeps
+// client-side lists reasonably fresh). router.refresh() is NOT called on this
+// timer — only on tab focus / visibility (see refresh(true)).
+//
+// IMPORTANT: Do not call invalidateQueries() without a predicate — that refetches
+// *every* active query (including shell-badge-counts), which would hit
+// main_shell_badge_counts_bundle ~20×/min per tab and overload Postgres.
+//
+// Badge counts: useShellBadgeCounts (60 s) + window focus. Broadcast feed:
+// invalidated here on a slower cadence only.
+const REFRESH_INTERVAL_MS = 30_000;
 const MIN_REFRESH_GAP_MS  = 2_500;
 
 export function ShellAutoRefresh() {
@@ -32,7 +36,12 @@ export function ShellAutoRefresh() {
     const refresh = (includeRouterRefresh = false) => {
       if (!shouldRefreshNow()) return;
       lastRefreshAtRef.current = Date.now();
-      void queryClient.invalidateQueries({ refetchType: 'active' });
+      void queryClient.invalidateQueries({
+        refetchType: 'active',
+        predicate: (q) =>
+          Array.isArray(q.queryKey) &&
+          (q.queryKey[0] === 'broadcast-feed' || q.queryKey[0] === 'broadcast-feed-search'),
+      });
       window.dispatchEvent(new Event(SHELL_REFRESH_EVENT));
       // Only do a full server re-render when the user returns to the tab —
       // not on the 3-second background interval.

@@ -204,6 +204,19 @@ export function BroadcastComposer({
 
   const isOrgWideActive = !draftOnly && deliveryMode === 'org_wide';
 
+  /** Stable across parent re-fetches: `BroadcastsClient` replaces `departments` with a new array on each periodic shell refresh even when rows are unchanged. */
+  const departmentIdsSignature = useMemo(
+    () =>
+      departments
+        .map((d) => String(d.id).trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join('|'),
+    [departments]
+  );
+  const departmentsRef = useRef(departments);
+  departmentsRef.current = departments;
+
   useEffect(() => {
     dirty.current = true;
   }, [
@@ -222,7 +235,8 @@ export function BroadcastComposer({
   ]);
 
   useEffect(() => {
-    if (draftOnly || !departments.length) {
+    const depts = departmentsRef.current;
+    if (draftOnly || !depts.length) {
       setOrgWideDeptIds([]);
       setOrgWideCapsLoading(false);
       return;
@@ -232,7 +246,7 @@ export function BroadcastComposer({
     void (async () => {
       const allowed: string[] = [];
       await Promise.all(
-        departments.map(async (d) => {
+        depts.map(async (d) => {
           const { data, error: rpcErr } = await supabase.rpc('get_my_dept_broadcast_caps', {
             p_dept_id: d.id,
           });
@@ -248,7 +262,7 @@ export function BroadcastComposer({
     return () => {
       cancelled = true;
     };
-  }, [departments, supabase, draftOnly]);
+  }, [departmentIdsSignature, supabase, draftOnly]);
 
   useEffect(() => {
     if (!orgWideDeptIds.length || !isOrgWideActive) return;
