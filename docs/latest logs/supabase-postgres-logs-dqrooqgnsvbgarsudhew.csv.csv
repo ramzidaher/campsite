@@ -1,0 +1,101 @@
+detail,error_severity,event_message,hint,id,identifier,timestamp
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,f06b98ef-89f2-4847-854e-0379242960c5,dqrooqgnsvbgarsudhew,1776015123247000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,76411c1a-cae5-4715-aaf1-7c36410a1022,dqrooqgnsvbgarsudhew,1776015123247000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,657800a9-60f9-46d1-8d6d-c79d9fb23da2,dqrooqgnsvbgarsudhew,1776015123008000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,82129607-dff1-4885-a157-e48807ed648a,dqrooqgnsvbgarsudhew,1776015123008000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,098e9012-090c-4138-a21e-ea9cf3c9a4f5,dqrooqgnsvbgarsudhew,1776015123007000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,068b7926-c6f3-4ac0-9cbb-ef6acf178189,dqrooqgnsvbgarsudhew,1776015123007000
+null,LOG,connection received: host=2a05:d018:1e14:200:3b39:79b4:91fc:2da0 port=52004,null,28543cfe-3ed4-46e0-806f-db434b8fa51f,dqrooqgnsvbgarsudhew,1776015122899000
+null,LOG,connection received: host=2a05:d018:1e14:207:26c4:3f3c:3b47:e8f6 port=37996,null,681457a3-daf2-41c9-9c60-edc925016b72,dqrooqgnsvbgarsudhew,1776015122896000
+null,LOG,connection received: host=2a05:d018:1e14:207:26c4:3f3c:3b47:e8f6 port=37988,null,b4ff9ac8-1963-474a-a9df-c4e525f22ee8,dqrooqgnsvbgarsudhew,1776015122893000
+null,LOG,connection received: host=2a05:d018:1e14:205:9d33:efe2:567b:9b02 port=52766,null,c79e7a72-e887-4009-a071-d1b3cf57166f,dqrooqgnsvbgarsudhew,1776015122892000
+null,LOG,connection received: host=2a05:d018:1e14:206:7e0a:c868:4755:171 port=44630,null,f03197ac-f171-45e5-a49b-f1a35a61b965,dqrooqgnsvbgarsudhew,1776015122891000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=pg_cron SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,b5063648-9ff0-4bc5-a63e-5c88bf1e8e2b,dqrooqgnsvbgarsudhew,1776015120057000
+null,LOG,"connection authenticated: user=""postgres"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,0bb6b77f-4aac-43bb-b3d8-fb1606f9e8ca,dqrooqgnsvbgarsudhew,1776015120057000
+null,LOG,cron job 1 starting: select,null,4efbc252-f1f9-4f37-bd7a-db0cc8840837,dqrooqgnsvbgarsudhew,1776015120008000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,96a37b5e-64d9-484c-852c-9154543da761,dqrooqgnsvbgarsudhew,1776015119065000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,62bc0e65-ea96-414f-8651-8aab2e976d15,dqrooqgnsvbgarsudhew,1776015119065000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,2e7bf35f-f5b4-4522-83ee-bb580d0d7f29,dqrooqgnsvbgarsudhew,1776015118997000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,0ebc57d1-c02b-4c8e-80a5-8b8a99de3718,dqrooqgnsvbgarsudhew,1776015118997000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,697539d0-3920-4e2e-b8aa-e5ff3e85853c,dqrooqgnsvbgarsudhew,1776015118841000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,e737bb35-9b42-4ab4-b786-9d62c436d273,dqrooqgnsvbgarsudhew,1776015118841000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,ead2c8fc-e6d2-4d52-a750-facc49da62c0,dqrooqgnsvbgarsudhew,1776015118771000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,570e4c41-0765-4f68-bd47-403b43afa7aa,dqrooqgnsvbgarsudhew,1776015118771000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,87b0e19f-802e-41b5-979b-8858048a8810,dqrooqgnsvbgarsudhew,1776015118643000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,56c99b20-05b6-4ec8-827e-a6bed90855ec,dqrooqgnsvbgarsudhew,1776015118643000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,1102c8e1-4e49-485c-a914-2e236b08e865,dqrooqgnsvbgarsudhew,1776015118516000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,02d84247-2df5-47a4-900f-565a8758e2c3,dqrooqgnsvbgarsudhew,1776015118516000
+null,LOG,connection received: host=2a05:d014:1c06:5f01:cd37:18bc:1fad:845e port=45442,null,5a91fedd-8ff5-4a1f-b3ef-6d4386f1c0e8,dqrooqgnsvbgarsudhew,1776015118512000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,7db7a796-44ab-42cb-80ad-4af6029f608f,dqrooqgnsvbgarsudhew,1776015108107000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,f032e687-374c-4ead-bdcb-8a387e5999eb,dqrooqgnsvbgarsudhew,1776015108107000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,f4d50974-41eb-4f9e-89bb-eca47bbd1f4d,dqrooqgnsvbgarsudhew,1776015108039000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,bc23d0b7-e9cd-40e0-a6fa-9e17b98c4e6c,dqrooqgnsvbgarsudhew,1776015108039000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,94c31200-5234-421a-9179-7408a22070c5,dqrooqgnsvbgarsudhew,1776015107989000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,0724cca6-6250-401f-bd3b-430139e5878d,dqrooqgnsvbgarsudhew,1776015107989000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,2c732f2e-8bbf-4869-88da-c7888d74f975,dqrooqgnsvbgarsudhew,1776015107835000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,ced9f3d7-680d-40b3-9797-e88b9e32b8a9,dqrooqgnsvbgarsudhew,1776015107835000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,56fbe14c-50c5-4049-ae1f-4c8e95363c2b,dqrooqgnsvbgarsudhew,1776015107729000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,6de5836e-e838-42cb-8c7c-b83a766188e5,dqrooqgnsvbgarsudhew,1776015107729000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,7f1a6dd1-45d0-4192-9416-6c744d6dbc6e,dqrooqgnsvbgarsudhew,1776015107606000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,0bf64a16-9b0d-402d-85b4-3c51810f9676,dqrooqgnsvbgarsudhew,1776015107606000
+null,LOG,connection received: host=2a05:d014:1c06:5f01:cd37:18bc:1fad:845e port=44798,null,272722a3-71f9-463e-8410-2cda4e5d15bf,dqrooqgnsvbgarsudhew,1776015107595000
+null,LOG,connection received: host=2a05:d014:1c06:5f02:b15f:690:b07f:5793 port=35178,null,45196394-64cb-4910-8f17-06c20ac62f15,dqrooqgnsvbgarsudhew,1776015088242000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,35d43a04-f004-4b6d-9eda-1b07406ba758,dqrooqgnsvbgarsudhew,1776015086878000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,ff806f3d-3af4-44cf-b1ee-68ab2ad577f2,dqrooqgnsvbgarsudhew,1776015086878000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,464620c1-425c-42f3-934e-9a88ae8d7c5c,dqrooqgnsvbgarsudhew,1776015086762000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,ffd37c6a-00df-4b3a-a732-a7ab3cb59e96,dqrooqgnsvbgarsudhew,1776015086762000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,1c09ae1a-13f6-457f-9ded-8b123cf15246,dqrooqgnsvbgarsudhew,1776015086701000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,72a6b83d-60a3-4e50-a014-8c067ed709e2,dqrooqgnsvbgarsudhew,1776015086701000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,b11bbac1-ac84-4682-9e25-5d203ac22c87,dqrooqgnsvbgarsudhew,1776015086642000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,a1c547c5-a451-4e6d-8d7f-b90e78b87ae1,dqrooqgnsvbgarsudhew,1776015086642000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,fd964179-377a-41bc-a130-d7e3f298fc2f,dqrooqgnsvbgarsudhew,1776015086515000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,d66d3a13-8d62-4d54-ad1a-482925f88679,dqrooqgnsvbgarsudhew,1776015086515000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,28e8a78f-874e-41e6-b91b-6f5350d4d3fd,dqrooqgnsvbgarsudhew,1776015086319000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,df88cd7d-32c7-471f-b171-eedd1d93692f,dqrooqgnsvbgarsudhew,1776015086319000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,c95a238c-c472-4d85-b1ee-63deb04462f3,dqrooqgnsvbgarsudhew,1776015081584000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,1b860c69-0a87-4071-ba9c-50de719192f8,dqrooqgnsvbgarsudhew,1776015081584000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,377580fb-e266-41aa-bb96-2b94ac7a5043,dqrooqgnsvbgarsudhew,1776015081525000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,65fdec5f-e6b8-471c-b3d4-dbcde2f35a73,dqrooqgnsvbgarsudhew,1776015081525000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,ea7daf3f-8ed1-4e37-9d1e-88c50932a526,dqrooqgnsvbgarsudhew,1776015081465000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,2ff240c0-3475-4dbf-8f5f-7ee070941275,dqrooqgnsvbgarsudhew,1776015081465000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,8df3db71-34b7-421b-b65a-73003c297c88,dqrooqgnsvbgarsudhew,1776015081415000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,ad6a2ab7-9224-46c9-9122-5a8a0ed8149c,dqrooqgnsvbgarsudhew,1776015081415000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,37f09580-83ab-4623-906b-716cc838fd09,dqrooqgnsvbgarsudhew,1776015081308000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,93a4c4c5-d02c-4055-b5d8-456754715570,dqrooqgnsvbgarsudhew,1776015081308000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,9038cf9b-559c-4146-be60-1a4400b11d27,dqrooqgnsvbgarsudhew,1776015081114000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,591e19e3-ab96-4eef-b988-2deb7bf61869,dqrooqgnsvbgarsudhew,1776015081114000
+null,LOG,connection received: host=2a05:d014:1c06:5f01:cd37:18bc:1fad:845e port=45920,null,50bd2af3-4409-4603-b705-b2c4eafabd5d,dqrooqgnsvbgarsudhew,1776015081112000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,1fcd9c9b-1e56-4910-8523-524594867a8c,dqrooqgnsvbgarsudhew,1776015063564000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,c934c5e0-5804-460a-b454-48d2cceee274,dqrooqgnsvbgarsudhew,1776015063563000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,766b465f-e6e8-408e-b3c8-63d08061f5b4,dqrooqgnsvbgarsudhew,1776015063495000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,48371669-03a0-46b1-b4b3-fc7abd20cdae,dqrooqgnsvbgarsudhew,1776015063495000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,1ccf5144-e5e0-4d8b-bcd7-d911aca6c21a,dqrooqgnsvbgarsudhew,1776015063438000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,85297e10-fedf-4bea-a356-9768fba2af68,dqrooqgnsvbgarsudhew,1776015063438000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,060aeae4-7e22-41f3-8b77-1a270f0c5fd2,dqrooqgnsvbgarsudhew,1776015063312000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,fbc69b40-98af-43cc-a2c3-662c51a7dceb,dqrooqgnsvbgarsudhew,1776015063312000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,846306fa-4e6d-4375-a78e-df9a2e4367ee,dqrooqgnsvbgarsudhew,1776015063193000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,5ec7dba8-9a68-458f-bc67-1dd8fbcddf01,dqrooqgnsvbgarsudhew,1776015063193000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,1e39e442-b25a-4f33-bf51-b36ba6e53a02,dqrooqgnsvbgarsudhew,1776015063094000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,973a60b9-f702-47bb-a1db-a845fc68e912,dqrooqgnsvbgarsudhew,1776015063094000
+null,LOG,connection received: host=2a05:d014:1c06:5f00:94f0:c3fa:cd91:74aa port=37910,null,a7540882-72b4-4092-81fc-fbbcf035422d,dqrooqgnsvbgarsudhew,1776015063092000
+null,LOG,"connection authenticated: user=""postgres"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,f4eb81ad-823d-45ad-8793-a731039e941c,dqrooqgnsvbgarsudhew,1776015060150000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=pg_cron SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,29bfba14-b403-4d9b-bdd2-f001940c7084,dqrooqgnsvbgarsudhew,1776015060150000
+null,LOG,cron job 1 starting: select,null,c0d6fb46-b1f4-4909-910f-67a48a3df9b8,dqrooqgnsvbgarsudhew,1776015060096000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,c0063cbb-1683-4d1d-aed2-0cb5f41046e0,dqrooqgnsvbgarsudhew,1776015052908000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,2164b9c3-2434-4f17-9966-8fb9f28f33d7,dqrooqgnsvbgarsudhew,1776015052908000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,40aa25e9-a4ce-436b-a44d-73ea0186bc40,dqrooqgnsvbgarsudhew,1776015052703000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,071dc6d1-7942-4428-8b52-71272a6034f2,dqrooqgnsvbgarsudhew,1776015052703000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,07fdac9e-1b42-4d41-ba28-db5004ced623,dqrooqgnsvbgarsudhew,1776015052693000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,c2a9a075-2f84-49d9-a071-a83c78209cad,dqrooqgnsvbgarsudhew,1776015052693000
+null,LOG,connection received: host=2a05:d018:1e14:205:da37:32ab:59b:be2 port=45998,null,58bdd23a-4742-4e0c-a3e0-04ccc24a95f9,dqrooqgnsvbgarsudhew,1776015052586000
+null,LOG,connection received: host=2a05:d018:1e14:207:26c4:3f3c:3b47:e8f6 port=48788,null,a005e06c-fd3c-4688-96a4-69aeb096f7ee,dqrooqgnsvbgarsudhew,1776015052585000
+null,LOG,connection received: host=2a05:d018:1e14:207:26c4:3f3c:3b47:e8f6 port=48780,null,37bccab9-be91-48d4-872a-56b45c6af99f,dqrooqgnsvbgarsudhew,1776015052582000
+null,LOG,connection received: host=2a05:d018:1e14:205:2240:5461:b7a8:bfb5 port=40550,null,36c438bd-6167-4010-b45d-2788f2ed46a0,dqrooqgnsvbgarsudhew,1776015051238000
+null,LOG,connection received: host=2a05:d018:1e14:201:de6b:e4fc:7f39:227a port=60566,null,cc998833-c0d1-4d16-9fc2-d3eee5d54fc0,dqrooqgnsvbgarsudhew,1776015051237000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,92f97624-f742-4a18-8b27-a6a893e4e675,dqrooqgnsvbgarsudhew,1776015047683000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,10f9b470-475e-4bbb-8b6a-dac0d93920ac,dqrooqgnsvbgarsudhew,1776015047683000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,dec17f24-75ce-456f-b127-3d75d127b1c2,dqrooqgnsvbgarsudhew,1776015047555000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,b17c0af0-0cb8-4a25-a84d-e44bd7810452,dqrooqgnsvbgarsudhew,1776015047555000
+null,LOG,"connection authenticated: identity=""pgbouncer"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,846b7416-cc98-403f-92ca-c6815657a243,dqrooqgnsvbgarsudhew,1776015047506000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,8031b0e4-d8fd-4980-8137-9e2656cb5d3d,dqrooqgnsvbgarsudhew,1776015047506000
+null,LOG,connection authorized: user=pgbouncer database=postgres application_name=Supavisor auth_query,null,70ec43d7-7e00-4365-9987-3e53b058f581,dqrooqgnsvbgarsudhew,1776015047456000

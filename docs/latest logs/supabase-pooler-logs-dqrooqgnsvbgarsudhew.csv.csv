@@ -1,0 +1,101 @@
+event_message,id,timestamp
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015569",d8ce70ef-7c85-4c42-891b-2a1dbac7caf6,1776015119069530
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,0ad28553-dfb1-4f4c-8b54-bca52e403185,1776015119060617
+"ClientHandler: secret checker not started, starting a new database connection",c3556907-9116-4a70-a699-56d2e903c012,1776015119060512
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",5e94f3cd-3101-4c97-afbf-29ecfe955b86,1776015119003159
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,855a6de0-bfb5-44f1-af10-6aa9bc337e2c,1776015118991810
+"ClientHandler: secret checker not started, starting a new database connection",cc174446-ca3d-4675-a1b4-5ce5b307e4da,1776015118991673
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",a4a78691-b9fe-43be-940d-d6a865d78e84,1776015118845898
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,8a6502be-4d7e-4fb4-8b3d-a4c434f598f3,1776015118835913
+"ClientHandler: secret checker not started, starting a new database connection",29cc11bb-cefd-4dc5-935f-74e4207662b7,1776015118835815
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015569",1c4a2de4-b3c1-4f2c-ae5c-f7d5b470ff84,1776015118776113
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,c6af6f83-0624-4eec-8e32-e4711669083c,1776015118767008
+"ClientHandler: secret checker not started, starting a new database connection",eca7e41e-b795-4028-8cf7-889aedeae0c6,1776015118766892
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",aaddf994-0154-4533-b9fc-1060ddee9e70,1776015118648281
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,9eb1545a-e3db-495d-bf2b-797f5e941379,1776015118637140
+"ClientHandler: secret checker not started, starting a new database connection",1d175b5d-2533-4515-a98a-1c6f45c5dbbb,1776015118637031
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",e078ad3c-41ba-4d96-b36d-815bb7a2ce44,1776015118532204
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,3b7d459e-ed69-486d-bdd1-0dc098d5f566,1776015118508687
+"ClientHandler: secret checker not started, starting a new database connection",6420d245-b1dd-49f9-879f-1c5b141db3c1,1776015118508604
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015546",572de306-6c2d-451d-b4ec-f36ed95909ae,1776015108112541
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,7898d378-7838-46b2-8b9f-6b60c0e82d80,1776015108102573
+"ClientHandler: secret checker not started, starting a new database connection",9ca27661-17b5-4a10-9c55-a6abf91ace71,1776015108102446
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",09155208-7d4f-469d-9f03-34009ad9ce5c,1776015108044634
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,ee8ce7ac-3cf7-4a41-90bb-7782c453a59b,1776015108033588
+"ClientHandler: secret checker not started, starting a new database connection",14e667c6-82de-4bef-877c-75756b90da65,1776015108033447
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",8ca2f85d-3b46-406d-84f2-e32fafc5b29f,1776015107994149
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,0dca8260-bca8-482d-b7f2-562f75307311,1776015107983824
+"ClientHandler: secret checker not started, starting a new database connection",0233757d-88d4-49d8-b889-e30112096f9d,1776015107983740
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015546",bda2bcb7-2f9e-4212-8d95-c1b40251c398,1776015107839831
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,7939145c-3891-474d-b4e3-16755ed4fd21,1776015107830685
+"ClientHandler: secret checker not started, starting a new database connection",57a12330-642e-46c9-b94b-52bd4bcdc924,1776015107830597
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",f5493585-c05e-49cc-93c5-31e2ebce58fd,1776015107743279
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,acbdfe61-a74b-417a-aba5-12901148ce17,1776015107722324
+"ClientHandler: secret checker not started, starting a new database connection",2f02c034-0868-4be5-88ed-2fd5d4a31193,1776015107722193
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",fa64b2c1-3a0b-4cf2-a1fa-c822688070b6,1776015107618203
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,6803bd9d-06bf-4d1e-9808-b2b422161a46,1776015107574802
+"ClientHandler: secret checker not started, starting a new database connection",4ba09842-f027-4bcd-99e9-e417af217c3e,1776015107574729
+"Pool {{:single, ""dqrooqgnsvbgarsudhew""}, ""cli_login_postgres"", :session, ""postgres"", nil} shutting down gracefully",cc790c99-f773-49bc-951a-05fde7e3f4c4,1776015088239527
+"No subscribers for pool {{:single, ""dqrooqgnsvbgarsudhew""}, ""cli_login_postgres"", :session, ""postgres"", nil}, shutting down",e07a0e6d-5adb-40a5-976b-fa2e7e86ed86,1776015088239251
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015569",4c2759b6-ee66-430a-8755-10102a6d07f2,1776015086883259
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,95084155-cf2e-42be-bd5d-4d97677dabdc,1776015086873761
+"ClientHandler: secret checker not started, starting a new database connection",cb006815-4095-47bb-b4ab-863e36598382,1776015086873659
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",7b2d692a-90bb-4a98-ae72-9a66bc07463c,1776015086767952
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,1bc89c01-1f1d-4c92-b010-e93f69fec3a7,1776015086755948
+"ClientHandler: secret checker not started, starting a new database connection",3ab852ab-35ab-46b2-9cfe-8ce9f6c318a4,1776015086755847
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",a6cb9cc1-1dcd-4030-b358-4e2b127bf31a,1776015086706667
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,68664ef0-90f4-48a3-b018-8f5fb22523fa,1776015086696514
+"ClientHandler: secret checker not started, starting a new database connection",c3c43af5-32ec-4e7a-a02b-2dc9a53def90,1776015086696415
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015569",0e1c9ce0-e3d5-4c29-a3ac-75dd8f396a00,1776015086647013
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,e887d687-faf5-493a-8e59-05bfcb1e7d61,1776015086637995
+"ClientHandler: secret checker not started, starting a new database connection",b6a0c16f-c9ec-4b19-bba9-fe580f8c1bcd,1776015086637884
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",d64905fc-8868-4465-9ea7-3433b373f282,1776015086520988
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,f68ef35a-c004-497c-a372-4a4c6c7a74fc,1776015086509729
+"ClientHandler: secret checker not started, starting a new database connection",f3cc2e44-7d62-4eef-b8b7-5563af30e99c,1776015086509640
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",19524c25-1909-483c-b716-312b39840d8e,1776015086326222
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,39237546-4f9c-4086-9abb-2c67587a391e,1776015086313562
+"ClientHandler: secret checker not started, starting a new database connection",93534cda-5b3d-48c4-af60-e344fd47ca9e,1776015086313486
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015546",2b6eca51-b3a8-465b-a58f-2b3568c505ec,1776015081589067
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,dea38e98-0065-4944-8096-b48406c61978,1776015081579463
+"ClientHandler: secret checker not started, starting a new database connection",62538c55-0c2f-4ead-9d6e-23e8aece3102,1776015081579376
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",029b4488-c874-479b-9ab2-7b3a10a26946,1776015081531395
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,464df9dd-647c-4bf5-9e3a-44e13553c1f9,1776015081518667
+"ClientHandler: secret checker not started, starting a new database connection",b78ffc96-5eea-4571-b69d-ea619ef89dd7,1776015081518532
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",814643fa-6d8b-40d7-87fc-cf87902fc15d,1776015081470328
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,53c316ac-41ed-4c57-b039-4828014ecd68,1776015081459431
+"ClientHandler: secret checker not started, starting a new database connection",0ced8d20-6ed3-4c85-8578-8fea79056ae6,1776015081459352
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015546",3a3eee87-6f8a-4dfd-ae1d-3e2047c1478f,1776015081420097
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,e44d98d4-73d0-47b7-b5f3-1a019c605a49,1776015081410332
+"ClientHandler: secret checker not started, starting a new database connection",4bf08601-ee37-48d9-8948-9561554b6d4d,1776015081410233
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",09121f8a-6fd9-4a68-891f-e2009b31b195,1776015081313619
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,dd1c507c-08bd-4b6f-84fb-c7f17581b618,1776015081302210
+"ClientHandler: secret checker not started, starting a new database connection",dc93f472-db66-4845-a3ce-62ce2aefc035,1776015081302112
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",a1f36bf6-455d-4661-9f65-d68a1baa7b67,1776015081119538
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,e05cef26-e78a-4ddf-94f3-d1e2dcbac5db,1776015081108762
+"ClientHandler: secret checker not started, starting a new database connection",ffc5411e-93be-428f-a09c-500b20a3976e,1776015081108678
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",e7ddd3f9-3267-4a0a-b012-205e595abb54,1776015063569110
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,5eda6962-330a-482f-ab57-c85ebe866e2a,1776015063558185
+"ClientHandler: secret checker not started, starting a new database connection",b1d0338a-56cc-4526-8758-8e3200749304,1776015063558081
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",a8aa828b-fc78-4f9b-ae8b-c3f0b9d0d560,1776015063499969
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,95359373-6acf-44b1-8d6e-63a2aebc8585,1776015063489703
+"ClientHandler: secret checker not started, starting a new database connection",d090b241-4bb8-4aff-976a-389d52c371f2,1776015063489594
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015546",de5d3677-9305-4832-8207-c696236f8217,1776015063442698
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,9eafef69-4a0b-49c5-b73e-f4752f381a86,1776015063433849
+"ClientHandler: secret checker not started, starting a new database connection",2b9dfb8f-029d-40e8-96b4-0770a0ca1478,1776015063433764
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",eebf79a3-791a-4116-8f8d-cdbcf745a1dc,1776015063317502
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,c02d2d21-d4c7-4863-a4ae-e2630c4b9920,1776015063305915
+"ClientHandler: secret checker not started, starting a new database connection",2b32df39-ad5f-4117-ba99-5ad9707c58b2,1776015063305824
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",345419e9-e2c3-496c-8807-c05834ba1a24,1776015063198093
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,febfc69b-400b-4151-a228-a586c240cb8a,1776015063187481
+"ClientHandler: secret checker not started, starting a new database connection",ec0d5a7e-1004-40cc-b207-cda61a5afc97,1776015063187393
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015546",75854618-8bef-4551-810d-2b120cc1327b,1776015063098665
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,d2fc1a95-bc7d-4d04-aaee-934366128954,1776015063089273
+"ClientHandler: secret checker not started, starting a new database connection",1a0e611b-e253-4bfb-8b0f-068a9a0e8031,1776015063089196
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015546",01a0f572-487e-4f2e-9739-201a65d86da2,1776015047687725
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,e53c2c6d-62a6-4b6e-b4bf-d4b1b2fb201f,1776015047677950
+"ClientHandler: secret checker not started, starting a new database connection",08253762-cf1a-4910-9d03-6f34ad666d8f,1776015047677848
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",25c25844-9459-49ee-8990-92ef2b4f2297,1776015047561101
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,cc306b77-7770-40a5-a389-73105b63c53a,1776015047549935
+"ClientHandler: secret checker not started, starting a new database connection",80d26ffb-7a97-4b19-9df4-5322a8fde387,1776015047549816
+"ClientHandler: Circuit breaker open for operation: auth_error, blocked until: 1776015534",68411b9e-e4fd-427f-9f9b-b5bde7406be8,1776015047511259
+Detecting IP version for 2a05:d014:1c06:5f45:be2c:df34:7576:498c,896ba92a-1333-43a6-b41f-03d48225a021,1776015047500349
