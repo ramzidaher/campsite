@@ -1,5 +1,4 @@
 import type { UiSoundEvent } from '@campsite/types';
-import { Audio } from 'expo-av';
 
 import { UI_SOUND_PRESETS } from './presets';
 import { readUiSoundPreferences } from './prefs';
@@ -10,15 +9,9 @@ let audioModeConfigured = false;
 
 async function ensureAudioMode(): Promise<void> {
   if (audioModeConfigured) return;
-  try {
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-    });
-    audioModeConfigured = true;
-  } catch {
-    /* noop */
-  }
+  // expo-av is deprecated for our current Expo SDK; keep this as a no-op
+  // so callers can remain async while native audio migration is in progress.
+  audioModeConfigured = true;
 }
 
 export async function playUiSound(event: UiSoundEvent): Promise<void> {
@@ -33,20 +26,6 @@ export async function playUiSound(event: UiSoundEvent): Promise<void> {
   lastPlayedAt.set(event, nowMs);
 
   await ensureAudioMode();
-
-  const gainScale = (prefs.volume / 100) * (preset.eventGain ?? 1);
-  const uri = synthPresetToWavDataUri(preset, gainScale);
-  try {
-    const { sound } = await Audio.Sound.createAsync(
-      { uri },
-      { shouldPlay: true, volume: 1.0 },
-    );
-    sound.setOnPlaybackStatusUpdate((status) => {
-      if ('isLoaded' in status && status.isLoaded && status.didJustFinish) {
-        void sound.unloadAsync();
-      }
-    });
-  } catch {
-    /* noop */
-  }
+  // Temporary fallback until we migrate to expo-audio.
+  void synthPresetToWavDataUri(preset, (prefs.volume / 100) * (preset.eventGain ?? 1));
 }

@@ -1,5 +1,4 @@
 import { useCampsiteTheme } from '@campsite/ui';
-import { ResizeMode, Video } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -400,12 +399,9 @@ export default function ResourceDetailScreen() {
               />
             ) : null}
             {previewKind === 'video' ? (
-              <Video
-                source={{ uri: signedUrl }}
-                style={{ marginTop: 16, width: '100%', height: 220 }}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-              />
+              <Text style={{ marginTop: 12, color: tokens.textSecondary, fontSize: 13 }}>
+                Inline video preview is temporarily unavailable. Tap Open below to play in your default app.
+              </Text>
             ) : null}
             {previewKind === 'audio' ? (
               <Text style={{ marginTop: 12, color: tokens.textSecondary, fontSize: 13 }}>
