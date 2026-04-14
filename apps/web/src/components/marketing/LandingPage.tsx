@@ -2,6 +2,52 @@ import Link from 'next/link';
 
 import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 
+const featureGroups = [
+  {
+    title: 'Comms and announcements',
+    description:
+      'Publish updates, approvals, and unread tracking so important messages do not get buried.',
+    bullets: ['Broadcasts with approvals', 'Unread tracking and alerts', 'Org-wide notifications'],
+  },
+  {
+    title: 'Scheduling and attendance',
+    description:
+      'Manage rota requests, shift swaps, attendance, and time-off approvals from one place.',
+    bullets: ['Rota planning and swaps', 'Attendance tools', 'Leave and absence workflows'],
+  },
+  {
+    title: 'Recruitment and onboarding',
+    description:
+      'Handle jobs, applications, interviews, offers, and onboarding without jumping across systems.',
+    bullets: ['Public jobs pages', 'Application and interview tracking', 'Offer templates and onboarding'],
+  },
+  {
+    title: 'People operations',
+    description:
+      'Support managers and HR with records, performance cycles, one-to-ones, and operational reporting.',
+    bullets: ['HR records and org structure', 'Performance and reviews', 'One-to-ones and follow-ups'],
+  },
+];
+
+const roleCards = [
+  {
+    title: 'Admins',
+    text: 'Control access, permissions, departments, and system-wide operations with one clear command layer.',
+  },
+  {
+    title: 'Managers',
+    text: 'Review requests, run teams, follow recruitment activity, and keep your department coordinated.',
+  },
+  {
+    title: 'HR teams',
+    text: 'Track recruitment, onboarding, records, attendance, and performance with purpose-built workflows.',
+  },
+  {
+    title: 'Employees',
+    text: 'Get updates, manage leave, check rota, and stay connected without chasing information in chats.',
+  },
+];
+
 function ProductPreview() {
   return (
     <div className="relative mx-auto w-full max-w-[520px] lg:mx-0 lg:max-w-none">
@@ -173,6 +219,87 @@ export function LandingPage() {
             >
               Get started
             </Link>
+          </div>
+        </section>
+
+        <section className="border-t border-[#ebe9e6] px-5 py-16 sm:px-8 sm:py-24">
+          <div className="mx-auto max-w-6xl">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a8a8a]">
+                What you can run in Campsite
+              </p>
+              <h2 className="mt-3 font-authSerif text-3xl leading-tight tracking-tight sm:text-4xl">
+                More than messaging. A full operations workspace.
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-[#5c5c5c] sm:text-base">
+                Campsite brings everyday people workflows together so teams can stop stitching tools and
+                start working from one source of truth.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-4 sm:grid-cols-2">
+              {featureGroups.map((group) => (
+                <article
+                  key={group.title}
+                  className="rounded-2xl border border-[#e4e2de] bg-white p-6 shadow-[0_1px_1px_rgba(18,18,18,0.03)]"
+                >
+                  <h3 className="font-authSerif text-2xl tracking-tight">{group.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-[#5c5c5c]">{group.description}</p>
+                  <ul className="mt-5 space-y-2 text-sm text-[#3d3d3d]">
+                    {group.bullets.map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <span className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[#121212]/70" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-[#ebe9e6] bg-[#f5f3ef]/45 px-5 py-16 sm:px-8 sm:py-24">
+          <div className="mx-auto max-w-6xl">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a8a8a]">
+                Built for every role
+              </p>
+              <h2 className="mt-3 font-authSerif text-3xl leading-tight tracking-tight sm:text-4xl">
+                One platform, role-aware by design.
+              </h2>
+            </div>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {roleCards.map((card) => (
+                <article key={card.title} className="rounded-2xl border border-[#e4e2de] bg-white p-5">
+                  <h3 className="font-authSerif text-2xl tracking-tight">{card.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-[#5c5c5c]">{card.text}</p>
+                </article>
+              ))}
+            </div>
+            <div className="mt-10 rounded-2xl border border-[#ddd9d3] bg-white p-6 sm:p-8">
+              <h3 className="font-authSerif text-2xl tracking-tight sm:text-[2rem]">
+                Replace scattered tools with one calm system.
+              </h3>
+              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#5c5c5c] sm:text-base">
+                Instead of separate chats, spreadsheets, and disconnected HR workflows, Campsite gives your
+                organisation a shared operating layer for communication and people operations.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/register"
+                  className="inline-flex h-[3.1rem] items-center justify-center rounded-[10px] bg-[#121212] px-7 text-sm font-medium text-[#faf9f6] transition-[opacity,transform] hover:opacity-95 active:scale-[0.99]"
+                >
+                  Create an account
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex h-[3.1rem] items-center justify-center rounded-[10px] border border-[#d8d6d2] bg-white px-7 text-sm font-medium text-[#121212] transition-colors hover:bg-[#f5f3ef]"
+                >
+                  Sign in to your workspace
+                </Link>
+              </div>
+            </div>
           </div>
         </section>
       </main>
