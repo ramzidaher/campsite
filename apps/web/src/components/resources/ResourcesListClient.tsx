@@ -595,7 +595,7 @@ export function ResourcesListClient({
 
 function FolderIconSmall({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg className={`h-4 w-4 ${className ?? ''}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
     </svg>
   );
@@ -603,7 +603,14 @@ function FolderIconSmall({ className }: { className?: string }) {
 
 function FolderOutlineIconSmall({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+    <svg
+      className={`h-4 w-4 ${className ?? ''}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -615,7 +622,7 @@ function FolderOutlineIconSmall({ className }: { className?: string }) {
 
 function FolderIconLarge({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg className={`h-8 w-8 ${className ?? ''}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
     </svg>
   );
