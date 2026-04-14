@@ -324,10 +324,10 @@ export function ResourcesListClient({
   const showFolderTiles = !archiveOnly && !searchActive && folderFilter === null && folders.length > 0;
 
   return (
-    <div className="mx-auto max-w-3xl px-7 py-8">
+    <div className="mx-auto max-w-4xl px-5 py-8 sm:px-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-authSerif text-2xl text-[#121212]">
+          <h1 className="font-authSerif text-3xl leading-tight text-[#121212]">
             Resource library
             {archiveOnly ? (
               <span className="ml-2 text-lg font-normal text-[#6b6b6b]">· Archived</span>
@@ -345,14 +345,14 @@ export function ResourcesListClient({
               {archiveColumnOk ? (
               <Link
                 href={archiveOnly ? '/resources' : '/resources?archived=1'}
-                className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-3.5 text-[13px] font-medium text-[#121212] transition hover:bg-[#faf9f6]"
+                className="inline-flex h-9 items-center rounded-xl border border-black/10 bg-white px-3.5 text-[13px] font-medium text-[#121212] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition hover:border-black/20 hover:bg-[#f8f8f6]"
               >
                 {archiveOnly ? 'Active library' : 'Archived'}
               </Link>
               ) : null}
               <Link
                 href={uploadHref}
-                className="inline-flex h-9 items-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition hover:bg-black"
+                className="inline-flex h-9 items-center rounded-xl bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition hover:bg-black"
               >
                 Upload
               </Link>
@@ -364,10 +364,10 @@ export function ResourcesListClient({
       <div className="mb-4 flex flex-wrap gap-2">
         <Link
           href={resourcesHref({ archived: archiveOnly })}
-          className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-medium ${
+          className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[12.5px] font-medium transition ${
             folderFilter === null && !searchActive
-              ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
-              : 'border-[#d8d8d8] bg-white text-[#121212] hover:bg-[#faf9f6]'
+              ? 'border-[#121212] bg-[#121212] text-[#faf9f6] shadow-[0_6px_16px_rgba(0,0,0,0.15)]'
+              : 'border-black/10 bg-white text-[#121212] hover:border-black/20 hover:bg-[#f8f8f6]'
           }`}
         >
           <FolderIconSmall className={folderFilter === null && !searchActive ? 'text-[#faf9f6]' : 'text-[#b45309]'} />
@@ -375,10 +375,10 @@ export function ResourcesListClient({
         </Link>
         <Link
           href={resourcesHref({ archived: archiveOnly, folder: 'none' })}
-          className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-medium ${
+          className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[12.5px] font-medium transition ${
             folderFilter === 'none' && !searchActive
-              ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
-              : 'border-[#d8d8d8] bg-white text-[#121212] hover:bg-[#faf9f6]'
+              ? 'border-[#121212] bg-[#121212] text-[#faf9f6] shadow-[0_6px_16px_rgba(0,0,0,0.15)]'
+              : 'border-black/10 bg-white text-[#121212] hover:border-black/20 hover:bg-[#f8f8f6]'
           }`}
         >
           <FolderOutlineIconSmall className={folderFilter === 'none' && !searchActive ? 'text-[#faf9f6]' : 'text-[#78716c]'} />
@@ -388,10 +388,10 @@ export function ResourcesListClient({
           <Link
             key={f.id}
             href={resourcesHref({ archived: archiveOnly, folder: f.id })}
-            className={`inline-flex h-9 max-w-[220px] items-center gap-1.5 truncate rounded-lg border px-3 text-[12.5px] font-medium ${
+            className={`inline-flex h-9 max-w-[220px] items-center gap-1.5 truncate rounded-xl border px-3 text-[12.5px] font-medium transition ${
               folderFilter === f.id && !searchActive
-                ? 'border-[#b45309] bg-[#fff7ed] text-[#121212] ring-1 ring-[#b45309]/25'
-                : 'border-[#e7e5e4] bg-gradient-to-b from-[#fdf8f0] to-[#f5ecd8] text-[#121212] hover:border-[#d6d3d1]'
+                ? 'border-[#b45309] bg-[#fff7ed] text-[#121212] ring-1 ring-[#b45309]/30'
+                : 'border-[#eadfca] bg-[#fffdf9] text-[#121212] hover:border-[#d7c4a3] hover:bg-[#fff9ef]'
             }`}
             title={f.name}
           >
@@ -411,14 +411,14 @@ export function ResourcesListClient({
                 <li key={f.id}>
                   <Link
                     href={resourcesHref({ archived: archiveOnly, folder: f.id })}
-                    className="flex items-start gap-3 rounded-xl border border-[#e8dcc8] bg-gradient-to-br from-[#fffbf5] via-[#fdf6e8] to-[#f3e9d7] p-4 shadow-sm transition hover:border-[#d4b896] hover:shadow-md"
+                    className="group flex items-start gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.02),0_10px_24px_rgba(0,0,0,0.04)] transition hover:-translate-y-[1px] hover:border-black/20 hover:shadow-[0_2px_0_rgba(0,0,0,0.02),0_14px_30px_rgba(0,0,0,0.08)]"
                   >
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#f0dcc0]/80 text-[#9a3412]">
-                      <FolderIconLarge className="h-7 w-7" />
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#fff3e2] text-[#b45309] ring-1 ring-[#f0d3aa] transition group-hover:bg-[#ffeacc]">
+                      <FolderIconLarge className="h-6 w-6" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[15px] font-semibold leading-snug text-[#121212]">{f.name}</span>
-                      <span className="mt-0.5 block text-[12px] text-[#78716c]">
+                      <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
                         {n === 0 ? 'Empty folder · upload files here' : `${n} file${n === 1 ? '' : 's'}`}
                       </span>
                     </span>
@@ -441,7 +441,10 @@ export function ResourcesListClient({
       ) : null}
 
       {canManage && !archiveOnly ? (
-        <form onSubmit={addFolder} className="mb-5 flex flex-wrap items-end gap-2 rounded-xl border border-[#ececec] bg-[#faf9f6] p-3">
+        <form
+          onSubmit={addFolder}
+          className="mb-5 flex flex-wrap items-end gap-2 rounded-2xl border border-black/10 bg-white p-3.5 shadow-[0_1px_0_rgba(0,0,0,0.02)]"
+        >
           <div className="min-w-[200px] flex-1">
             <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#6b6b6b]">
               New folder
@@ -450,13 +453,13 @@ export function ResourcesListClient({
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="e.g. Policies"
-              className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] outline-none focus:border-[#121212]"
+              className="h-9 w-full rounded-xl border border-black/10 bg-[#fbfbfa] px-3 text-[13px] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
             />
           </div>
           <button
             type="submit"
             disabled={folderBusy || !newFolderName.trim()}
-            className="h-9 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+            className="h-9 rounded-xl bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] shadow-[0_6px_16px_rgba(0,0,0,0.18)] disabled:opacity-50"
           >
             {folderBusy ? '…' : 'Add'}
           </button>
@@ -477,7 +480,7 @@ export function ResourcesListClient({
                 {folders.map((f) => (
                   <span
                     key={f.id}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#e7e5e4] bg-white px-2.5 py-1.5 text-[12px] text-[#121212]"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-[#fcfcfb] px-2.5 py-1.5 text-[12px] text-[#121212]"
                   >
                     <FolderIconSmall className="shrink-0 text-[#b45309]" aria-hidden />
                     <span className="max-w-[140px] truncate">{f.name}</span>
@@ -512,7 +515,7 @@ export function ResourcesListClient({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search resources (type at least 2 characters)…"
-            className="h-10 w-full rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+            className="h-11 w-full rounded-xl border border-black/10 bg-white py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b] shadow-[0_1px_0_rgba(0,0,0,0.02)] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
           />
         </div>
       )}
@@ -533,7 +536,7 @@ export function ResourcesListClient({
                 )}
                 {section.title}
               </h2>
-              <ul className="divide-y divide-[#ececec] overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+              <ul className="divide-y divide-black/5 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_0_rgba(0,0,0,0.02)]">
                 {section.items.length === 0 ? (
                   <li className="flex items-start gap-3 border border-dashed border-[#e8dcc8] bg-[#fffbf7] px-4 py-4 text-[13px] text-[#6b6b6b]">
                     <span className="mt-0.5 text-[#d4b896]">
@@ -583,7 +586,7 @@ export function ResourcesListClient({
           ) : null}
         </p>
       ) : (
-        <ul className="divide-y divide-[#ececec] overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+        <ul className="divide-y divide-black/5 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_0_rgba(0,0,0,0.02)]">
           {rows.map((r) => (
             <ResourceRow key={r.id} r={r} />
           ))}
@@ -632,7 +635,7 @@ function ResourceRow({ r }: { r: StaffResourceRow }) {
   const folderName = r.staff_resource_folders?.name;
   return (
     <li>
-      <Link href={`/resources/${r.id}`} className="block px-4 py-3 transition hover:bg-[#faf9f6]">
+      <Link href={`/resources/${r.id}`} className="block px-4 py-3.5 transition hover:bg-[#fafaf8]">
         <p className="text-[14px] font-medium text-[#121212]">{r.title}</p>
         {r.description ? (
           <p className="mt-0.5 line-clamp-2 text-[12.5px] text-[#6b6b6b]">{r.description}</p>
