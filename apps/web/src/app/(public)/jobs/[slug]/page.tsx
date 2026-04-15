@@ -35,7 +35,14 @@ function formatSalaryDisplay(raw: string): string {
 }
 
 function ProseBlock({ children }: { children: ReactNode }) {
-  return <div className="text-[15px] leading-[1.75] text-[#2a2a2a] [&_strong]:font-semibold [&_strong]:text-[#121212]">{children}</div>;
+  return (
+    <div
+      className="text-[15px] leading-[1.75] [&_strong]:font-semibold"
+      style={{ color: 'var(--org-brand-text)' }}
+    >
+      {children}
+    </div>
+  );
 }
 
 export default async function PublicJobPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -106,10 +113,11 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
       className="font-sans antialiased"
       style={{ ...jobsVars, background: 'var(--org-brand-bg)', color: 'var(--org-brand-text)' }}
     >
-      <div className="mx-auto max-w-6xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
         <Link
           href={jobsIndexHref}
-          className="inline-flex text-[13px] font-medium text-[#6b6b6b] transition-colors hover:text-[#121212]"
+          className="inline-flex text-[13px] font-medium transition-colors"
+          style={{ color: 'var(--org-brand-muted)' }}
         >
           <span className="mr-1.5" aria-hidden>
             ←
@@ -122,27 +130,33 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
           <CareersOrgLine orgName={job.org_name} />
         </div>
 
-        {/* Hero */}
-        <header className="mt-6 overflow-hidden rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] shadow-[0_1px_0_0_rgba(18,18,18,0.04)]">
-          <div className="border-b border-[#e0ddd8] bg-gradient-to-br from-white/90 to-[#f5f4f1] px-6 py-8 sm:px-10 sm:py-10">
-            <h1 className="max-w-4xl font-authSerif text-[clamp(1.875rem,4.5vw,2.75rem)] leading-[1.12] tracking-[-0.03em] text-[#121212]">
+        <header
+          className="mt-6 overflow-hidden rounded-2xl border"
+          style={{
+            borderColor: 'color-mix(in oklab, var(--org-brand-primary, #121212) 45%, black 55%)',
+            background:
+              'linear-gradient(145deg, color-mix(in oklab, var(--org-brand-primary, #121212) 92%, white 8%), color-mix(in oklab, var(--org-brand-secondary, #2f2f2f) 88%, black 12%))',
+          }}
+        >
+          <div className="border-b px-6 py-8 sm:px-10 sm:py-10" style={{ borderColor: 'color-mix(in oklab, var(--org-brand-accent, #d4af37) 55%, transparent)' }}>
+            <h1 className="max-w-4xl font-authSerif text-[clamp(1.875rem,4.5vw,2.75rem)] leading-[1.12] tracking-[-0.03em]" style={{ color: 'var(--jobs-on-primary)' }}>
               {job.title}
             </h1>
             <div className="mt-8 flex flex-wrap gap-2">
               <span className={pillClass}>
-                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider text-[#9b9b9b]">Team</span>
+                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--org-brand-muted)' }}>Team</span>
                 {job.department_name}
               </span>
               <span className={pillClass}>
-                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider text-[#9b9b9b]">Contract</span>
+                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--org-brand-muted)' }}>Contract</span>
                 {recruitmentContractLabel(job.contract_type)}
               </span>
               <span className={pillClass}>
-                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider text-[#9b9b9b]">Salary</span>
+                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--org-brand-muted)' }}>Salary</span>
                 {formatSalaryDisplay(job.salary_band)}
               </span>
               <span className={pillClass}>
-                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider text-[#9b9b9b]">Headcount</span>
+                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--org-brand-muted)' }}>Headcount</span>
                 1 opening
               </span>
             </div>
@@ -153,7 +167,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
           {/* Main column — second on mobile so apply card can lead on small screens */}
           <div className="order-2 min-w-0 space-y-12 lg:order-1">
             <section>
-              <h2 className="font-authSerif text-[1.5rem] leading-tight tracking-[-0.02em] text-[#121212] sm:text-[1.625rem]">
+              <h2 className="font-authSerif text-[1.5rem] leading-tight tracking-[-0.02em] sm:text-[1.625rem]" style={{ color: 'var(--org-brand-text)' }}>
                 About the role
               </h2>
               <ProseBlock>
@@ -165,7 +179,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
 
             {job.requirements?.trim() ? (
               <section>
-                <h2 className="font-authSerif text-[1.5rem] leading-tight tracking-[-0.02em] text-[#121212] sm:text-[1.625rem]">
+                <h2 className="font-authSerif text-[1.5rem] leading-tight tracking-[-0.02em] sm:text-[1.625rem]" style={{ color: 'var(--org-brand-text)' }}>
                   Requirements
                 </h2>
                 <ProseBlock>
@@ -176,7 +190,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
 
             {job.benefits?.trim() ? (
               <section>
-                <h2 className="font-authSerif text-[1.5rem] leading-tight tracking-[-0.02em] text-[#121212] sm:text-[1.625rem]">
+                <h2 className="font-authSerif text-[1.5rem] leading-tight tracking-[-0.02em] sm:text-[1.625rem]" style={{ color: 'var(--org-brand-text)' }}>
                   Benefits
                 </h2>
                 <ProseBlock>
@@ -188,8 +202,8 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
 
           {/* Sticky apply card — first on mobile */}
           <aside className="order-1 lg:sticky lg:order-2 lg:top-8">
-            <div className="rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-6 shadow-[0_2px_12px_rgba(18,18,18,0.06)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6b6b]">Apply</p>
+            <div className="rounded-2xl border p-6 shadow-[0_2px_12px_rgba(18,18,18,0.06)]" style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-surface)' }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--org-brand-muted)' }}>Apply</p>
               <Link
                 href={applyHref}
                 className="mt-3 flex w-full items-center justify-center rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-opacity hover:opacity-90"
@@ -200,45 +214,45 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
               >
                 Apply now
               </Link>
-              <p className="mt-4 text-[13px] leading-relaxed text-[#6b6b6b]">
+              <p className="mt-4 text-[13px] leading-relaxed" style={{ color: 'var(--org-brand-muted)' }}>
                 Submit online — this vacancy accepts {applySummary}. You will receive a private link to track your
                 application.
               </p>
 
-              <div className="mt-6 border-t border-[#e0ddd8] pt-6">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9b9b9b]">Key facts</p>
+              <div className="mt-6 border-t pt-6" style={{ borderColor: 'var(--org-brand-border)' }}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--org-brand-muted)' }}>Key facts</p>
                 <dl className="mt-3 space-y-3 text-[13px]">
-                  <div className="flex justify-between gap-4 border-b border-[#eceae6] pb-3">
-                    <dt className="text-[#6b6b6b]">Grade / level</dt>
-                    <dd className="text-right font-medium text-[#121212]">{job.grade_level}</dd>
+                  <div className="flex justify-between gap-4 border-b pb-3" style={{ borderColor: 'var(--org-brand-border)' }}>
+                    <dt style={{ color: 'var(--org-brand-muted)' }}>Grade / level</dt>
+                    <dd className="text-right font-medium" style={{ color: 'var(--org-brand-text)' }}>{job.grade_level}</dd>
                   </div>
-                  <div className="flex justify-between gap-4 border-b border-[#eceae6] pb-3">
-                    <dt className="text-[#6b6b6b]">Contract</dt>
-                    <dd className="text-right font-medium text-[#121212]">{recruitmentContractLabel(job.contract_type)}</dd>
+                  <div className="flex justify-between gap-4 border-b pb-3" style={{ borderColor: 'var(--org-brand-border)' }}>
+                    <dt style={{ color: 'var(--org-brand-muted)' }}>Contract</dt>
+                    <dd className="text-right font-medium" style={{ color: 'var(--org-brand-text)' }}>{recruitmentContractLabel(job.contract_type)}</dd>
                   </div>
-                  <div className="flex justify-between gap-4 border-b border-[#eceae6] pb-3">
-                    <dt className="text-[#6b6b6b]">Salary</dt>
-                    <dd className="text-right font-medium text-[#121212]">{formatSalaryDisplay(job.salary_band)}</dd>
+                  <div className="flex justify-between gap-4 border-b pb-3" style={{ borderColor: 'var(--org-brand-border)' }}>
+                    <dt style={{ color: 'var(--org-brand-muted)' }}>Salary</dt>
+                    <dd className="text-right font-medium" style={{ color: 'var(--org-brand-text)' }}>{formatSalaryDisplay(job.salary_band)}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-[#6b6b6b]">Team</dt>
-                    <dd className="text-right font-medium text-[#121212]">{job.department_name}</dd>
+                    <dt style={{ color: 'var(--org-brand-muted)' }}>Team</dt>
+                    <dd className="text-right font-medium" style={{ color: 'var(--org-brand-text)' }}>{job.department_name}</dd>
                   </div>
                 </dl>
               </div>
 
-              <div className="mt-6 rounded-xl border border-[#e0ddd8] bg-white/80 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9b9b9b]">Closing</p>
-                <p className="mt-1 text-[14px] font-medium text-[#121212]">Rolling — apply while listed</p>
-                <p className="mt-2 text-[12px] leading-snug text-[#6b6b6b]">
+              <div className="mt-6 rounded-xl border px-4 py-3" style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-bg)' }}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--org-brand-muted)' }}>Closing</p>
+                <p className="mt-1 text-[14px] font-medium" style={{ color: 'var(--org-brand-text)' }}>Rolling — apply while listed</p>
+                <p className="mt-2 text-[12px] leading-snug" style={{ color: 'var(--org-brand-muted)' }}>
                   We do not show a fixed deadline for this vacancy; apply before the role is filled or archived.
                 </p>
               </div>
 
               {postedLong ? (
-                <p className="mt-5 text-center text-[12px] text-[#9b9b9b]">First listed {postedLong}</p>
+                <p className="mt-5 text-center text-[12px]" style={{ color: 'var(--org-brand-muted)' }}>First listed {postedLong}</p>
               ) : (
-                <p className="mt-5 text-center text-[12px] text-[#9b9b9b]">Recently published</p>
+                <p className="mt-5 text-center text-[12px]" style={{ color: 'var(--org-brand-muted)' }}>Recently published</p>
               )}
             </div>
           </aside>

@@ -1,5 +1,6 @@
 import { ApplyJobFormClient } from '@/app/(public)/jobs/[slug]/apply/ApplyJobFormClient';
 import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
+import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { createClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -39,6 +40,21 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
   }
 
   const job = data[0] as PublicJobRow;
+  const { data: orgBrand } = await supabase
+    .from('organisations')
+    .select('brand_preset_key, brand_tokens, brand_policy')
+    .eq('slug', orgSlug)
+    .maybeSingle();
+  const resolvedBranding = resolveOrgBranding({
+    presetKey: orgBrand?.brand_preset_key,
+    customTokens: orgBrand?.brand_tokens,
+    policy: orgBrand?.brand_policy,
+    effectiveMode: 'off',
+  });
+  const jobsVars = {
+    ...orgBrandingCssVars(resolvedBranding.tokens),
+    ['--jobs-on-primary' as string]: onColorFor(resolvedBranding.tokens.primary),
+  };
 
   const { data: eqJson } = await supabase.rpc('public_org_eq_monitoring_codes', {
     p_org_slug: orgSlug,
@@ -60,7 +76,10 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
   });
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] font-sans text-[#121212] antialiased">
+    <div
+      className="min-h-screen font-sans antialiased"
+      style={{ ...jobsVars, background: 'var(--org-brand-bg)', color: 'var(--org-brand-text)' }}
+    >
       <div className="mx-auto max-w-[660px] px-5 py-8">
         <div className="space-y-5">
           <CareersProductStrip />

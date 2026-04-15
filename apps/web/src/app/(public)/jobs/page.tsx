@@ -53,8 +53,7 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-const linkClass =
-  'text-[#121212] underline decoration-[#d8d8d8] underline-offset-[3px] hover:decoration-[#121212]';
+const linkClass = 'underline underline-offset-[3px]';
 
 export default async function PublicJobsPage({
   searchParams,
@@ -127,10 +126,9 @@ export default async function PublicJobsPage({
   const year = new Date().getFullYear();
 
   const pillOn = 'shadow-sm';
-  const pillOff =
-    'ring-1 ring-inset';
+  const pillOff = 'ring-1 ring-inset';
 
-  const metaLabel = 'text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b9b9b]';
+  const metaLabel = 'text-[10px] font-semibold uppercase tracking-[0.1em]';
 
   return (
     <div
@@ -151,23 +149,23 @@ export default async function PublicJobsPage({
           trailing={
             <>
               {user?.email ? (
-                <p className="max-w-[240px] truncate text-[12px] text-[#6b6b6b]" title={user.email}>
+                <p className="max-w-[240px] truncate text-[12px]" style={{ color: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 78%, transparent)' }} title={user.email}>
                   {user.email}
                 </p>
               ) : null}
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-medium">
-                <Link href={tenantJobsSubrouteRelativePath('me', orgSlug, host)} className={linkClass}>
+                <Link href={tenantJobsSubrouteRelativePath('me', orgSlug, host)} className={linkClass} style={{ color: 'var(--jobs-on-primary, #faf9f6)', textDecorationColor: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 35%, transparent)' }}>
                   My applications
                 </Link>
-                <Link href={tenantJobsSubrouteRelativePath('me/profile', orgSlug, host)} className={linkClass}>
+                <Link href={tenantJobsSubrouteRelativePath('me/profile', orgSlug, host)} className={linkClass} style={{ color: 'var(--jobs-on-primary, #faf9f6)', textDecorationColor: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 35%, transparent)' }}>
                   Profile
                 </Link>
                 {!user ? (
                   <>
-                    <Link href={tenantJobsSubrouteRelativePath('login', orgSlug, host)} className={linkClass}>
+                    <Link href={tenantJobsSubrouteRelativePath('login', orgSlug, host)} className={linkClass} style={{ color: 'var(--jobs-on-primary, #faf9f6)', textDecorationColor: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 35%, transparent)' }}>
                       Sign in
                     </Link>
-                    <Link href={tenantJobsSubrouteRelativePath('register', orgSlug, host)} className={linkClass}>
+                    <Link href={tenantJobsSubrouteRelativePath('register', orgSlug, host)} className={linkClass} style={{ color: 'var(--jobs-on-primary, #faf9f6)', textDecorationColor: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 35%, transparent)' }}>
                       Register
                     </Link>
                   </>
@@ -179,32 +177,34 @@ export default async function PublicJobsPage({
 
         <CareersSectionNav orgSlug={orgSlug} hostHeader={host} current="browse" />
 
-        <header className="mt-8">
-          <h1 className="font-authSerif text-[clamp(1.5rem,3.5vw,2rem)] tracking-[-0.02em] text-[#121212]">Open roles</h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Browse live vacancies for <span className="font-medium text-[#121212]">{orgName}</span>. Filters apply instantly.
-          </p>
-        </header>
-
-        <form method="get" action="/jobs" className="mt-6">
+        <form method="get" action="/jobs" className="mt-7">
           {orgQuery}
           {dept ? <input type="hidden" name="dept" value={dept} /> : null}
           {contract ? <input type="hidden" name="contract" value={contract} /> : null}
-          <label className="flex min-h-[48px] items-center gap-3 rounded-xl border border-[#e8e6e3] bg-white px-4 shadow-sm shadow-[#121212]/[0.04] transition-[box-shadow,border-color] focus-within:border-[#121212] focus-within:ring-2 focus-within:ring-[#121212]/12">
-            <SearchIcon className="shrink-0 text-[#9b9b9b]" />
+          <label
+            className="flex min-h-[46px] items-center gap-3 rounded-xl border px-4 transition-[box-shadow,border-color] focus-within:ring-2"
+            style={{
+              borderColor: 'var(--org-brand-border)',
+              background: 'var(--org-brand-surface)',
+              boxShadow: '0 1px 0 0 color-mix(in oklab, var(--org-brand-primary, #121212) 10%, transparent)',
+            }}
+          >
+            <SearchIcon className="shrink-0" />
             <input
               name="q"
               defaultValue={q}
               placeholder="Search roles, teams, keywords — press Enter"
-              className="min-w-0 flex-1 border-0 bg-transparent py-3 text-[14px] text-[#121212] placeholder:text-[#9b9b9b] outline-none"
+              className="min-w-0 flex-1 border-0 bg-transparent py-3 text-[14px] outline-none"
+              style={{ color: 'var(--org-brand-text)' }}
               aria-label="Search roles"
               autoComplete="off"
             />
           </label>
         </form>
 
-        <div className="mt-5">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9b9b9b]">Contract</p>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--org-brand-muted)' }}>Contract</p>
           <div className="flex flex-wrap gap-1.5">
             {CONTRACT_OPTIONS.map((opt) => {
               const isOn = opt.value === '' ? contract === '' : contract === opt.value;
@@ -235,10 +235,9 @@ export default async function PublicJobsPage({
               );
             })}
           </div>
-        </div>
-
-        <div className="mt-4">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9b9b9b]">Team</p>
+          </div>
+          <div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--org-brand-muted)' }}>Team</p>
           <div className="flex flex-wrap gap-1.5">
             <Link
               href={buildPublicJobsHref(orgSlug, host, { q, dept: '', contract, page: 1 })}
@@ -279,14 +278,26 @@ export default async function PublicJobsPage({
               );
             })}
           </div>
+          </div>
         </div>
+        {(q || dept || contract) ? (
+          <div className="mt-4">
+            <Link
+              href={buildPublicJobsHref(orgSlug, host, {})}
+              className="inline-flex rounded-md px-3 py-1.5 text-[12px] font-semibold"
+              style={{ background: 'var(--org-brand-primary)', color: 'var(--jobs-on-primary)' }}
+            >
+              Clear filters
+            </Link>
+          </div>
+        ) : null}
 
         {rows.length === 0 ? (
-          <section className="mt-10 rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] px-6 py-12 text-center shadow-sm shadow-[#121212]/[0.03]">
-            <h2 className="font-authSerif text-[1.375rem] text-[#121212]">
+          <section className="mt-10 rounded-2xl border px-6 py-12 text-center">
+            <h2 className="font-authSerif text-[1.375rem]" style={{ color: 'var(--org-brand-text)' }}>
               {liveCount === 0 && !q && !dept && !contract ? 'No open roles yet' : 'No matching roles'}
             </h2>
-            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-[#6b6b6b]">
+            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed" style={{ color: 'var(--org-brand-muted)' }}>
               {liveCount === 0 && !q && !dept && !contract
                 ? 'When vacancies go live, they will show here.'
                 : 'Try different keywords or clear filters to see everything that is open.'}
@@ -300,7 +311,16 @@ export default async function PublicJobsPage({
             </Link>
           </section>
         ) : (
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2">
+          <>
+            <div className="mb-3 mt-7 flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold" style={{ color: 'var(--org-brand-text)' }}>
+                Open roles
+              </h2>
+              <span className="text-[12px]" style={{ color: 'var(--org-brand-muted)' }}>
+                {rows.length} result{rows.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <ul className="grid gap-3">
             {rows.map((job) => {
               const href = tenantJobListingRelativePath(job.slug, orgSlug, host);
               const posted =
@@ -314,99 +334,114 @@ export default async function PublicJobsPage({
                 <li key={job.job_listing_id}>
                   <Link
                     href={href}
-                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#e8e6e3] bg-[#f5f4f1] p-5 transition-[border-color,box-shadow] hover:border-[#d8d8d8] hover:bg-white hover:shadow-md hover:shadow-[#121212]/[0.06]"
+                    className="group flex h-full items-start justify-between gap-5 overflow-hidden rounded-2xl border p-5 transition-[border-color,box-shadow]"
+                    style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-surface)' }}
                   >
-                    <h2 className="text-[17px] font-semibold leading-snug tracking-[-0.01em] text-[#121212]">
+                    <div className="min-w-0 flex-1">
+                    <h2 className="text-[17px] font-semibold leading-snug tracking-[-0.01em]" style={{ color: 'var(--org-brand-text)' }}>
                       {job.title}
                     </h2>
-
-                    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
                       <div className="min-w-0">
-                        <dt className={metaLabel}>Team</dt>
-                        <dd className="mt-0.5 truncate text-[#121212]">{job.department_name}</dd>
+                        <dt className={metaLabel} style={{ color: 'var(--org-brand-muted)' }}>Team</dt>
+                        <dd className="mt-0.5 truncate" style={{ color: 'var(--org-brand-text)' }}>{job.department_name}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className={metaLabel}>Contract</dt>
-                        <dd className="mt-0.5 text-[#121212]">{recruitmentContractLabel(job.contract_type)}</dd>
+                        <dt className={metaLabel} style={{ color: 'var(--org-brand-muted)' }}>Contract</dt>
+                        <dd className="mt-0.5" style={{ color: 'var(--org-brand-text)' }}>{recruitmentContractLabel(job.contract_type)}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className={metaLabel}>Salary band</dt>
-                        <dd className="mt-0.5 truncate text-[#121212]">{job.salary_band}</dd>
+                        <dt className={metaLabel} style={{ color: 'var(--org-brand-muted)' }}>Salary band</dt>
+                        <dd className="mt-0.5 truncate" style={{ color: 'var(--org-brand-text)' }}>{job.salary_band}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className={metaLabel}>Grade</dt>
-                        <dd className="mt-0.5 text-[#121212]">{job.grade_level}</dd>
+                        <dt className={metaLabel} style={{ color: 'var(--org-brand-muted)' }}>Grade</dt>
+                        <dd className="mt-0.5" style={{ color: 'var(--org-brand-text)' }}>{job.grade_level}</dd>
                       </div>
-                      <div className="col-span-2 min-w-0 border-t border-[#e0ddd8] pt-3">
-                        <dt className={metaLabel}>Posted</dt>
-                        <dd className="mt-0.5 text-[#121212]">{posted ?? '—'}</dd>
+                      <div className="col-span-2 min-w-0 border-t pt-3" style={{ borderColor: 'var(--org-brand-border)' }}>
+                        <dt className={metaLabel} style={{ color: 'var(--org-brand-muted)' }}>Posted</dt>
+                        <dd className="mt-0.5" style={{ color: 'var(--org-brand-text)' }}>{posted ?? '—'}</dd>
                       </div>
                     </dl>
 
-                    <p className="mt-4 text-[12px] text-[#6b6b6b]">
-                      Apply with <span className="font-medium text-[#121212]">{jobApplicationModeLabel(job.application_mode)}</span>
+                    <p className="mt-4 text-[12px]" style={{ color: 'var(--org-brand-muted)' }}>
+                      Apply with <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>{jobApplicationModeLabel(job.application_mode)}</span>
                     </p>
-
-                    <span className="mt-4 inline-flex items-center text-[13px] font-semibold text-[#121212]">
-                      View role
-                      <span className="ml-1 transition-transform group-hover:translate-x-0.5" aria-hidden>
-                        →
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="mb-3 text-[11px]" style={{ color: 'var(--org-brand-muted)' }}>Apply with CV upload</p>
+                      <span
+                        className="inline-flex items-center rounded-md px-3 py-2 text-[12px] font-semibold"
+                        style={{ background: 'var(--org-brand-primary)', color: 'var(--jobs-on-primary)' }}
+                      >
+                        View role →
                       </span>
-                    </span>
+                    </div>
                   </Link>
                 </li>
               );
             })}
-          </ul>
+            </ul>
+          </>
         )}
 
-        <div className="mt-8 flex items-center justify-between border-t border-[#e8e6e3] pt-6">
+        <div className="mt-8 flex items-center justify-between border-t pt-6" style={{ borderColor: 'var(--org-brand-border)' }}>
           <Link
             aria-disabled={!hasPrev}
             className={`rounded-lg px-3 py-2 text-[13px] font-medium ${
               hasPrev
-                ? 'bg-white text-[#121212] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#f5f4f1]'
-                : 'cursor-not-allowed text-[#b0b0b0]'
+                ? ''
+                : 'cursor-not-allowed'
             }`}
             href={hasPrev ? buildPublicJobsHref(orgSlug, host, { q, dept, contract, page: page - 1 }) : '#'}
+            style={
+              hasPrev
+                ? { background: 'var(--org-brand-surface)', color: 'var(--org-brand-text)', boxShadow: 'inset 0 0 0 1px var(--org-brand-border)' }
+                : { color: 'var(--org-brand-muted)' }
+            }
           >
             Previous
           </Link>
-          <span className="text-[12px] tabular-nums text-[#6b6b6b]">Page {page}</span>
+          <span className="text-[12px] tabular-nums" style={{ color: 'var(--org-brand-muted)' }}>Page {page}</span>
           <Link
             aria-disabled={!hasNext}
             className={`rounded-lg px-3 py-2 text-[13px] font-medium ${
               hasNext
-                ? 'bg-white text-[#121212] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#f5f4f1]'
-                : 'cursor-not-allowed text-[#b0b0b0]'
+                ? ''
+                : 'cursor-not-allowed'
             }`}
             href={hasNext ? buildPublicJobsHref(orgSlug, host, { q, dept, contract, page: page + 1 }) : '#'}
+            style={
+              hasNext
+                ? { background: 'var(--org-brand-surface)', color: 'var(--org-brand-text)', boxShadow: 'inset 0 0 0 1px var(--org-brand-border)' }
+                : { color: 'var(--org-brand-muted)' }
+            }
           >
             Next
           </Link>
         </div>
 
-        <footer className="mt-10 rounded-xl border border-[#e8e6e3] bg-[#f5f4f1] px-5 py-4 text-[13px] text-[#6b6b6b]">
-          <span className="font-medium text-[#121212]">Candidates:</span>{' '}
-          <Link className={`${linkClass} font-semibold`} href={tenantJobsSubrouteRelativePath('login', orgSlug, host)}>
+        <footer className="mt-10 rounded-xl border px-5 py-4 text-[13px]" style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-surface)', color: 'var(--org-brand-muted)' }}>
+          <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>Candidates:</span>{' '}
+          <Link className={`${linkClass} font-semibold`} href={tenantJobsSubrouteRelativePath('login', orgSlug, host)} style={{ color: 'var(--org-brand-primary)', textDecorationColor: 'var(--org-brand-border)' }}>
             Sign in
           </Link>
           {' · '}
-          <Link className={`${linkClass} font-semibold`} href={tenantJobsSubrouteRelativePath('register', orgSlug, host)}>
+          <Link className={`${linkClass} font-semibold`} href={tenantJobsSubrouteRelativePath('register', orgSlug, host)} style={{ color: 'var(--org-brand-primary)', textDecorationColor: 'var(--org-brand-border)' }}>
             Create an account
           </Link>
           {' '}to save progress and track applications.
         </footer>
 
-        <div className="mt-12 border-t border-[#e8e6e3] pt-8">
+        <div className="mt-12 border-t pt-8" style={{ borderColor: 'var(--org-brand-border)' }}>
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:justify-between sm:text-left">
             <div>
-              <p className="font-authSerif text-[1.125rem] text-[#121212]">Campsite</p>
-              <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[#9b9b9b]">Careers</p>
+              <p className="font-authSerif text-[1.125rem]" style={{ color: 'var(--org-brand-text)' }}>Campsite</p>
+              <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em]" style={{ color: 'var(--org-brand-muted)' }}>Careers</p>
             </div>
-            <div className="max-w-md space-y-1 text-[11px] leading-relaxed text-[#9b9b9b] sm:text-right">
+            <div className="max-w-md space-y-1 text-[11px] leading-relaxed sm:text-right" style={{ color: 'var(--org-brand-muted)' }}>
               <p>© {year} Common Ground Studios Ltd. All rights reserved.</p>
-              <p className="text-[#b0b0b0]">
+              <p>
                 Campsite is a product of Common Ground Studios Ltd. Job listings are published by the organisation named
                 above.
               </p>
