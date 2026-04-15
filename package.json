@@ -15,6 +15,8 @@
     "provision:university-of-sussex-student-union": "node scripts/provision-university-of-sussex-student-union.mjs",
     "generate:ussu-password-tsv": "python3 scripts/generate-ussu-password-import-tsv.py",
     "add-platform-founder": "node scripts/add-platform-founder.mjs",
+    "security:bank-details:rotate-key": "node scripts/rotate-bank-details-key.mjs",
+    "security:medical-notes:rotate-key": "node scripts/rotate-medical-notes-key.mjs",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",

@@ -1,137 +1,221 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
+import {
+  tenantJobsSubrouteRelativePath,
+  tenantPublicJobsIndexRelativePath,
+} from '@/lib/tenant/adminUrl';
 
-/** Campsite + Careers + Common Ground Studios — use at the top of every public careers route. */
-export function CareersProductStrip({ className = '' }: { className?: string }) {
+export type CareersSection = 'browse' | 'applications' | 'profile';
+
+// ─── Org mark: logo image or two-letter monogram ─────────────────────────────
+function OrgMark({ orgName, logoUrl }: { orgName: string; logoUrl?: string | null }) {
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        alt=""
+        aria-hidden
+        width={40}
+        height={40}
+        className="h-10 w-10 shrink-0 rounded-xl object-contain ring-1 ring-black/[0.07]"
+        style={{ background: 'var(--org-brand-surface, #f5f4f1)' }}
+      />
+    );
+  }
+  const words = orgName.trim().split(/\s+/);
+  const initials =
+    words.length >= 2
+      ? `${words[0]?.[0] ?? ''}${words[words.length - 1]?.[0] ?? ''}`.toUpperCase()
+      : orgName.slice(0, 2).toUpperCase();
   return (
     <div
-      className={`rounded-2xl border px-5 py-4 sm:px-6 ${className}`}
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[12px] font-bold tracking-wide"
       style={{
-        borderColor: 'color-mix(in oklab, var(--org-brand-primary, #121212) 40%, black 60%)',
-        background:
-          'linear-gradient(180deg, color-mix(in oklab, var(--org-brand-primary, #121212) 92%, white 8%), color-mix(in oklab, var(--org-brand-primary, #121212) 84%, black 16%))',
+        background: 'var(--org-brand-primary, #121212)',
+        color: 'var(--jobs-on-primary, #fff)',
       }}
+      aria-hidden
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <span
-            className="font-authSerif text-[1.35rem] leading-none tracking-tight sm:text-[1.5rem]"
-            style={{ color: 'var(--jobs-on-primary, #faf9f6)' }}
-          >
-            Campsite
-          </span>
-          <span
-            className="hidden h-5 w-px sm:block"
-            aria-hidden
-            style={{ background: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 25%, transparent)' }}
-          />
-          <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em]"
-            style={{
-              background: 'color-mix(in oklab, var(--org-brand-accent, #d4af37) 88%, white 12%)',
-              color: 'var(--org-brand-primary, #121212)',
-            }}
-          >
-            Careers
-          </span>
-        </div>
-        <p
-          className="text-[12px] leading-snug sm:text-right"
-          style={{ color: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 72%, transparent)' }}
-        >
-          Hiring platform by <span className="font-semibold">Common Ground Studios Ltd</span>
-        </p>
-      </div>
+      {initials}
     </div>
   );
 }
 
-/** Large org block — job index hero and anywhere the employer should read as the main context. */
-export function CareersOrgHero({
+// ─── Unified branded header ──────────────────────────────────────────────────
+type CareersHeaderProps = {
+  orgName: string;
+  orgLogoUrl?: string | null;
+  /** When provided together with hostHeader + current, renders nav tabs */
+  orgSlug?: string | null;
+  hostHeader?: string;
+  current?: CareersSection;
+  /** Slot for account/context actions rendered on the right */
+  actions?: ReactNode;
+};
+
+export function CareersHeader({
+  orgName,
+  orgLogoUrl,
+  orgSlug,
+  hostHeader = '',
+  current,
+  actions,
+}: CareersHeaderProps) {
+  const showNav = Boolean(orgSlug?.trim()) && Boolean(current);
+
+  return (
+    <header
+      className="overflow-hidden rounded-2xl border"
+      style={{
+        borderColor: 'var(--org-brand-border, #e0ddd8)',
+        background:
+          'linear-gradient(135deg, color-mix(in oklab, var(--org-brand-primary, #121212) 9%, var(--org-brand-surface, #f5f4f1)) 0%, var(--org-brand-surface, #f5f4f1) 55%)',
+      }}
+    >
+      {/* Identity + account row */}
+      <div className="flex items-center gap-3 px-5 py-3.5 sm:px-6">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <OrgMark orgName={orgName} logoUrl={orgLogoUrl} />
+          <div className="min-w-0">
+            <p
+              className="truncate text-[14px] font-semibold leading-snug"
+              style={{ color: 'var(--org-brand-text, #121212)' }}
+            >
+              {orgName}
+            </p>
+            <p
+              className="text-[11px] font-medium uppercase tracking-[0.1em]"
+              style={{ color: 'var(--org-brand-muted, #6b6b6b)' }}
+            >
+              Careers & Opportunities
+            </p>
+          </div>
+        </div>
+        {actions ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-1 text-[13px]">{actions}</div>
+        ) : null}
+      </div>
+
+      {/* Navigation tabs */}
+      {showNav ? (
+        <nav
+          aria-label="Careers sections"
+          className="flex border-t"
+          style={{ borderColor: 'var(--org-brand-border, #e0ddd8)' }}
+        >
+          {(
+            [
+              {
+                id: 'browse' as CareersSection,
+                label: 'Open roles',
+                path: tenantPublicJobsIndexRelativePath(orgSlug!, hostHeader),
+              },
+              {
+                id: 'applications' as CareersSection,
+                label: 'Applications',
+                path: tenantJobsSubrouteRelativePath('me', orgSlug!, hostHeader),
+              },
+              {
+                id: 'profile' as CareersSection,
+                label: 'Profile',
+                path: tenantJobsSubrouteRelativePath('me/profile', orgSlug!, hostHeader),
+              },
+            ] as const
+          ).map((tab) =>
+            tab.id === current ? (
+              <span
+                key={tab.id}
+                className="flex-1 border-b-[2.5px] py-3 text-center text-[12.5px] font-semibold"
+                style={{
+                  borderBottomColor: 'var(--org-brand-primary, #121212)',
+                  color: 'var(--org-brand-text, #121212)',
+                }}
+              >
+                {tab.label}
+              </span>
+            ) : (
+              <Link
+                key={tab.id}
+                href={tab.path}
+                className="flex-1 border-b-[2.5px] border-transparent py-3 text-center text-[12.5px] font-medium transition-opacity hover:opacity-70"
+                style={{ color: 'var(--org-brand-muted, #6b6b6b)' }}
+              >
+                {tab.label}
+              </Link>
+            )
+          )}
+        </nav>
+      ) : null}
+    </header>
+  );
+}
+
+// ─── Jobs index hero ─────────────────────────────────────────────────────────
+export function CareersJobsHero({
   orgName,
   description,
-  trailing,
   className = '',
 }: {
   orgName: string;
   description?: ReactNode;
-  /** e.g. account links — laid out to the right on wide screens */
-  trailing?: ReactNode;
   className?: string;
 }) {
   return (
-    <section
-      className={`mt-5 overflow-hidden rounded-2xl border ${className}`}
-      style={{
-        borderColor: 'color-mix(in oklab, var(--org-brand-primary, #121212) 45%, black 55%)',
-        background:
-          'linear-gradient(145deg, color-mix(in oklab, var(--org-brand-primary, #121212) 92%, white 8%), color-mix(in oklab, var(--org-brand-secondary, #2f2f2f) 88%, black 12%))',
-      }}
-    >
-      <div
-        className="border-b px-5 pb-1 pt-5 sm:px-7 sm:pt-6"
-        style={{ borderColor: 'color-mix(in oklab, var(--org-brand-accent, #d4af37) 55%, transparent)' }}
+    <section className={`pb-2 pt-8 sm:pt-10 ${className}`}>
+      <p
+        className="text-[11px] font-semibold uppercase tracking-[0.14em]"
+        style={{ color: 'var(--org-brand-muted, #6b6b6b)' }}
       >
-        <span
-          className="inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.13em]"
-          style={{
-            background: 'color-mix(in oklab, var(--org-brand-accent, #d4af37) 88%, white 12%)',
-            color: 'var(--org-brand-primary, #121212)',
-          }}
+        Open opportunities
+      </p>
+      <h1
+        className="mt-2 font-authSerif text-[clamp(2rem,5vw,3rem)] leading-[1.1] tracking-[-0.03em]"
+        style={{ color: 'var(--org-brand-text, #121212)' }}
+      >
+        {orgName}
+      </h1>
+      {description ? (
+        <p
+          className="mt-3 max-w-2xl text-[15px] leading-relaxed"
+          style={{ color: 'var(--org-brand-muted, #6b6b6b)' }}
         >
-          We&apos;re hiring
-        </span>
-      </div>
-      <div className="flex flex-col gap-5 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-6">
-        <div className="min-w-0">
-          <p
-            className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-            style={{ color: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 72%, transparent)' }}
-          >
-            {orgName}
-          </p>
-          <p
-            className="mt-1 font-authSerif text-[clamp(1.75rem,4vw,2.25rem)] leading-[1.15] tracking-[-0.02em]"
-            style={{ color: 'var(--jobs-on-primary, #faf9f6)' }}
-          >
-            {orgName}
-          </p>
-          {description ? (
-            <div
-              className="mt-2 max-w-xl text-[13px] leading-relaxed"
-              style={{ color: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 75%, transparent)' }}
-            >
-              {description}
-            </div>
-          ) : null}
-        </div>
-        {trailing ? <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">{trailing}</div> : null}
-      </div>
+          {description}
+        </p>
+      ) : null}
     </section>
   );
 }
 
-/** Compact org block — auth flows, job detail, apply, token pages. Parent should use gap or space-y for spacing above. */
-export function CareersOrgLine({ orgName, className = '' }: { orgName: string; className?: string }) {
+// ─── Product strip (footer branding) ─────────────────────────────────────────
+export function CareersProductStrip({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`rounded-2xl border px-5 py-4 sm:px-6 sm:py-5 ${className}`}
+      className={`rounded-xl border px-4 py-3 sm:px-5 ${className}`}
       style={{
-        borderColor: 'color-mix(in oklab, var(--org-brand-primary, #121212) 32%, transparent)',
-        background: 'color-mix(in oklab, var(--org-brand-primary, #121212) 92%, white 8%)',
+        borderColor: 'var(--org-brand-border, #e8e6e3)',
+        background: 'var(--org-brand-surface, #f5f4f1)',
       }}
     >
-      <p
-        className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-        style={{ color: 'color-mix(in oklab, var(--jobs-on-primary, #faf9f6) 72%, transparent)' }}
-      >
-        Organisation
-      </p>
-      <p
-        className="mt-1 font-authSerif text-[clamp(1.25rem,3vw,1.75rem)] leading-tight tracking-[-0.02em]"
-        style={{ color: 'var(--jobs-on-primary, #faf9f6)' }}
-      >
-        {orgName}
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p
+            className="font-authSerif text-[1.1rem] leading-none"
+            style={{ color: 'var(--org-brand-text, #121212)' }}
+          >
+            Campsite
+          </p>
+          <p
+            className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+            style={{ color: 'var(--org-brand-muted, #6b6b6b)' }}
+          >
+            Careers
+          </p>
+        </div>
+        <p className="text-right text-[11px]" style={{ color: 'var(--org-brand-muted, #6b6b6b)' }}>
+          Powered by Common Ground Studios
+        </p>
+      </div>
     </div>
   );
 }

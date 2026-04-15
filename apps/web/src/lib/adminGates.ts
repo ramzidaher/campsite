@@ -93,7 +93,8 @@ export type ShellNavIconId =
   | 'systemOverview'
   | 'absenceReport'
   | 'attendance'
-  | 'payroll';
+  | 'payroll'
+  | 'privacy';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -262,6 +263,13 @@ export function getMainShellAdminNavItemsByPermissions(
   if (p.includes('members.view'))
     items.push({ href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' });
   items.push({ href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' });
+  if (
+    p.includes('privacy.retention_policy.view') ||
+    p.includes('privacy.erasure_request.review') ||
+    p.includes('privacy.erasure_request.audit_view')
+  ) {
+    items.push({ href: '/admin/privacy', label: 'Privacy center', icon: 'privacy', section: 'Configuration' });
+  }
   items.push({
     href: '/admin/notifications',
     label: 'Notification defaults',
@@ -360,6 +368,13 @@ export function getMainShellHrNavItemsByPermissions(
     items.push({ href: '/hr/timesheets', label: 'Timesheet review', icon: 'calendar', section: 'Payroll & time' });
   if (p.includes('payroll.view') || p.includes('payroll.manage'))
     items.push({ href: '/hr/wagesheets', label: 'Wagesheets', icon: 'payroll', section: 'Payroll & time' });
+  if (
+    p.includes('privacy.retention_policy.view') ||
+    p.includes('privacy.erasure_request.review') ||
+    p.includes('privacy.erasure_request.audit_view')
+  ) {
+    items.push({ href: '/admin/privacy', label: 'Privacy center', icon: 'privacy', section: 'Compliance' });
+  }
   if (p.includes('hr.manage_records'))
     items.push({ href: '/hr/attendance-settings', label: 'Attendance sites', icon: 'orgSettings', section: 'Payroll & time' });
   return items.length ? items : null;

@@ -65,7 +65,7 @@ export function HrMetricNotificationsClient({
             HR metric alerts
           </h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Bradford factor, working hours, recruitment diversity, probation, and related notices.
+            Bradford factor, working hours, recruitment diversity, probation, ID expiry, and related notices.
           </p>
         </div>
         {unread.length > 0 ? (

@@ -52,6 +52,77 @@ const PERMISSION_GROUPS: { key: string; title: string }[] = [
   { key: 'interviews', title: 'Interviews' },
 ];
 
+const HR_DOCUMENT_PERMISSION_KEYS = [
+  'hr.employee_photo.view_all',
+  'hr.employee_photo.manage_all',
+  'hr.employee_photo.view_own',
+  'hr.employee_photo.upload_own',
+  'hr.employee_photo.delete_own',
+  'hr.id_document.view_all',
+  'hr.id_document.manage_all',
+  'hr.id_document.view_own',
+  'hr.id_document.upload_own',
+  'hr.id_document.delete_own',
+] as const;
+
+const PAYROLL_TAX_DOCUMENT_PERMISSION_KEYS = [
+  'payroll.tax_docs.view_all',
+  'payroll.tax_docs.manage_all',
+  'payroll.tax_docs.view_own',
+  'payroll.tax_docs.upload_own',
+  'payroll.tax_docs.export',
+] as const;
+
+const EMPLOYMENT_HISTORY_PERMISSION_KEYS = [
+  'hr.employment_history.view_all',
+  'hr.employment_history.manage_all',
+  'hr.employment_history.view_own',
+  'hr.employment_history.manage_own',
+] as const;
+
+const DISCIPLINARY_GRIEVANCE_PERMISSION_KEYS = [
+  'hr.disciplinary.view_all',
+  'hr.disciplinary.manage_all',
+  'hr.disciplinary.view_own',
+  'hr.grievance.view_all',
+  'hr.grievance.manage_all',
+  'hr.grievance.view_own',
+] as const;
+
+const MEDICAL_NOTES_PERMISSION_KEYS = [
+  'hr.medical_notes.view_all',
+  'hr.medical_notes.manage_all',
+  'hr.medical_notes.view_own_summary',
+  'hr.medical_notes.reveal_sensitive',
+  'hr.medical_notes.export',
+  'hr.medical_notes.manage_own',
+] as const;
+
+const CUSTOM_HR_FIELDS_PERMISSION_KEYS = [
+  'hr.custom_fields.view',
+  'hr.custom_fields.manage_definitions',
+  'hr.custom_fields.manage_values_all',
+  'hr.custom_fields.manage_values_own',
+] as const;
+
+const PRIVACY_POLICY_PERMISSION_KEYS = [
+  'privacy.retention_policy.view',
+  'privacy.retention_policy.manage',
+  'privacy.erasure_request.create',
+  'privacy.erasure_request.review',
+  'privacy.erasure_request.execute',
+  'privacy.erasure_request.audit_view',
+] as const;
+
+const RECORD_EXPORT_PERMISSION_KEYS = [
+  'hr.records_export.view_all',
+  'hr.records_export.view_own',
+  'hr.records_export.view_direct_reports',
+  'hr.records_export.include_sensitive',
+  'hr.records_export.generate_pdf',
+  'hr.records_export.generate_csv',
+] as const;
+
 export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRoles: boolean }) {
   const [activeTab, setActiveTab] = useState<'roles' | 'create'>('roles');
   const [createPickerItems, setCreatePickerItems] = useState<PermissionPickerItem[]>([]);
@@ -578,6 +649,414 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
               </div>
             </div>
           ) : null}
+
+          <div className="rounded-[18px] border border-black/10 bg-white p-5">
+            <div className="mb-3">
+              <p className="text-[16px] font-medium text-[#1A1917]">Employee Document Permission Matrix</p>
+              <p className="mt-0.5 text-[12px] text-[#6B6963]">
+                Role coverage for employee photo and ID document access controls.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-black/10 text-[#6B6963]">
+                    <th className="py-2 pr-3 font-medium">Permission</th>
+                    <th className="py-2 pr-3 font-medium">Roles with permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {HR_DOCUMENT_PERMISSION_KEYS.map((key) => {
+                    const permission = permissions.find((p) => p.key === key);
+                    const roleLabels = roles
+                      .filter((r) => r.org_role_permissions.some((rp) => rp.permission_key === key))
+                      .map((r) => r.label);
+                    return (
+                      <tr key={key} className="border-b border-black/5 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium text-[#1A1917]">{permission?.label ?? key}</p>
+                          <p className="font-mono text-[11px] text-[#A39E97]">{key}</p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {roleLabels.length === 0 ? (
+                            <span className="text-[#A39E97]">None</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {roleLabels.map((label) => (
+                                <span
+                                  key={`${key}:${label}`}
+                                  className="rounded-full border border-[#1A5FA8]/20 bg-[#EBF3FF] px-2 py-0.5 text-[11.5px] text-[#1A5FA8]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-black/10 bg-white p-5">
+            <div className="mb-3">
+              <p className="text-[16px] font-medium text-[#1A1917]">Payroll Tax Document Permission Matrix</p>
+              <p className="mt-0.5 text-[12px] text-[#6B6963]">
+                Role coverage for P45/P60 payroll tax document access controls.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-black/10 text-[#6B6963]">
+                    <th className="py-2 pr-3 font-medium">Permission</th>
+                    <th className="py-2 pr-3 font-medium">Roles with permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PAYROLL_TAX_DOCUMENT_PERMISSION_KEYS.map((key) => {
+                    const permission = permissions.find((p) => p.key === key);
+                    const roleLabels = roles
+                      .filter((r) => r.org_role_permissions.some((rp) => rp.permission_key === key))
+                      .map((r) => r.label);
+                    return (
+                      <tr key={key} className="border-b border-black/5 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium text-[#1A1917]">{permission?.label ?? key}</p>
+                          <p className="font-mono text-[11px] text-[#A39E97]">{key}</p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {roleLabels.length === 0 ? (
+                            <span className="text-[#A39E97]">None</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {roleLabels.map((label) => (
+                                <span
+                                  key={`${key}:${label}`}
+                                  className="rounded-full border border-[#1A5FA8]/20 bg-[#EBF3FF] px-2 py-0.5 text-[11.5px] text-[#1A5FA8]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-black/10 bg-white p-5">
+            <div className="mb-3">
+              <p className="text-[16px] font-medium text-[#1A1917]">Employment History Permission Matrix</p>
+              <p className="mt-0.5 text-[12px] text-[#6B6963]">
+                Role coverage for employee employment history access controls.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-black/10 text-[#6B6963]">
+                    <th className="py-2 pr-3 font-medium">Permission</th>
+                    <th className="py-2 pr-3 font-medium">Roles with permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {EMPLOYMENT_HISTORY_PERMISSION_KEYS.map((key) => {
+                    const permission = permissions.find((p) => p.key === key);
+                    const roleLabels = roles
+                      .filter((r) => r.org_role_permissions.some((rp) => rp.permission_key === key))
+                      .map((r) => r.label);
+                    return (
+                      <tr key={key} className="border-b border-black/5 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium text-[#1A1917]">{permission?.label ?? key}</p>
+                          <p className="font-mono text-[11px] text-[#A39E97]">{key}</p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {roleLabels.length === 0 ? (
+                            <span className="text-[#A39E97]">None</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {roleLabels.map((label) => (
+                                <span
+                                  key={`${key}:${label}`}
+                                  className="rounded-full border border-[#1A5FA8]/20 bg-[#EBF3FF] px-2 py-0.5 text-[11.5px] text-[#1A5FA8]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-black/10 bg-white p-5">
+            <div className="mb-3">
+              <p className="text-[16px] font-medium text-[#1A1917]">Disciplinary & Grievance Permission Matrix</p>
+              <p className="mt-0.5 text-[12px] text-[#6B6963]">
+                Role coverage for sensitive disciplinary and grievance access controls.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-black/10 text-[#6B6963]">
+                    <th className="py-2 pr-3 font-medium">Permission</th>
+                    <th className="py-2 pr-3 font-medium">Roles with permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {DISCIPLINARY_GRIEVANCE_PERMISSION_KEYS.map((key) => {
+                    const permission = permissions.find((p) => p.key === key);
+                    const roleLabels = roles
+                      .filter((r) => r.org_role_permissions.some((rp) => rp.permission_key === key))
+                      .map((r) => r.label);
+                    return (
+                      <tr key={key} className="border-b border-black/5 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium text-[#1A1917]">{permission?.label ?? key}</p>
+                          <p className="font-mono text-[11px] text-[#A39E97]">{key}</p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {roleLabels.length === 0 ? (
+                            <span className="text-[#A39E97]">None</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {roleLabels.map((label) => (
+                                <span
+                                  key={`${key}:${label}`}
+                                  className="rounded-full border border-[#1A5FA8]/20 bg-[#EBF3FF] px-2 py-0.5 text-[11.5px] text-[#1A5FA8]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-black/10 bg-white p-5">
+            <div className="mb-3">
+              <p className="text-[16px] font-medium text-[#1A1917]">Medical Notes Permission Matrix</p>
+              <p className="mt-0.5 text-[12px] text-[#6B6963]">
+                Role coverage for medical and occupational health record controls.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-black/10 text-[#6B6963]">
+                    <th className="py-2 pr-3 font-medium">Permission</th>
+                    <th className="py-2 pr-3 font-medium">Roles with permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MEDICAL_NOTES_PERMISSION_KEYS.map((key) => {
+                    const permission = permissions.find((p) => p.key === key);
+                    const roleLabels = roles
+                      .filter((r) => r.org_role_permissions.some((rp) => rp.permission_key === key))
+                      .map((r) => r.label);
+                    return (
+                      <tr key={key} className="border-b border-black/5 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium text-[#1A1917]">{permission?.label ?? key}</p>
+                          <p className="font-mono text-[11px] text-[#A39E97]">{key}</p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {roleLabels.length === 0 ? (
+                            <span className="text-[#A39E97]">None</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {roleLabels.map((label) => (
+                                <span
+                                  key={`${key}:${label}`}
+                                  className="rounded-full border border-[#1A5FA8]/20 bg-[#EBF3FF] px-2 py-0.5 text-[11.5px] text-[#1A5FA8]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-black/10 bg-white p-5">
+            <div className="mb-3">
+              <p className="text-[16px] font-medium text-[#1A1917]">Custom HR Fields Permission Matrix</p>
+              <p className="mt-0.5 text-[12px] text-[#6B6963]">
+                Role coverage for custom HR field definition and value controls.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-black/10 text-[#6B6963]">
+                    <th className="py-2 pr-3 font-medium">Permission</th>
+                    <th className="py-2 pr-3 font-medium">Roles with permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CUSTOM_HR_FIELDS_PERMISSION_KEYS.map((key) => {
+                    const permission = permissions.find((p) => p.key === key);
+                    const roleLabels = roles
+                      .filter((r) => r.org_role_permissions.some((rp) => rp.permission_key === key))
+                      .map((r) => r.label);
+                    return (
+                      <tr key={key} className="border-b border-black/5 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium text-[#1A1917]">{permission?.label ?? key}</p>
+                          <p className="font-mono text-[11px] text-[#A39E97]">{key}</p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {roleLabels.length === 0 ? (
+                            <span className="text-[#A39E97]">None</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {roleLabels.map((label) => (
+                                <span
+                                  key={`${key}:${label}`}
+                                  className="rounded-full border border-[#1A5FA8]/20 bg-[#EBF3FF] px-2 py-0.5 text-[11.5px] text-[#1A5FA8]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-black/10 bg-white p-5">
+            <div className="mb-3">
+              <p className="text-[16px] font-medium text-[#1A1917]">Privacy & Erasure Permission Matrix</p>
+              <p className="mt-0.5 text-[12px] text-[#6B6963]">
+                Role coverage for retention policies and GDPR right-to-erasure controls.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-black/10 text-[#6B6963]">
+                    <th className="py-2 pr-3 font-medium">Permission</th>
+                    <th className="py-2 pr-3 font-medium">Roles with permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PRIVACY_POLICY_PERMISSION_KEYS.map((key) => {
+                    const permission = permissions.find((p) => p.key === key);
+                    const roleLabels = roles
+                      .filter((r) => r.org_role_permissions.some((rp) => rp.permission_key === key))
+                      .map((r) => r.label);
+                    return (
+                      <tr key={key} className="border-b border-black/5 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium text-[#1A1917]">{permission?.label ?? key}</p>
+                          <p className="font-mono text-[11px] text-[#A39E97]">{key}</p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {roleLabels.length === 0 ? (
+                            <span className="text-[#A39E97]">None</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {roleLabels.map((label) => (
+                                <span
+                                  key={`${key}:${label}`}
+                                  className="rounded-full border border-[#1A5FA8]/20 bg-[#EBF3FF] px-2 py-0.5 text-[11.5px] text-[#1A5FA8]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-black/10 bg-white p-5">
+            <div className="mb-3">
+              <p className="text-[16px] font-medium text-[#1A1917]">Employee Record Export Permission Matrix</p>
+              <p className="mt-0.5 text-[12px] text-[#6B6963]">
+                Role coverage for CSV/PDF export and sensitive export gating.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-black/10 text-[#6B6963]">
+                    <th className="py-2 pr-3 font-medium">Permission</th>
+                    <th className="py-2 pr-3 font-medium">Roles with permission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {RECORD_EXPORT_PERMISSION_KEYS.map((key) => {
+                    const permission = permissions.find((p) => p.key === key);
+                    const roleLabels = roles
+                      .filter((r) => r.org_role_permissions.some((rp) => rp.permission_key === key))
+                      .map((r) => r.label);
+                    return (
+                      <tr key={key} className="border-b border-black/5 align-top">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium text-[#1A1917]">{permission?.label ?? key}</p>
+                          <p className="font-mono text-[11px] text-[#A39E97]">{key}</p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {roleLabels.length === 0 ? (
+                            <span className="text-[#A39E97]">None</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {roleLabels.map((label) => (
+                                <span
+                                  key={`${key}:${label}`}
+                                  className="rounded-full border border-[#1A5FA8]/20 bg-[#EBF3FF] px-2 py-0.5 text-[11.5px] text-[#1A5FA8]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       ) : canManageRoles ? (
         <div className="max-w-4xl rounded-[18px] border border-black/10 bg-white p-6">

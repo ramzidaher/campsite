@@ -4,6 +4,16 @@ import {
   formatLeaveYearPeriodRange,
 } from '@/lib/datetime';
 import { createClient } from '@/lib/supabase/server';
+import { EmployeeSelfDocumentsClient } from '@/components/profile/EmployeeSelfDocumentsClient';
+import { DependantsEditorClient } from '@/components/hr/DependantsEditorClient';
+import { BankDetailsClient } from '@/components/hr/BankDetailsClient';
+import { CustomHrFieldsValuesClient } from '@/components/hr/CustomHrFieldsValuesClient';
+import { DisciplinaryGrievanceLogClient } from '@/components/hr/DisciplinaryGrievanceLogClient';
+import { EmploymentHistoryClient } from '@/components/hr/EmploymentHistoryClient';
+import { MedicalNotesClient } from '@/components/hr/MedicalNotesClient';
+import { PrivacySelfRequestClient } from '@/components/privacy/PrivacySelfRequestClient';
+import { TaxDocumentsClient } from '@/components/hr/TaxDocumentsClient';
+import { UkTaxDetailsClient } from '@/components/hr/UkTaxDetailsClient';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -54,6 +64,63 @@ export default async function MyProfilePage() {
     p_permission_key: 'performance.view_own',
     p_context: {},
   });
+  const [
+    { data: canViewPhotoOwn },
+    { data: canUploadPhotoOwn },
+    { data: canDeletePhotoOwn },
+    { data: canViewIdOwn },
+    { data: canUploadIdOwn },
+    { data: canDeleteIdOwn },
+    { data: canBankViewOwn },
+    { data: canBankManageOwn },
+    { data: canBankExport },
+    { data: canUkTaxViewOwn },
+    { data: canUkTaxManageOwn },
+    { data: canUkTaxExport },
+    { data: canTaxDocsViewOwn },
+    { data: canTaxDocsUploadOwn },
+    { data: canTaxDocsExport },
+    { data: canEmploymentHistoryViewOwn },
+    { data: canEmploymentHistoryManageOwn },
+    { data: canDisciplinaryViewOwn },
+    { data: canGrievanceViewOwn },
+    { data: canMedicalViewOwnSummary },
+    { data: canMedicalManageOwn },
+    { data: canCustomFieldsView },
+    { data: canCustomFieldsManageOwn },
+    { data: canPrivacyErasureCreate },
+    { data: canRecordExportOwn },
+    { data: canRecordExportCsv },
+    { data: canRecordExportPdf },
+  ] = await Promise.all([
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employee_photo.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employee_photo.upload_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employee_photo.delete_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.id_document.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.id_document.upload_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.id_document.delete_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.bank_details.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.bank_details.manage_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.bank_details.export', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.manage_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.export', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.tax_docs.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.tax_docs.upload_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.tax_docs.export', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employment_history.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employment_history.manage_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.disciplinary.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.grievance.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.medical_notes.view_own_summary', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.medical_notes.manage_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.custom_fields.view', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.custom_fields.manage_values_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'privacy.erasure_request.create', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.records_export.view_own', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.records_export.generate_csv', p_context: {} }),
+    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.records_export.generate_pdf', p_context: {} }),
+  ]);
 
   const [{ data: leaveSettingsForYear }, { data: orgForTz }] = await Promise.all([
     supabase
@@ -79,6 +146,18 @@ export default async function MyProfilePage() {
     directReportsRes,
     onboardingCountRes,
     probationAlertsRes,
+    ownDocsRes,
+    ownDependantsRes,
+    ownBankRowsRes,
+    ownUkTaxRowsRes,
+    ownTaxDocsRes,
+    ownEmploymentHistoryRes,
+    ownCaseRowsRes,
+    ownCaseEventRowsRes,
+    ownMedicalRowsRes,
+    ownMedicalEventsRes,
+    ownCustomFieldDefsRes,
+    ownCustomFieldValuesRes,
   ] = await Promise.all([
     supabase.rpc('hr_employee_file', { p_user_id: user.id }),
     supabase
@@ -112,6 +191,87 @@ export default async function MyProfilePage() {
       .eq('user_id', user.id)
       .eq('status', 'active'),
     supabase.rpc('my_probation_alerts'),
+    supabase
+      .from('employee_hr_documents')
+      .select('id, category, document_kind, bucket_id, label, storage_path, file_name, byte_size, created_at, id_document_type, id_number_last4, expires_on, is_current')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .in('document_kind', ['employee_photo', 'id_document'])
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('employee_dependants')
+      .select('full_name, relationship, date_of_birth, is_student, is_disabled, is_beneficiary, beneficiary_percentage, phone, email, address, notes, is_emergency_contact')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('employee_bank_details')
+      .select('id, status, is_active, account_holder_display, account_number_last4, sort_code_last4, iban_last4, bank_country, currency, effective_from, submitted_by, reviewed_by, reviewed_at, review_note, created_at')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('employee_uk_tax_details')
+      .select('id, status, is_active, ni_number_masked, ni_number_last2, tax_code_masked, tax_code_last2, effective_from, review_note, created_at')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('employee_tax_documents')
+      .select('id, document_type, tax_year, issue_date, payroll_period_end, status, finance_reference, wagesheet_id, payroll_run_reference, bucket_id, storage_path, file_name, byte_size, is_current, created_at')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('employee_employment_history')
+      .select('role_title, department_name, team_name, manager_name, employment_type, contract_type, fte, location_type, start_date, end_date, change_reason, pay_grade, salary_band, notes, source')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .order('start_date', { ascending: false })
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('employee_case_records')
+      .select('id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, linked_documents, archived_at, created_at')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('employee_case_record_events')
+      .select('id, case_id, event_type, old_status, new_status, created_at')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('employee_medical_notes')
+      .select('id, case_ref, referral_reason, status, fit_for_work_outcome, recommended_adjustments, review_date, next_review_date, summary_for_employee, archived_at, created_at')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('employee_medical_note_events')
+      .select('id, medical_note_id, event_type, reason, created_at')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('hr_custom_field_definitions')
+      .select('id, key, label, section, field_type, options, is_required, visible_to_manager, visible_to_self')
+      .eq('org_id', orgId)
+      .eq('is_active', true)
+      .eq('visible_to_self', true)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('hr_custom_field_values')
+      .select('definition_id, value')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id),
   ]);
 
   const fileRow = (fileRows.data ?? [])[0];
@@ -460,9 +620,282 @@ export default async function MyProfilePage() {
             <strong>Other job details</strong> (custom fields) above.
           </p>
           <p className="text-[#6b6b6b]">
-            <strong className="text-[#121212]">Documents:</strong> contract and ID storage is not available in this
-            product area yet — use your HR team&apos;s usual process.
+            <strong className="text-[#121212]">Documents:</strong> your employee photo and ID records are available below.
+            ID number display is masked for privacy.
           </p>
+          {(canRecordExportOwn && (canRecordExportCsv || canRecordExportPdf)) ? (
+            <div className="flex flex-wrap gap-2">
+              {canRecordExportCsv ? (
+                <a href="/api/hr/records/export?format=csv" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] text-[#121212] hover:bg-[#fafafa]">
+                  Export my record (CSV)
+                </a>
+              ) : null}
+              {canRecordExportPdf ? (
+                <a href="/api/hr/records/export?format=pdf" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] text-[#121212] hover:bg-[#fafafa]">
+                  Export my record (PDF)
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+          <EmployeeSelfDocumentsClient
+            orgId={orgId}
+            userId={user.id}
+            docs={(ownDocsRes.data ?? []).map((d) => ({
+              id: d.id as string,
+              category: d.category as string,
+              document_kind: (d.document_kind as string) ?? 'id_document',
+              bucket_id: (d.bucket_id as string) ?? '',
+              label: (d.label as string) ?? '',
+              storage_path: d.storage_path as string,
+              file_name: d.file_name as string,
+              byte_size: Number(d.byte_size ?? 0),
+              created_at: d.created_at as string,
+              id_document_type: (d.id_document_type as string | null) ?? null,
+              id_number_last4: (d.id_number_last4 as string | null) ?? null,
+              expires_on: (d.expires_on as string | null) ?? null,
+              is_current: Boolean(d.is_current),
+            }))}
+            canViewPhoto={!!canViewPhotoOwn}
+            canUploadPhoto={!!canUploadPhotoOwn}
+            canDeletePhoto={!!canDeletePhotoOwn}
+            canViewId={!!canViewIdOwn}
+            canUploadId={!!canUploadIdOwn}
+            canDeleteId={!!canDeleteIdOwn}
+          />
+          <DependantsEditorClient
+            title="Dependants & beneficiaries"
+            description="Manage your dependant and beneficiary information."
+            subjectUserId={user.id}
+            canEdit={true}
+            initialDependants={(ownDependantsRes.data ?? []).map((d) => ({
+              full_name: (d.full_name as string) ?? '',
+              relationship: (d.relationship as string) ?? 'other',
+              date_of_birth: (d.date_of_birth as string | null) ?? null,
+              is_student: Boolean(d.is_student),
+              is_disabled: Boolean(d.is_disabled),
+              is_beneficiary: Boolean(d.is_beneficiary),
+              beneficiary_percentage:
+                d.beneficiary_percentage != null ? Number(d.beneficiary_percentage) : null,
+              phone: (d.phone as string | null) ?? null,
+              email: (d.email as string | null) ?? null,
+              address: (d.address as string | null) ?? null,
+              notes: (d.notes as string | null) ?? null,
+              is_emergency_contact: Boolean(d.is_emergency_contact),
+            }))}
+          />
+          {(canBankViewOwn || canBankManageOwn) ? (
+            <BankDetailsClient
+              title="Bank details (payroll)"
+              description="Masked by default. Changes require approval before activation."
+              subjectUserId={user.id}
+              initialRows={(ownBankRowsRes.data ?? []).map((r) => ({
+                id: r.id as string,
+                status: (r.status as 'pending' | 'approved' | 'rejected') ?? 'pending',
+                is_active: Boolean(r.is_active),
+                account_holder_display: (r.account_holder_display as string) ?? '',
+                account_number_last4: (r.account_number_last4 as string | null) ?? null,
+                sort_code_last4: (r.sort_code_last4 as string | null) ?? null,
+                iban_last4: (r.iban_last4 as string | null) ?? null,
+                bank_country: (r.bank_country as string | null) ?? null,
+                currency: (r.currency as string | null) ?? null,
+                effective_from: (r.effective_from as string | null) ?? null,
+                submitted_by: r.submitted_by as string,
+                reviewed_by: (r.reviewed_by as string | null) ?? null,
+                reviewed_at: (r.reviewed_at as string | null) ?? null,
+                review_note: (r.review_note as string | null) ?? null,
+                created_at: r.created_at as string,
+              }))}
+              permissions={{
+                viewAll: false,
+                manageAll: false,
+                viewOwn: Boolean(canBankViewOwn),
+                manageOwn: Boolean(canBankManageOwn),
+                canExport: Boolean(canBankExport),
+              }}
+            />
+          ) : null}
+          {(canUkTaxViewOwn || canUkTaxManageOwn) ? (
+            <UkTaxDetailsClient
+              subjectUserId={user.id}
+              initialRows={(ownUkTaxRowsRes.data ?? []).map((r) => ({
+                id: r.id as string,
+                status: (r.status as 'pending' | 'approved' | 'rejected') ?? 'pending',
+                is_active: Boolean(r.is_active),
+                ni_number_masked: (r.ni_number_masked as string | null) ?? null,
+                ni_number_last2: (r.ni_number_last2 as string | null) ?? null,
+                tax_code_masked: (r.tax_code_masked as string | null) ?? null,
+                tax_code_last2: (r.tax_code_last2 as string | null) ?? null,
+                effective_from: (r.effective_from as string | null) ?? null,
+                review_note: (r.review_note as string | null) ?? null,
+                created_at: r.created_at as string,
+              }))}
+              permissions={{
+                viewAll: false,
+                manageAll: false,
+                viewOwn: Boolean(canUkTaxViewOwn),
+                manageOwn: Boolean(canUkTaxManageOwn),
+                canExport: Boolean(canUkTaxExport),
+              }}
+            />
+          ) : null}
+          {(canTaxDocsViewOwn || canTaxDocsUploadOwn) ? (
+            <TaxDocumentsClient
+              orgId={orgId}
+              subjectUserId={user.id}
+              actorUserId={user.id}
+              initialDocs={(ownTaxDocsRes.data ?? []).map((r) => ({
+                id: r.id as string,
+                document_type: ((r.document_type as string) ?? 'p60') as 'p45' | 'p60',
+                tax_year: (r.tax_year as string | null) ?? null,
+                issue_date: (r.issue_date as string | null) ?? null,
+                payroll_period_end: (r.payroll_period_end as string | null) ?? null,
+                status: ((r.status as string) ?? 'issued') as 'draft' | 'final' | 'issued',
+                finance_reference: (r.finance_reference as string | null) ?? null,
+                wagesheet_id: (r.wagesheet_id as string | null) ?? null,
+                payroll_run_reference: (r.payroll_run_reference as string | null) ?? null,
+                bucket_id: (r.bucket_id as string) ?? 'employee-tax-documents',
+                storage_path: r.storage_path as string,
+                file_name: r.file_name as string,
+                byte_size: Number(r.byte_size ?? 0),
+                is_current: Boolean(r.is_current),
+                created_at: r.created_at as string,
+              }))}
+              permissions={{
+                viewAll: false,
+                manageAll: false,
+                viewOwn: Boolean(canTaxDocsViewOwn),
+                uploadOwn: Boolean(canTaxDocsUploadOwn),
+                canExport: Boolean(canTaxDocsExport),
+              }}
+            />
+          ) : null}
+          {(canEmploymentHistoryViewOwn || canEmploymentHistoryManageOwn) ? (
+            <EmploymentHistoryClient
+              subjectUserId={user.id}
+              canEdit={Boolean(canEmploymentHistoryManageOwn)}
+              isSelf
+              initialRows={(ownEmploymentHistoryRes.data ?? []).map((r) => ({
+                role_title: (r.role_title as string) ?? '',
+                department_name: (r.department_name as string | null) ?? null,
+                team_name: (r.team_name as string | null) ?? null,
+                manager_name: (r.manager_name as string | null) ?? null,
+                employment_type: (r.employment_type as string | null) ?? null,
+                contract_type: (r.contract_type as string | null) ?? null,
+                fte: r.fte != null ? Number(r.fte) : null,
+                location_type: (r.location_type as string | null) ?? null,
+                start_date: (r.start_date as string) ?? '',
+                end_date: (r.end_date as string | null) ?? null,
+                change_reason: (r.change_reason as string | null) ?? null,
+                pay_grade: (r.pay_grade as string | null) ?? null,
+                salary_band: (r.salary_band as string | null) ?? null,
+                notes: (r.notes as string | null) ?? null,
+                source: ((r.source as string) ?? 'employee_request') as 'manual' | 'auto_from_hr_record' | 'employee_request',
+              }))}
+            />
+          ) : null}
+          {(canDisciplinaryViewOwn || canGrievanceViewOwn) ? (
+            <DisciplinaryGrievanceLogClient
+              orgId={orgId}
+              subjectUserId={user.id}
+              title="Disciplinary & grievance records"
+              initialCases={(ownCaseRowsRes.data ?? []).map((r) => ({
+                id: r.id as string,
+                case_type: ((r.case_type as string) ?? 'disciplinary') as 'disciplinary' | 'grievance',
+                case_ref: (r.case_ref as string) ?? '',
+                category: (r.category as string | null) ?? null,
+                severity: (r.severity as string | null) ?? null,
+                status: ((r.status as string) ?? 'open') as 'open' | 'investigating' | 'hearing' | 'outcome_issued' | 'appeal' | 'closed',
+                incident_date: (r.incident_date as string | null) ?? null,
+                reported_date: (r.reported_date as string | null) ?? null,
+                hearing_date: (r.hearing_date as string | null) ?? null,
+                outcome_effective_date: (r.outcome_effective_date as string | null) ?? null,
+                review_date: (r.review_date as string | null) ?? null,
+                summary: (r.summary as string | null) ?? null,
+                allegations_details: null,
+                outcome_action: (r.outcome_action as string | null) ?? null,
+                appeal_submitted: Boolean(r.appeal_submitted),
+                appeal_outcome: (r.appeal_outcome as string | null) ?? null,
+                owner_user_id: (r.owner_user_id as string | null) ?? null,
+                investigator_user_id: (r.investigator_user_id as string | null) ?? null,
+                witness_details: null,
+                investigation_notes: null,
+                internal_notes: null,
+                linked_documents: r.linked_documents ?? [],
+                archived_at: (r.archived_at as string | null) ?? null,
+                created_at: r.created_at as string,
+              }))}
+              initialEvents={(ownCaseEventRowsRes.data ?? [])
+                .filter((e) => (ownCaseRowsRes.data ?? []).some((c) => (c.id as string) === (e.case_id as string)))
+                .map((e) => ({
+                  id: e.id as string,
+                  case_id: e.case_id as string,
+                  event_type: (e.event_type as string) ?? 'updated',
+                  old_status: (e.old_status as string | null) ?? null,
+                  new_status: (e.new_status as string | null) ?? null,
+                  created_at: e.created_at as string,
+                }))}
+              permissions={{
+                canManageDisciplinary: false,
+                canManageGrievance: false,
+                canViewSensitive: false,
+              }}
+            />
+          ) : null}
+          {(canMedicalViewOwnSummary || canMedicalManageOwn) ? (
+            <MedicalNotesClient
+              subjectUserId={user.id}
+              initialRows={(ownMedicalRowsRes.data ?? []).map((r) => ({
+                id: r.id as string,
+                case_ref: (r.case_ref as string) ?? '',
+                referral_reason: (r.referral_reason as string | null) ?? null,
+                status: ((r.status as string) ?? 'open') as 'open' | 'under_review' | 'fit_note_received' | 'closed',
+                fit_for_work_outcome: (r.fit_for_work_outcome as string | null) ?? null,
+                recommended_adjustments: (r.recommended_adjustments as string | null) ?? null,
+                review_date: (r.review_date as string | null) ?? null,
+                next_review_date: (r.next_review_date as string | null) ?? null,
+                summary_for_employee: (r.summary_for_employee as string | null) ?? null,
+                archived_at: (r.archived_at as string | null) ?? null,
+                created_at: r.created_at as string,
+              }))}
+              initialEvents={(ownMedicalEventsRes.data ?? []).map((e) => ({
+                id: e.id as string,
+                medical_note_id: e.medical_note_id as string,
+                event_type: (e.event_type as string) ?? 'updated',
+                reason: (e.reason as string | null) ?? null,
+                created_at: e.created_at as string,
+              }))}
+              permissions={{
+                viewAll: false,
+                manageAll: false,
+                viewOwnSummary: Boolean(canMedicalViewOwnSummary),
+                revealSensitive: false,
+                canExport: false,
+                manageOwn: Boolean(canMedicalManageOwn),
+              }}
+            />
+          ) : null}
+          {(canCustomFieldsView || canCustomFieldsManageOwn) ? (
+            <CustomHrFieldsValuesClient
+              orgId={orgId}
+              subjectUserId={user.id}
+              title="Custom HR fields"
+              definitions={(ownCustomFieldDefsRes.data ?? []).map((d) => ({
+                id: d.id as string,
+                key: d.key as string,
+                label: d.label as string,
+                section: (d.section as string) ?? 'personal',
+                field_type: (d.field_type as string) ?? 'text',
+                options: d.options ?? [],
+                is_required: Boolean(d.is_required),
+              }))}
+              initialValues={(ownCustomFieldValuesRes.data ?? []).map((v) => ({
+                definition_id: v.definition_id as string,
+                value: v.value,
+              }))}
+              canEdit={Boolean(canCustomFieldsManageOwn)}
+            />
+          ) : null}
+          {canPrivacyErasureCreate ? <PrivacySelfRequestClient userId={user.id} /> : null}
           <div>
             <p className="text-[#9b9b9b]">HR notes</p>
             <p className="mt-1 text-[#121212]">

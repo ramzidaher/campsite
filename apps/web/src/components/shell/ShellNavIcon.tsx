@@ -130,6 +130,8 @@ function tone(name: ShellNavIconId) {
       return ICON_TONE.slate;
     case 'integrations':
       return ICON_TONE.violet;
+    case 'privacy':
+      return ICON_TONE.violet;
     case 'orgSettings':
       return ICON_TONE.slate;
     case 'systemOverview':
@@ -205,6 +207,8 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <Bell {...p} />;
     case 'integrations':
       return <Link2 {...p} />;
+    case 'privacy':
+      return <FileLock {...p} />;
     case 'manager':
       if (open !== undefined) {
         return (
