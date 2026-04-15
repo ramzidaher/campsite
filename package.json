@@ -29,7 +29,11 @@
     "supabase:db:push": "cd supabase && npx supabase@latest db push --include-all --yes",
     "supabase:functions:deploy:verify": "npx supabase@latest functions deploy staff-discount-verify",
     "supabase:functions:deploy:broadcast-notify": "npx supabase@latest functions deploy process-broadcast-notifications --no-verify-jwt",
-    "supabase:functions:deploy:rota-notify": "npx supabase@latest functions deploy process-rota-notifications --no-verify-jwt"
+    "supabase:functions:deploy:rota-notify": "npx supabase@latest functions deploy process-rota-notifications --no-verify-jwt",
+    "loadtest:k6:shell": "k6 run load-tests/k6-shell-rpc.js",
+    "loadtest:k6:shell:50": "k6 run --vus 50 --duration 5m load-tests/k6-shell-rpc.js",
+    "loadtest:k6:shell:100": "k6 run --vus 100 --duration 5m load-tests/k6-shell-rpc.js",
+    "loadtest:k6:shell:200": "k6 run --vus 200 --duration 5m load-tests/k6-shell-rpc.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
