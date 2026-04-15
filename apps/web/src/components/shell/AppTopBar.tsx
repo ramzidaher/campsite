@@ -52,7 +52,14 @@ export function AppTopBar({
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 flex h-[60px] shrink-0 items-center gap-3 border-b border-[#d8d8d8] bg-[#faf9f6] px-4 sm:gap-4 sm:px-7">
+    <header
+      className="sticky top-0 z-50 flex h-[60px] shrink-0 items-center gap-3 border-b px-4 sm:gap-4 sm:px-7"
+      style={{
+        borderColor: 'var(--org-brand-border)',
+        background: 'var(--org-brand-surface)',
+        color: 'var(--org-brand-text)',
+      }}
+    >
       <div className="min-w-0 flex-1" aria-hidden />
       <div className="relative min-w-0 flex-1 sm:max-w-[420px]">
         <ShellCommandMenu
@@ -66,7 +73,7 @@ export function AppTopBar({
         <div className="relative" ref={notifRef}>
           <button
             type="button"
-            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white text-base text-[#6b6b6b] transition-colors hover:border-[#c5c5c5] hover:bg-[#f5f4f1]"
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg border bg-white text-base transition-colors"
             title="Notifications"
             aria-label={
               notificationCount > 0
@@ -75,6 +82,10 @@ export function AppTopBar({
             }
             aria-expanded={notifOpen}
             onClick={() => setNotifOpen((v) => !v)}
+            style={{
+              borderColor: 'var(--org-brand-border)',
+              color: 'var(--org-brand-muted)',
+            }}
           >
             🔔
             {notificationCount > 0 ? (
@@ -98,10 +109,17 @@ export function AppTopBar({
                       key={item.id}
                       href={item.href}
                       onClick={() => setNotifOpen(false)}
-                      className="flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] text-[#121212] transition-colors hover:bg-[#f7f6f2]"
+                      className="flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] transition-colors hover:bg-[#f7f6f2]"
+                      style={{ color: 'var(--org-brand-text)' }}
                     >
                       <span>{item.label}</span>
-                      <span className="rounded-full bg-[#121212] px-2 py-0.5 text-[11px] font-semibold text-white">
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                        style={{
+                          background: 'var(--org-brand-primary)',
+                          color: 'var(--org-brand-bg)',
+                        }}
+                      >
                         {item.count > 99 ? '99+' : item.count}
                       </span>
                     </Link>
@@ -115,7 +133,12 @@ export function AppTopBar({
         </div>
         <Link
           href="/settings"
-          className="flex h-[34px] w-[34px] items-center justify-center overflow-hidden rounded-full border-2 border-transparent bg-[#121212] text-[13px] font-semibold text-[#faf9f6] transition-colors hover:border-[#121212]"
+          className="flex h-[34px] w-[34px] items-center justify-center overflow-hidden rounded-full border-2 border-transparent text-[13px] font-semibold transition-colors"
+          style={{
+            background: 'var(--org-brand-primary)',
+            color: 'var(--org-brand-bg)',
+            borderColor: 'var(--org-brand-primary)',
+          }}
           title="Settings"
         >
           {avatarImageSrc ? (

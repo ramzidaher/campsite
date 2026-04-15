@@ -2,6 +2,7 @@ import { CareersOrgHero, CareersProductStrip } from '@/app/(public)/jobs/Careers
 import { CareersSectionNav } from '@/app/(public)/jobs/CareersSectionNav';
 import { buildPublicJobsHref } from '@/app/(public)/jobs/buildPublicJobsHref';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
+import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -89,7 +90,11 @@ export default async function PublicJobsPage({
       p_limit: PAGE_SIZE + 1,
       p_offset: offset,
     }),
-    supabase.from('organisations').select('name').eq('slug', orgSlug).maybeSingle(),
+    supabase
+      .from('organisations')
+      .select('name, brand_preset_key, brand_tokens, brand_policy')
+      .eq('slug', orgSlug)
+      .maybeSingle(),
   ]);
 
   if (error) {
@@ -107,18 +112,31 @@ export default async function PublicJobsPage({
   const hasPrev = page > 1;
 
   const orgName = (orgLookup?.name as string | undefined)?.trim() || rows[0]?.org_name || 'Organisation';
+  const resolvedBranding = resolveOrgBranding({
+    presetKey: orgLookup?.brand_preset_key,
+    customTokens: orgLookup?.brand_tokens,
+    policy: orgLookup?.brand_policy,
+    effectiveMode: 'off',
+  });
+  const jobsVars = {
+    ...orgBrandingCssVars(resolvedBranding.tokens),
+    ['--jobs-on-primary' as string]: onColorFor(resolvedBranding.tokens.primary),
+  };
 
   const orgQuery = !tenantHostMatchesOrg(orgSlug, host) ? <input type="hidden" name="org" value={orgSlug} /> : null;
   const year = new Date().getFullYear();
 
-  const pillOn = 'bg-[#121212] text-[#faf9f6] shadow-sm';
+  const pillOn = 'shadow-sm';
   const pillOff =
-    'bg-[#f5f4f1] text-[#6b6b6b] ring-1 ring-inset ring-[#e0ddd8] hover:bg-[#ebe8e3] hover:text-[#121212]';
+    'ring-1 ring-inset';
 
   const metaLabel = 'text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b9b9b]';
 
   return (
-    <div className="bg-[#faf9f6] font-sans text-[#121212] antialiased">
+    <div
+      className="font-sans antialiased"
+      style={{ ...jobsVars, background: 'var(--org-brand-bg)', color: 'var(--org-brand-text)' }}
+    >
       <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
         <CareersProductStrip />
 
@@ -201,9 +219,16 @@ export default async function PublicJobsPage({
                 <Link
                   key={opt.value || 'all'}
                   href={href}
-                  className={['rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors', isOn ? pillOn : pillOff].join(
-                    ' '
-                  )}
+                  className={['rounded-lg px-3 py-1.5 text-[12px] font-semibold', isOn ? pillOn : pillOff].join(' ')}
+                  style={
+                    isOn
+                      ? { background: 'var(--org-brand-primary)', color: 'var(--jobs-on-primary)' }
+                      : {
+                          background: 'var(--org-brand-surface)',
+                          color: 'var(--org-brand-muted)',
+                          boxShadow: 'inset 0 0 0 1px var(--org-brand-border)',
+                        }
+                  }
                 >
                   {opt.label}
                 </Link>
@@ -217,7 +242,16 @@ export default async function PublicJobsPage({
           <div className="flex flex-wrap gap-1.5">
             <Link
               href={buildPublicJobsHref(orgSlug, host, { q, dept: '', contract, page: 1 })}
-              className={['rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors', !dept ? pillOn : pillOff].join(' ')}
+              className={['rounded-lg px-3 py-1.5 text-[12px] font-semibold', !dept ? pillOn : pillOff].join(' ')}
+              style={
+                !dept
+                  ? { background: 'var(--org-brand-primary)', color: 'var(--jobs-on-primary)' }
+                  : {
+                      background: 'var(--org-brand-surface)',
+                      color: 'var(--org-brand-muted)',
+                      boxShadow: 'inset 0 0 0 1px var(--org-brand-border)',
+                    }
+              }
             >
               All teams
             </Link>
@@ -229,7 +263,16 @@ export default async function PublicJobsPage({
                 <Link
                   key={name}
                   href={href}
-                  className={['rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors', isOn ? pillOn : pillOff].join(' ')}
+                  className={['rounded-lg px-3 py-1.5 text-[12px] font-semibold', isOn ? pillOn : pillOff].join(' ')}
+                  style={
+                    isOn
+                      ? { background: 'var(--org-brand-primary)', color: 'var(--jobs-on-primary)' }
+                      : {
+                          background: 'var(--org-brand-surface)',
+                          color: 'var(--org-brand-muted)',
+                          boxShadow: 'inset 0 0 0 1px var(--org-brand-border)',
+                        }
+                  }
                 >
                   {name}
                 </Link>
@@ -250,7 +293,8 @@ export default async function PublicJobsPage({
             </p>
             <Link
               href={buildPublicJobsHref(orgSlug, host, {})}
-              className="mt-6 inline-flex rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-semibold text-[#faf9f6] hover:opacity-90"
+              className="mt-6 inline-flex rounded-lg px-4 py-2.5 text-[13px] font-semibold hover:opacity-90"
+              style={{ background: 'var(--org-brand-primary)', color: 'var(--jobs-on-primary)' }}
             >
               Clear filters
             </Link>

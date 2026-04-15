@@ -9,9 +9,11 @@ import {
   getMainShellManagerNavSectionLabel,
 } from '@/lib/adminGates';
 import { normalizeCelebrationMode } from '@/lib/holidayThemes';
+import type { OrgCelebrationModeOverride } from '@/lib/holidayThemes';
 import { resolveTenantGovernanceRedirect } from '@/lib/tenantGovernanceGate';
 import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import { createClient } from '@/lib/supabase/server';
 import {
   type PermissionKey,
 } from '@campsite/types';
@@ -77,10 +79,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const initialCelebrationMode = normalizeCelebrationMode(str('celebration_mode'));
   const initialCelebrationAutoEnabled =
     typeof b['celebration_auto_enabled'] === 'boolean' ? Boolean(b['celebration_auto_enabled']) : true;
+  let orgCelebrationOverrides: OrgCelebrationModeOverride[] = [];
+  if (currentOrgId) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('org_celebration_modes')
+      .select(
+        'mode_key,label,is_enabled,display_order,auto_start_month,auto_start_day,auto_end_month,auto_end_day,gradient_override,emoji_primary,emoji_secondary'
+      )
+      .eq('org_id', currentOrgId)
+      .order('display_order', { ascending: true })
+      .order('label', { ascending: true });
+    orgCelebrationOverrides = (data ?? []) as OrgCelebrationModeOverride[];
+  }
 
   const hasTenantProfile = hasProfile;
   const orgName          = str('org_name') ?? 'Organisation';
   const orgLogoUrl       = str('org_logo_url');
+  const orgBrandPresetKey = str('org_brand_preset_key');
+  const orgBrandPolicy = str('org_brand_policy');
+  const rawOrgBrandTokens = b['org_brand_tokens'];
+  const orgBrandTokens =
+    rawOrgBrandTokens && typeof rawOrgBrandTokens === 'object'
+      ? (rawOrgBrandTokens as Record<string, string>)
+      : null;
   const userAvatarUrl    = str('profile_avatar_url');
   const userRoleLabel    = profileRole ? roleLabel(profileRole) : '';
   const deptLine         = str('dept_name');
@@ -244,6 +266,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppShell
           orgName={orgName}
           orgLogoUrl={orgLogoUrl}
+          orgBrandPresetKey={orgBrandPresetKey}
+          orgBrandTokens={orgBrandTokens}
+          orgBrandPolicy={orgBrandPolicy}
           userName={userName}
           userAvatarUrl={userAvatarUrl}
           userRoleLabel={userRoleLabel}
@@ -276,6 +301,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           orgId={currentOrgId}
           initialCelebrationMode={initialCelebrationMode}
           initialCelebrationAutoEnabled={initialCelebrationAutoEnabled}
+          orgCelebrationOverrides={orgCelebrationOverrides}
         >
           {children}
         </AppShell>

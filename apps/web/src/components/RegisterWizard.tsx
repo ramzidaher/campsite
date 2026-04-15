@@ -138,6 +138,13 @@ export function RegisterWizard({
   const [boundOrgId, setBoundOrgId] = useState<string | null>(null);
   const [boundOrgName, setBoundOrgName] = useState<string | null>(null);
   const [newOrgName, setNewOrgName] = useState('');
+  const [newOrgLogoUrl, setNewOrgLogoUrl] = useState('');
+  const [newOrgLogoDomain, setNewOrgLogoDomain] = useState('');
+  const [orgLogoUploading, setOrgLogoUploading] = useState(false);
+  const [orgLogoLookupLoading, setOrgLogoLookupLoading] = useState(false);
+  const [newOrgLogoFile, setNewOrgLogoFile] = useState<File | null>(null);
+  const [orgLogoPreviewUrl, setOrgLogoPreviewUrl] = useState<string | null>(null);
+  const orgLogoFileInputRef = useRef<HTMLInputElement>(null);
   const [orgSlugInput, setOrgSlugInput] = useState('');
   /** Once true, organisation name changes no longer overwrite the short-name field. */
   const [orgSlugUserEdited, setOrgSlugUserEdited] = useState(false);
@@ -220,6 +227,82 @@ export function RegisterWizard({
     return () => URL.revokeObjectURL(url);
   }, [optionalAvatarFile]);
 
+  useEffect(() => {
+    if (!newOrgLogoFile) {
+      setOrgLogoPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(newOrgLogoFile);
+    setOrgLogoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [newOrgLogoFile]);
+
+  function normalizeDomain(input: string): string | null {
+    const raw = input.trim();
+    if (!raw) return null;
+    const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      const host = new URL(withProto).hostname.toLowerCase().replace(/^www\./, '');
+      if (!host.includes('.')) return null;
+      return host;
+    } catch {
+      return null;
+    }
+  }
+
+  async function lookupOrgLogoFromDomain() {
+    const domain = normalizeDomain(newOrgLogoDomain);
+    if (!domain) {
+      setError('Enter a valid website domain, for example acme.com.');
+      return;
+    }
+    setError(null);
+    setOrgLogoLookupLoading(true);
+    try {
+      const res = await fetch('/api/org-logo/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !body.url) {
+        setError(body.error || 'Could not find a logo for that domain.');
+        return;
+      }
+      setNewOrgLogoUrl(body.url);
+      setNewOrgLogoFile(null);
+    } catch {
+      setError('Network error while finding logo.');
+    } finally {
+      setOrgLogoLookupLoading(false);
+    }
+  }
+
+  async function uploadNewOrgLogo(file: File) {
+    setError(null);
+    setOrgLogoUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/org-logo/upload', {
+        method: 'POST',
+        body: form,
+      });
+      const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !body.url) {
+        setError(body.error || 'Could not upload the selected logo.');
+        return;
+      }
+      setNewOrgLogoFile(file);
+      setNewOrgLogoUrl(body.url);
+    } catch {
+      setError('Network error while uploading logo.');
+    } finally {
+      setOrgLogoUploading(false);
+      if (orgLogoFileInputRef.current) orgLogoFileInputRef.current.value = '';
+    }
+  }
+
   function toggleDept(id: string) {
     setSelectedDeptIds((prev) => {
       const n = new Set(prev);
@@ -280,6 +363,9 @@ export function RegisterWizard({
         register_create_org_slug: workspaceSlugNormalized,
         register_legal_bundle_version: initialLegalBundleVersion,
       };
+      if (newOrgLogoUrl.trim()) {
+        createMeta.register_create_org_logo_url = newOrgLogoUrl.trim();
+      }
       const { data, error: signErr } = await supabase.auth.signUp({
         email,
         password,
@@ -685,6 +771,80 @@ export function RegisterWizard({
                   Letters and numbers are fine; we add hyphens for you. This stays the same after
                   signup, contact support if you need to change it later.
                 </p>
+              </div>
+              <div className="rounded-xl border border-[#e8e6e3] bg-white p-3">
+                <div className="text-[13px] font-medium text-[#121212]">Organisation logo (optional)</div>
+                <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
+                  Add a logo now so your workspace starts with branding.
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <input
+                    className="auth-input"
+                    value={newOrgLogoDomain}
+                    onChange={(e) => setNewOrgLogoDomain(e.target.value)}
+                    placeholder="Website domain (e.g. acme.com)"
+                    autoComplete="off"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void lookupOrgLogoFromDomain()}
+                    disabled={orgLogoLookupLoading}
+                    className="auth-btn-ghost min-w-[120px]"
+                  >
+                    {orgLogoLookupLoading ? 'Finding...' : 'Find logo'}
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <input
+                    ref={orgLogoFileInputRef}
+                    id="reg-org-logo-file"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      if (!f) return;
+                      void uploadNewOrgLogo(f);
+                    }}
+                  />
+                  <label
+                    htmlFor="reg-org-logo-file"
+                    className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 py-2 text-[12px] font-medium text-[#121212] hover:bg-[#efede9]"
+                  >
+                    {orgLogoUploading ? 'Uploading...' : 'Upload custom logo'}
+                  </label>
+                </div>
+                <label className="mt-3 block">
+                  <span className="mb-1 block text-[11.5px] text-[#9b9b9b]">Logo URL</span>
+                  <input
+                    className="auth-input"
+                    value={newOrgLogoUrl}
+                    onChange={(e) => setNewOrgLogoUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </label>
+                {newOrgLogoUrl.trim() ? (
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-[#eceae7] bg-[#faf9f7] p-2.5">
+                    <img
+                      src={newOrgLogoUrl.trim()}
+                      alt=""
+                      className="h-10 w-10 rounded-md border border-[#e8e6e3] bg-white object-contain"
+                    />
+                    <div className="text-[11.5px] text-[#9b9b9b]">
+                      {newOrgLogoFile ? 'Custom upload selected.' : 'Using provided image URL.'}
+                    </div>
+                  </div>
+                ) : null}
+                {orgLogoPreviewUrl && !newOrgLogoUrl.trim() ? (
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-[#eceae7] bg-[#faf9f7] p-2.5">
+                    <img
+                      src={orgLogoPreviewUrl}
+                      alt=""
+                      className="h-10 w-10 rounded-md border border-[#e8e6e3] bg-white object-contain"
+                    />
+                    <div className="text-[11.5px] text-[#9b9b9b]">Preview</div>
+                  </div>
+                ) : null}
               </div>
               <p className="rounded-xl bg-[#f5f4f1] p-3 text-[12px] leading-relaxed text-[#6b6b6b]">
                 After you sign in, you can invite people and add teams. We start you with one team called{' '}

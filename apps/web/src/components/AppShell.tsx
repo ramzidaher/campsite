@@ -19,8 +19,10 @@ import {
   getAutoCelebrationMode,
   getCelebrationModeDef,
   normalizeCelebrationMode,
+  type OrgCelebrationModeOverride,
   type CelebrationMode,
 } from '@/lib/holidayThemes';
+import { orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { ChevronDown, Menu } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
@@ -117,6 +119,9 @@ export function AppShell({
   children,
   orgName,
   orgLogoUrl = null,
+  orgBrandPresetKey = null,
+  orgBrandTokens = null,
+  orgBrandPolicy = null,
   userName,
   userAvatarUrl = null,
   userRoleLabel,
@@ -146,12 +151,16 @@ export function AppShell({
   showStandaloneApprovals = true,
   initialCelebrationMode = 'off',
   initialCelebrationAutoEnabled = true,
+  orgCelebrationOverrides = [],
   initialShellBadgeCounts,
 }: {
   children: React.ReactNode;
   orgName: string;
   /** Public image URL from `organisations.logo_url` when set. */
   orgLogoUrl?: string | null;
+  orgBrandPresetKey?: string | null;
+  orgBrandTokens?: Record<string, string> | null;
+  orgBrandPolicy?: string | null;
   userName: string;
   userAvatarUrl?: string | null;
   userRoleLabel: string;
@@ -190,6 +199,7 @@ export function AppShell({
   showStandaloneApprovals?: boolean;
   initialCelebrationMode?: CelebrationMode;
   initialCelebrationAutoEnabled?: boolean;
+  orgCelebrationOverrides?: OrgCelebrationModeOverride[];
   /** Hydrated from merged server shell bundle — avoids duplicate badge RPC right after load. */
   initialShellBadgeCounts?: ShellBadgeCounts;
 }) {
@@ -317,10 +327,22 @@ export function AppShell({
   const effectiveMode = shellMode !== 'off'
     ? shellMode
     : shellModeAutoEnabled
-      ? getAutoCelebrationMode(new Date())
+      ? getAutoCelebrationMode(new Date(), orgCelebrationOverrides)
       : 'off';
-  const shellTheme = getCelebrationModeDef(effectiveMode);
+  const shellTheme = getCelebrationModeDef(effectiveMode, orgCelebrationOverrides);
   const shellGradient = shellTheme.gradient;
+  const resolvedBranding = useMemo(
+    () =>
+      resolveOrgBranding({
+        presetKey: orgBrandPresetKey,
+        customTokens: orgBrandTokens,
+        policy: orgBrandPolicy,
+        effectiveMode,
+      }),
+    [orgBrandPresetKey, orgBrandTokens, orgBrandPolicy, effectiveMode]
+  );
+  const brandVars = useMemo(() => orgBrandingCssVars(resolvedBranding.tokens), [resolvedBranding.tokens]);
+  const shellGradientAllowed = resolvedBranding.shouldApplyCelebrationGradient ? shellGradient : null;
 
 
   const safeOrgLogo = useMemo(() => safeHttpImageUrl(orgLogoUrl ?? null), [orgLogoUrl]);
@@ -381,7 +403,10 @@ export function AppShell({
   };
 
   return (
-    <div className="campsite-paper flex min-h-screen bg-[#faf9f6] text-[#121212]">
+    <div
+      className="campsite-paper flex min-h-screen text-[#121212]"
+      style={{ ...brandVars, background: 'var(--org-brand-bg)', color: 'var(--org-brand-text)' }}
+    >
       <CheckboxUiSoundCapture />
       <HolidayOverlay mode={effectiveMode} />
       {mobileNav ? (
@@ -400,12 +425,13 @@ export function AppShell({
           mobileNav ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         ].join(' ')}
         style={
-          shellGradient
+          shellGradientAllowed
             ? {
-                backgroundImage: `linear-gradient(rgba(17,17,19,0.84),rgba(17,17,19,0.84)), ${shellGradient}`,
+                backgroundImage: `linear-gradient(rgba(17,17,19,0.84),rgba(17,17,19,0.84)), ${shellGradientAllowed}`,
                 backgroundBlendMode: 'multiply,normal',
+                backgroundColor: '#121212',
               }
-            : undefined
+            : { backgroundColor: '#121212' }
         }
       >
         <Link
@@ -900,15 +926,23 @@ export function AppShell({
       <div
         className="flex min-h-screen flex-1 flex-col md:ml-[240px]"
         style={
-          shellGradient
+          shellGradientAllowed
             ? {
-                backgroundImage: `linear-gradient(rgba(250,249,246,0.96),rgba(250,249,246,0.96)), ${shellGradient}`,
+                backgroundImage: `linear-gradient(rgba(250,249,246,0.84),rgba(250,249,246,0.84)), ${shellGradientAllowed}`,
                 backgroundBlendMode: 'normal,normal',
+                backgroundColor: 'var(--org-brand-bg)',
               }
-            : undefined
+            : { backgroundColor: 'var(--org-brand-bg)' }
         }
       >
-        <div className="flex h-[60px] items-center border-b border-[#d8d8d8] bg-[#121212] px-4 md:hidden">
+        <div
+          className="flex h-[60px] items-center border-b px-4 md:hidden"
+          style={{
+            borderColor: 'var(--org-brand-border)',
+            background: '#121212',
+            color: '#fff',
+          }}
+        >
           <button
             type="button"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/[0.14] active:bg-white/[0.18]"

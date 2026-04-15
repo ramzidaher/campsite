@@ -1,5 +1,6 @@
 import { CareersOrgLine, CareersProductStrip } from '@/app/(public)/jobs/CareersBranding';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
+import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { createClient } from '@/lib/supabase/server';
 import { tenantJobApplyRelativePath, tenantPublicJobsIndexRelativePath } from '@/lib/tenant/adminUrl';
@@ -58,6 +59,21 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   }
 
   const job = data[0] as PublicJobRow;
+  const { data: orgBrand } = await supabase
+    .from('organisations')
+    .select('brand_preset_key, brand_tokens, brand_policy')
+    .eq('slug', orgSlug)
+    .maybeSingle();
+  const resolvedBranding = resolveOrgBranding({
+    presetKey: orgBrand?.brand_preset_key,
+    customTokens: orgBrand?.brand_tokens,
+    policy: orgBrand?.brand_policy,
+    effectiveMode: 'off',
+  });
+  const jobsVars = {
+    ...orgBrandingCssVars(resolvedBranding.tokens),
+    ['--jobs-on-primary' as string]: onColorFor(resolvedBranding.tokens.primary),
+  };
   await supabase.rpc('track_public_job_metric', {
     p_org_slug: orgSlug,
     p_job_slug: jobSlug,
@@ -86,7 +102,10 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
     'inline-flex items-center rounded-full border border-[#e0ddd8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#121212] shadow-sm shadow-[#121212]/[0.04]';
 
   return (
-    <div className="bg-[#faf9f6] font-sans text-[#121212] antialiased">
+    <div
+      className="font-sans antialiased"
+      style={{ ...jobsVars, background: 'var(--org-brand-bg)', color: 'var(--org-brand-text)' }}
+    >
       <div className="mx-auto max-w-6xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
         <Link
           href={jobsIndexHref}
@@ -173,7 +192,11 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b6b6b]">Apply</p>
               <Link
                 href={applyHref}
-                className="mt-3 flex w-full items-center justify-center rounded-xl bg-[#121212] px-4 py-3.5 text-[15px] font-semibold text-[#faf9f6] transition-opacity hover:opacity-90"
+                className="mt-3 flex w-full items-center justify-center rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-opacity hover:opacity-90"
+                style={{
+                  background: 'var(--org-brand-primary)',
+                  color: 'var(--jobs-on-primary)',
+                }}
               >
                 Apply now
               </Link>
