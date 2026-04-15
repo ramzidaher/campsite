@@ -534,11 +534,9 @@ export function AppShell({
             ) : null}
           </div>
 
-          {Boolean(
-            (managerNavItems && managerNavItems.length > 0) ||
+          {(managerNavItems && managerNavItems.length > 0) ||
             (hrNavItems && hrNavItems.length > 0) ||
-            (adminNavItems && adminNavItems.length > 0)
-          ) ? (
+            (adminNavItems && adminNavItems.length > 0) ? (
             <div className="mt-3 mb-1 px-2">
               <div className="h-px bg-white/[0.08]" />
               <div className="pt-3 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-white/28">

@@ -69,7 +69,6 @@ export default async function CandidateForgotPasswordPage({
         {/* Org identity + badge */}
         <div className="mb-4 flex items-center gap-2.5">
           {orgLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={orgLogoUrl}
               alt=""

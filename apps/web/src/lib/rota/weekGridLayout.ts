@@ -40,7 +40,7 @@ function clampToGrid(startMin: number, endMin: number): { startMin: number; endM
  * (including multi-day shifts ending after local midnight).
  */
 export function gridBandMinutesForShiftOnStartDay(start: Date, end: Date): { startMin: number; endMin: number } {
-  let startMin = minutesFromMidnight(start);
+  const startMin = minutesFromMidnight(start);
   let endMin = minutesFromMidnight(end);
   if (end.getTime() <= start.getTime()) {
     return clampToGrid(startMin, startMin + SNAP_MINUTES);
@@ -101,7 +101,7 @@ export function layoutWeekShifts(
     const dayIndex = weekDays.findIndex((wd) => localYmd(wd) === localYmd(start));
     if (dayIndex < 0) continue;
 
-    let startMin = minutesFromMidnight(start);
+    const startMin = minutesFromMidnight(start);
     let endMin = minutesFromMidnight(end);
     if (end.getTime() <= start.getTime()) continue;
     if (localYmd(end) !== localYmd(start)) {

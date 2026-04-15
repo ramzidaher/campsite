@@ -18,7 +18,7 @@ function stripForPrompt(markdown: string): string {
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[#>*_\-]{1,3}\s?/g, ' ')
+    .replace(/[#>*_-]{1,3}\s?/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

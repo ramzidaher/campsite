@@ -747,7 +747,6 @@ export function OrgSettingsClient({
               <div className="mt-5 flex flex-col gap-4 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] p-4 sm:flex-row sm:items-center">
                 <div className="mx-auto h-16 w-16 shrink-0 sm:mx-0">
                   {trimmedLogoUrl && !logoPreviewFailed ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       key={trimmedLogoUrl}
                       src={trimmedLogoUrl}

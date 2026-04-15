@@ -176,7 +176,7 @@ export function addMonths(d: Date, n: number): Date {
 /** Month grid (Mon-Sun rows) covering all days in `anchorMonth`’s calendar month. */
 export function monthCalendarWeeks(anchorMonth: Date): Date[][] {
   const lastDay = new Date(anchorMonth.getFullYear(), anchorMonth.getMonth() + 1, 0);
-  let weekStart = startOfWeekMonday(startOfMonth(anchorMonth));
+  const weekStart = startOfWeekMonday(startOfMonth(anchorMonth));
   const weeks: Date[][] = [];
   while (weeks.length === 0 || weekStart <= lastDay) {
     const row: Date[] = [];

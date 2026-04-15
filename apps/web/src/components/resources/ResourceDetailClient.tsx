@@ -353,7 +353,6 @@ export function ResourceDetailClient({
                   />
                 ) : null}
                 {previewKind === 'image' ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={previewUrl!}
                     alt=""

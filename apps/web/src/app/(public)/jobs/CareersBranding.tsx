@@ -11,7 +11,6 @@ export type CareersSection = 'browse' | 'applications' | 'profile';
 function OrgMark({ orgName, logoUrl }: { orgName: string; logoUrl?: string | null }) {
   if (logoUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={logoUrl}
         alt=""

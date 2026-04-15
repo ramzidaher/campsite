@@ -109,7 +109,7 @@ export default async function HrRecruitmentPage() {
       .in('id', allowedDeptIds)
       .order('name', { ascending: true });
     managedDepartments = (deptRows ?? [])
-      .filter((d) => !Boolean(d.is_archived))
+      .filter((d) => !d.is_archived)
       .map((d) => ({ id: String(d.id), name: String(d.name ?? 'Department') }));
   }
 
@@ -121,7 +121,7 @@ export default async function HrRecruitmentPage() {
       .eq('org_id', orgId)
       .order('name', { ascending: true });
     managedDepartments = (allDeptRows ?? [])
-      .filter((d) => !Boolean(d.is_archived))
+      .filter((d) => !d.is_archived)
       .map((d) => ({ id: String(d.id), name: String(d.name ?? 'Department') }));
   }
 

@@ -159,7 +159,14 @@ export function PerformanceCycleDetailClient({
                 <input
                   type="checkbox"
                   checked={selected.has(m.id)}
-                  onChange={(e) => setSelected((prev) => { const n = new Set(prev); e.target.checked ? n.add(m.id) : n.delete(m.id); return n; })}
+                  onChange={(e) =>
+                    setSelected((prev) => {
+                      const n = new Set(prev);
+                      if (e.target.checked) n.add(m.id);
+                      else n.delete(m.id);
+                      return n;
+                    })
+                  }
                 />
                 {m.full_name}
                 {m.email ? <span className="text-[11.5px] text-[#9b9b9b]">({m.email})</span> : null}

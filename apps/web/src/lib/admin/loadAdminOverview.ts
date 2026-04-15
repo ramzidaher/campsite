@@ -187,7 +187,7 @@ export async function loadAdminOverview(
   }
 
   const creatorIds = [...new Set((recentBroadcasts ?? []).map((b) => b.created_by as string))];
-  let nameById: Record<string, string> = {};
+  const nameById: Record<string, string> = {};
   if (creatorIds.length) {
     const { data: creators } = await supabase
       .from('profiles')

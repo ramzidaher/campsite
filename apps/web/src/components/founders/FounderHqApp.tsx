@@ -1602,7 +1602,7 @@ export function FounderHqApp({
                                 disabled={busy}
                                 onClick={() =>
                                   setOrgs((prev) =>
-                                    prev.map((p) => (p.id === org.id ? { ...p, is_locked: !Boolean(p.is_locked) } : p))
+                                    prev.map((p) => (p.id === org.id ? { ...p, is_locked: !p.is_locked } : p))
                                   )
                                 }
                               >
@@ -1615,7 +1615,7 @@ export function FounderHqApp({
                                 onClick={() =>
                                   setOrgs((prev) =>
                                     prev.map((p) =>
-                                      p.id === org.id ? { ...p, maintenance_mode: !Boolean(p.maintenance_mode) } : p
+                                      p.id === org.id ? { ...p, maintenance_mode: !p.maintenance_mode } : p
                                     )
                                   )
                                 }

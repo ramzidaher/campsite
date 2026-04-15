@@ -133,7 +133,7 @@ export function CandidateAuthCard({
     } else if (!liEmailValid) {
       liEmailValidRef.current = false;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [liEmailValid]);
 
   // One-shot XP toast: register email
@@ -144,7 +144,7 @@ export function CandidateAuthCard({
     } else if (!rEmailValid) {
       rEmailValidRef.current = false;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [rEmailValid]);
 
   // ── actions
@@ -244,7 +244,6 @@ export function CandidateAuthCard({
       {/* ── Org identity + badge ── */}
       <div className="mb-4 flex items-center gap-2.5">
         {orgLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={orgLogoUrl}
             alt=""

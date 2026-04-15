@@ -58,7 +58,7 @@ export default async function SettingsPage({
     subscribed: boolean;
   };
 
-  let broadcastChannelPrefs: BroadcastChannelPref[] = [];
+  const broadcastChannelPrefs: BroadcastChannelPref[] = [];
   const orgId = profile?.org_id as string | undefined;
   let canManageDiscounts = false;
   let orgCelebrationOverrides: OrgCelebrationModeOverride[] = [];
