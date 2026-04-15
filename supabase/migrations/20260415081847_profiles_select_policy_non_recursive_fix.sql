@@ -1,0 +1,2 @@
+-- No-op migration file created by CLI scaffold during local troubleshooting.
+-- Intentionally empty.

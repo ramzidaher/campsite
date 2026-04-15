@@ -312,7 +312,13 @@ export function AppShell({
       window.removeEventListener('campsite:shell-mode-change', sync as EventListener);
     };
   }, [initialCelebrationMode, initialCelebrationAutoEnabled]);
-  const effectiveMode = shellModeAutoEnabled ? getAutoCelebrationMode(new Date()) : shellMode;
+  // Manual mode is an explicit override. Auto mode only picks a holiday
+  // when the user has not selected a specific celebration mode.
+  const effectiveMode = shellMode !== 'off'
+    ? shellMode
+    : shellModeAutoEnabled
+      ? getAutoCelebrationMode(new Date())
+      : 'off';
   const shellTheme = getCelebrationModeDef(effectiveMode);
   const shellGradient = shellTheme.gradient;
 

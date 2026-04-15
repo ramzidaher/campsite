@@ -67,6 +67,49 @@ function byWindows(windows: DateWindow[]) {
   return (now: Date) => anyWindow(now, windows);
 }
 
+function startOfDayLocal(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function isWithinDateRange(now: Date, start: Date, end: Date): boolean {
+  const target = startOfDayLocal(now).getTime();
+  const min = startOfDayLocal(start).getTime();
+  const max = startOfDayLocal(end).getTime();
+  return target >= min && target <= max;
+}
+
+// Gregorian computus for Western Easter Sunday.
+function getEasterSunday(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31); // 3=Mar, 4=Apr
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function easterWindow(offsetStartDays: number, offsetEndDays: number) {
+  return (now: Date) => {
+    const easter = getEasterSunday(now.getFullYear());
+    return isWithinDateRange(now, addDays(easter, offsetStartDays), addDays(easter, offsetEndDays));
+  };
+}
+
 const MODE_DEFS: CelebrationModeDef[] = [
   { id: 'off', label: 'Off', category: 'Universal / Global', gradient: null, decorations: [], isActiveNow: () => false },
   {
@@ -123,7 +166,8 @@ const MODE_DEFS: CelebrationModeDef[] = [
     category: 'Christian Holidays',
     gradient: 'linear-gradient(180deg,#fce7f3 0%,#f9a8d4 45%,#93c5fd 100%)',
     decorations: ['🥚', '🐇'],
-    isActiveNow: byWindows([{ month: 3, dayStart: 20, dayEnd: 31 }, { month: 4, dayStart: 1, dayEnd: 30 }]),
+    // Easter Sunday through Easter Monday.
+    isActiveNow: easterWindow(0, 1),
   },
   {
     id: 'good_friday',
@@ -131,7 +175,8 @@ const MODE_DEFS: CelebrationModeDef[] = [
     category: 'Christian Holidays',
     gradient: 'linear-gradient(180deg,#111827 0%,#374151 55%,#6b7280 100%)',
     decorations: ['✝️', '🕊️'],
-    isActiveNow: byWindows([{ month: 3, dayStart: 20, dayEnd: 31 }, { month: 4, dayStart: 1, dayEnd: 20 }]),
+    // Good Friday through Holy Saturday.
+    isActiveNow: easterWindow(-2, -1),
   },
   {
     id: 'palm_sunday',
@@ -139,7 +184,7 @@ const MODE_DEFS: CelebrationModeDef[] = [
     category: 'Christian Holidays',
     gradient: 'linear-gradient(180deg,#064e3b 0%,#15803d 50%,#84cc16 100%)',
     decorations: ['🌿', '🕊️'],
-    isActiveNow: byWindows([{ month: 3, dayStart: 15, dayEnd: 31 }, { month: 4, dayStart: 1, dayEnd: 15 }]),
+    isActiveNow: easterWindow(-7, -7),
   },
   {
     id: 'hanukkah',
