@@ -20,9 +20,9 @@ const EXT: Record<string, string> = {
 };
 
 export async function POST(req: Request) {
-  let form: FormData;
+  let form: globalThis.FormData;
   try {
-    form = await req.formData();
+    form = (await req.formData()) as unknown as globalThis.FormData;
   } catch {
     return NextResponse.json({ error: 'Invalid upload payload.' }, { status: 400 });
   }

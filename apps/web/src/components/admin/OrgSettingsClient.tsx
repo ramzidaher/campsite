@@ -439,7 +439,7 @@ export function OrgSettingsClient({
     const logoUrlForSuggestion = sourceLogoUrl.trim();
     if (!logoUrlForSuggestion) {
       if (!opts?.quiet) flash('Set or upload a logo first.', 'err');
-      return;
+      return null;
     }
     if (!opts?.quiet) {
       setLoading(true);
@@ -1135,7 +1135,7 @@ export function OrgSettingsClient({
                     label: mode.label,
                     is_enabled: true,
                     display_order: idx + 1,
-                    ...getCelebrationModeAdminDefaults(mode.id),
+                    ...getCelebrationModeAdminDefaults(mode.id as Parameters<typeof getCelebrationModeAdminDefaults>[0]),
                   };
                   const isCustom = row.mode_key.startsWith('org_custom:');
                   return (
