@@ -823,6 +823,31 @@ export function FounderHqApp({
     router.refresh();
   };
 
+  const unlockOrganisation = async (org: FounderOrg) => {
+    setBusy(true);
+    const result = await updateOrganisationGovernance({
+      orgId: org.id,
+      planTier: org.plan_tier ?? 'starter',
+      subscriptionStatus:
+        (org.subscription_status as 'trial' | 'active' | 'limited' | 'suspended') ?? 'active',
+      isLocked: false,
+      maintenanceMode: false,
+      forceLogout: false,
+      trialEndsAt: org.subscription_trial_ends_at ?? null,
+      clearTrial: false,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    setOrgs((prev) =>
+      prev.map((p) => (p.id === org.id ? { ...p, is_locked: false, maintenance_mode: false } : p))
+    );
+    showToast('Organisation unlocked and maintenance disabled');
+    router.refresh();
+  };
+
   const startSupportSession = async (orgId: string, targetUserId: string) => {
     setBusy(true);
     const result = await startSupportViewAsSession({ orgId, targetUserId, minutes: 20 });
@@ -1621,6 +1646,14 @@ export function FounderHqApp({
                                 }
                               >
                                 Toggle maintenance
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-success btn-sm"
+                                disabled={busy || (!org.is_locked && !org.maintenance_mode)}
+                                onClick={() => void unlockOrganisation(org)}
+                              >
+                                Unlock now
                               </button>
                               <button
                                 type="button"
