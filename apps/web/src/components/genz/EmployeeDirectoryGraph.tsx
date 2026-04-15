@@ -106,6 +106,12 @@ function wrapLabel(label: string, maxChars = 14): string[] {
   return lines.slice(0, 2);
 }
 
+function linkNodeId(endpoint: string | number | { id?: string | number } | undefined): string {
+  if (typeof endpoint === 'string' || typeof endpoint === 'number') return String(endpoint);
+  if (endpoint && endpoint.id != null) return String(endpoint.id);
+  return '';
+}
+
 export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const fgRef = useRef<ForceGraphMethods<DirectoryGraphNode, DirectoryGraphLink> | undefined>(undefined);
@@ -279,13 +285,13 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
             });
           }}
           linkColor={(link) => {
-            const source = typeof link.source === 'string' ? link.source : link.source.id;
-            const target = typeof link.target === 'string' ? link.target : link.target.id;
+            const source = linkNodeId(link.source);
+            const target = linkNodeId(link.target);
             return selectedId && (selectedId === source || selectedId === target) ? colors.nodeSelectedBorder : colors.link;
           }}
           linkWidth={(link) => {
-            const source = typeof link.source === 'string' ? link.source : link.source.id;
-            const target = typeof link.target === 'string' ? link.target : link.target.id;
+            const source = linkNodeId(link.source);
+            const target = linkNodeId(link.target);
             return selectedId && (selectedId === source || selectedId === target) ? 2.2 : 0.85;
           }}
           onNodeClick={(nodeRaw, event) => {
