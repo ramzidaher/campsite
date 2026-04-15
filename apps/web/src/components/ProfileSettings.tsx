@@ -15,6 +15,7 @@ import { useUiSound, useUiSoundPreferences } from '@/lib/sound/useUiSound';
 import {
   CELEBRATION_MODE_OPTIONS,
   normalizeCelebrationMode,
+  type CelebrationModeCategory,
   type CelebrationMode,
 } from '@/lib/holidayThemes';
 import {
@@ -149,6 +150,7 @@ export function ProfileSettings({
   currentOrgId,
   initialBroadcastChannels = [],
   canManageDiscounts = false,
+  celebrationModeOptions = CELEBRATION_MODE_OPTIONS,
 }: {
   initial: Profile | null;
   googleFlash?: string | null;
@@ -157,6 +159,11 @@ export function ProfileSettings({
   currentOrgId?: string | null;
   initialBroadcastChannels?: BroadcastChannelPref[];
   canManageDiscounts?: boolean;
+  celebrationModeOptions?: Array<{
+    id: CelebrationMode;
+    label: string;
+    category: CelebrationModeCategory;
+  }>;
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
@@ -235,6 +242,7 @@ export function ProfileSettings({
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(SHELL_MODE_STORAGE_KEY);
+      const savedAuto = window.localStorage.getItem(SHELL_MODE_AUTO_STORAGE_KEY);
       const legacyPride = window.localStorage.getItem(LEGACY_PRIDE_MODE_STORAGE_KEY) === '1';
       if (saved) {
         setShellMode(normalizeCelebrationMode(saved));
@@ -243,10 +251,14 @@ export function ProfileSettings({
       } else {
         setShellMode(normalizeCelebrationMode(initial?.celebration_mode));
       }
+      if (savedAuto === '0') setShellModeAutoEnabled(false);
+      else if (savedAuto === '1') setShellModeAutoEnabled(true);
+      else setShellModeAutoEnabled(initial?.celebration_auto_enabled ?? true);
     } catch {
       setShellMode(normalizeCelebrationMode(initial?.celebration_mode));
+      setShellModeAutoEnabled(initial?.celebration_auto_enabled ?? true);
     }
-  }, [initial?.celebration_mode]);
+  }, [initial?.celebration_mode, initial?.celebration_auto_enabled]);
 
   useEffect(() => {
     setMsg(googleFlash ?? null);
@@ -571,9 +583,9 @@ export function ProfileSettings({
                   value={shellMode}
                   onChange={(e) => setShellModePref(normalizeCelebrationMode(e.target.value))}
                 >
-                  {Array.from(new Set(CELEBRATION_MODE_OPTIONS.map((o) => o.category))).map((category) => (
+                  {Array.from(new Set(celebrationModeOptions.map((o) => o.category))).map((category) => (
                     <optgroup key={category} label={category}>
-                      {CELEBRATION_MODE_OPTIONS.filter((o) => o.category === category).map((option) => (
+                      {celebrationModeOptions.filter((o) => o.category === category).map((option) => (
                         <option key={option.id} value={option.id}>
                           {option.label}
                         </option>

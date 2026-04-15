@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { LoginOrgChoiceModal } from '@/components/auth/LoginOrgChoiceModal';
+import { AppLoaderOverlay } from '@/components/AppLoaderOverlay';
 import { createClient } from '@/lib/supabase/client';
 
 type Props = {
@@ -22,6 +23,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
   const [showPw, setShowPw] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [orgChoiceOpen, setOrgChoiceOpen] = useState(false);
   const [orgChoiceOrgs, setOrgChoiceOrgs] = useState<LoginOrgOption[]>([]);
   const [message, setMessage] = useState<string | null>(
@@ -52,6 +54,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
     const uid = userData.user?.id;
     if (!uid) {
       setLoading(false);
+      setSigningIn(true);
       router.replace(next);
       router.refresh();
       return;
@@ -63,6 +66,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
 
     if (memErr || !memRows?.length) {
       setLoading(false);
+      setSigningIn(true);
       router.replace(next);
       router.refresh();
       return;
@@ -85,6 +89,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
         await supabase.rpc('set_my_active_org', { p_org_id: orgs[0]!.org_id });
       }
       setLoading(false);
+      setSigningIn(true);
       router.replace(next);
       router.refresh();
       return;
@@ -94,6 +99,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
     const activeOk = Boolean(prof?.org_id && orgs.some((o) => o.org_id === prof.org_id));
     if (activeOk) {
       setLoading(false);
+      setSigningIn(true);
       router.replace(next);
       router.refresh();
       return;
@@ -106,6 +112,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
 
   return (
     <div>
+      {signingIn && <AppLoaderOverlay />}
       <h2 className="auth-title">Welcome back</h2>
       <p className="auth-sub mb-8">Sign in to your Campsite account</p>
 

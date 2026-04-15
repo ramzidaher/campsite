@@ -1,5 +1,6 @@
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { ProfileSettings } from '@/components/ProfileSettings';
+import { getCelebrationModeOptions, type OrgCelebrationModeOverride } from '@/lib/holidayThemes';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -60,8 +61,9 @@ export default async function SettingsPage({
   let broadcastChannelPrefs: BroadcastChannelPref[] = [];
   const orgId = profile?.org_id as string | undefined;
   let canManageDiscounts = false;
+  let orgCelebrationOverrides: OrgCelebrationModeOverride[] = [];
   if (orgId) {
-    const [{ data: orgDepts }, { data: subs }, { data: hasDiscounts }] = await Promise.all([
+    const [{ data: orgDepts }, { data: subs }, { data: hasDiscounts }, { data: celebrationRows }] = await Promise.all([
       supabase.from('departments').select('id, name').eq('org_id', orgId).eq('is_archived', false),
       supabase.from('user_subscriptions').select('channel_id, subscribed').eq('user_id', user.id),
       supabase.rpc('has_permission', {
@@ -70,8 +72,17 @@ export default async function SettingsPage({
         p_permission_key: 'discounts.view',
         p_context: {},
       }),
+      supabase
+        .from('org_celebration_modes')
+        .select(
+          'mode_key,label,is_enabled,display_order,auto_start_month,auto_start_day,auto_end_month,auto_end_day,gradient_override,emoji_primary,emoji_secondary'
+        )
+        .eq('org_id', orgId)
+        .order('display_order', { ascending: true })
+        .order('label', { ascending: true }),
     ]);
     canManageDiscounts = Boolean(hasDiscounts);
+    orgCelebrationOverrides = (celebrationRows ?? []) as OrgCelebrationModeOverride[];
     const deptIds = [...new Set((orgDepts ?? []).map((d) => d.id as string).filter(Boolean))];
     if (deptIds.length) {
       const { data: chans } = await supabase
@@ -135,6 +146,7 @@ export default async function SettingsPage({
           }
         initialBroadcastChannels={broadcastChannelPrefs}
         canManageDiscounts={canManageDiscounts}
+        celebrationModeOptions={getCelebrationModeOptions(orgCelebrationOverrides)}
       />
     </div>
   );
