@@ -1,6 +1,9 @@
 'use client';
 
 import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewModal';
+import { EmployeeDirectoryGraph } from '@/components/genz/EmployeeDirectoryGraph';
+import { useUiModePreference } from '@/hooks/useUiModePreference';
+import type { UiMode } from '@/lib/uiMode';
 import Link from 'next/link';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -275,6 +278,7 @@ export function HRDirectoryClient({
   initialRows,
   dashStats,
   initialQuery = '',
+  initialUiMode = 'millennial',
 }: {
   orgId: string;
   canManage: boolean;
@@ -286,6 +290,7 @@ export function HRDirectoryClient({
   dashStats: Record<string, unknown> | null;
   /** Optional query seeded from URL (`?q=`), used by top-bar search. */
   initialQuery?: string;
+  initialUiMode?: UiMode;
 }) {
   const columnOptions = [
     { key: 'jobTitle', label: 'Job title' },
@@ -342,6 +347,8 @@ export function HRDirectoryClient({
   const [tab, setTab] = useState<'dashboard' | 'directory'>(stats ? 'dashboard' : 'directory');
   const [previewRow, setPreviewRow] = useState<HRDirectoryRow | null>(null);
   const deferredQ = useDeferredValue(q);
+  const { uiMode } = useUiModePreference(initialUiMode);
+  const isGenZDirectoryView = uiMode === 'gen_z' && tab === 'directory';
 
   useEffect(() => {
     if (tab !== 'directory') setPreviewRow(null);
@@ -389,8 +396,14 @@ export function HRDirectoryClient({
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-8 sm:px-7">
-      <div className="mb-6">
+    <div
+      className={
+        isGenZDirectoryView
+          ? 'w-full px-0 py-0'
+          : 'mx-auto max-w-6xl px-5 py-8 sm:px-7'
+      }
+    >
+      <div className={isGenZDirectoryView ? 'px-5 pt-6 sm:px-7' : 'mb-6'}>
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           {canViewAll ? 'Employee records' : 'Team records'}
         </h1>
@@ -400,7 +413,7 @@ export function HRDirectoryClient({
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex border-b border-[#ececec]">
+      <div className={isGenZDirectoryView ? 'mt-4 flex border-b border-[#ececec] px-5 sm:px-7' : 'mb-6 flex border-b border-[#ececec]'}>
         {stats ? (
           <button type="button" onClick={() => setTab('dashboard')} className={['px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors', tab === 'dashboard' ? 'border-[#121212] text-[#121212]' : 'border-transparent text-[#9b9b9b] hover:text-[#4a4a4a]'].join(' ')}>
             Overview
@@ -635,7 +648,7 @@ export function HRDirectoryClient({
       {tab === 'directory' ? (
         <>
           {/* Filters */}
-          <div className="mb-5 flex flex-wrap gap-3">
+          <div className={isGenZDirectoryView ? 'mb-2 flex flex-wrap gap-3 px-5 sm:px-7' : 'mb-5 flex flex-wrap gap-3'}>
             <input
               type="search"
               placeholder="Search name, email, role…"
@@ -715,136 +728,140 @@ export function HRDirectoryClient({
             <span className="ml-auto flex items-center text-[12px] text-[#9b9b9b]">{filtered.length} of {initialRows.length}</span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-white">
-            <table className="w-full min-w-[840px] text-[13px]">
-              <thead>
-                <tr className="border-b border-[#ececec] text-left text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-                  <th className="px-4 py-3">Name</th>
-                  {visibleColumns.jobTitle ? <th className="px-4 py-3">Job title</th> : null}
-                  {visibleColumns.contract ? <th className="px-4 py-3">Contract</th> : null}
-                  {visibleColumns.location ? <th className="px-4 py-3">Location</th> : null}
-                  {visibleColumns.startDate ? <th className="px-4 py-3">Start date</th> : null}
-                  {visibleColumns.tenure ? <th className="px-4 py-3">Tenure</th> : null}
-                  {visibleColumns.hoursPositions ? <th className="px-4 py-3">Hrs / pos.</th> : null}
-                  {visibleColumns.probation ? <th className="px-4 py-3">Probation ends</th> : null}
-                  {visibleColumns.departments ? <th className="px-4 py-3">Departments</th> : null}
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#ececec]">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={2 + columnOptions.filter((c) => visibleColumns[c.key]).length} className="px-4 py-8 text-center text-[#9b9b9b]">No members match.</td></tr>
-                ) : null}
-                {filtered.map((r) => {
-                  const onProbation = r.probation_end_date && r.probation_end_date >= today;
-                  return (
-                    <tr
-                      key={r.user_id}
-                      className="group cursor-pointer hover:bg-[#faf9f6]"
-                      onClick={() => setPreviewRow(r)}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          {r.avatar_url ? (
-                            <img src={r.avatar_url} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
-                          ) : (
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] text-[10px] font-bold text-[#6b6b6b]">{initials(r.full_name)}</div>
-                          )}
-                          <div>
-                            <div className="font-medium text-[#121212]">{r.display_name ?? r.full_name}</div>
-                            {r.email ? <div className="text-[11.5px] text-[#9b9b9b]">{r.email}</div> : null}
-                          </div>
-                        </div>
-                      </td>
-                      {visibleColumns.jobTitle ? (
-                        <td className="px-4 py-3 text-[#4a4a4a]">
-                          {r.job_title || <span className="text-[#c8c8c8]">—</span>}
-                          {r.grade_level ? <span className="ml-1 whitespace-nowrap text-[11px] text-[#9b9b9b]">({r.grade_level})</span> : null}
-                        </td>
-                      ) : null}
-                      {visibleColumns.contract ? (
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {r.contract_type ? (
-                            <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#4a4a4a]">
-                              {contractLabel(r.contract_type)}{r.fte && r.fte < 1 ? ` ${Math.round(r.fte * 100)}%` : ''}
-                            </span>
-                          ) : <span className="text-[#c8c8c8]">—</span>}
-                        </td>
-                      ) : null}
-                      {visibleColumns.location ? (
-                        <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.work_location ? locationLabel(r.work_location) : <span className="text-[#c8c8c8]">—</span>}</td>
-                      ) : null}
-                      {visibleColumns.startDate ? (
-                        <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.employment_start_date ?? <span className="text-[#c8c8c8]">—</span>}</td>
-                      ) : null}
-                      {visibleColumns.tenure ? (
-                        <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#4a4a4a]">
-                          {r.length_of_service_years != null && r.length_of_service_months != null ? (
-                            <span>
-                              {r.length_of_service_years}y {r.length_of_service_months}m
-                            </span>
-                          ) : (
-                            <span className="text-[#c8c8c8]">—</span>
-                          )}
-                        </td>
-                      ) : null}
-                      {visibleColumns.hoursPositions ? (
-                        <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#4a4a4a]">
-                          {r.weekly_hours != null ? <span>{r.weekly_hours}h</span> : <span className="text-[#c8c8c8]">—</span>}
-                          {r.positions_count != null && r.positions_count > 1 ? (
-                            <span className="text-[#9b9b9b]"> · {r.positions_count} pos.</span>
-                          ) : null}
-                        </td>
-                      ) : null}
-                      {visibleColumns.probation ? (
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {r.probation_end_date ? (
-                            <span className={['text-[12px]', onProbation ? 'font-medium text-[#c2410c]' : 'text-[#6b6b6b]'].join(' ')}>
-                              {r.probation_end_date}{onProbation ? ' ●' : ''}
-                            </span>
-                          ) : <span className="text-[#c8c8c8]">—</span>}
-                        </td>
-                      ) : null}
-                      {visibleColumns.departments ? (
-                        <td className="px-4 py-3">
-                          <div className="flex max-w-[220px] items-center gap-1.5 overflow-hidden whitespace-nowrap">
-                            {r.department_names.slice(0, 2).map((d) => (
-                              <span
-                                key={d}
-                                title={d}
-                                className="max-w-[130px] truncate rounded-full bg-[#f3f1ed] px-2 py-0.5 text-[11px] font-medium text-[#5b5b5b]"
-                              >
-                                {d}
-                              </span>
-                            ))}
-                            {r.department_names.length > 2 ? (
-                              <span className="shrink-0 rounded-full bg-[#f7f6f3] px-1.5 py-0.5 text-[10.5px] font-medium text-[#8a8a8a]">
-                                +{r.department_names.length - 2}
-                              </span>
-                            ) : null}
-                          </div>
-                        </td>
-                      ) : null}
-                      <td
-                        className="px-4 py-3 text-right align-middle whitespace-nowrap"
-                        onClick={(e) => e.stopPropagation()}
+          {uiMode === 'gen_z' ? (
+            <EmployeeDirectoryGraph rows={filtered} />
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-white">
+              <table className="w-full min-w-[840px] text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#ececec] text-left text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+                    <th className="px-4 py-3">Name</th>
+                    {visibleColumns.jobTitle ? <th className="px-4 py-3">Job title</th> : null}
+                    {visibleColumns.contract ? <th className="px-4 py-3">Contract</th> : null}
+                    {visibleColumns.location ? <th className="px-4 py-3">Location</th> : null}
+                    {visibleColumns.startDate ? <th className="px-4 py-3">Start date</th> : null}
+                    {visibleColumns.tenure ? <th className="px-4 py-3">Tenure</th> : null}
+                    {visibleColumns.hoursPositions ? <th className="px-4 py-3">Hrs / pos.</th> : null}
+                    {visibleColumns.probation ? <th className="px-4 py-3">Probation ends</th> : null}
+                    {visibleColumns.departments ? <th className="px-4 py-3">Departments</th> : null}
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#ececec]">
+                  {filtered.length === 0 ? (
+                    <tr><td colSpan={2 + columnOptions.filter((c) => visibleColumns[c.key]).length} className="px-4 py-8 text-center text-[#9b9b9b]">No members match.</td></tr>
+                  ) : null}
+                  {filtered.map((r) => {
+                    const onProbation = r.probation_end_date && r.probation_end_date >= today;
+                    return (
+                      <tr
+                        key={r.user_id}
+                        className="group cursor-pointer hover:bg-[#faf9f6]"
+                        onClick={() => setPreviewRow(r)}
                       >
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[16px] font-medium text-[#121212] opacity-70 transition-opacity hover:bg-[#ececec] group-hover:opacity-100"
-                          aria-label="Preview employee"
-                          title="Preview"
-                          onClick={() => setPreviewRow(r)}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            {r.avatar_url ? (
+                              <img src={r.avatar_url} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
+                            ) : (
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] text-[10px] font-bold text-[#6b6b6b]">{initials(r.full_name)}</div>
+                            )}
+                            <div>
+                              <div className="font-medium text-[#121212]">{r.display_name ?? r.full_name}</div>
+                              {r.email ? <div className="text-[11.5px] text-[#9b9b9b]">{r.email}</div> : null}
+                            </div>
+                          </div>
+                        </td>
+                        {visibleColumns.jobTitle ? (
+                          <td className="px-4 py-3 text-[#4a4a4a]">
+                            {r.job_title || <span className="text-[#c8c8c8]">—</span>}
+                            {r.grade_level ? <span className="ml-1 whitespace-nowrap text-[11px] text-[#9b9b9b]">({r.grade_level})</span> : null}
+                          </td>
+                        ) : null}
+                        {visibleColumns.contract ? (
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {r.contract_type ? (
+                              <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#4a4a4a]">
+                                {contractLabel(r.contract_type)}{r.fte && r.fte < 1 ? ` ${Math.round(r.fte * 100)}%` : ''}
+                              </span>
+                            ) : <span className="text-[#c8c8c8]">—</span>}
+                          </td>
+                        ) : null}
+                        {visibleColumns.location ? (
+                          <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.work_location ? locationLabel(r.work_location) : <span className="text-[#c8c8c8]">—</span>}</td>
+                        ) : null}
+                        {visibleColumns.startDate ? (
+                          <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.employment_start_date ?? <span className="text-[#c8c8c8]">—</span>}</td>
+                        ) : null}
+                        {visibleColumns.tenure ? (
+                          <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#4a4a4a]">
+                            {r.length_of_service_years != null && r.length_of_service_months != null ? (
+                              <span>
+                                {r.length_of_service_years}y {r.length_of_service_months}m
+                              </span>
+                            ) : (
+                              <span className="text-[#c8c8c8]">—</span>
+                            )}
+                          </td>
+                        ) : null}
+                        {visibleColumns.hoursPositions ? (
+                          <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#4a4a4a]">
+                            {r.weekly_hours != null ? <span>{r.weekly_hours}h</span> : <span className="text-[#c8c8c8]">—</span>}
+                            {r.positions_count != null && r.positions_count > 1 ? (
+                              <span className="text-[#9b9b9b]"> · {r.positions_count} pos.</span>
+                            ) : null}
+                          </td>
+                        ) : null}
+                        {visibleColumns.probation ? (
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {r.probation_end_date ? (
+                              <span className={['text-[12px]', onProbation ? 'font-medium text-[#c2410c]' : 'text-[#6b6b6b]'].join(' ')}>
+                                {r.probation_end_date}{onProbation ? ' ●' : ''}
+                              </span>
+                            ) : <span className="text-[#c8c8c8]">—</span>}
+                          </td>
+                        ) : null}
+                        {visibleColumns.departments ? (
+                          <td className="px-4 py-3">
+                            <div className="flex max-w-[220px] items-center gap-1.5 overflow-hidden whitespace-nowrap">
+                              {r.department_names.slice(0, 2).map((d) => (
+                                <span
+                                  key={d}
+                                  title={d}
+                                  className="max-w-[130px] truncate rounded-full bg-[#f3f1ed] px-2 py-0.5 text-[11px] font-medium text-[#5b5b5b]"
+                                >
+                                  {d}
+                                </span>
+                              ))}
+                              {r.department_names.length > 2 ? (
+                                <span className="shrink-0 rounded-full bg-[#f7f6f3] px-1.5 py-0.5 text-[10.5px] font-medium text-[#8a8a8a]">
+                                  +{r.department_names.length - 2}
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
+                        ) : null}
+                        <td
+                          className="px-4 py-3 text-right align-middle whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          →
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[16px] font-medium text-[#121212] opacity-70 transition-opacity hover:bg-[#ececec] group-hover:opacity-100"
+                            aria-label="Preview employee"
+                            title="Preview"
+                            onClick={() => setPreviewRow(r)}
+                          >
+                            →
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
           {initialRows.some((r) => !r.hr_record_id) ? (
             <p className="mt-4 text-[12px] text-[#9b9b9b]">
               {initialRows.filter((r) => !r.hr_record_id).length} member{initialRows.filter((r) => !r.hr_record_id).length === 1 ? '' : 's'} without an HR record — open their file to create one.

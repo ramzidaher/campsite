@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { normalizeUiMode } from '@/lib/uiMode';
 
 export default async function HRDirectoryPage({
   searchParams,
@@ -16,7 +17,7 @@ export default async function HRDirectoryPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, status')
+    .select('org_id, status, ui_mode')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -56,6 +57,7 @@ export default async function HRDirectoryPage({
       initialRows={(rows ?? []) as Parameters<typeof HRDirectoryClient>[0]['initialRows']}
       dashStats={(dashStats ?? null) as Record<string, unknown> | null}
       initialQuery={initialQuery}
+      initialUiMode={normalizeUiMode(profile.ui_mode)}
     />
   );
 }

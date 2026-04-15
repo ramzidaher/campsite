@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ShellCommandMenu } from '@/components/shell/ShellCommandMenu';
 import type { ShellCommandPaletteSection } from '@/lib/shell/shellCommandPaletteSections';
+import type { UiMode } from '@/lib/uiMode';
 
 export type TopBarNotificationItem = {
   id: string;
@@ -23,6 +24,8 @@ export function AppTopBar({
   orgId = null,
   orgName,
   paletteSections,
+  uiMode = 'millennial',
+  onToggleUiMode,
 }: {
   userInitials: string;
   avatarImageSrc?: string | null;
@@ -36,6 +39,8 @@ export function AppTopBar({
   orgId?: string | null;
   orgName: string;
   paletteSections: ShellCommandPaletteSection[];
+  uiMode?: UiMode;
+  onToggleUiMode?: () => void;
 }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
@@ -70,6 +75,19 @@ export function AppTopBar({
         />
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggleUiMode}
+          className="inline-flex h-9 items-center justify-center rounded-lg border px-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] transition-colors hover:bg-[#f5f4f1]"
+          style={{
+            borderColor: 'var(--org-brand-border)',
+            color: 'var(--org-brand-muted)',
+          }}
+          title={`Switch to ${uiMode === 'gen_z' ? 'Millennial' : 'Gen Z'} mode`}
+          aria-label={`Switch to ${uiMode === 'gen_z' ? 'Millennial' : 'Gen Z'} mode`}
+        >
+          {uiMode === 'gen_z' ? 'Gen Z' : 'Classic'}
+        </button>
         <div className="relative" ref={notifRef}>
           <button
             type="button"

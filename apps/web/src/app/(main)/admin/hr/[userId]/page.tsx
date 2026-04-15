@@ -1,4 +1,5 @@
 import { EmployeeHRFileClient } from '@/components/admin/hr/EmployeeHRFileClient';
+import { GraphExperience } from '@/components/genz/GraphExperience';
 import { SensitiveRecordExportButton } from '@/components/admin/hr/SensitiveRecordExportButton';
 import { BankDetailsClient } from '@/components/hr/BankDetailsClient';
 import { CustomHrFieldsValuesClient } from '@/components/hr/CustomHrFieldsValuesClient';
@@ -12,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { normalizeUiMode } from '@/lib/uiMode';
 
 export default async function EmployeeHRFilePage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
@@ -21,13 +23,14 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, status')
+    .select('org_id, status, ui_mode')
     .eq('id', user.id)
     .maybeSingle();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
+  const viewerUiMode = normalizeUiMode((profile.ui_mode as string | null) ?? null);
 
   const [{ data: canViewAll }, { data: canViewTeam }, { data: canManageLeaveOrg }] = await Promise.all([
     supabase.rpc('has_permission', {
@@ -511,83 +514,103 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
         Active GDPR erasure request: <strong>{String(activePrivacyRequest.status)}</strong> (submitted {String(activePrivacyRequest.created_at).slice(0, 10)}).
       </div>
     ) : null}
-    <EmployeeHRFileClient
-      orgId={orgId}
-      currentUserId={user.id}
-      canManage={canManage}
-      canManageEmployeePhotos={!!canPhotoManageAll}
-      canViewEmployeePhotos={!!canPhotoViewAll || !!canPhotoManageAll}
-      canManageIdDocuments={!!canIdManageAll}
-      canViewIdDocuments={!!canIdViewAll || !!canIdManageAll}
-      canMarkProbationCheck={canMarkProbationCheck}
-      canViewGrading={!!canViewAll || !!canManageLeaveOrg}
-      customCategories={(customCategoryRows ?? []).map((c) => ({
-        id: c.id as string,
-        name: c.name as string,
-        document_kind_scope: (c.document_kind_scope as string) ?? 'supporting_document',
-      }))}
-      employee={fileRow as Parameters<typeof EmployeeHRFileClient>[0]['employee']}
-      auditEvents={(auditRows ?? []).map((e) => ({
-        id: e.id as string,
-        field_name: e.field_name as string,
-        old_value: (e.old_value as string | null) ?? null,
-        new_value: (e.new_value as string | null) ?? null,
-        created_at: e.created_at as string,
-        changer_name: changerNames[e.changed_by as string] ?? 'Unknown',
-      }))}
-      leaveAllowance={
-        leaveData
-          ? {
-              annual_entitlement_days: Number(leaveData.annual_entitlement_days ?? 0),
-              toil_balance_days: Number(leaveData.toil_balance_days ?? 0),
-            }
-          : null
-      }
-      leaveEntitlementYearLabel={hrFileLeaveYearKey}
-      absenceScore={absenceScore}
-      showAbsenceReportingLink={!!canViewAll || !!canViewTeam || !!canManageLeaveOrg}
-      applications={(applications ?? []) as { id: string; candidate_name: string; job_listing_id: string }[]}
-      initialDocuments={(hrDocRows ?? []).map((d) => ({
-        id: d.id as string,
-        org_id: d.org_id as string,
-        user_id: d.user_id as string,
-        category: d.category as string,
-        document_kind: (d.document_kind as string) ?? 'supporting_document',
-        bucket_id: (d.bucket_id as string) ?? 'employee-hr-documents',
-        custom_category_id: (d.custom_category_id as string | null) ?? null,
-        custom_category_name: categoryNameById.get((d.custom_category_id as string | null) ?? '') ?? null,
-        label: (d.label as string) ?? '',
-        storage_path: d.storage_path as string,
-        file_name: d.file_name as string,
-        mime_type: d.mime_type as string,
-        byte_size: Number(d.byte_size ?? 0),
-        uploaded_by: d.uploaded_by as string,
-        created_at: d.created_at as string,
-        id_document_type: (d.id_document_type as string | null) ?? null,
-        id_number_last4: (d.id_number_last4 as string | null) ?? null,
-        expires_on: (d.expires_on as string | null) ?? null,
-        verification_status: (d.verification_status as string | null) ?? null,
-        is_current: Boolean(d.is_current),
-        uploader_name: docUploaderNames[d.uploaded_by as string] ?? 'Unknown',
-      }))}
-      initialDependants={(dependantRows ?? []).map((d) => ({
-        full_name: (d.full_name as string) ?? '',
-        relationship: (d.relationship as string) ?? 'other',
-        date_of_birth: (d.date_of_birth as string | null) ?? null,
-        is_student: Boolean(d.is_student),
-        is_disabled: Boolean(d.is_disabled),
-        is_beneficiary: Boolean(d.is_beneficiary),
-        beneficiary_percentage:
-          d.beneficiary_percentage != null ? Number(d.beneficiary_percentage) : null,
-        phone: (d.phone as string | null) ?? null,
-        email: (d.email as string | null) ?? null,
-        address: (d.address as string | null) ?? null,
-        notes: (d.notes as string | null) ?? null,
-        is_emergency_contact: Boolean(d.is_emergency_contact),
-      }))}
-    />
+    {viewerUiMode === 'gen_z' ? (
+      <GraphExperience
+        title="HR File Graph"
+        subtitle="Use connected nodes to move around the employee record and launch edits quickly."
+        centerLabel={String((fileRow.display_name as string | null) ?? (fileRow.full_name as string | null) ?? 'Employee')}
+        centerDescription="The employee profile is the center node. Surrounding branches map payroll, compliance, and casework modules."
+        nodes={[
+          { id: 'record-core-node', label: 'Record Core', description: 'Core employee record and audit events.', href: '#record-core' },
+          { id: 'bank-node', label: 'Bank Details', description: 'Payroll bank history and approvals.', href: '#bank-details' },
+          { id: 'uk-tax-node', label: 'UK Tax', description: 'Tax identifiers and review status.', href: '#uk-tax' },
+          { id: 'tax-docs-node', label: 'Tax Documents', description: 'P45/P60 and payroll tax docs.', href: '#tax-documents' },
+          { id: 'employment-node', label: 'Employment History', description: 'Role and contract timeline.', href: '#employment-history' },
+          { id: 'case-node', label: 'Case Log', description: 'Disciplinary and grievance records.', href: '#case-log' },
+          { id: 'medical-node', label: 'Medical Notes', description: 'Medical notes and follow-up events.', href: '#medical-notes' },
+          { id: 'custom-node', label: 'Custom Fields', description: 'Org-defined custom HR fields.', href: '#custom-fields' },
+        ]}
+      />
+    ) : null}
+    <div id="record-core" className="scroll-mt-24">
+      <EmployeeHRFileClient
+        orgId={orgId}
+        currentUserId={user.id}
+        canManage={canManage}
+        canManageEmployeePhotos={!!canPhotoManageAll}
+        canViewEmployeePhotos={!!canPhotoViewAll || !!canPhotoManageAll}
+        canManageIdDocuments={!!canIdManageAll}
+        canViewIdDocuments={!!canIdViewAll || !!canIdManageAll}
+        canMarkProbationCheck={canMarkProbationCheck}
+        canViewGrading={!!canViewAll || !!canManageLeaveOrg}
+        customCategories={(customCategoryRows ?? []).map((c) => ({
+          id: c.id as string,
+          name: c.name as string,
+          document_kind_scope: (c.document_kind_scope as string) ?? 'supporting_document',
+        }))}
+        employee={fileRow as Parameters<typeof EmployeeHRFileClient>[0]['employee']}
+        auditEvents={(auditRows ?? []).map((e) => ({
+          id: e.id as string,
+          field_name: e.field_name as string,
+          old_value: (e.old_value as string | null) ?? null,
+          new_value: (e.new_value as string | null) ?? null,
+          created_at: e.created_at as string,
+          changer_name: changerNames[e.changed_by as string] ?? 'Unknown',
+        }))}
+        leaveAllowance={
+          leaveData
+            ? {
+                annual_entitlement_days: Number(leaveData.annual_entitlement_days ?? 0),
+                toil_balance_days: Number(leaveData.toil_balance_days ?? 0),
+              }
+            : null
+        }
+        leaveEntitlementYearLabel={hrFileLeaveYearKey}
+        absenceScore={absenceScore}
+        showAbsenceReportingLink={!!canViewAll || !!canViewTeam || !!canManageLeaveOrg}
+        applications={(applications ?? []) as { id: string; candidate_name: string; job_listing_id: string }[]}
+        initialDocuments={(hrDocRows ?? []).map((d) => ({
+          id: d.id as string,
+          org_id: d.org_id as string,
+          user_id: d.user_id as string,
+          category: d.category as string,
+          document_kind: (d.document_kind as string) ?? 'supporting_document',
+          bucket_id: (d.bucket_id as string) ?? 'employee-hr-documents',
+          custom_category_id: (d.custom_category_id as string | null) ?? null,
+          custom_category_name: categoryNameById.get((d.custom_category_id as string | null) ?? '') ?? null,
+          label: (d.label as string) ?? '',
+          storage_path: d.storage_path as string,
+          file_name: d.file_name as string,
+          mime_type: d.mime_type as string,
+          byte_size: Number(d.byte_size ?? 0),
+          uploaded_by: d.uploaded_by as string,
+          created_at: d.created_at as string,
+          id_document_type: (d.id_document_type as string | null) ?? null,
+          id_number_last4: (d.id_number_last4 as string | null) ?? null,
+          expires_on: (d.expires_on as string | null) ?? null,
+          verification_status: (d.verification_status as string | null) ?? null,
+          is_current: Boolean(d.is_current),
+          uploader_name: docUploaderNames[d.uploaded_by as string] ?? 'Unknown',
+        }))}
+        initialDependants={(dependantRows ?? []).map((d) => ({
+          full_name: (d.full_name as string) ?? '',
+          relationship: (d.relationship as string) ?? 'other',
+          date_of_birth: (d.date_of_birth as string | null) ?? null,
+          is_student: Boolean(d.is_student),
+          is_disabled: Boolean(d.is_disabled),
+          is_beneficiary: Boolean(d.is_beneficiary),
+          beneficiary_percentage:
+            d.beneficiary_percentage != null ? Number(d.beneficiary_percentage) : null,
+          phone: (d.phone as string | null) ?? null,
+          email: (d.email as string | null) ?? null,
+          address: (d.address as string | null) ?? null,
+          notes: (d.notes as string | null) ?? null,
+          is_emergency_contact: Boolean(d.is_emergency_contact),
+        }))}
+      />
+    </div>
     {(canPayrollBankViewAll || canPayrollBankManageAll) ? (
-      <div className="mx-auto max-w-3xl px-5 pb-8 sm:px-7">
+      <div id="bank-details" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <BankDetailsClient
           title="Bank details (payroll)"
           description="Masked by default. Full reveal and export are audited."
@@ -620,7 +643,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canUkTaxViewAll || canUkTaxManageAll) ? (
-      <div className="mx-auto max-w-3xl px-5 pb-8 sm:px-7">
+      <div id="uk-tax" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <UkTaxDetailsClient
           subjectUserId={userId}
           initialRows={(ukTaxRows ?? []).map((r) => ({
@@ -646,7 +669,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canTaxDocsViewAll || canTaxDocsManageAll) ? (
-      <div className="mx-auto max-w-3xl px-5 pb-8 sm:px-7">
+      <div id="tax-documents" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <TaxDocumentsClient
           orgId={orgId}
           subjectUserId={userId}
@@ -679,7 +702,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canEmploymentHistoryViewAll || canEmploymentHistoryManageAll) ? (
-      <div className="mx-auto max-w-3xl px-5 pb-8 sm:px-7">
+      <div id="employment-history" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <EmploymentHistoryClient
           subjectUserId={userId}
           canEdit={Boolean(canEmploymentHistoryManageAll)}
@@ -704,7 +727,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canDisciplinaryViewAll || canDisciplinaryManageAll || canGrievanceViewAll || canGrievanceManageAll || canViewTeam) ? (
-      <div className="mx-auto max-w-3xl px-5 pb-8 sm:px-7">
+      <div id="case-log" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <DisciplinaryGrievanceLogClient
           orgId={orgId}
           subjectUserId={userId}
@@ -751,7 +774,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canMedicalViewAll || canMedicalManageAll) ? (
-      <div className="mx-auto max-w-3xl px-5 pb-8 sm:px-7">
+      <div id="medical-notes" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <MedicalNotesClient
           subjectUserId={userId}
           initialRows={(medicalRows ?? []).map((r) => ({
@@ -786,7 +809,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canCustomFieldsView || canCustomFieldsManageValuesAll) ? (
-      <div className="mx-auto max-w-3xl px-5 pb-8 sm:px-7">
+      <div id="custom-fields" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <CustomHrFieldsValuesClient
           orgId={orgId}
           subjectUserId={userId}

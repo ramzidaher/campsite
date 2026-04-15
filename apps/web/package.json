@@ -33,6 +33,7 @@
     "@types/sanitize-html": "^2.16.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "@xyflow/react": "^12.10.2",
     "chrono-node": "^2.9.0",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
@@ -43,12 +44,15 @@
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-force-graph-2d": "^1.29.1",
+    "react-force-graph-3d": "^1.29.1",
     "react-markdown": "^10.1.0",
     "react-native": "0.83.2",
     "react-native-web": "^0.21.0",
     "remark-gfm": "^4.0.1",
     "sanitize-html": "^2.17.2",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "three-spritetext": "^1.10.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

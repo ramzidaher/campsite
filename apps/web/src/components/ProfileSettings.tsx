@@ -19,6 +19,11 @@ import {
   type CelebrationMode,
 } from '@/lib/holidayThemes';
 import {
+  normalizeUiMode,
+  type UiMode,
+} from '@/lib/uiMode';
+import { useUiModePreference } from '@/hooks/useUiModePreference';
+import {
   DEFAULT_ACCESSIBILITY_PREFERENCES,
   applyAccessibilityPreferencesToDocument,
   loadAccessibilityPreferences,
@@ -35,6 +40,7 @@ type Profile = {
   color_scheme: string;
   celebration_mode?: CelebrationMode | null;
   celebration_auto_enabled?: boolean | null;
+  ui_mode?: UiMode | null;
   dnd_enabled: boolean;
   dnd_start: string | null;
   dnd_end: string | null;
@@ -211,6 +217,7 @@ export function ProfileSettings({
   const [shellModeAutoEnabled, setShellModeAutoEnabled] = useState<boolean>(
     initial?.celebration_auto_enabled ?? true
   );
+  const { uiMode, updateUiMode } = useUiModePreference(initial?.ui_mode);
   const [tenantSwitching, setTenantSwitching] = useState<string | null>(null);
   const [avatarPreviewFailed, setAvatarPreviewFailed] = useState(false);
   const [channelPrefs, setChannelPrefs] = useState<BroadcastChannelPref[]>(initialBroadcastChannels);
@@ -306,6 +313,10 @@ export function ProfileSettings({
     );
   }
 
+  function setUiModePref(mode: UiMode) {
+    updateUiMode(mode);
+  }
+
   const channelsByDept = useMemo(() => {
     const m = new Map<string, BroadcastChannelPref[]>();
     for (const c of channelPrefs) {
@@ -364,6 +375,7 @@ export function ProfileSettings({
         color_scheme: scheme,
         celebration_mode: shellMode,
         celebration_auto_enabled: shellModeAutoEnabled,
+        ui_mode: uiMode,
         dnd_enabled: dnd,
         dnd_start: dnd ? dndStart : null,
         dnd_end: dnd ? dndEnd : null,
@@ -576,6 +588,20 @@ export function ProfileSettings({
                   ))}
                 </div>
               </div>
+              <label className={fieldLabel}>
+                Experience mode
+                <select
+                  className={selectClass}
+                  value={uiMode}
+                  onChange={(e) => setUiModePref(normalizeUiMode(e.target.value))}
+                >
+                  <option value="millennial">Millennial mode</option>
+                  <option value="gen_z">Gen Z mode</option>
+                </select>
+                <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  Gen Z mode enables graph-based profile and HR experiences with quicker navigation.
+                </span>
+              </label>
               <label className={fieldLabel}>
                 Celebration mode
                 <select

@@ -27,7 +27,7 @@ export default async function SettingsPage({
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'full_name,avatar_url,role,accent_preset,color_scheme,celebration_mode,celebration_auto_enabled,dnd_enabled,dnd_start,dnd_end,shift_reminder_before_minutes,rota_open_slot_alerts_enabled,org_id'
+      'full_name,avatar_url,role,accent_preset,color_scheme,celebration_mode,celebration_auto_enabled,ui_mode,dnd_enabled,dnd_start,dnd_end,shift_reminder_before_minutes,rota_open_slot_alerts_enabled,org_id'
     )
     .eq('id', user.id)
     .single();
@@ -136,6 +136,7 @@ export default async function SettingsPage({
                   color_scheme: profile.color_scheme,
                   celebration_mode: profile.celebration_mode,
                   celebration_auto_enabled: profile.celebration_auto_enabled,
+                  ui_mode: profile.ui_mode,
                   dnd_enabled: profile.dnd_enabled,
                   dnd_start: profile.dnd_start,
                   dnd_end: profile.dnd_end,

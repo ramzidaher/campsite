@@ -13,6 +13,7 @@ import type { OrgCelebrationModeOverride } from '@/lib/holidayThemes';
 import { resolveTenantGovernanceRedirect } from '@/lib/tenantGovernanceGate';
 import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import { normalizeUiMode } from '@/lib/uiMode';
 import { createClient } from '@/lib/supabase/server';
 import {
   type PermissionKey,
@@ -77,6 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const profileRole    = str('profile_role')?.trim() || null;
   const currentOrgId   = str('org_id');
   const initialCelebrationMode = normalizeCelebrationMode(str('celebration_mode'));
+  const initialUiMode = normalizeUiMode(str('ui_mode'));
   const initialCelebrationAutoEnabled =
     typeof b['celebration_auto_enabled'] === 'boolean' ? Boolean(b['celebration_auto_enabled']) : true;
   let orgCelebrationOverrides: OrgCelebrationModeOverride[] = [];
@@ -300,6 +302,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           showMemberSearch={showMemberSearch}
           orgId={currentOrgId}
           initialCelebrationMode={initialCelebrationMode}
+          initialUiMode={initialUiMode}
           initialCelebrationAutoEnabled={initialCelebrationAutoEnabled}
           orgCelebrationOverrides={orgCelebrationOverrides}
         >

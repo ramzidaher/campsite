@@ -23,6 +23,9 @@ import {
   type CelebrationMode,
 } from '@/lib/holidayThemes';
 import { orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
+import { createClient } from '@/lib/supabase/client';
+import { useUiModePreference } from '@/hooks/useUiModePreference';
+import { nextUiMode, type UiMode } from '@/lib/uiMode';
 import { ChevronDown, Menu } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
@@ -153,6 +156,7 @@ export function AppShell({
   initialCelebrationAutoEnabled = true,
   orgCelebrationOverrides = [],
   initialShellBadgeCounts,
+  initialUiMode = 'millennial',
 }: {
   children: React.ReactNode;
   orgName: string;
@@ -202,6 +206,7 @@ export function AppShell({
   orgCelebrationOverrides?: OrgCelebrationModeOverride[];
   /** Hydrated from merged server shell bundle — avoids duplicate badge RPC right after load. */
   initialShellBadgeCounts?: ShellBadgeCounts;
+  initialUiMode?: UiMode;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
@@ -209,6 +214,7 @@ export function AppShell({
   const [hrNavExpanded, setHrNavExpanded] = useState(true);
   const [shellMode, setShellMode] = useState<CelebrationMode>(initialCelebrationMode);
   const [shellModeAutoEnabled, setShellModeAutoEnabled] = useState<boolean>(initialCelebrationAutoEnabled);
+  const { uiMode, updateUiMode } = useUiModePreference(initialUiMode);
   const [orgLogoFailed, setOrgLogoFailed] = useState(false);
   const [userAvatarFailed, setUserAvatarFailed] = useState(false);
   const playUiSound = useUiSound();
@@ -292,6 +298,15 @@ export function AppShell({
       /* ignore */
     }
   }, [initialCelebrationMode, initialCelebrationAutoEnabled]);
+
+  const toggleUiMode = async () => {
+    const nextMode = nextUiMode(uiMode);
+    updateUiMode(nextMode);
+    const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) return;
+    await supabase.from('profiles').update({ ui_mode: nextMode }).eq('id', authData.user.id);
+  };
 
   useEffect(() => {
     const sync = () => {
@@ -970,6 +985,8 @@ export function AppShell({
           orgId={orgId}
           orgName={orgName}
           paletteSections={paletteSections}
+          uiMode={uiMode}
+          onToggleUiMode={toggleUiMode}
         />
         <main id="main-content" tabIndex={-1} className="flex-1 overflow-x-hidden overflow-y-auto">
           {children}

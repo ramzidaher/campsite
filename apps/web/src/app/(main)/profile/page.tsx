@@ -14,10 +14,14 @@ import { MedicalNotesClient } from '@/components/hr/MedicalNotesClient';
 import { PrivacySelfRequestClient } from '@/components/privacy/PrivacySelfRequestClient';
 import { TaxDocumentsClient } from '@/components/hr/TaxDocumentsClient';
 import { UkTaxDetailsClient } from '@/components/hr/UkTaxDetailsClient';
+import { GraphExperience } from '@/components/genz/GraphExperience';
+import { ProfileUiModeSync } from '@/components/profile/ProfileUiModeSync';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getDisplayName } from '@/lib/names';
+import { normalizeUiMode } from '@/lib/uiMode';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 
 function labelContract(value: string | null) {
   if (value === 'full_time') return 'Full-time';
@@ -44,83 +48,44 @@ export default async function MyProfilePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, status, full_name, preferred_name, email, avatar_url, role, reports_to_user_id')
+    .select('org_id, status, full_name, preferred_name, email, avatar_url, role, reports_to_user_id, ui_mode')
     .eq('id', user.id)
     .maybeSingle();
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
-  const { data: canViewOwn } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: orgId,
-    p_permission_key: 'hr.view_own',
-    p_context: {},
-  });
+  // Reuse request-cached permission bundle from layout to avoid many per-page RPC calls.
+  const permissionKeys = await getMyPermissions(orgId);
+  const canViewOwn = permissionKeys.includes('hr.view_own');
   if (!canViewOwn) redirect('/dashboard');
-
-  const { data: canPerf } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: orgId,
-    p_permission_key: 'performance.view_own',
-    p_context: {},
-  });
-  const [
-    { data: canViewPhotoOwn },
-    { data: canUploadPhotoOwn },
-    { data: canDeletePhotoOwn },
-    { data: canViewIdOwn },
-    { data: canUploadIdOwn },
-    { data: canDeleteIdOwn },
-    { data: canBankViewOwn },
-    { data: canBankManageOwn },
-    { data: canBankExport },
-    { data: canUkTaxViewOwn },
-    { data: canUkTaxManageOwn },
-    { data: canUkTaxExport },
-    { data: canTaxDocsViewOwn },
-    { data: canTaxDocsUploadOwn },
-    { data: canTaxDocsExport },
-    { data: canEmploymentHistoryViewOwn },
-    { data: canEmploymentHistoryManageOwn },
-    { data: canDisciplinaryViewOwn },
-    { data: canGrievanceViewOwn },
-    { data: canMedicalViewOwnSummary },
-    { data: canMedicalManageOwn },
-    { data: canCustomFieldsView },
-    { data: canCustomFieldsManageOwn },
-    { data: canPrivacyErasureCreate },
-    { data: canRecordExportOwn },
-    { data: canRecordExportCsv },
-    { data: canRecordExportPdf },
-  ] = await Promise.all([
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employee_photo.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employee_photo.upload_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employee_photo.delete_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.id_document.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.id_document.upload_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.id_document.delete_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.bank_details.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.bank_details.manage_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.bank_details.export', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.manage_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.export', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.tax_docs.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.tax_docs.upload_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'payroll.tax_docs.export', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employment_history.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.employment_history.manage_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.disciplinary.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.grievance.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.medical_notes.view_own_summary', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.medical_notes.manage_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.custom_fields.view', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.custom_fields.manage_values_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'privacy.erasure_request.create', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.records_export.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.records_export.generate_csv', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'hr.records_export.generate_pdf', p_context: {} }),
-  ]);
+  const canPerf = permissionKeys.includes('performance.view_own');
+  const canViewPhotoOwn = permissionKeys.includes('hr.employee_photo.view_own');
+  const canUploadPhotoOwn = permissionKeys.includes('hr.employee_photo.upload_own');
+  const canDeletePhotoOwn = permissionKeys.includes('hr.employee_photo.delete_own');
+  const canViewIdOwn = permissionKeys.includes('hr.id_document.view_own');
+  const canUploadIdOwn = permissionKeys.includes('hr.id_document.upload_own');
+  const canDeleteIdOwn = permissionKeys.includes('hr.id_document.delete_own');
+  const canBankViewOwn = permissionKeys.includes('payroll.bank_details.view_own');
+  const canBankManageOwn = permissionKeys.includes('payroll.bank_details.manage_own');
+  const canBankExport = permissionKeys.includes('payroll.bank_details.export');
+  const canUkTaxViewOwn = permissionKeys.includes('payroll.uk_tax.view_own');
+  const canUkTaxManageOwn = permissionKeys.includes('payroll.uk_tax.manage_own');
+  const canUkTaxExport = permissionKeys.includes('payroll.uk_tax.export');
+  const canTaxDocsViewOwn = permissionKeys.includes('payroll.tax_docs.view_own');
+  const canTaxDocsUploadOwn = permissionKeys.includes('payroll.tax_docs.upload_own');
+  const canTaxDocsExport = permissionKeys.includes('payroll.tax_docs.export');
+  const canEmploymentHistoryViewOwn = permissionKeys.includes('hr.employment_history.view_own');
+  const canEmploymentHistoryManageOwn = permissionKeys.includes('hr.employment_history.manage_own');
+  const canDisciplinaryViewOwn = permissionKeys.includes('hr.disciplinary.view_own');
+  const canGrievanceViewOwn = permissionKeys.includes('hr.grievance.view_own');
+  const canMedicalViewOwnSummary = permissionKeys.includes('hr.medical_notes.view_own_summary');
+  const canMedicalManageOwn = permissionKeys.includes('hr.medical_notes.manage_own');
+  const canCustomFieldsView = permissionKeys.includes('hr.custom_fields.view');
+  const canCustomFieldsManageOwn = permissionKeys.includes('hr.custom_fields.manage_values_own');
+  const canPrivacyErasureCreate = permissionKeys.includes('privacy.erasure_request.create');
+  const canRecordExportOwn = permissionKeys.includes('hr.records_export.view_own');
+  const canRecordExportCsv = permissionKeys.includes('hr.records_export.generate_csv');
+  const canRecordExportPdf = permissionKeys.includes('hr.records_export.generate_pdf');
 
   const [{ data: leaveSettingsForYear }, { data: orgForTz }] = await Promise.all([
     supabase
@@ -294,6 +259,7 @@ export default async function MyProfilePage() {
   const emailDisplay = (profile.email as string | null)?.trim() || user.email || '—';
   const profileDisplayName = getDisplayName(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
   const roleLabel = (profile.role as string | null) ?? '—';
+  const uiMode = normalizeUiMode((profile.ui_mode as string | null) ?? null);
   const onboardingActive = (onboardingCountRes.count ?? 0) > 0;
 
   const probationItems = (
@@ -301,8 +267,219 @@ export default async function MyProfilePage() {
       ?.items ?? []
   ).filter((i) => i.role === 'self');
 
+  const directReports = (directReportsRes.data ?? []).map((r) =>
+    `${getDisplayName(r.full_name as string, (r.preferred_name as string | null) ?? null)}${r.email ? ` · ${String(r.email)}` : ''}`
+  );
+  const ownDocs = ownDocsRes.data ?? [];
+  const ownDependants = ownDependantsRes.data ?? [];
+  const ownBankRows = ownBankRowsRes.data ?? [];
+  const ownUkTaxRows = ownUkTaxRowsRes.data ?? [];
+  const ownTaxDocs = ownTaxDocsRes.data ?? [];
+  const ownEmploymentHistory = ownEmploymentHistoryRes.data ?? [];
+  const ownCases = ownCaseRowsRes.data ?? [];
+  const ownMedical = ownMedicalRowsRes.data ?? [];
+  const ownCustomDefs = ownCustomFieldDefsRes.data ?? [];
+
+  const genZNodes = [
+    {
+      id: 'personal-node',
+      label: 'Personal',
+      description: 'Identity and core account profile.',
+      facts: [
+        { label: 'Name', value: profileDisplayName },
+        { label: 'Work email', value: emailDisplay },
+        { label: 'Role', value: roleLabel },
+        { label: 'Department', value: deptNames.length ? deptNames.join(', ') : '—' },
+        { label: 'Account ID', value: user.id },
+        { label: 'Phone', value: '—' },
+        {
+          label: 'Emergency contact',
+          value: 'Not stored in CampSite yet. Ask HR if stored externally.',
+        },
+      ],
+      actions: [{ id: 'edit-profile-settings', label: 'Edit profile settings', href: '/settings#profile' }],
+    },
+    {
+      id: 'job-node',
+      label: 'Job',
+      description: 'Position, contract, probation, and job metadata.',
+      facts: [
+        { label: 'Job title', value: String(fileRow?.job_title ?? '—') },
+        { label: 'Grade', value: String(fileRow?.grade_level ?? '—') },
+        { label: 'Pay grade', value: String((fileRow as { pay_grade?: string } | undefined)?.pay_grade ?? '—') },
+        { label: 'Position type', value: String((fileRow as { position_type?: string } | undefined)?.position_type ?? '—') },
+        { label: 'Employment basis', value: String((fileRow as { employment_basis?: string } | undefined)?.employment_basis ?? '—') },
+        { label: 'Contract', value: labelContract((fileRow?.contract_type as string | null) ?? null) },
+        { label: 'FTE', value: fileRow?.fte ? `${Math.round(Number(fileRow.fte) * 100)}%` : '—' },
+        { label: 'Weekly hours', value: String((fileRow as { weekly_hours?: number } | undefined)?.weekly_hours ?? '—') },
+        { label: 'Work location', value: labelLocation((fileRow?.work_location as string | null) ?? null) },
+        { label: 'Employment start', value: String(fileRow?.employment_start_date ?? '—') },
+        {
+          label: 'Length of service',
+          value:
+            typeof (fileRow as { length_of_service_years?: number } | undefined)?.length_of_service_years === 'number' &&
+            typeof (fileRow as { length_of_service_months?: number } | undefined)?.length_of_service_months === 'number'
+              ? `${(fileRow as { length_of_service_years: number }).length_of_service_years}y ${(fileRow as { length_of_service_months: number }).length_of_service_months}m`
+              : '—',
+        },
+        { label: 'Dept. start', value: String((fileRow as { department_start_date?: string } | undefined)?.department_start_date ?? '—') },
+        { label: 'Continuous employment', value: String((fileRow as { continuous_employment_start_date?: string } | undefined)?.continuous_employment_start_date ?? '—') },
+        { label: 'Probation end', value: String(fileRow?.probation_end_date ?? '—') },
+        { label: 'Notice period (weeks)', value: String(fileRow?.notice_period_weeks ?? '—') },
+        { label: 'Salary band', value: String(fileRow?.salary_band ?? '—') },
+      ],
+      bulletPoints:
+        probationItems.length > 0
+          ? probationItems.map((p) => `Probation alert (${p.alert_level}): ends ${p.probation_end_date}`)
+          : ['No active probation alerts.'],
+    },
+    {
+      id: 'timeoff-node',
+      label: 'Time off',
+      description: 'Current leave-year allowances and usage.',
+      facts: [
+        {
+          label: 'Leave year',
+          value: `${profileLeaveYearKey} · ${formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}`,
+        },
+        { label: 'Annual entitlement', value: `${Number(allowanceRow.data?.annual_entitlement_days ?? 0)} days` },
+        { label: 'Annual leave used', value: `${annualUsed} days` },
+        { label: 'TOIL balance', value: `${Number(allowanceRow.data?.toil_balance_days ?? 0)} days` },
+      ],
+      actions: [{ id: 'open-leave', label: 'Open leave', href: '/leave' }],
+    },
+    {
+      id: 'reporting-node',
+      label: 'Reporting line',
+      description: 'Manager and direct-report structure.',
+      facts: [
+        {
+          label: 'Manager',
+          value:
+            fileRow && (fileRow as { reports_to_name?: string }).reports_to_name
+              ? String((fileRow as { reports_to_name: string }).reports_to_name)
+              : '—',
+        },
+      ],
+      bulletPoints: directReports.length > 0 ? directReports : ['No direct reports.'],
+      actions: [{ id: 'org-chart', label: 'Open org chart', href: '/hr/org-chart' }],
+    },
+    {
+      id: 'performance-node',
+      label: 'Performance',
+      description: 'Review access and current status.',
+      bulletPoints: [
+        canPerf
+          ? 'Open performance reviews for your goals and review cycles.'
+          : 'Performance reviews are not enabled for your account.',
+      ],
+      actions: canPerf ? [{ id: 'open-performance', label: 'Open performance', href: '/performance' }] : [],
+    },
+    {
+      id: 'onboarding-node',
+      label: 'Onboarding',
+      description: 'Onboarding run availability.',
+      bulletPoints: [onboardingActive ? 'Active onboarding checklist available.' : 'No active onboarding checklist.'],
+      actions: onboardingActive ? [{ id: 'open-onboarding', label: 'Continue onboarding', href: '/onboarding' }] : [],
+    },
+    {
+      id: 'training-docs-node',
+      label: 'Training & docs',
+      description: 'Documents, certifications, and exports.',
+      facts: [
+        { label: 'Employee photo docs', value: `${ownDocs.filter((d) => d.document_kind === 'employee_photo').length}` },
+        { label: 'ID documents', value: `${ownDocs.filter((d) => d.document_kind === 'id_document').length}` },
+        { label: 'Dependants', value: `${ownDependants.length}` },
+      ],
+      bulletPoints: [
+        'Training/certification records are not modelled yet.',
+        'ID document display is masked for privacy.',
+      ],
+      actions: [
+        ...(canRecordExportOwn && canRecordExportCsv
+          ? [{ id: 'export-csv', label: 'Export my record (CSV)', href: '/api/hr/records/export?format=csv' }]
+          : []),
+        ...(canRecordExportOwn && canRecordExportPdf
+          ? [{ id: 'export-pdf', label: 'Export my record (PDF)', href: '/api/hr/records/export?format=pdf' }]
+          : []),
+      ],
+    },
+    {
+      id: 'payroll-node',
+      label: 'Payroll & tax',
+      description: 'Bank details, UK tax details, and P45/P60 docs.',
+      facts: [
+        { label: 'Bank records', value: `${ownBankRows.length}` },
+        { label: 'UK tax records', value: `${ownUkTaxRows.length}` },
+        { label: 'P45/P60 documents', value: `${ownTaxDocs.length}` },
+      ],
+      bulletPoints: [
+        ownBankRows.length > 0 ? 'Bank details exist (masked by default).' : 'No approved active payroll bank details.',
+        ownUkTaxRows.length > 0 ? 'UK tax details exist (masked by default).' : 'No approved active UK tax record.',
+        ownTaxDocs.length > 0 ? 'P45/P60 documents uploaded.' : 'No P45/P60 documents uploaded yet.',
+      ],
+    },
+    {
+      id: 'employment-history-node',
+      label: 'Employment history',
+      description: 'Role progression and transfers.',
+      facts: [{ label: 'Entries', value: `${ownEmploymentHistory.length}` }],
+      bulletPoints:
+        ownEmploymentHistory.length > 0
+          ? ownEmploymentHistory.slice(0, 5).map((r) => `${String(r.role_title ?? 'Role')} (${String(r.start_date ?? '—')} to ${String(r.end_date ?? 'present')})`)
+          : ['No employment history entries yet.'],
+    },
+    {
+      id: 'cases-medical-node',
+      label: 'Cases & medical',
+      description: 'Disciplinary/grievance and occupational health records.',
+      facts: [
+        { label: 'Case records', value: `${ownCases.length}` },
+        { label: 'Medical notes', value: `${ownMedical.length}` },
+      ],
+      bulletPoints: [
+        ownCases.length > 0 ? 'Disciplinary/grievance cases present.' : 'No disciplinary or grievance cases.',
+        ownMedical.length > 0 ? 'Medical/OH notes present.' : 'No medical/OH notes yet.',
+      ],
+    },
+    {
+      id: 'custom-privacy-node',
+      label: 'Custom fields & privacy',
+      description: 'Org custom fields, GDPR erase workflow, and HR notes.',
+      facts: [
+        { label: 'Custom HR fields', value: `${ownCustomDefs.length}` },
+        { label: 'Privacy erase request', value: canPrivacyErasureCreate ? 'Available' : 'Unavailable' },
+        {
+          label: 'HR notes',
+          value:
+            fileRow && fileRow.notes != null && String(fileRow.notes).trim() !== ''
+              ? String(fileRow.notes)
+              : '—',
+        },
+      ],
+      bulletPoints: [ownCustomDefs.length > 0 ? 'Custom HR fields are configured.' : 'No custom fields configured yet.'],
+    },
+  ];
+
+  if (uiMode === 'gen_z') {
+    return (
+      <div className="min-h-[calc(100vh-60px)]">
+        <ProfileUiModeSync initialMode={uiMode} />
+        <GraphExperience
+          title="My Profile Graph"
+          subtitle="Graph-only view. Every profile area is represented as connected nodes."
+          centerLabel={profileDisplayName}
+          centerDescription="Select nodes to inspect details and jump to related actions."
+          nodes={genZNodes}
+          fullScreen
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
+      <ProfileUiModeSync initialMode={uiMode} />
       <header className="border-b border-[#e8e8e8] pb-5">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">My Profile</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
