@@ -15,7 +15,7 @@ export const SHELL_BADGE_COUNTS_QUERY_KEY = ['shell-badge-counts'] as const;
 /**
  * Fetches shell badge counts client-side via React Query.
  *
- * - Polls on an interval only while the tab is visible
+ * - Realtime invalidation is handled by `ShellBadgeRealtime`
  * - Server `initialData` avoids an immediate duplicate refetch after hydration when fresh
  */
 export function useShellBadgeCounts(initialData?: ShellBadgeCounts) {
@@ -28,13 +28,7 @@ export function useShellBadgeCounts(initialData?: ShellBadgeCounts) {
     },
     initialData,
     initialDataUpdatedAt: initialData ? Date.now() : undefined,
-    staleTime: 60_000,
-    refetchInterval: () => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        return false;
-      }
-      return 90_000;
-    },
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 }

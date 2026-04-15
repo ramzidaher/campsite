@@ -2,12 +2,13 @@
 
 import { useEffect, useRef } from 'react';
 
-/** Dispatched by `ShellAutoRefresh` on each global refresh tick (when tab is visible). */
+/** App-level event key for optional shell refresh broadcasts. */
 export const SHELL_REFRESH_EVENT = 'campsite:shell-refresh';
 
 /**
  * Re-run client-side data loaders when the app shell auto-refreshes (periodic tick + tab focus).
- * Use for dashboards that fetch in the browser; server-rendered props update from `router.refresh()` on focus only.
+ * Use for dashboards that fetch in the browser; this intentionally avoids full
+ * `router.refresh()` churn to keep interaction latency low.
  */
 export function useShellRefresh(onRefresh: () => void) {
   const cbRef = useRef(onRefresh);
