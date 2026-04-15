@@ -4,11 +4,11 @@ import { createClient } from './server';
 
 const BADGE_RPC_TIMEOUT_MS = 250;
 
-async function resolveWithTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
   try {
     return await Promise.race<T>([
-      promise,
+      Promise.resolve(promise),
       new Promise<T>((resolve) => {
         timer = setTimeout(() => resolve(fallback), timeoutMs);
       }),

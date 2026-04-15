@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import exec from 'k6/execution';
 
 const SUPABASE_URL = __ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = __ENV.SUPABASE_ANON_KEY;
@@ -10,10 +11,14 @@ const USERS_CSV_ENV_FILTER = (__ENV.K6_USERS_CSV_ENV ?? '').trim().toLowerCase()
 const PREAUTH_COUNT = Number.parseInt(__ENV.K6_PREAUTH_COUNT ?? '0', 10);
 const PREAUTH_DELAY_MS = Number.parseInt(__ENV.K6_PREAUTH_DELAY_MS ?? '150', 10);
 const SHARED_TOKEN = __ENV.K6_SHARED_TOKEN ?? '';
+const SPLIT_SCENARIOS = (__ENV.K6_SPLIT_SCENARIOS ?? '1') !== '0';
 
 const BADGE_RPC_WEIGHT = Number.parseFloat(__ENV.K6_BADGE_WEIGHT ?? '0.85');
 const PAUSE_MIN_MS = Number.parseInt(__ENV.K6_PAUSE_MIN_MS ?? '200', 10);
 const PAUSE_MAX_MS = Number.parseInt(__ENV.K6_PAUSE_MAX_MS ?? '800', 10);
+const BADGE_VUS = Number.parseInt(__ENV.K6_BADGE_VUS ?? '40', 10);
+const LAYOUT_VUS = Number.parseInt(__ENV.K6_LAYOUT_VUS ?? '10', 10);
+const TEST_DURATION = __ENV.K6_DURATION ?? '30s';
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || (!SHARED_TOKEN && !TEST_EMAIL && !USERS_CSV_PATH)) {
   if (!USERS_CSV_PATH && !SHARED_TOKEN) {
@@ -122,24 +127,44 @@ function login(email, password) {
   return res.json('access_token');
 }
 
+const defaultThresholds = {
+  http_req_failed: ['rate<0.01'],
+  http_req_duration: ['p(95)<600', 'p(99)<1000'],
+  'http_req_duration{endpoint:rpc_badges}': ['p(95)<450', 'p(99)<800'],
+  'http_req_duration{endpoint:rpc_layout}': ['p(95)<700', 'p(99)<1200'],
+};
+
 export const options = {
-  thresholds: {
-    http_req_failed: ['rate<0.01'],
-    http_req_duration: ['p(95)<600', 'p(99)<1000'],
-    'http_req_duration{endpoint:rpc_badges}': ['p(95)<450', 'p(99)<800'],
-    'http_req_duration{endpoint:rpc_layout}': ['p(95)<700', 'p(99)<1200'],
-  },
-  scenarios: {
-    shell_rpc_load: {
-      executor: 'ramping-vus',
-      stages: [
-        { duration: '1m', target: 20 },
-        { duration: '3m', target: 50 },
-        { duration: '1m', target: 0 },
-      ],
-      gracefulRampDown: '30s',
-    },
-  },
+  thresholds: defaultThresholds,
+  scenarios: SPLIT_SCENARIOS
+    ? {
+        badge_hot: {
+          executor: 'constant-vus',
+          vus: BADGE_VUS,
+          duration: TEST_DURATION,
+          gracefulStop: '30s',
+          exec: 'runBadgeScenario',
+        },
+        layout_cold: {
+          executor: 'constant-vus',
+          vus: LAYOUT_VUS,
+          duration: TEST_DURATION,
+          gracefulStop: '30s',
+          exec: 'runLayoutScenario',
+        },
+      }
+    : {
+        shell_rpc_load: {
+          executor: 'ramping-vus',
+          stages: [
+            { duration: '1m', target: 20 },
+            { duration: '3m', target: 50 },
+            { duration: '1m', target: 0 },
+          ],
+          gracefulRampDown: '30s',
+          exec: 'runMixedScenario',
+        },
+      },
 };
 
 export function setup() {
@@ -160,6 +185,47 @@ export function setup() {
   }
 
   return { users };
+}
+
+function callWeightedRpc(token) {
+  const pick = Math.random();
+  if (pick <= BADGE_RPC_WEIGHT) {
+    callRpc(token, 'main_shell_badge_counts_bundle', 'rpc_badges');
+  } else {
+    callRpc(token, 'main_shell_layout_bundle', 'rpc_layout');
+  }
+}
+
+function runScenarioByType(data, scenarioType) {
+  const token = getTokenForVu(data.users);
+  if (scenarioType === 'badge') {
+    callRpc(token, 'main_shell_badge_counts_bundle', 'rpc_badges');
+  } else if (scenarioType === 'layout') {
+    callRpc(token, 'main_shell_layout_bundle', 'rpc_layout');
+  } else {
+    callWeightedRpc(token);
+  }
+  sleep(randomPauseSeconds());
+}
+
+export function runBadgeScenario(data) {
+  runScenarioByType(data, 'badge');
+}
+
+export function runLayoutScenario(data) {
+  runScenarioByType(data, 'layout');
+}
+
+export function runMixedScenario(data) {
+  runScenarioByType(data, 'mixed');
+}
+
+export default function (data) {
+  // Fallback when running without named exec target.
+  const scenarioName = exec.scenario.name || '';
+  if (scenarioName === 'badge_hot') return runBadgeScenario(data);
+  if (scenarioName === 'layout_cold') return runLayoutScenario(data);
+  return runMixedScenario(data);
 }
 
 function callRpc(token, rpcName, endpointTag) {
@@ -199,13 +265,3 @@ function getTokenForVu(users) {
   return token;
 }
 
-export default function (data) {
-  const token = getTokenForVu(data.users);
-  const pick = Math.random();
-  if (pick <= BADGE_RPC_WEIGHT) {
-    callRpc(token, 'main_shell_badge_counts_bundle', 'rpc_badges');
-  } else {
-    callRpc(token, 'main_shell_layout_bundle', 'rpc_layout');
-  }
-  sleep(randomPauseSeconds());
-}
