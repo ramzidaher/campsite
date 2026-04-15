@@ -70,7 +70,7 @@ export function CandidateAuthCard({
   const [tab, setTab] = useState<Tab>(defaultTab);
   const [regStep, setRegStep] = useState<RegStep>(0);
   const [toast, setToast] = useState<string | null>(null);
-  const toastRef = useRef<ReturnType<typeof setTimeout>>();
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── login state
   const [liEmail, setLiEmail] = useState('');
@@ -119,11 +119,16 @@ export function CandidateAuthCard({
   // ── toast
   function showToast(msg: string) {
     setToast(msg);
-    clearTimeout(toastRef.current);
+    if (toastRef.current) clearTimeout(toastRef.current);
     toastRef.current = setTimeout(() => setToast(null), 2400);
   }
 
-  useEffect(() => () => clearTimeout(toastRef.current), []);
+  useEffect(
+    () => () => {
+      if (toastRef.current) clearTimeout(toastRef.current);
+    },
+    []
+  );
 
   // One-shot XP toast: login email
   useEffect(() => {

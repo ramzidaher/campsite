@@ -10,7 +10,7 @@ function csvEsc(v: unknown): string {
   return s;
 }
 
-function simplePdf(lines: string[]): Uint8Array {
+function simplePdf(lines: string[]): string {
   const safe = lines.map((l) => l.replace(/[()\\]/g, '')).join('\n');
   const stream = `BT /F1 10 Tf 40 790 Td (${safe.replace(/\n/g, ') Tj T* (')}) Tj ET`;
   const objs = [
@@ -30,7 +30,7 @@ function simplePdf(lines: string[]): Uint8Array {
   body += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
   for (let i = 1; i <= objs.length; i += 1) body += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
   body += `trailer << /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-  return new TextEncoder().encode(body);
+  return body;
 }
 
 export async function GET(req: Request) {

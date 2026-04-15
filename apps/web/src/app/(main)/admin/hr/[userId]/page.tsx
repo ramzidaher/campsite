@@ -368,17 +368,21 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
 
   const canViewSensitiveCaseData = Boolean(canDisciplinaryViewAll || canDisciplinaryManageAll || canGrievanceViewAll || canGrievanceManageAll);
 
-  const caseSelect = canViewSensitiveCaseData
-    ? 'id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, allegations_details, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, witness_details, investigation_notes, internal_notes, linked_documents, archived_at, created_at'
-    : 'id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, linked_documents, archived_at, created_at';
-
-  const { data: caseRows } = await supabase
-    .from('employee_case_records')
-    .select(caseSelect)
-    .eq('org_id', orgId)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(50);
+  const { data: caseRows } = canViewSensitiveCaseData
+    ? await supabase
+        .from('employee_case_records')
+        .select('id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, allegations_details, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, witness_details, investigation_notes, internal_notes, linked_documents, archived_at, created_at')
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+    : await supabase
+        .from('employee_case_records')
+        .select('id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, linked_documents, archived_at, created_at')
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
   const caseIds = (caseRows ?? []).map((r) => r.id as string).filter(Boolean);
   const { data: caseEventRows } = caseIds.length
@@ -704,7 +708,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
         <DisciplinaryGrievanceLogClient
           orgId={orgId}
           subjectUserId={userId}
-          initialCases={(caseRows ?? []).map((r) => ({
+          initialCases={(caseRows ?? []).map((r: Record<string, unknown>) => ({
             id: r.id as string,
             case_type: ((r.case_type as string) ?? 'disciplinary') as 'disciplinary' | 'grievance',
             case_ref: (r.case_ref as string) ?? '',
