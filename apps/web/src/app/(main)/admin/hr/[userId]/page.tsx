@@ -1,4 +1,5 @@
 import { EmployeeHRFileClient } from '@/components/admin/hr/EmployeeHRFileClient';
+import { EmployeeHrRecordGenZClient } from '@/components/admin/hr/EmployeeHrRecordGenZClient';
 import { GraphExperience } from '@/components/genz/GraphExperience';
 import { SensitiveRecordExportButton } from '@/components/admin/hr/SensitiveRecordExportButton';
 import { BankDetailsClient } from '@/components/hr/BankDetailsClient';
@@ -484,6 +485,250 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
         }
       : null;
 
+  if (viewerUiMode === 'gen_z') {
+    return (
+      <>
+      {(canRecordExportCsv || canRecordExportPdf) ? (
+        <div className="mx-auto mt-4 flex max-w-3xl flex-wrap gap-2 px-5 sm:px-7">
+          {canRecordExportCsv ? (
+            <a
+              href={`/api/hr/records/export?userId=${encodeURIComponent(userId)}&format=csv`}
+              className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] text-[#121212] hover:bg-[#fafafa]"
+            >
+              Export CSV
+            </a>
+          ) : null}
+          {canRecordExportPdf ? (
+            <a
+              href={`/api/hr/records/export?userId=${encodeURIComponent(userId)}&format=pdf`}
+              className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] text-[#121212] hover:bg-[#fafafa]"
+            >
+              Export PDF
+            </a>
+          ) : null}
+          {(canRecordExportSensitive && canRecordExportCsv) ? (
+            <SensitiveRecordExportButton userId={userId} />
+          ) : null}
+        </div>
+      ) : null}
+      {activePrivacyRequest ? (
+        <div className="mx-auto mt-4 max-w-3xl rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[12.5px] text-[#854d0e]">
+          Active GDPR erasure request: <strong>{String(activePrivacyRequest.status)}</strong> (submitted {String(activePrivacyRequest.created_at).slice(0, 10)}).
+        </div>
+      ) : null}
+      <EmployeeHrRecordGenZClient
+        orgId={orgId}
+        subjectUserId={userId}
+        actorUserId={user.id}
+        centerLabel={String((fileRow.display_name as string | null) ?? (fileRow.full_name as string | null) ?? 'Employee')}
+        centerDescription="The employee profile is the center node. Surrounding branches map payroll, compliance, and casework modules."
+        nodes={[
+          {
+            id: 'record-core-node',
+            label: 'Record Core',
+            description: 'Core employee record and audit events.',
+            facts: [
+              { label: 'Status', value: String(fileRow.status ?? '—') },
+              { label: 'Department', value: String(fileRow.department_name ?? '—') },
+              { label: 'Job title', value: String(fileRow.job_title ?? '—') },
+            ],
+          },
+          {
+            id: 'documents-node',
+            label: 'Documents & ID',
+            description: 'Employee photo, ID documents, and supporting files.',
+            facts: [
+              { label: 'Total docs', value: `${(hrDocRows ?? []).length}` },
+              {
+                label: 'ID docs',
+                value: `${(hrDocRows ?? []).filter((d) => String(d.document_kind ?? '') === 'id_document').length}`,
+              },
+              {
+                label: 'Photos',
+                value: `${(hrDocRows ?? []).filter((d) => String(d.document_kind ?? '') === 'employee_photo').length}`,
+              },
+            ],
+          },
+          {
+            id: 'dependants-node',
+            label: 'Dependants',
+            description: 'Dependants, beneficiaries, and emergency contact relationships.',
+            facts: [
+              { label: 'Entries', value: `${(dependantRows ?? []).length}` },
+              {
+                label: 'Beneficiaries',
+                value: `${(dependantRows ?? []).filter((d) => Boolean(d.is_beneficiary)).length}`,
+              },
+              {
+                label: 'Emergency contacts',
+                value: `${(dependantRows ?? []).filter((d) => Boolean(d.is_emergency_contact)).length}`,
+              },
+            ],
+          },
+          {
+            id: 'leave-absence-node',
+            label: 'Leave & Absence',
+            description: 'Allowance context and Bradford absence score.',
+            facts: [
+              { label: 'Leave year', value: hrFileLeaveYearKey },
+              {
+                label: 'Annual entitlement',
+                value: `${Number(leaveData?.annual_entitlement_days ?? 0)} days`,
+              },
+              { label: 'TOIL balance', value: `${Number(leaveData?.toil_balance_days ?? 0)} days` },
+              {
+                label: 'Bradford score',
+                value: absenceScore ? `${absenceScore.bradford_score}` : '—',
+              },
+            ],
+          },
+          {
+            id: 'bank-node',
+            label: 'Bank Details',
+            description: 'Payroll bank history and approvals.',
+            facts: [{ label: 'Entries', value: `${(bankRows ?? []).length}` }],
+            bulletPoints: [
+              canPayrollBankManageAll
+                ? 'Use the classic editor for full create/review workflow.'
+                : 'View-only access for bank records.',
+            ],
+          },
+          {
+            id: 'uk-tax-node',
+            label: 'UK Tax',
+            description: 'Tax identifiers and review status.',
+            facts: [{ label: 'Entries', value: `${(ukTaxRows ?? []).length}` }],
+            bulletPoints: [canUkTaxManageAll ? 'Manage submissions in classic editor.' : 'View-only access.'],
+          },
+          {
+            id: 'tax-docs-node',
+            label: 'Tax Documents',
+            description: 'P45/P60 and payroll tax docs.',
+            facts: [{ label: 'Documents', value: `${(taxDocRows ?? []).length}` }],
+            bulletPoints: [canTaxDocsManageAll ? 'Upload/manage docs in classic editor.' : 'View-only access.'],
+          },
+          {
+            id: 'employment-node',
+            label: 'Employment History',
+            description: 'Role and contract timeline.',
+            facts: [{ label: 'Entries', value: `${(employmentHistoryRows ?? []).length}` }],
+          },
+          {
+            id: 'case-node',
+            label: 'Case Log',
+            description: 'Disciplinary and grievance records.',
+            facts: [{ label: 'Cases', value: `${(caseRows ?? []).length}` }],
+          },
+          {
+            id: 'medical-node',
+            label: 'Medical Notes',
+            description: 'Medical notes and follow-up events.',
+            facts: [{ label: 'Records', value: `${(medicalRows ?? []).length}` }],
+          },
+          {
+            id: 'custom-node',
+            label: 'Custom Fields',
+            description: 'Org-defined custom HR fields.',
+            facts: [{ label: 'Configured fields', value: `${(customFieldDefs ?? []).length}` }],
+          },
+          {
+            id: 'privacy-node',
+            label: 'Privacy',
+            description: 'GDPR erasure lifecycle and privacy status.',
+            facts: [
+              {
+                label: 'Active request',
+                value: activePrivacyRequest ? String(activePrivacyRequest.status) : 'None',
+              },
+              {
+                label: 'Requested at',
+                value: activePrivacyRequest ? String(activePrivacyRequest.created_at).slice(0, 10) : '—',
+              },
+            ],
+          },
+          {
+            id: 'audit-node',
+            label: 'Audit Trail',
+            description: 'Recent HR record change events and changer attribution.',
+            facts: [
+              { label: 'Events loaded', value: `${(auditRows ?? []).length}` },
+              { label: 'Recent limit', value: '50' },
+            ],
+          },
+          {
+            id: 'exports-node',
+            label: 'Exports',
+            description: 'Record export capability and sensitive export access.',
+            facts: [
+              { label: 'CSV export', value: canRecordExportCsv ? 'Enabled' : 'Disabled' },
+              { label: 'PDF export', value: canRecordExportPdf ? 'Enabled' : 'Disabled' },
+              {
+                label: 'Sensitive export',
+                value: canRecordExportSensitive ? 'Enabled' : 'Disabled',
+              },
+            ],
+          },
+        ]}
+        bankRows={(bankRows ?? []).map((r) => ({
+          id: r.id as string,
+          status: (r.status as 'pending' | 'approved' | 'rejected') ?? 'pending',
+          is_active: Boolean(r.is_active),
+          account_holder_display: (r.account_holder_display as string) ?? '',
+          account_number_last4: (r.account_number_last4 as string | null) ?? null,
+          sort_code_last4: (r.sort_code_last4 as string | null) ?? null,
+          iban_last4: (r.iban_last4 as string | null) ?? null,
+          bank_country: (r.bank_country as string | null) ?? null,
+          currency: (r.currency as string | null) ?? null,
+          effective_from: (r.effective_from as string | null) ?? null,
+          submitted_by: r.submitted_by as string,
+          reviewed_by: (r.reviewed_by as string | null) ?? null,
+          reviewed_at: (r.reviewed_at as string | null) ?? null,
+          review_note: (r.review_note as string | null) ?? null,
+          created_at: r.created_at as string,
+        }))}
+        ukTaxRows={(ukTaxRows ?? []).map((r) => ({
+          id: r.id as string,
+          status: (r.status as 'pending' | 'approved' | 'rejected') ?? 'pending',
+          is_active: Boolean(r.is_active),
+          ni_number_masked: (r.ni_number_masked as string | null) ?? null,
+          ni_number_last2: (r.ni_number_last2 as string | null) ?? null,
+          tax_code_masked: (r.tax_code_masked as string | null) ?? null,
+          tax_code_last2: (r.tax_code_last2 as string | null) ?? null,
+          effective_from: (r.effective_from as string | null) ?? null,
+          review_note: (r.review_note as string | null) ?? null,
+          created_at: r.created_at as string,
+        }))}
+        taxDocRows={(taxDocRows ?? []).map((r) => ({
+          id: r.id as string,
+          document_type: ((r.document_type as string) ?? 'p60') as 'p45' | 'p60',
+          tax_year: (r.tax_year as string | null) ?? null,
+          issue_date: (r.issue_date as string | null) ?? null,
+          payroll_period_end: (r.payroll_period_end as string | null) ?? null,
+          status: ((r.status as string) ?? 'issued') as 'draft' | 'final' | 'issued',
+          finance_reference: (r.finance_reference as string | null) ?? null,
+          wagesheet_id: (r.wagesheet_id as string | null) ?? null,
+          payroll_run_reference: (r.payroll_run_reference as string | null) ?? null,
+          bucket_id: (r.bucket_id as string) ?? 'employee-tax-documents',
+          storage_path: r.storage_path as string,
+          file_name: r.file_name as string,
+          byte_size: Number(r.byte_size ?? 0),
+          is_current: Boolean(r.is_current),
+          created_at: r.created_at as string,
+        }))}
+        canPayrollBankViewAll={Boolean(canPayrollBankViewAll)}
+        canPayrollBankManageAll={Boolean(canPayrollBankManageAll)}
+        canPayrollBankExport={Boolean(canPayrollBankExport)}
+        canUkTaxViewAll={Boolean(canUkTaxViewAll)}
+        canUkTaxManageAll={Boolean(canUkTaxManageAll)}
+        canUkTaxExport={Boolean(canUkTaxExport)}
+        canTaxDocsViewAll={Boolean(canTaxDocsViewAll)}
+        canTaxDocsManageAll={Boolean(canTaxDocsManageAll)}
+        canTaxDocsExport={Boolean(canTaxDocsExport)}
+      />
+      </>
+    );
+  }
+
   return (
     <>
     {(canRecordExportCsv || canRecordExportPdf) ? (
@@ -513,24 +758,6 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       <div className="mx-auto mt-4 max-w-3xl rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[12.5px] text-[#854d0e]">
         Active GDPR erasure request: <strong>{String(activePrivacyRequest.status)}</strong> (submitted {String(activePrivacyRequest.created_at).slice(0, 10)}).
       </div>
-    ) : null}
-    {viewerUiMode === 'gen_z' ? (
-      <GraphExperience
-        title="HR File Graph"
-        subtitle="Use connected nodes to move around the employee record and launch edits quickly."
-        centerLabel={String((fileRow.display_name as string | null) ?? (fileRow.full_name as string | null) ?? 'Employee')}
-        centerDescription="The employee profile is the center node. Surrounding branches map payroll, compliance, and casework modules."
-        nodes={[
-          { id: 'record-core-node', label: 'Record Core', description: 'Core employee record and audit events.', href: '#record-core' },
-          { id: 'bank-node', label: 'Bank Details', description: 'Payroll bank history and approvals.', href: '#bank-details' },
-          { id: 'uk-tax-node', label: 'UK Tax', description: 'Tax identifiers and review status.', href: '#uk-tax' },
-          { id: 'tax-docs-node', label: 'Tax Documents', description: 'P45/P60 and payroll tax docs.', href: '#tax-documents' },
-          { id: 'employment-node', label: 'Employment History', description: 'Role and contract timeline.', href: '#employment-history' },
-          { id: 'case-node', label: 'Case Log', description: 'Disciplinary and grievance records.', href: '#case-log' },
-          { id: 'medical-node', label: 'Medical Notes', description: 'Medical notes and follow-up events.', href: '#medical-notes' },
-          { id: 'custom-node', label: 'Custom Fields', description: 'Org-defined custom HR fields.', href: '#custom-fields' },
-        ]}
-      />
     ) : null}
     <div id="record-core" className="scroll-mt-24">
       <EmployeeHRFileClient

@@ -77,8 +77,10 @@ export function AppTopBar({
       <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
+          role="switch"
+          aria-checked={uiMode === 'gen_z'}
           onClick={onToggleUiMode}
-          className="inline-flex h-9 items-center justify-center rounded-lg border px-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] transition-colors hover:bg-[#f5f4f1]"
+          className="inline-flex h-9 items-center gap-2 rounded-full border px-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] transition-colors hover:bg-[#f5f4f1]"
           style={{
             borderColor: 'var(--org-brand-border)',
             color: 'var(--org-brand-muted)',
@@ -86,7 +88,23 @@ export function AppTopBar({
           title={`Switch to ${uiMode === 'gen_z' ? 'Millennial' : 'Gen Z'} mode`}
           aria-label={`Switch to ${uiMode === 'gen_z' ? 'Millennial' : 'Gen Z'} mode`}
         >
-          {uiMode === 'gen_z' ? 'Gen Z' : 'Classic'}
+          <span style={{ color: uiMode === 'gen_z' ? 'var(--org-brand-primary)' : 'var(--org-brand-muted)' }}>
+            Gen Z
+          </span>
+          <span
+            aria-hidden
+            className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+            style={{
+              background: uiMode === 'gen_z' ? 'var(--org-brand-primary)' : 'var(--org-brand-border)',
+            }}
+          >
+            <span
+              className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+              style={{
+                transform: uiMode === 'gen_z' ? 'translateX(18px)' : 'translateX(2px)',
+              }}
+            />
+          </span>
         </button>
         <div className="relative" ref={notifRef}>
           <button

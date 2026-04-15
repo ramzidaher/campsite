@@ -108,10 +108,11 @@ function wrapLabel(label: string, maxChars = 14): string[] {
 
 export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
-  const fgRef = useRef<ForceGraphMethods<DirectoryGraphNode, DirectoryGraphLink>>();
+  const fgRef = useRef<ForceGraphMethods<DirectoryGraphNode, DirectoryGraphLink> | undefined>(undefined);
   const [colors, setColors] = useState<GraphColors>(DEFAULT_COLORS);
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 640 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<{ x: number; y: number } | null>(null);
 
   const { nodes, links } = useMemo(() => {
     const peopleMap = new Map<string, HRDirectoryRow>();
@@ -187,16 +188,17 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
     const el = canvasRef.current;
     if (!el) return;
     const update = () => {
-      const rect = el.getBoundingClientRect();
+      const width = Math.max(320, Math.floor(el.clientWidth));
+      const height = Math.max(460, Math.floor(el.clientHeight));
       setCanvasSize({
-        width: Math.max(320, Math.floor(rect.width)),
-        height: Math.max(460, Math.floor(rect.height)),
+        width,
+        height,
       });
     };
     update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
+    const onWindowResize = () => window.requestAnimationFrame(update);
+    window.addEventListener('resize', onWindowResize);
+    return () => window.removeEventListener('resize', onWindowResize);
   }, []);
 
   return (
@@ -215,10 +217,10 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
         </div>
       </div>
 
-      <div className="mt-3 grid flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-3 flex-1">
       <div
         ref={canvasRef}
-        className="h-[calc(100vh-142px)] overflow-hidden rounded-xl border"
+        className="relative h-[calc(100vh-142px)] overflow-hidden rounded-xl border"
         style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-surface)' }}
       >
         <ForceGraph2D
@@ -245,20 +247,20 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
             const x = node.x ?? 0;
             const y = node.y ?? 0;
             const teamBump = Math.min(node.teamSize, 6);
-            const radius = 8 + teamBump;
+            const radius = 14 + teamBump;
             const isSelected = selectedId === node.id;
 
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-            ctx.shadowColor = 'rgba(18, 18, 18, 0.1)';
-            ctx.shadowBlur = 6;
-            ctx.shadowOffsetY = 1;
-            ctx.fillStyle = isSelected ? colors.nodeSelectedFill : colors.nodeDefaultFill;
+            ctx.shadowColor = 'rgba(15, 23, 42, 0.14)';
+            ctx.shadowBlur = 14;
+            ctx.shadowOffsetY = 4;
+            ctx.fillStyle = isSelected ? '#fff7f8' : '#ffffff';
             ctx.fill();
             ctx.shadowBlur = 0;
             ctx.shadowOffsetY = 0;
             ctx.lineWidth = isSelected ? 2 : 1.1;
-            ctx.strokeStyle = isSelected ? colors.nodeSelectedBorder : colors.nodeDefaultBorder;
+            ctx.strokeStyle = isSelected ? '#f45461' : '#d6d8de';
             ctx.stroke();
 
             const lines = wrapLabel(node.label);
@@ -284,13 +286,21 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
           linkWidth={(link) => {
             const source = typeof link.source === 'string' ? link.source : link.source.id;
             const target = typeof link.target === 'string' ? link.target : link.target.id;
-            return selectedId && (selectedId === source || selectedId === target) ? 2 : 1.1;
+            return selectedId && (selectedId === source || selectedId === target) ? 2.2 : 0.85;
           }}
-          onNodeClick={(nodeRaw) => {
+          onNodeClick={(nodeRaw, event) => {
             const node = nodeRaw as DirectoryGraphNode;
             setSelectedId(node.id);
+            setSelectedPoint(
+              event
+                ? { x: Number((event as MouseEvent).offsetX ?? canvasSize.width / 2), y: Number((event as MouseEvent).offsetY ?? canvasSize.height / 2) }
+                : { x: canvasSize.width / 2, y: canvasSize.height / 2 }
+            );
           }}
-          onBackgroundClick={() => setSelectedId(null)}
+          onBackgroundClick={() => {
+            setSelectedId(null);
+            setSelectedPoint(null);
+          }}
           enableNodeDrag
           nodePointerAreaPaint={(nodeRaw, color, ctx) => {
             const node = nodeRaw as DirectoryGraphNode & { x?: number; y?: number };
@@ -305,10 +315,15 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
         />
       </div>
 
-      {selected ? (
-        <aside
-          className="rounded-xl border bg-white p-4"
-          style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-surface)' }}
+      {selected && selectedPoint ? (
+        <div
+          className="absolute z-20 max-h-[70%] w-[min(92vw,360px)] overflow-auto rounded-2xl border bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.16)]"
+          style={{
+            borderColor: 'var(--org-brand-border)',
+            background: 'var(--org-brand-surface)',
+            left: `${Math.max(12, Math.min(selectedPoint.x + 14, canvasSize.width - 372))}px`,
+            top: `${Math.max(12, Math.min(selectedPoint.y - 10, canvasSize.height - 420))}px`,
+          }}
         >
           <p className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--org-brand-muted)' }}>
             Directory graph
@@ -387,7 +402,7 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
             </Link>
           </div>
           </div>
-        </aside>
+        </div>
       ) : null}
       </div>
     </section>
