@@ -99,6 +99,16 @@ type HolidayPeriod = {
   is_active: boolean;
 };
 
+type TeamAbsence = {
+  id: string;
+  requester_id: string;
+  requester_name: string;
+  kind: string;
+  start_date: string;
+  end_date: string;
+  half_day_portion?: 'am' | 'pm' | null;
+};
+
 const REQUESTABLE_LEAVE_KINDS = ['annual', 'toil', 'parental', 'bereavement', 'compassionate', 'study', 'unpaid'] as const;
 type RequestableLeaveKind = (typeof REQUESTABLE_LEAVE_KINDS)[number];
 type ParentalSubtype = 'maternity' | 'paternity' | 'adoption' | 'shared_parental';
@@ -146,6 +156,20 @@ function fmtDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString(undefined, {
     day: 'numeric', month: 'short', year: 'numeric',
   });
+}
+
+function monthKeyToRange(monthKey: string): { start: string; end: string } {
+  const [y, m] = monthKey.split('-').map(Number);
+  const start = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-01`;
+  const endDate = new Date(Date.UTC(y, m, 0, 12, 0, 0));
+  const end = endDate.toISOString().slice(0, 10);
+  return { start, end };
+}
+
+function shiftMonthKey(monthKey: string, delta: number): string {
+  const [y, m] = monthKey.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1, 12, 0, 0));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 function displayName(p: LeaveRequest | ToilCreditRequest | CarryoverRequest | EncashmentRequest): string {
@@ -237,6 +261,11 @@ export function LeaveHubClient({
   const [sickness, setSickness] = useState<SicknessRow[]>([]);
   const [sspSummary, setSspSummary] = useState<Record<string, unknown> | null>(null);
   const [holidayPeriods, setHolidayPeriods] = useState<HolidayPeriod[]>(initialHolidayPeriods ?? []);
+  const [teamAbsences, setTeamAbsences] = useState<TeamAbsence[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  });
   const [absenceScore, setAbsenceScore] = useState<{ spell_count: number; total_days: number; bradford_score: number } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -354,10 +383,12 @@ export function LeaveHubClient({
     } else { setAbsenceScore(null); }
 
     if (canApprove || canManage) {
+      const calRange = monthKeyToRange(calendarMonth);
       let pend: LeaveRequest[] = [];
       let pendToil: ToilCreditRequest[] = [];
       let pendCarry: CarryoverRequest[] = [];
       let pendEncash: EncashmentRequest[] = [];
+      let approvalScopeIds: string[] | null = null;
       if (canManage) {
         const { data } = await supabase
           .from('leave_requests')
@@ -390,6 +421,7 @@ export function LeaveHubClient({
       } else {
         const { data: reportIds } = await supabase.from('profiles').select('id').eq('org_id', orgId).eq('reports_to_user_id', userId);
         const ids = (reportIds ?? []).map((r) => r.id as string).filter(Boolean);
+        approvalScopeIds = ids;
         if (ids.length) {
           const { data } = await supabase
             .from('leave_requests')
@@ -438,13 +470,44 @@ export function LeaveHubClient({
       setPendingToilForMe(pendToil.map((t) => ({ ...t, profiles: { full_name: names[t.requester_id as string] ?? '' } })));
       setPendingCarryoverForMe(pendCarry.map((c) => ({ ...c, profiles: { full_name: names[c.requester_id as string] ?? '' } })));
       setPendingEncashmentForMe(pendEncash.map((e) => ({ ...e, profiles: { full_name: names[e.requester_id as string] ?? '' } })));
+
+      const reportScopeIds = canManage
+        ? null
+        : (approvalScopeIds && approvalScopeIds.length ? approvalScopeIds : ['00000000-0000-0000-0000-000000000000']);
+      const absBase = supabase
+        .from('leave_requests')
+        .select('id, requester_id, kind, start_date, end_date, half_day_portion')
+        .eq('org_id', orgId)
+        .eq('status', 'approved')
+        .lte('start_date', calRange.end)
+        .gte('end_date', calRange.start)
+        .order('start_date', { ascending: true });
+      const { data: absRows } = reportScopeIds ? await absBase.in('requester_id', reportScopeIds) : await absBase;
+      const absRequesterIds = [...new Set((absRows ?? []).map((r) => String(r.requester_id ?? '')).filter(Boolean))];
+      const absNameMap: Record<string, string> = {};
+      if (absRequesterIds.length) {
+        const { data: nrows } = await supabase.from('coworker_directory_public').select('id, full_name').in('id', absRequesterIds);
+        for (const row of nrows ?? []) absNameMap[String(row.id)] = String(row.full_name ?? '');
+      }
+      setTeamAbsences(
+        (absRows ?? []).map((r) => ({
+          id: String(r.id),
+          requester_id: String(r.requester_id),
+          requester_name: absNameMap[String(r.requester_id)] || 'Team member',
+          kind: String(r.kind),
+          start_date: String(r.start_date),
+          end_date: String(r.end_date),
+          half_day_portion: (r.half_day_portion as 'am' | 'pm' | null | undefined) ?? null,
+        })),
+      );
     } else {
       setPendingForMe([]);
       setPendingToilForMe([]);
       setPendingCarryoverForMe([]);
       setPendingEncashmentForMe([]);
+      setTeamAbsences([]);
     }
-  }, [supabase, orgId, userId, year, canApprove, canManage]);
+  }, [supabase, orgId, userId, year, canApprove, canManage, calendarMonth]);
 
   useEffect(() => { void load(); }, [load]);
   useShellRefresh(() => void load());
@@ -798,6 +861,21 @@ export function LeaveHubClient({
       ),
     [myRequests, editTarget, editStart, editEnd],
   );
+
+  const monthGrid = useMemo(() => {
+    const { start, end } = monthKeyToRange(calendarMonth);
+    const [sy, sm] = start.split('-').map(Number);
+    const [ey, em, ed] = end.split('-').map(Number);
+    const firstIsoDow = new Date(Date.UTC(sy, sm - 1, 1, 12, 0, 0)).getUTCDay() || 7;
+    const leadingBlanks = firstIsoDow - 1;
+    const days = Array.from({ length: ed }, (_, i) => {
+      const day = i + 1;
+      const iso = `${String(ey).padStart(4, '0')}-${String(em).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const rows = teamAbsences.filter((a) => a.start_date <= iso && a.end_date >= iso);
+      return { iso, day, rows };
+    });
+    return { start, end, leadingBlanks, days, monthLabel: new Date(`${start}T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
+  }, [calendarMonth, teamAbsences]);
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
@@ -1583,6 +1661,40 @@ export function LeaveHubClient({
                 </div>
               ),
             )}
+          </div>
+        </section>
+      ) : null}
+
+      {(canApprove || canManage) ? (
+        <section className="mb-6">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Team absence calendar</h2>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setCalendarMonth((v) => shiftMonthKey(v, -1))} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1]">Prev</button>
+              <span className="text-[12px] font-medium text-[#6b6b6b]">{monthGrid.monthLabel}</span>
+              <button type="button" onClick={() => setCalendarMonth((v) => shiftMonthKey(v, 1))} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1]">Next</button>
+            </div>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white p-3">
+            <div className="mb-2 grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: monthGrid.leadingBlanks }).map((_, i) => <div key={`b-${i}`} className="min-h-[92px] rounded-lg bg-[#faf9f6]" />)}
+              {monthGrid.days.map((d) => (
+                <div key={d.iso} className="min-h-[92px] rounded-lg border border-[#f0f0f0] bg-[#faf9f6] p-2">
+                  <p className="text-[11px] font-semibold text-[#6b6b6b]">{d.day}</p>
+                  <div className="mt-1 space-y-1">
+                    {d.rows.slice(0, 2).map((r) => (
+                      <p key={`${d.iso}-${r.id}`} className="truncate rounded bg-[#e8f3ff] px-1.5 py-0.5 text-[10.5px] text-[#1e3a8a]">
+                        {r.requester_name} · {leaveKindLabel(r.kind)}
+                      </p>
+                    ))}
+                    {d.rows.length > 2 ? <p className="text-[10px] text-[#9b9b9b]">+{d.rows.length - 2} more</p> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       ) : null}
