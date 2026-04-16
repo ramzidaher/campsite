@@ -33,6 +33,7 @@ export default async function AdminLeavePage() {
       .from('org_leave_settings')
       .select(
         'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings, carry_over_enabled, carry_over_requires_approval, carry_over_max_days, encashment_enabled, encashment_requires_approval, encashment_max_days',
+        'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings, carry_over_enabled, carry_over_requires_approval, carry_over_max_days, encashment_enabled, encashment_requires_approval, encashment_max_days, leave_accrual_enabled, leave_accrual_frequency',
       )
       .eq('org_id', orgId)
       .maybeSingle(),
@@ -70,6 +71,8 @@ export default async function AdminLeavePage() {
               encashment_enabled: Boolean(settings.encashment_enabled),
               encashment_requires_approval: Boolean(settings.encashment_requires_approval ?? true),
               encashment_max_days: Number(settings.encashment_max_days ?? 0),
+              leave_accrual_enabled: Boolean((settings as { leave_accrual_enabled?: boolean }).leave_accrual_enabled),
+              leave_accrual_frequency: String((settings as { leave_accrual_frequency?: string }).leave_accrual_frequency ?? 'monthly'),
             }
           : null
       }

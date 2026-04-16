@@ -53,6 +53,8 @@ export function OrgLeaveAdminClient({
     encashment_enabled: boolean;
     encashment_requires_approval: boolean;
     encashment_max_days: number;
+    leave_accrual_enabled: boolean;
+    leave_accrual_frequency: string;
   } | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -104,6 +106,8 @@ export function OrgLeaveAdminClient({
   const [encashmentEnabled, setEncashmentEnabled] = useState(initialSettings?.encashment_enabled ?? false);
   const [encashmentRequiresApproval, setEncashmentRequiresApproval] = useState(initialSettings?.encashment_requires_approval ?? true);
   const [encashmentMaxDays, setEncashmentMaxDays] = useState(String(initialSettings?.encashment_max_days ?? 0));
+  const [leaveAccrualEnabled, setLeaveAccrualEnabled] = useState(initialSettings?.leave_accrual_enabled ?? false);
+  const [leaveAccrualFrequency, setLeaveAccrualFrequency] = useState(initialSettings?.leave_accrual_frequency ?? 'monthly');
   const [msg, setMsg] = useState<string | null>(null);
   const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok');
   const [busy, setBusy] = useState(false);
@@ -210,6 +214,8 @@ export function OrgLeaveAdminClient({
       p_encashment_enabled: boolean;
       p_encashment_requires_approval: boolean;
       p_encashment_max_days: number;
+      p_leave_accrual_enabled: boolean;
+      p_leave_accrual_frequency: string;
     } = {
       p_bradford_window_days: Number(bradfordDays),
       p_leave_year_start_month: Number(lyM),
@@ -228,6 +234,8 @@ export function OrgLeaveAdminClient({
       p_encashment_enabled: encashmentEnabled,
       p_encashment_requires_approval: encashmentRequiresApproval,
       p_encashment_max_days: Number(encashmentMaxDays),
+      p_leave_accrual_enabled: leaveAccrualEnabled,
+      p_leave_accrual_frequency: leaveAccrualFrequency,
     };
     if (clearSspLel) {
       payload.p_clear_ssp_lel = true;
@@ -817,6 +825,33 @@ export function OrgLeaveAdminClient({
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
               Each SU (organisation) can set its own policy — e.g. 20 days or 30 days. Save here, then use “Apply to everyone” below to populate allowances; employment start dates still pro-rate the year someone joins.
             </p>
+          </div>
+
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <p className="text-[12.5px] font-medium text-[#121212]">Annual leave accrual</p>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              When enabled, annual leave accrues month by month through the leave year instead of granting the full prorated allowance upfront.
+            </p>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12.5px] font-medium text-[#121212]">
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded border-[#d8d8d8]"
+                checked={leaveAccrualEnabled}
+                onChange={(e) => setLeaveAccrualEnabled(e.target.checked)}
+              />
+              <span>Enable accrual by months worked</span>
+            </label>
+            <label className="mt-3 block text-[12.5px] font-medium text-[#6b6b6b]">
+              Accrual frequency
+              <select
+                value={leaveAccrualFrequency}
+                onChange={(e) => setLeaveAccrualFrequency(e.target.value)}
+                disabled={!leaveAccrualEnabled}
+                className="mt-1 w-full max-w-[180px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] disabled:opacity-50"
+              >
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
           </div>
 
           <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
