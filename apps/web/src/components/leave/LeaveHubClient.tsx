@@ -75,6 +75,19 @@ type CarryoverRequest = {
   profiles?: { full_name: string } | { full_name: string }[] | null;
 };
 
+type EncashmentRequest = {
+  id: string;
+  leave_year: string;
+  days_requested: number;
+  days_approved?: number | null;
+  note: string | null;
+  status: string;
+  decision_note?: string | null;
+  created_at: string;
+  requester_id?: string;
+  profiles?: { full_name: string } | { full_name: string }[] | null;
+};
+
 function daysBetween(start: string, end: string): number {
   const a = new Date(`${start}T12:00:00Z`);
   const b = new Date(`${end}T12:00:00Z`);
@@ -97,7 +110,7 @@ function fmtDate(iso: string) {
   });
 }
 
-function displayName(p: LeaveRequest | ToilCreditRequest | CarryoverRequest): string {
+function displayName(p: LeaveRequest | ToilCreditRequest | CarryoverRequest | EncashmentRequest): string {
   const raw = p.profiles;
   const row = Array.isArray(raw) ? raw[0] : raw;
   return row?.full_name?.trim() || 'Team member';
@@ -176,9 +189,11 @@ export function LeaveHubClient({
   const [myRequests, setMyRequests] = useState<LeaveRequest[]>([]);
   const [myToilCreditRequests, setMyToilCreditRequests] = useState<ToilCreditRequest[]>([]);
   const [myCarryoverRequests, setMyCarryoverRequests] = useState<CarryoverRequest[]>([]);
+  const [myEncashmentRequests, setMyEncashmentRequests] = useState<EncashmentRequest[]>([]);
   const [pendingForMe, setPendingForMe] = useState<LeaveRequest[]>([]);
   const [pendingToilForMe, setPendingToilForMe] = useState<ToilCreditRequest[]>([]);
   const [pendingCarryoverForMe, setPendingCarryoverForMe] = useState<CarryoverRequest[]>([]);
+  const [pendingEncashmentForMe, setPendingEncashmentForMe] = useState<EncashmentRequest[]>([]);
   const [sickness, setSickness] = useState<SicknessRow[]>([]);
   const [sspSummary, setSspSummary] = useState<Record<string, unknown> | null>(null);
   const [absenceScore, setAbsenceScore] = useState<{ spell_count: number; total_days: number; bradford_score: number } | null>(null);
@@ -187,6 +202,7 @@ export function LeaveHubClient({
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [showToilEarnForm, setShowToilEarnForm] = useState(false);
   const [showCarryoverForm, setShowCarryoverForm] = useState(false);
+  const [showEncashmentForm, setShowEncashmentForm] = useState(false);
   const [showSickForm, setShowSickForm] = useState(false);
   const [showSickHistory, setShowSickHistory] = useState(false);
 
@@ -210,7 +226,7 @@ export function LeaveHubClient({
   const [editDayMode, setEditDayMode] = useState<'full' | 'half'>('full');
   const [editHalfDayPortion, setEditHalfDayPortion] = useState<'am' | 'pm'>('am');
   const [approvalModal, setApprovalModal] = useState<
-    null | { source: 'leave' | 'toil_credit' | 'carryover'; id: string; approve: boolean }
+    null | { source: 'leave' | 'toil_credit' | 'carryover' | 'encashment'; id: string; approve: boolean }
   >(null);
   const [approvalNote, setApprovalNote] = useState('');
   const [toilEarnWorkDate, setToilEarnWorkDate] = useState('');
@@ -220,6 +236,9 @@ export function LeaveHubClient({
   const [carryoverFromYear, setCarryoverFromYear] = useState('');
   const [carryoverDays, setCarryoverDays] = useState('');
   const [carryoverNote, setCarryoverNote] = useState('');
+  const [encashmentYear, setEncashmentYear] = useState('');
+  const [encashmentDays, setEncashmentDays] = useState('');
+  const [encashmentNote, setEncashmentNote] = useState('');
 
   const selectedLeavePeriodLabel = useMemo(
     () => formatLeaveYearPeriodRange(year, leaveYearStartMonth, leaveYearStartDay),
@@ -242,7 +261,7 @@ export function LeaveHubClient({
     setMsg(null);
     const toIso = new Date().toISOString().slice(0, 10);
     const fromIso = new Date(Date.now() - 730 * 86400000).toISOString().slice(0, 10);
-  const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }, { data: myCarry }] = await Promise.all([
+  const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }, { data: myCarry }, { data: myEncash }] = await Promise.all([
       supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
       supabase.from('leave_requests').select('id, kind, start_date, end_date, half_day_portion, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
       supabase.from('sickness_absences').select('id, start_date, end_date, half_day_portion, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
@@ -262,12 +281,20 @@ export function LeaveHubClient({
         .eq('requester_id', userId)
         .order('created_at', { ascending: false })
         .limit(40),
+      supabase
+        .from('leave_encashment_requests')
+        .select('id, leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+        .eq('org_id', orgId)
+        .eq('requester_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(40),
     ]);
 
     setAllowance(al ? { leave_year: String(al.leave_year), annual_entitlement_days: Number(al.annual_entitlement_days ?? 0), toil_balance_days: Number(al.toil_balance_days ?? 0) } : { leave_year: year, annual_entitlement_days: 0, toil_balance_days: 0 });
     setMyRequests((mine ?? []) as LeaveRequest[]);
     setMyToilCreditRequests((mineToil ?? []) as ToilCreditRequest[]);
     setMyCarryoverRequests((myCarry ?? []) as CarryoverRequest[]);
+    setMyEncashmentRequests((myEncash ?? []) as EncashmentRequest[]);
     setSickness((sick ?? []) as SicknessRow[]);
     setSspSummary(ssp && typeof ssp === 'object' ? (ssp as Record<string, unknown>) : null);
 
@@ -280,6 +307,7 @@ export function LeaveHubClient({
       let pend: LeaveRequest[] = [];
       let pendToil: ToilCreditRequest[] = [];
       let pendCarry: CarryoverRequest[] = [];
+      let pendEncash: EncashmentRequest[] = [];
       if (canManage) {
         const { data } = await supabase
           .from('leave_requests')
@@ -302,6 +330,13 @@ export function LeaveHubClient({
           .eq('status', 'pending')
           .order('created_at', { ascending: false });
         pendCarry = (carryData ?? []) as CarryoverRequest[];
+        const { data: encashData } = await supabase
+          .from('leave_encashment_requests')
+          .select('id, requester_id, leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+          .eq('org_id', orgId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+        pendEncash = (encashData ?? []) as EncashmentRequest[];
       } else {
         const { data: reportIds } = await supabase.from('profiles').select('id').eq('org_id', orgId).eq('reports_to_user_id', userId);
         const ids = (reportIds ?? []).map((r) => r.id as string).filter(Boolean);
@@ -330,9 +365,17 @@ export function LeaveHubClient({
             .in('requester_id', ids)
             .order('created_at', { ascending: false });
           pendCarry = (carryData ?? []) as CarryoverRequest[];
+          const { data: encashData } = await supabase
+            .from('leave_encashment_requests')
+            .select('id, requester_id, leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+            .eq('org_id', orgId)
+            .eq('status', 'pending')
+            .in('requester_id', ids)
+            .order('created_at', { ascending: false });
+          pendEncash = (encashData ?? []) as EncashmentRequest[];
         }
       }
-      const nameIds = [...new Set([...pend.map((r) => r.requester_id as string), ...pendToil.map((t) => t.requester_id as string), ...pendCarry.map((c) => c.requester_id as string)])];
+      const nameIds = [...new Set([...pend.map((r) => r.requester_id as string), ...pendToil.map((t) => t.requester_id as string), ...pendCarry.map((c) => c.requester_id as string), ...pendEncash.map((e) => e.requester_id as string)])];
       const names: Record<string, string> = {};
       if (nameIds.length) {
         const { data: profs } = await supabase
@@ -344,10 +387,12 @@ export function LeaveHubClient({
       setPendingForMe(pend.map((r) => ({ ...r, profiles: { full_name: names[r.requester_id as string] ?? '' } })));
       setPendingToilForMe(pendToil.map((t) => ({ ...t, profiles: { full_name: names[t.requester_id as string] ?? '' } })));
       setPendingCarryoverForMe(pendCarry.map((c) => ({ ...c, profiles: { full_name: names[c.requester_id as string] ?? '' } })));
+      setPendingEncashmentForMe(pendEncash.map((e) => ({ ...e, profiles: { full_name: names[e.requester_id as string] ?? '' } })));
     } else {
       setPendingForMe([]);
       setPendingToilForMe([]);
       setPendingCarryoverForMe([]);
+      setPendingEncashmentForMe([]);
     }
   }, [supabase, orgId, userId, year, canApprove, canManage]);
 
@@ -447,7 +492,7 @@ export function LeaveHubClient({
     setMsg(null);
   }
 
-  function openApprovalDialog(source: 'leave' | 'toil_credit' | 'carryover', id: string, approve: boolean) {
+  function openApprovalDialog(source: 'leave' | 'toil_credit' | 'carryover' | 'encashment', id: string, approve: boolean) {
     setApprovalModal({ source, id, approve });
     setApprovalNote('');
     setMsg(null);
@@ -503,6 +548,28 @@ export function LeaveHubClient({
     await load();
   }
 
+  async function submitEncashmentRequest(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase.rpc('leave_encashment_request_submit', {
+      p_leave_year: encashmentYear || year,
+      p_days_requested: Number(encashmentDays),
+      p_note: encashmentNote.trim() || null,
+    });
+    setBusy(false);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setEncashmentYear('');
+    setEncashmentDays('');
+    setEncashmentNote('');
+    setShowEncashmentForm(false);
+    await load();
+  }
+
   async function submitApprovalDecision() {
     if (!approvalModal) return;
     setBusy(true);
@@ -520,7 +587,13 @@ export function LeaveHubClient({
             p_approve: approvalModal.approve,
             p_note: note,
           })
-        : await supabase.rpc('leave_carryover_request_decide', {
+        : approvalModal.source === 'carryover'
+        ? await supabase.rpc('leave_carryover_request_decide', {
+            p_request_id: approvalModal.id,
+            p_approve: approvalModal.approve,
+            p_note: note,
+          })
+        : await supabase.rpc('leave_encashment_request_decide', {
             p_request_id: approvalModal.id,
             p_approve: approvalModal.approve,
             p_note: note,
@@ -539,7 +612,8 @@ export function LeaveHubClient({
     type Row =
       | { key: string; created_at: string; kind: 'leave'; leave: LeaveRequest }
       | { key: string; created_at: string; kind: 'toil'; toil: ToilCreditRequest }
-      | { key: string; created_at: string; kind: 'carryover'; carryover: CarryoverRequest };
+      | { key: string; created_at: string; kind: 'carryover'; carryover: CarryoverRequest }
+      | { key: string; created_at: string; kind: 'encashment'; encashment: EncashmentRequest };
     const rows: Row[] = [
       ...pendingForMe.map((leave) => ({
         key: `leave-${leave.id}`,
@@ -559,10 +633,16 @@ export function LeaveHubClient({
         kind: 'carryover' as const,
         carryover,
       })),
+      ...pendingEncashmentForMe.map((encashment) => ({
+        key: `encash-${encashment.id}`,
+        created_at: encashment.created_at,
+        kind: 'encashment' as const,
+        encashment,
+      })),
     ];
     rows.sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
     return rows;
-  }, [pendingForMe, pendingToilForMe, pendingCarryoverForMe]);
+  }, [pendingForMe, pendingToilForMe, pendingCarryoverForMe, pendingEncashmentForMe]);
 
   const leaveYearStartIso = useMemo(() => {
     const y = Number(year);
@@ -719,6 +799,7 @@ export function LeaveHubClient({
                   setShowLeaveForm(false);
                   setShowSickForm(false);
                   setShowCarryoverForm(false);
+                  setShowEncashmentForm(false);
                   setMsg(null);
                 }}
                 className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-xl border border-[#008B60] bg-[#f0fdf9] px-3 text-[12.5px] font-semibold text-[#065f46] hover:bg-[#d1fae5]"
@@ -745,6 +826,7 @@ export function LeaveHubClient({
                     setShowSickForm(false);
                     setShowToilEarnForm(false);
                     setShowCarryoverForm(false);
+                    setShowEncashmentForm(false);
                   }}
                   className="inline-flex h-9 items-center justify-center rounded-xl bg-[#121212] px-4 text-[13px] font-medium text-white hover:bg-[#2a2a2a]"
                 >
@@ -757,6 +839,7 @@ export function LeaveHubClient({
                     setShowLeaveForm(false);
                     setShowToilEarnForm(false);
                     setShowCarryoverForm(false);
+                    setShowEncashmentForm(false);
                   }}
                   className="inline-flex h-9 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
                 >
@@ -769,10 +852,24 @@ export function LeaveHubClient({
                     setShowLeaveForm(false);
                     setShowSickForm(false);
                     setShowToilEarnForm(false);
+                    setShowEncashmentForm(false);
                   }}
                   className="inline-flex h-9 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
                 >
                   {showCarryoverForm ? 'Close' : '+ Request carry-over'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEncashmentForm((v) => !v);
+                    setShowLeaveForm(false);
+                    setShowSickForm(false);
+                    setShowToilEarnForm(false);
+                    setShowCarryoverForm(false);
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+                >
+                  {showEncashmentForm ? 'Close' : '+ Request encashment'}
                 </button>
               </div>
             ) : null}
@@ -797,6 +894,7 @@ export function LeaveHubClient({
                 setShowToilEarnForm(false);
                 setShowLeaveForm(true);
                 setShowCarryoverForm(false);
+                setShowEncashmentForm(false);
               }}
             >
               Book time off instead
@@ -917,6 +1015,57 @@ export function LeaveHubClient({
         </div>
       ) : null}
 
+      {showEncashmentForm && canSubmit ? (
+        <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
+          <h2 className="mb-1 text-[15px] font-semibold text-[#121212]">Request leave encashment</h2>
+          <p className="mb-4 text-[12px] text-[#9b9b9b]">Request payout of unused annual leave from a leave year. Reviewed case by case.</p>
+          <form className="space-y-4" onSubmit={(e) => void submitEncashmentRequest(e)}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Leave year</span>
+                <select
+                  value={encashmentYear}
+                  onChange={(e) => setEncashmentYear(e.target.value)}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                >
+                  <option value="">Select year</option>
+                  {yearOptions.map((y) => <option key={`encash-${y}`} value={y}>{y}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Days requested</span>
+                <input
+                  type="number"
+                  required
+                  min={0.5}
+                  step={0.5}
+                  value={encashmentDays}
+                  onChange={(e) => setEncashmentDays(e.target.value)}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                />
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Reason (optional)</span>
+              <input
+                type="text"
+                value={encashmentNote}
+                onChange={(e) => setEncashmentNote(e.target.value)}
+                className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                placeholder="e.g. business-critical delivery period"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={busy || !encashmentYear || !encashmentDays}
+              className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50"
+            >
+              {busy ? 'Sending…' : 'Send request'}
+            </button>
+          </form>
+        </div>
+      ) : null}
+
       {/* Leave request form (slide-in) */}
       {showLeaveForm && canSubmit ? (
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
@@ -929,6 +1078,7 @@ export function LeaveHubClient({
                 setShowLeaveForm(false);
                 setShowToilEarnForm(true);
                 setShowCarryoverForm(false);
+                setShowEncashmentForm(false);
                 setMsg(null);
               }}
             >
@@ -1113,6 +1263,10 @@ export function LeaveHubClient({
                   ? approvalModal.approve
                     ? 'Approve carry-over request'
                     : 'Decline carry-over request'
+                  : approvalModal.source === 'encashment'
+                    ? approvalModal.approve
+                      ? 'Approve encashment request'
+                      : 'Decline encashment request'
                   : approvalModal.approve
                     ? 'Approve leave request'
                     : 'Decline leave request'}
@@ -1289,7 +1443,7 @@ export function LeaveHubClient({
                     </button>
                   </div>
                 </div>
-              ) : (
+              ) : row.kind === 'carryover' ? (
                 <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="font-semibold text-[#121212]">{displayName(row.carryover)}</p>
@@ -1303,6 +1457,24 @@ export function LeaveHubClient({
                       Approve
                     </button>
                     <button type="button" disabled={busy} onClick={() => openApprovalDialog('carryover', row.carryover.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#121212]">{displayName(row.encashment)}</p>
+                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                      Encashment request &middot; {row.encashment.days_requested} day{row.encashment.days_requested === 1 ? '' : 's'} from leave year {row.encashment.leave_year}
+                    </p>
+                    {row.encashment.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.encashment.note}&rdquo;</p> : null}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('encashment', row.encashment.id, true)} className="rounded-xl bg-[#14532d] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[#166534]">
+                      Approve
+                    </button>
+                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('encashment', row.encashment.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
                       Reject
                     </button>
                   </div>
@@ -1362,6 +1534,35 @@ export function LeaveHubClient({
                     <p className="mt-1 text-[12px] text-[#6b6b6b]">
                       <span className="font-medium text-[#121212]">Approver note: </span>
                       {c.decision_note}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {canSubmit && myEncashmentRequests.length > 0 ? (
+        <section className="mb-6">
+          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My encashment requests</h2>
+          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+            {myEncashmentRequests.map((e, i) => (
+              <div key={e.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13.5px] font-medium text-[#121212]">Encashment</span>
+                    <StatusPill status={e.status} />
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                    {e.days_requested} day{e.days_requested === 1 ? '' : 's'} from leave year {e.leave_year}
+                    {e.status === 'approved' && e.days_approved != null ? ` · ${e.days_approved} approved` : ''}
+                  </p>
+                  {e.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{e.note}&rdquo;</p> : null}
+                  {(e.status === 'approved' || e.status === 'rejected') && e.decision_note ? (
+                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                      <span className="font-medium text-[#121212]">Approver note: </span>
+                      {e.decision_note}
                     </p>
                   ) : null}
                 </div>

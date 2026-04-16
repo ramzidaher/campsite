@@ -32,7 +32,7 @@ export default async function AdminLeavePage() {
     supabase
       .from('org_leave_settings')
       .select(
-        'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings, carry_over_enabled, carry_over_requires_approval, carry_over_max_days',
+        'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings, carry_over_enabled, carry_over_requires_approval, carry_over_max_days, encashment_enabled, encashment_requires_approval, encashment_max_days',
       )
       .eq('org_id', orgId)
       .maybeSingle(),
@@ -67,6 +67,9 @@ export default async function AdminLeavePage() {
               carry_over_enabled: Boolean(settings.carry_over_enabled),
               carry_over_requires_approval: Boolean(settings.carry_over_requires_approval ?? true),
               carry_over_max_days: Number(settings.carry_over_max_days ?? 0),
+              encashment_enabled: Boolean(settings.encashment_enabled),
+              encashment_requires_approval: Boolean(settings.encashment_requires_approval ?? true),
+              encashment_max_days: Number(settings.encashment_max_days ?? 0),
             }
           : null
       }
