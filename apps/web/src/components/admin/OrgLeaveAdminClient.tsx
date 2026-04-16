@@ -55,6 +55,8 @@ export function OrgLeaveAdminClient({
     encashment_max_days: number;
     leave_accrual_enabled: boolean;
     leave_accrual_frequency: string;
+    leave_law_country_code: string;
+    leave_law_profile: string;
   } | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -108,6 +110,8 @@ export function OrgLeaveAdminClient({
   const [encashmentMaxDays, setEncashmentMaxDays] = useState(String(initialSettings?.encashment_max_days ?? 0));
   const [leaveAccrualEnabled, setLeaveAccrualEnabled] = useState(initialSettings?.leave_accrual_enabled ?? false);
   const [leaveAccrualFrequency, setLeaveAccrualFrequency] = useState(initialSettings?.leave_accrual_frequency ?? 'monthly');
+  const [leaveLawCountryCode, setLeaveLawCountryCode] = useState(initialSettings?.leave_law_country_code ?? 'GB');
+  const [leaveLawProfile, setLeaveLawProfile] = useState(initialSettings?.leave_law_profile ?? 'uk');
   const [msg, setMsg] = useState<string | null>(null);
   const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok');
   const [busy, setBusy] = useState(false);
@@ -216,6 +220,8 @@ export function OrgLeaveAdminClient({
       p_encashment_max_days: number;
       p_leave_accrual_enabled: boolean;
       p_leave_accrual_frequency: string;
+      p_leave_law_country_code: string;
+      p_leave_law_profile: string;
     } = {
       p_bradford_window_days: Number(bradfordDays),
       p_leave_year_start_month: Number(lyM),
@@ -236,6 +242,8 @@ export function OrgLeaveAdminClient({
       p_encashment_max_days: Number(encashmentMaxDays),
       p_leave_accrual_enabled: leaveAccrualEnabled,
       p_leave_accrual_frequency: leaveAccrualFrequency,
+      p_leave_law_country_code: leaveLawCountryCode.trim().toUpperCase(),
+      p_leave_law_profile: leaveLawProfile,
     };
     if (clearSspLel) {
       payload.p_clear_ssp_lel = true;
@@ -825,6 +833,41 @@ export function OrgLeaveAdminClient({
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
               Each SU (organisation) can set its own policy — e.g. 20 days or 30 days. Save here, then use “Apply to everyone” below to populate allowances; employment start dates still pro-rate the year someone joins.
             </p>
+          </div>
+
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <p className="text-[12.5px] font-medium text-[#121212]">International leave law profile</p>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              Configure leave policy baseline beyond UK. Keep using your organisation defaults and override values case-by-case as needed.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Country code (ISO-2)
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={leaveLawCountryCode}
+                  onChange={(e) => setLeaveLawCountryCode(e.target.value.toUpperCase())}
+                  className="mt-1 w-full max-w-[120px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                  placeholder="GB"
+                />
+              </label>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Policy profile
+                <select
+                  value={leaveLawProfile}
+                  onChange={(e) => setLeaveLawProfile(e.target.value)}
+                  className="mt-1 w-full max-w-[220px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                >
+                  <option value="uk">UK</option>
+                  <option value="eu_general">EU (general)</option>
+                  <option value="us_general">US (general)</option>
+                  <option value="ca_general">Canada (general)</option>
+                  <option value="au_general">Australia (general)</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+            </div>
           </div>
 
           <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
