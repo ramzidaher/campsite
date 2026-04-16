@@ -31,12 +31,14 @@ type LeaveRequest = {
   kind: string;
   start_date: string;
   end_date: string;
+  half_day_portion?: 'am' | 'pm' | null;
   status: string;
   note: string | null;
   decision_note?: string | null;
   created_at: string;
   proposed_start_date?: string | null;
   proposed_end_date?: string | null;
+  proposed_half_day_portion?: 'am' | 'pm' | null;
   requester_id?: string;
   requester_name?: string;
 };
@@ -125,6 +127,8 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
   const [formStart, setFormStart] = useState(new Date());
   const [formEnd, setFormEnd] = useState(new Date());
   const [formNote, setFormNote] = useState('');
+  const [formDayMode, setFormDayMode] = useState<'full' | 'half'>('full');
+  const [formHalfDayPortion, setFormHalfDayPortion] = useState<'am' | 'pm'>('am');
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -217,7 +221,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         .maybeSingle(),
       supabase
         .from('leave_requests')
-        .select('id, kind, start_date, end_date, status, note, decision_note, created_at, proposed_start_date, proposed_end_date')
+        .select('id, kind, start_date, end_date, half_day_portion, status, note, decision_note, created_at, proposed_start_date, proposed_end_date, proposed_half_day_portion')
         .eq('org_id', orgId)
         .eq('requester_id', userId)
         .order('created_at', { ascending: false })
@@ -276,7 +280,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
       if (isManager) {
         const { data } = await supabase
           .from('leave_requests')
-          .select('id, requester_id, kind, start_date, end_date, status, note, created_at')
+          .select('id, requester_id, kind, start_date, end_date, half_day_portion, status, note, created_at')
           .eq('org_id', orgId)
           .in('status', ['pending', 'pending_cancel', 'pending_edit'])
           .order('created_at', { ascending: false });
@@ -298,7 +302,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         if (ids.length) {
           const { data } = await supabase
             .from('leave_requests')
-            .select('id, requester_id, kind, start_date, end_date, status, note, created_at')
+            .select('id, requester_id, kind, start_date, end_date, half_day_portion, status, note, created_at')
             .eq('org_id', orgId)
             .in('status', ['pending', 'pending_cancel', 'pending_edit'])
             .in('requester_id', ids)
@@ -495,8 +499,9 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
     const { error } = await supabase.rpc('leave_request_submit', {
       p_kind: formKind,
       p_start: start,
-      p_end: end,
+      p_end: formDayMode === 'half' ? start : end,
       p_note: formNote.trim() || null,
+      p_half_day_portion: formDayMode === 'half' ? formHalfDayPortion : null,
     });
     setBusy(false);
     if (error) {
@@ -504,6 +509,8 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
       return;
     }
     setFormNote('');
+    setFormDayMode('full');
+    setFormHalfDayPortion('am');
     setShowForm(false);
     await load();
     Alert.alert('Submitted', 'Your leave request has been submitted for approval.');
@@ -883,6 +890,38 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                     </Pressable>
                   ))}
                 </View>
+                <Text style={[styles.fieldLabel, { color: textSecondary }]}>Duration</Text>
+                <View style={[styles.segmentRow, { backgroundColor: isDark ? '#2a2a2a' : '#f0eeea', marginBottom: 12 }]}>
+                  {(['full', 'half'] as const).map((m) => (
+                    <Pressable
+                      key={m}
+                      style={[styles.segment, formDayMode === m && { backgroundColor: cardBg }]}
+                      onPress={() => setFormDayMode(m)}
+                    >
+                      <Text style={[styles.segmentLabel, { color: formDayMode === m ? textPrimary : textSecondary, fontWeight: formDayMode === m ? '600' : '400' }]}>
+                        {m === 'full' ? 'Full day(s)' : 'Half day'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {formDayMode === 'half' ? (
+                  <>
+                    <Text style={[styles.fieldLabel, { color: textSecondary }]}>Half-day slot</Text>
+                    <View style={[styles.segmentRow, { backgroundColor: isDark ? '#2a2a2a' : '#f0eeea', marginBottom: 12 }]}>
+                      {(['am', 'pm'] as const).map((slot) => (
+                        <Pressable
+                          key={slot}
+                          style={[styles.segment, formHalfDayPortion === slot && { backgroundColor: cardBg }]}
+                          onPress={() => setFormHalfDayPortion(slot)}
+                        >
+                          <Text style={[styles.segmentLabel, { color: formHalfDayPortion === slot ? textPrimary : textSecondary, fontWeight: formHalfDayPortion === slot ? '600' : '400' }]}>
+                            {slot === 'am' ? 'Morning (AM)' : 'Afternoon (PM)'}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
 
                 {/* Dates */}
                 <Text style={[styles.fieldLabel, { color: textSecondary }]}>Start date</Text>
@@ -907,11 +946,14 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                 <Text style={[styles.fieldLabel, { color: textSecondary }]}>End date</Text>
                 <Pressable
                   style={[styles.dateBtn, { borderColor: border, backgroundColor: isDark ? '#2a2a2a' : '#fafafa' }]}
-                  onPress={() => setShowEndPicker(true)}
+                  onPress={() => {
+                    if (formDayMode === 'half') return;
+                    setShowEndPicker(true);
+                  }}
                 >
-                  <Text style={[styles.dateBtnText, { color: textPrimary }]}>{fmtDate(toIsoDate(formEnd))}</Text>
+                  <Text style={[styles.dateBtnText, { color: textPrimary }]}>{fmtDate(toIsoDate(formDayMode === 'half' ? formStart : formEnd))}</Text>
                 </Pressable>
-                {showEndPicker ? (
+                {showEndPicker && formDayMode !== 'half' ? (
                   <DateTimePicker
                     value={formEnd}
                     mode="date"
@@ -1002,7 +1044,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                       <Text style={[styles.requestStatus, { color: st.color }]}>{st.text}</Text>
                     </View>
                     <Text style={[styles.requestDates, { color: textSecondary }]}>
-                      {fmtDate(r.start_date)} – {fmtDate(r.end_date)} · {days} day{days === 1 ? '' : 's'}
+                      {fmtDate(r.start_date)} – {fmtDate(r.end_date)} · {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : `${days} day${days === 1 ? '' : 's'}`}
                     </Text>
                     {r.note ? <Text style={[styles.requestNote, { color: textSecondary }]}>{r.note}</Text> : null}
                     {(r.status === 'approved' || r.status === 'rejected') && r.decision_note ? (
@@ -1041,7 +1083,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                     <View key={row.key} style={[styles.requestCard, { backgroundColor: cardBg, borderColor: border }]}>
                       <Text style={[styles.requestKind, { color: textPrimary }]}>{name}</Text>
                       <Text style={[styles.requestDates, { color: textSecondary }]}>
-                        {kindLabel(r.kind)} · {fmtDate(r.start_date)} – {fmtDate(r.end_date)} · {days} day{days === 1 ? '' : 's'}
+                        {kindLabel(r.kind)} · {fmtDate(r.start_date)} – {fmtDate(r.end_date)} · {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : `${days} day${days === 1 ? '' : 's'}`}
                       </Text>
                       {r.note ? <Text style={[styles.requestNote, { color: textSecondary }]}>{r.note}</Text> : null}
                       <View style={styles.decideRow}>

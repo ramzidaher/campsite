@@ -19,6 +19,7 @@ type LeaveRequest = {
   kind: string;
   start_date: string;
   end_date: string;
+  half_day_portion?: 'am' | 'pm' | null;
   status: string;
   note: string | null;
   decision_note?: string | null;
@@ -29,6 +30,7 @@ type LeaveRequest = {
   proposed_start_date?: string | null;
   proposed_end_date?: string | null;
   proposed_note?: string | null;
+  proposed_half_day_portion?: 'am' | 'pm' | null;
   requester_id?: string;
   profiles?: { full_name: string } | { full_name: string }[] | null;
 };
@@ -37,6 +39,7 @@ type SicknessRow = {
   id: string;
   start_date: string;
   end_date: string;
+  half_day_portion?: 'am' | 'pm' | null;
   notes: string | null;
 };
 
@@ -174,15 +177,21 @@ export function LeaveHubClient({
   const [formStart, setFormStart] = useState('');
   const [formEnd, setFormEnd] = useState('');
   const [formNote, setFormNote] = useState('');
+  const [formDayMode, setFormDayMode] = useState<'full' | 'half'>('full');
+  const [formHalfDayPortion, setFormHalfDayPortion] = useState<'am' | 'pm'>('am');
 
   const [sickStart, setSickStart] = useState('');
   const [sickEnd, setSickEnd] = useState('');
   const [sickNotes, setSickNotes] = useState('');
+  const [sickDayMode, setSickDayMode] = useState<'full' | 'half'>('full');
+  const [sickHalfDayPortion, setSickHalfDayPortion] = useState<'am' | 'pm'>('am');
   const [editTarget, setEditTarget] = useState<LeaveRequest | null>(null);
   const [editKind, setEditKind] = useState<'annual' | 'toil'>('annual');
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
   const [editNote, setEditNote] = useState('');
+  const [editDayMode, setEditDayMode] = useState<'full' | 'half'>('full');
+  const [editHalfDayPortion, setEditHalfDayPortion] = useState<'am' | 'pm'>('am');
   const [approvalModal, setApprovalModal] = useState<
     null | { source: 'leave' | 'toil_credit'; id: string; approve: boolean }
   >(null);
@@ -215,8 +224,8 @@ export function LeaveHubClient({
     const fromIso = new Date(Date.now() - 730 * 86400000).toISOString().slice(0, 10);
     const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }] = await Promise.all([
       supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
-      supabase.from('leave_requests').select('id, kind, start_date, end_date, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
-      supabase.from('sickness_absences').select('id, start_date, end_date, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
+      supabase.from('leave_requests').select('id, kind, start_date, end_date, half_day_portion, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
+      supabase.from('sickness_absences').select('id, start_date, end_date, half_day_portion, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
       supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: toIso }),
       supabase
         .from('toil_credit_requests')
@@ -245,7 +254,7 @@ export function LeaveHubClient({
       if (canManage) {
         const { data } = await supabase
           .from('leave_requests')
-          .select('id, requester_id, kind, start_date, end_date, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note')
+          .select('id, requester_id, kind, start_date, end_date, half_day_portion, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion')
           .eq('org_id', orgId)
           .in('status', ['pending', 'pending_cancel', 'pending_edit'])
           .order('created_at', { ascending: false });
@@ -263,7 +272,7 @@ export function LeaveHubClient({
         if (ids.length) {
           const { data } = await supabase
             .from('leave_requests')
-            .select('id, requester_id, kind, start_date, end_date, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note')
+            .select('id, requester_id, kind, start_date, end_date, half_day_portion, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion')
             .eq('org_id', orgId)
             .in('status', ['pending', 'pending_cancel', 'pending_edit'])
             .in('requester_id', ids)
@@ -307,10 +316,16 @@ export function LeaveHubClient({
       return;
     }
     setBusy(true); setMsg(null);
-    const { error } = await supabase.rpc('leave_request_submit', { p_kind: formKind, p_start: formStart, p_end: formEnd, p_note: formNote.trim() || null });
+    const { error } = await supabase.rpc('leave_request_submit', {
+      p_kind: formKind,
+      p_start: formStart,
+      p_end: formDayMode === 'half' ? formStart : formEnd,
+      p_note: formNote.trim() || null,
+      p_half_day_portion: formDayMode === 'half' ? formHalfDayPortion : null,
+    });
     setBusy(false);
     if (error) { setMsg(error.message); return; }
-    setFormStart(''); setFormEnd(''); setFormNote(''); setShowLeaveForm(false);
+    setFormStart(''); setFormEnd(''); setFormNote(''); setFormDayMode('full'); setFormHalfDayPortion('am'); setShowLeaveForm(false);
     await load();
   }
 
@@ -318,10 +333,16 @@ export function LeaveHubClient({
     e.preventDefault();
     if (!canSubmit || !sickStart || !sickEnd) return;
     setBusy(true); setMsg(null);
-    const { error } = await supabase.rpc('sickness_absence_create', { p_user_id: userId, p_start: sickStart, p_end: sickEnd, p_notes: sickNotes.trim() || null });
+    const { error } = await supabase.rpc('sickness_absence_create', {
+      p_user_id: userId,
+      p_start: sickStart,
+      p_end: sickDayMode === 'half' ? sickStart : sickEnd,
+      p_notes: sickNotes.trim() || null,
+      p_half_day_portion: sickDayMode === 'half' ? sickHalfDayPortion : null,
+    });
     setBusy(false);
     if (error) { setMsg(error.message); return; }
-    setSickStart(''); setSickEnd(''); setSickNotes(''); setShowSickForm(false);
+    setSickStart(''); setSickEnd(''); setSickNotes(''); setSickDayMode('full'); setSickHalfDayPortion('am'); setShowSickForm(false);
     await load();
   }
 
@@ -351,8 +372,9 @@ export function LeaveHubClient({
       p_request_id: editTarget.id,
       p_kind: editKind,
       p_start: editStart,
-      p_end: editEnd,
+      p_end: editDayMode === 'half' ? editStart : editEnd,
       p_note: editNote.trim() || null,
+      p_half_day_portion: editDayMode === 'half' ? editHalfDayPortion : null,
     });
     setBusy(false);
     if (error) {
@@ -363,6 +385,8 @@ export function LeaveHubClient({
     setEditStart('');
     setEditEnd('');
     setEditNote('');
+    setEditDayMode('full');
+    setEditHalfDayPortion('am');
     await load();
   }
 
@@ -372,6 +396,8 @@ export function LeaveHubClient({
     setEditStart(r.start_date);
     setEditEnd(r.end_date);
     setEditNote(r.note ?? '');
+    setEditDayMode(r.half_day_portion ? 'half' : 'full');
+    setEditHalfDayPortion((r.half_day_portion === 'pm' ? 'pm' : 'am') as 'am' | 'pm');
     setMsg(null);
   }
 
@@ -778,8 +804,34 @@ export function LeaveHubClient({
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Last day off</span>
-                <input type="date" required min={formStart} value={formEnd} onChange={(e) => setFormEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+                <input type="date" required min={formStart} value={formDayMode === 'half' ? formStart : formEnd} disabled={formDayMode === 'half'} onChange={(e) => setFormEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none disabled:opacity-60" />
               </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Duration</span>
+                <select
+                  value={formDayMode}
+                  onChange={(e) => setFormDayMode(e.target.value as 'full' | 'half')}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                >
+                  <option value="full">Full day(s)</option>
+                  <option value="half">Half day</option>
+                </select>
+              </label>
+              {formDayMode === 'half' ? (
+                <label className="block">
+                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Half-day slot</span>
+                  <select
+                    value={formHalfDayPortion}
+                    onChange={(e) => setFormHalfDayPortion(e.target.value as 'am' | 'pm')}
+                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                  >
+                    <option value="am">Morning (AM)</option>
+                    <option value="pm">Afternoon (PM)</option>
+                  </select>
+                </label>
+              ) : <div />}
             </div>
             {formStart && formEnd && formEnd >= formStart ? (
               <p
@@ -843,8 +895,34 @@ export function LeaveHubClient({
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Last day sick</span>
-                <input type="date" required min={sickStart} value={sickEnd} onChange={(e) => setSickEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+                <input type="date" required min={sickStart} value={sickDayMode === 'half' ? sickStart : sickEnd} disabled={sickDayMode === 'half'} onChange={(e) => setSickEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none disabled:opacity-60" />
               </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Duration</span>
+                <select
+                  value={sickDayMode}
+                  onChange={(e) => setSickDayMode(e.target.value as 'full' | 'half')}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                >
+                  <option value="full">Full day(s)</option>
+                  <option value="half">Half day</option>
+                </select>
+              </label>
+              {sickDayMode === 'half' ? (
+                <label className="block">
+                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Half-day slot</span>
+                  <select
+                    value={sickHalfDayPortion}
+                    onChange={(e) => setSickHalfDayPortion(e.target.value as 'am' | 'pm')}
+                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                  >
+                    <option value="am">Morning (AM)</option>
+                    <option value="pm">Afternoon (PM)</option>
+                  </select>
+                </label>
+              ) : <div />}
             </div>
             {sickStart && sickEnd && sickEnd >= sickStart ? (
               <p className="rounded-lg bg-[#faf9f6] px-3 py-2 text-[12.5px] text-[#6b6b6b]">{daysLabel(sickStart, sickEnd)}</p>
@@ -950,8 +1028,34 @@ export function LeaveHubClient({
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Last day off</span>
-                <input type="date" required min={editStart} value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+                <input type="date" required min={editStart} value={editDayMode === 'half' ? editStart : editEnd} disabled={editDayMode === 'half'} onChange={(e) => setEditEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none disabled:opacity-60" />
               </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Duration</span>
+                <select
+                  value={editDayMode}
+                  onChange={(e) => setEditDayMode(e.target.value as 'full' | 'half')}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                >
+                  <option value="full">Full day(s)</option>
+                  <option value="half">Half day</option>
+                </select>
+              </label>
+              {editDayMode === 'half' ? (
+                <label className="block">
+                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Half-day slot</span>
+                  <select
+                    value={editHalfDayPortion}
+                    onChange={(e) => setEditHalfDayPortion(e.target.value as 'am' | 'pm')}
+                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                  >
+                    <option value="am">Morning (AM)</option>
+                    <option value="pm">Afternoon (PM)</option>
+                  </select>
+                </label>
+              ) : <div />}
             </div>
             <label className="block">
               <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Note (optional)</span>
@@ -1083,7 +1187,7 @@ export function LeaveHubClient({
                     <span className="text-[13.5px] font-medium text-[#121212]">{r.kind === 'toil' ? 'TOIL' : 'Annual leave'}</span>
                     <StatusPill status={r.status} />
                   </div>
-                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{fmtDate(r.start_date)} – {fmtDate(r.end_date)} &middot; {daysLabel(r.start_date, r.end_date)}</p>
+                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{fmtDate(r.start_date)} – {fmtDate(r.end_date)} &middot; {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : daysLabel(r.start_date, r.end_date)}</p>
                   {r.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{r.note}&rdquo;</p> : null}
                   {(r.status === 'approved' || r.status === 'rejected') && r.decision_note ? (
                     <p className="mt-1 text-[12px] text-[#6b6b6b]">
@@ -1094,6 +1198,7 @@ export function LeaveHubClient({
                   {r.status === 'pending_edit' && r.proposed_start_date && r.proposed_end_date ? (
                     <p className="mt-1 text-[12px] text-[#92400e]">
                       Edit requested: {r.proposed_kind === 'toil' ? 'TOIL' : 'Annual leave'} &middot; {fmtDate(r.proposed_start_date)} – {fmtDate(r.proposed_end_date)}
+                      {r.proposed_half_day_portion ? ` · Half day (${r.proposed_half_day_portion.toUpperCase()})` : ''}
                     </p>
                   ) : null}
                 </div>
@@ -1177,7 +1282,7 @@ export function LeaveHubClient({
             <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
               {sickness.map((s, i) => (
                 <div key={s.id} className={`px-5 py-3 text-[12.5px] text-[#6b6b6b] ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
-                  {fmtDate(s.start_date)} – {fmtDate(s.end_date)} &middot; {daysLabel(s.start_date, s.end_date)}
+                  {fmtDate(s.start_date)} – {fmtDate(s.end_date)} &middot; {s.half_day_portion ? `Half day (${s.half_day_portion.toUpperCase()})` : daysLabel(s.start_date, s.end_date)}
                   {s.notes ? <span className="ml-2 italic text-[#9b9b9b]">&ldquo;{s.notes}&rdquo;</span> : null}
                 </div>
               ))}
