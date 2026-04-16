@@ -807,11 +807,33 @@ export function LeaveHubClient({
         }, 0),
     [myRequests, leaveYearStartIso, leaveYearEndIso, leaveDayOpts],
   );
+  const usedToil = useMemo(
+    () =>
+      myRequests
+        .filter((r) => r.kind === 'toil' && annualCountsTowardUsage(r.status))
+        .reduce((acc, r) => {
+          const seg = overlapInclusiveRange(r.start_date, r.end_date, leaveYearStartIso, leaveYearEndIso);
+          if (!seg) return acc;
+          return acc + countOrgLeaveDaysInclusive(seg.start, seg.end, leaveDayOpts);
+        }, 0),
+    [myRequests, leaveYearStartIso, leaveYearEndIso, leaveDayOpts],
+  );
 
   const entitlement = allowance?.annual_entitlement_days ?? 0;
   const remaining = Math.max(0, entitlement - usedAnnual);
   const toilBalance = allowance?.toil_balance_days ?? 0;
   const usedPct = entitlement > 0 ? Math.min(100, Math.round((usedAnnual / entitlement) * 100)) : 0;
+  const pendingRequestsCount = useMemo(
+    () => myRequests.filter((r) => ['pending', 'pending_edit', 'pending_cancel'].includes(r.status)).length,
+    [myRequests],
+  );
+  const approvedUpcomingCount = useMemo(
+    () => {
+      const today = new Date().toISOString().slice(0, 10);
+      return myRequests.filter((r) => r.status === 'approved' && r.end_date >= today).length;
+    },
+    [myRequests],
+  );
 
   /** Calendar trip length (inclusive). */
   const formTripDays =
@@ -1024,6 +1046,33 @@ export function LeaveHubClient({
           </div>
         </div>
       </div>
+
+      {/* Employee leave balance dashboard */}
+      <section className="mb-6">
+        <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Leave balance dashboard</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Annual leave left</p>
+            <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{remaining}<span className="ml-1 text-[14px] font-normal text-[#9b9b9b]">days</span></p>
+            <p className="mt-1 text-[12px] text-[#6b6b6b]">{usedAnnual} used of {entitlement} total for {year}.</p>
+          </div>
+          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">TOIL leave left</p>
+            <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{toilBalance}<span className="ml-1 text-[14px] font-normal text-[#9b9b9b]">days</span></p>
+            <p className="mt-1 text-[12px] text-[#6b6b6b]">{usedToil} TOIL day{usedToil === 1 ? '' : 's'} booked or pending this leave year.</p>
+          </div>
+          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Pending requests</p>
+            <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{pendingRequestsCount}</p>
+            <p className="mt-1 text-[12px] text-[#6b6b6b]">Awaiting approval, edits, or cancellation decisions.</p>
+          </div>
+          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Upcoming approved leave</p>
+            <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{approvedUpcomingCount}</p>
+            <p className="mt-1 text-[12px] text-[#6b6b6b]">Approved bookings from today onward.</p>
+          </div>
+        </div>
+      </section>
 
       {/* Request TOIL credit (overtime) — manager approval */}
       {showToilEarnForm && canSubmit ? (
