@@ -144,6 +144,7 @@ export function AppTopBar({
                     <Link
                       key={item.id}
                       href={item.href}
+                      prefetch={false}
                       onClick={() => setNotifOpen(false)}
                       className="flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] transition-colors hover:bg-[#f7f6f2]"
                       style={{ color: 'var(--org-brand-text)' }}
@@ -169,6 +170,7 @@ export function AppTopBar({
         </div>
         <Link
           href="/settings"
+          prefetch={false}
           className="flex h-[34px] w-[34px] items-center justify-center overflow-hidden rounded-full border-2 border-transparent text-[13px] font-semibold transition-colors"
           style={{
             background: 'var(--org-brand-primary)',

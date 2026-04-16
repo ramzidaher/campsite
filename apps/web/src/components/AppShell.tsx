@@ -84,6 +84,7 @@ function NavLink({
   return (
     <Link
       href={href}
+      prefetch={false}
       onClick={onNavigate}
       className={[
         'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors',
@@ -451,6 +452,7 @@ export function AppShell({
       >
         <Link
           href="/dashboard"
+          prefetch={false}
           onClick={closeMobile}
           className="relative z-[1] flex items-center gap-2.5 border-b border-white/[0.07] px-5 py-5"
         >
@@ -638,6 +640,7 @@ export function AppShell({
                           ) : null}
                           <Link
                             href={item_.href}
+                            prefetch={false}
                             onClick={closeMobile}
                             className={
                               isOverview
@@ -747,6 +750,7 @@ export function AppShell({
                           ) : null}
                           <Link
                             href={item_.href}
+                            prefetch={false}
                             onClick={closeMobile}
                             className={
                               isOverview
@@ -856,6 +860,7 @@ export function AppShell({
                           ) : null}
                           <Link
                             href={item_.href}
+                            prefetch={false}
                             onClick={closeMobile}
                             className={
                               isOverview
@@ -902,6 +907,7 @@ export function AppShell({
 
         <Link
           href="/settings"
+          prefetch={false}
           onClick={closeMobile}
           className="relative z-[1] mt-auto flex items-center gap-2.5 border-t border-white/[0.07] px-3 py-3.5 transition-colors hover:bg-white/[0.06]"
         >
