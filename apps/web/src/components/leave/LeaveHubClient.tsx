@@ -301,6 +301,8 @@ export function LeaveHubClient({
     null | { source: 'leave' | 'toil_credit' | 'carryover' | 'encashment'; id: string; approve: boolean }
   >(null);
   const [approvalNote, setApprovalNote] = useState('');
+  const [selectedApprovalKeys, setSelectedApprovalKeys] = useState<string[]>([]);
+  const [bulkApprovalNote, setBulkApprovalNote] = useState('');
   const [toilEarnWorkDate, setToilEarnWorkDate] = useState('');
   const [toilEarnAmount, setToilEarnAmount] = useState('');
   const [toilEarnUnit, setToilEarnUnit] = useState<'minutes' | 'hours' | 'days'>('hours');
@@ -728,6 +730,52 @@ export function LeaveHubClient({
     await load();
   }
 
+  async function submitBulkApprovalDecision(approve: boolean) {
+    if (!selectedApprovalKeys.length) return;
+    setBusy(true);
+    const note = bulkApprovalNote.trim() || null;
+    const selected = mergedApprovalQueue.filter((row) => selectedApprovalKeys.includes(row.key));
+    let success = 0;
+    const failures: string[] = [];
+    for (const row of selected) {
+      const { error } =
+        row.kind === 'leave'
+          ? await supabase.rpc('leave_request_decide', {
+              p_request_id: row.leave.id,
+              p_approve: approve,
+              p_note: note,
+            })
+          : row.kind === 'toil'
+          ? await supabase.rpc('toil_credit_request_decide', {
+              p_request_id: row.toil.id,
+              p_approve: approve,
+              p_note: note,
+            })
+          : row.kind === 'carryover'
+          ? await supabase.rpc('leave_carryover_request_decide', {
+              p_request_id: row.carryover.id,
+              p_approve: approve,
+              p_note: note,
+            })
+          : await supabase.rpc('leave_encashment_request_decide', {
+              p_request_id: row.encashment.id,
+              p_approve: approve,
+              p_note: note,
+            });
+      if (error) failures.push(error.message);
+      else success += 1;
+    }
+    setBusy(false);
+    setSelectedApprovalKeys([]);
+    setBulkApprovalNote('');
+    await load();
+    if (failures.length) {
+      setMsg(`${success} processed, ${failures.length} failed. ${failures[0]}`);
+    } else {
+      setMsg(`${success} request${success === 1 ? '' : 's'} ${approve ? 'approved' : 'rejected'}.`);
+    }
+  }
+
   const mergedApprovalQueue = useMemo(() => {
     type Row =
       | { key: string; created_at: string; kind: 'leave'; leave: LeaveRequest }
@@ -763,6 +811,11 @@ export function LeaveHubClient({
     rows.sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
     return rows;
   }, [pendingForMe, pendingToilForMe, pendingCarryoverForMe, pendingEncashmentForMe]);
+
+  useEffect(() => {
+    const valid = new Set(mergedApprovalQueue.map((r) => r.key));
+    setSelectedApprovalKeys((prev) => prev.filter((k) => valid.has(k)));
+  }, [mergedApprovalQueue]);
 
   const leaveYearStartIso = useMemo(() => {
     const y = Number(year);
@@ -1625,11 +1678,70 @@ export function LeaveHubClient({
             <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pending approval</h2>
             <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">{mergedApprovalQueue.length}</span>
           </div>
+          <div className="mb-3 rounded-xl border border-[#e8e8e8] bg-white p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedApprovalKeys(mergedApprovalQueue.map((r) => r.key))}
+                className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              >
+                Select all
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedApprovalKeys([])}
+                className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              >
+                Clear
+              </button>
+              <span className="text-[12px] text-[#6b6b6b]">{selectedApprovalKeys.length} selected</span>
+            </div>
+            <label className="mt-2 block">
+              <span className="mb-1 block text-[11px] font-medium text-[#9b9b9b]">Bulk decision note (optional)</span>
+              <input
+                type="text"
+                value={bulkApprovalNote}
+                onChange={(e) => setBulkApprovalNote(e.target.value)}
+                placeholder="e.g. approved after weekly review"
+                className="w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[12px] focus:border-[#121212] focus:outline-none"
+              />
+            </label>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                disabled={busy || selectedApprovalKeys.length === 0}
+                onClick={() => void submitBulkApprovalDecision(true)}
+                className="rounded-lg bg-[#14532d] px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
+              >
+                Approve selected
+              </button>
+              <button
+                type="button"
+                disabled={busy || selectedApprovalKeys.length === 0}
+                onClick={() => void submitBulkApprovalDecision(false)}
+                className="rounded-lg border border-[#fca5a5] bg-white px-3 py-2 text-[12px] font-semibold text-[#b91c1c] disabled:opacity-50"
+              >
+                Reject selected
+              </button>
+            </div>
+          </div>
           <div className="space-y-2">
             {mergedApprovalQueue.map((row) =>
               row.kind === 'leave' ? (
                 <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
+                    <label className="mb-1 inline-flex items-center gap-2 text-[11px] text-[#6b6b6b]">
+                      <input
+                        type="checkbox"
+                        checked={selectedApprovalKeys.includes(row.key)}
+                        onChange={(e) =>
+                          setSelectedApprovalKeys((prev) =>
+                            e.target.checked ? [...prev, row.key] : prev.filter((k) => k !== row.key),
+                          )
+                        }
+                      />
+                      Select
+                    </label>
                     <p className="font-semibold text-[#121212]">{displayName(row.leave)}</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
                       {leaveKindLabel(row.leave.kind)}{row.leave.kind === 'parental' && row.leave.parental_subtype ? ` (${parentalSubtypeLabel(row.leave.parental_subtype)})` : ''} &middot; {fmtDate(row.leave.start_date)} – {fmtDate(row.leave.end_date)} &middot; {daysLabel(row.leave.start_date, row.leave.end_date)}
@@ -1657,6 +1769,18 @@ export function LeaveHubClient({
               ) : row.kind === 'toil' ? (
                 <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#a7f3d0] bg-[#ecfdf5] p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
+                    <label className="mb-1 inline-flex items-center gap-2 text-[11px] text-[#6b6b6b]">
+                      <input
+                        type="checkbox"
+                        checked={selectedApprovalKeys.includes(row.key)}
+                        onChange={(e) =>
+                          setSelectedApprovalKeys((prev) =>
+                            e.target.checked ? [...prev, row.key] : prev.filter((k) => k !== row.key),
+                          )
+                        }
+                      />
+                      Select
+                    </label>
                     <p className="font-semibold text-[#121212]">{displayName(row.toil)}</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
                       TOIL credit (overtime) &middot; worked {fmtDate(row.toil.work_date)} &middot; {formatToilMinutes(row.toil.minutes_earned, toilMinutesPerDay)}
@@ -1675,6 +1799,18 @@ export function LeaveHubClient({
               ) : row.kind === 'carryover' ? (
                 <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
+                    <label className="mb-1 inline-flex items-center gap-2 text-[11px] text-[#6b6b6b]">
+                      <input
+                        type="checkbox"
+                        checked={selectedApprovalKeys.includes(row.key)}
+                        onChange={(e) =>
+                          setSelectedApprovalKeys((prev) =>
+                            e.target.checked ? [...prev, row.key] : prev.filter((k) => k !== row.key),
+                          )
+                        }
+                      />
+                      Select
+                    </label>
                     <p className="font-semibold text-[#121212]">{displayName(row.carryover)}</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
                       Carry-over request &middot; {row.carryover.days_requested} day{row.carryover.days_requested === 1 ? '' : 's'} from {row.carryover.from_leave_year} to {row.carryover.to_leave_year}
@@ -1693,6 +1829,18 @@ export function LeaveHubClient({
               ) : (
                 <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
+                    <label className="mb-1 inline-flex items-center gap-2 text-[11px] text-[#6b6b6b]">
+                      <input
+                        type="checkbox"
+                        checked={selectedApprovalKeys.includes(row.key)}
+                        onChange={(e) =>
+                          setSelectedApprovalKeys((prev) =>
+                            e.target.checked ? [...prev, row.key] : prev.filter((k) => k !== row.key),
+                          )
+                        }
+                      />
+                      Select
+                    </label>
                     <p className="font-semibold text-[#121212]">{displayName(row.encashment)}</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
                       Encashment request &middot; {row.encashment.days_requested} day{row.encashment.days_requested === 1 ? '' : 's'} from leave year {row.encashment.leave_year}
