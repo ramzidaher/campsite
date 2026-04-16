@@ -102,7 +102,16 @@ function statusLabel(s: string): { text: string; color: string } {
 }
 
 function kindLabel(k: string): string {
-  return k === 'toil' ? 'Time off in lieu (TOIL)' : 'Annual leave';
+  switch (k) {
+    case 'annual': return 'Annual leave';
+    case 'toil': return 'Time off in lieu (TOIL)';
+    case 'parental': return 'Parental leave';
+    case 'bereavement': return 'Bereavement leave';
+    case 'compassionate': return 'Compassionate leave';
+    case 'study': return 'Study leave';
+    case 'unpaid': return 'Unpaid leave';
+    default: return k;
+  }
 }
 
 export function LeaveScreen({ profile }: { profile: ProfileRow }) {
@@ -123,7 +132,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
   const [busy, setBusy] = useState(false);
 
   // Form state
-  const [formKind, setFormKind] = useState<'annual' | 'toil'>('annual');
+  const [formKind, setFormKind] = useState<'annual' | 'toil' | 'parental' | 'bereavement' | 'compassionate' | 'study' | 'unpaid'>('annual');
   const [formStart, setFormStart] = useState(new Date());
   const [formEnd, setFormEnd] = useState(new Date());
   const [formNote, setFormNote] = useState('');
@@ -456,8 +465,10 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
       parts.push(
         `${Math.max(0, projectedAnnualRemaining)} day${Math.max(0, projectedAnnualRemaining) === 1 ? '' : 's'} remaining after this`,
       );
-    } else {
+    } else if (formKind === 'toil') {
       parts.push(`${toilBalance} TOIL day${toilBalance === 1 ? '' : 's'} available`);
+    } else {
+      parts.push('submitted for manager approval');
     }
     if (newLeaveOverlaps) parts.push('overlaps another booking');
     if (exceedsAnnualAllowance) {
@@ -878,14 +889,14 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                 {/* Kind */}
                 <Text style={[styles.fieldLabel, { color: textSecondary }]}>Type</Text>
                 <View style={[styles.segmentRow, { backgroundColor: isDark ? '#2a2a2a' : '#f0eeea', marginBottom: 12 }]}>
-                  {(['annual', 'toil'] as const).map((k) => (
+                  {(['annual', 'toil', 'parental', 'bereavement', 'compassionate', 'study', 'unpaid'] as const).map((k) => (
                     <Pressable
                       key={k}
                       style={[styles.segment, formKind === k && { backgroundColor: cardBg }]}
                       onPress={() => setFormKind(k)}
                     >
                       <Text style={[styles.segmentLabel, { color: formKind === k ? textPrimary : textSecondary, fontWeight: formKind === k ? '600' : '400' }]}>
-                        {k === 'annual' ? 'Annual leave' : 'TOIL'}
+                        {kindLabel(k)}
                       </Text>
                     </Pressable>
                   ))}

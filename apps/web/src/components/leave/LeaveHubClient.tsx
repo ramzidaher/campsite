@@ -88,6 +88,22 @@ type EncashmentRequest = {
   profiles?: { full_name: string } | { full_name: string }[] | null;
 };
 
+const REQUESTABLE_LEAVE_KINDS = ['annual', 'toil', 'parental', 'bereavement', 'compassionate', 'study', 'unpaid'] as const;
+type RequestableLeaveKind = (typeof REQUESTABLE_LEAVE_KINDS)[number];
+
+function leaveKindLabel(kind: string): string {
+  switch (kind) {
+    case 'annual': return 'Annual leave';
+    case 'toil': return 'Time off in lieu (TOIL)';
+    case 'parental': return 'Parental leave';
+    case 'bereavement': return 'Bereavement leave';
+    case 'compassionate': return 'Compassionate leave';
+    case 'study': return 'Study leave';
+    case 'unpaid': return 'Unpaid leave';
+    default: return kind;
+  }
+}
+
 function daysBetween(start: string, end: string): number {
   const a = new Date(`${start}T12:00:00Z`);
   const b = new Date(`${end}T12:00:00Z`);
@@ -206,7 +222,7 @@ export function LeaveHubClient({
   const [showSickForm, setShowSickForm] = useState(false);
   const [showSickHistory, setShowSickHistory] = useState(false);
 
-  const [formKind, setFormKind] = useState<'annual' | 'toil'>('annual');
+  const [formKind, setFormKind] = useState<RequestableLeaveKind>('annual');
   const [formStart, setFormStart] = useState('');
   const [formEnd, setFormEnd] = useState('');
   const [formNote, setFormNote] = useState('');
@@ -219,7 +235,7 @@ export function LeaveHubClient({
   const [sickDayMode, setSickDayMode] = useState<'full' | 'half'>('full');
   const [sickHalfDayPortion, setSickHalfDayPortion] = useState<'am' | 'pm'>('am');
   const [editTarget, setEditTarget] = useState<LeaveRequest | null>(null);
-  const [editKind, setEditKind] = useState<'annual' | 'toil'>('annual');
+  const [editKind, setEditKind] = useState<RequestableLeaveKind>('annual');
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
   const [editNote, setEditNote] = useState('');
@@ -483,7 +499,10 @@ export function LeaveHubClient({
 
   function openEditDialog(r: LeaveRequest) {
     setEditTarget(r);
-    setEditKind((r.kind === 'toil' ? 'toil' : 'annual') as 'annual' | 'toil');
+    const nextKind = REQUESTABLE_LEAVE_KINDS.includes(r.kind as RequestableLeaveKind)
+      ? (r.kind as RequestableLeaveKind)
+      : 'annual';
+    setEditKind(nextKind);
     setEditStart(r.start_date);
     setEditEnd(r.end_date);
     setEditNote(r.note ?? '');
@@ -1088,10 +1107,10 @@ export function LeaveHubClient({
           <form className="space-y-4" onSubmit={(e) => void submitLeave(e)}>
             {/* Kind */}
             <div className="flex gap-2">
-              {(['annual', 'toil'] as const).map((k) => (
+              {REQUESTABLE_LEAVE_KINDS.map((k) => (
                 <button key={k} type="button" onClick={() => setFormKind(k)}
                   className={`flex-1 rounded-xl border py-2.5 text-[13px] font-medium transition-colors ${formKind === k ? 'border-[#121212] bg-[#121212] text-white' : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#121212]'}`}>
-                  {k === 'annual' ? 'Annual leave' : 'Time off in lieu (TOIL)'}
+                  {leaveKindLabel(k)}
                 </button>
               ))}
             </div>
@@ -1159,7 +1178,9 @@ export function LeaveHubClient({
                 ) : null}
                 {formKind === 'annual'
                   ? ` · ${Math.max(0, projectedAnnualRemaining)} day${Math.max(0, projectedAnnualRemaining) === 1 ? '' : 's'} remaining after this`
-                  : ` · ${toilBalance} TOIL day${toilBalance === 1 ? '' : 's'} available`}
+                  : formKind === 'toil'
+                    ? ` · ${toilBalance} TOIL day${toilBalance === 1 ? '' : 's'} available`
+                    : ' · Submitted for manager approval'}
                 {newLeaveOverlaps ? ' · Overlaps another leave booking' : ''}
                 {exceedsAnnualAllowance
                   ? ` · Exceeds your allowance by ${Math.abs(projectedAnnualRemaining)} day${Math.abs(projectedAnnualRemaining) === 1 ? '' : 's'}`
@@ -1317,14 +1338,14 @@ export function LeaveHubClient({
           </p>
           <form className="space-y-4" onSubmit={(e) => void requestEditApproval(e)}>
             <div className="flex gap-2">
-              {(['annual', 'toil'] as const).map((k) => (
+              {REQUESTABLE_LEAVE_KINDS.map((k) => (
                 <button
                   key={k}
                   type="button"
                   onClick={() => setEditKind(k)}
                   className={`flex-1 rounded-xl border py-2.5 text-[13px] font-medium transition-colors ${editKind === k ? 'border-[#121212] bg-[#121212] text-white' : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#121212]'}`}
                 >
-                  {k === 'annual' ? 'Annual leave' : 'Time off in lieu (TOIL)'}
+                  {leaveKindLabel(k)}
                 </button>
               ))}
             </div>
@@ -1403,11 +1424,11 @@ export function LeaveHubClient({
                   <div className="min-w-0">
                     <p className="font-semibold text-[#121212]">{displayName(row.leave)}</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                      {row.leave.kind === 'toil' ? 'Time off in lieu (TOIL)' : 'Annual leave'} &middot; {fmtDate(row.leave.start_date)} – {fmtDate(row.leave.end_date)} &middot; {daysLabel(row.leave.start_date, row.leave.end_date)}
+                      {leaveKindLabel(row.leave.kind)} &middot; {fmtDate(row.leave.start_date)} – {fmtDate(row.leave.end_date)} &middot; {daysLabel(row.leave.start_date, row.leave.end_date)}
                     </p>
                     {row.leave.status === 'pending_edit' && row.leave.proposed_start_date && row.leave.proposed_end_date ? (
                       <p className="mt-1 text-[12px] text-[#92400e]">
-                        Requested edit to {row.leave.proposed_kind === 'toil' ? 'TOIL' : 'Annual leave'} &middot; {fmtDate(row.leave.proposed_start_date)} – {fmtDate(row.leave.proposed_end_date)}
+                        Requested edit to {leaveKindLabel(row.leave.proposed_kind ?? row.leave.kind)} &middot; {fmtDate(row.leave.proposed_start_date)} – {fmtDate(row.leave.proposed_end_date)}
                         {row.leave.proposed_note ? ` · "${row.leave.proposed_note}"` : ''}
                       </p>
                     ) : null}
@@ -1585,7 +1606,7 @@ export function LeaveHubClient({
               <div key={r.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[13.5px] font-medium text-[#121212]">{r.kind === 'toil' ? 'TOIL' : 'Annual leave'}</span>
+                    <span className="text-[13.5px] font-medium text-[#121212]">{leaveKindLabel(r.kind)}</span>
                     <StatusPill status={r.status} />
                   </div>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{fmtDate(r.start_date)} – {fmtDate(r.end_date)} &middot; {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : daysLabel(r.start_date, r.end_date)}</p>
@@ -1598,7 +1619,7 @@ export function LeaveHubClient({
                   ) : null}
                   {r.status === 'pending_edit' && r.proposed_start_date && r.proposed_end_date ? (
                     <p className="mt-1 text-[12px] text-[#92400e]">
-                      Edit requested: {r.proposed_kind === 'toil' ? 'TOIL' : 'Annual leave'} &middot; {fmtDate(r.proposed_start_date)} – {fmtDate(r.proposed_end_date)}
+                      Edit requested: {leaveKindLabel(r.proposed_kind ?? r.kind)} &middot; {fmtDate(r.proposed_start_date)} – {fmtDate(r.proposed_end_date)}
                       {r.proposed_half_day_portion ? ` · Half day (${r.proposed_half_day_portion.toUpperCase()})` : ''}
                     </p>
                   ) : null}
