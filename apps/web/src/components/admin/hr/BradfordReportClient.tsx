@@ -19,17 +19,39 @@ export type BradfordReportRow = {
   bradford_score: number;
 };
 
+type LeaveTrendRow = {
+  month_key: string;
+  leave_days: number;
+  sickness_days: number;
+  leave_request_count: number;
+};
+
+type HighAbsenceRow = {
+  user_id: string;
+  full_name: string;
+  preferred_name: string | null;
+  reports_to_name: string | null;
+  spell_count: number;
+  total_days: number;
+  bradford_score: number;
+  trigger_reason: string;
+};
+
 export function BradfordReportClient({
   initialRows,
   initialAsOf,
   bradfordWindowDays,
   canViewAll,
+  initialTrends,
+  initialHighAbsence,
 }: {
   initialRows: BradfordReportRow[];
   initialAsOf: string;
   bradfordWindowDays: number;
   /** When false, roster is direct reports only (manager view). */
   canViewAll: boolean;
+  initialTrends: LeaveTrendRow[];
+  initialHighAbsence: HighAbsenceRow[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [asOf, setAsOf] = useState(initialAsOf);
@@ -37,6 +59,8 @@ export function BradfordReportClient({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [alertsOnly, setAlertsOnly] = useState(false);
+  const [trends, setTrends] = useState<LeaveTrendRow[]>(initialTrends);
+  const [highAbsence, setHighAbsence] = useState<HighAbsenceRow[]>(initialHighAbsence);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent === true;
@@ -59,6 +83,22 @@ export function BradfordReportClient({
         bradford_score: Number(r.bradford_score),
       })),
     );
+    const [{ data: trendData }, { data: highAbsenceData }] = await Promise.all([
+      supabase.rpc('hr_leave_usage_trends', { p_on: asOf }),
+      supabase.rpc('hr_high_absence_triggers', { p_on: asOf }),
+    ]);
+    setTrends(((trendData ?? []) as LeaveTrendRow[]).map((r) => ({
+      ...r,
+      leave_days: Number(r.leave_days),
+      sickness_days: Number(r.sickness_days),
+      leave_request_count: Number(r.leave_request_count),
+    })));
+    setHighAbsence(((highAbsenceData ?? []) as HighAbsenceRow[]).map((r) => ({
+      ...r,
+      spell_count: Number(r.spell_count),
+      total_days: Number(r.total_days),
+      bradford_score: Number(r.bradford_score),
+    })));
   }, [supabase, asOf]);
 
   useShellRefresh(() => void load({ silent: true }));
@@ -180,6 +220,58 @@ export function BradfordReportClient({
           </tbody>
         </table>
       </div>
+
+      <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-4">
+        <h2 className="text-[13px] font-semibold text-[#121212]">Leave usage trends (last 6 months)</h2>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {trends.map((t) => (
+            <div key={t.month_key} className="rounded-lg border border-[#ececec] bg-[#faf9f6] p-3">
+              <p className="text-[12px] font-medium text-[#121212]">{t.month_key}</p>
+              <p className="mt-1 text-[12px] text-[#6b6b6b]">Leave days: {t.leave_days}</p>
+              <p className="text-[12px] text-[#6b6b6b]">Sickness days: {t.sickness_days}</p>
+              <p className="text-[12px] text-[#6b6b6b]">Leave requests: {t.leave_request_count}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-4">
+        <h2 className="text-[13px] font-semibold text-[#121212]">High absence employees (auto triggers)</h2>
+        {highAbsence.length === 0 ? (
+          <p className="mt-2 text-[12px] text-[#9b9b9b]">No trigger conditions met for the selected date.</p>
+        ) : (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-[12.5px]">
+              <thead>
+                <tr className="border-b border-[#ececec] text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+                  <th className="px-3 py-2">Employee</th>
+                  <th className="px-3 py-2">Manager</th>
+                  <th className="px-3 py-2">Spells</th>
+                  <th className="px-3 py-2">Days</th>
+                  <th className="px-3 py-2">Bradford</th>
+                  <th className="px-3 py-2">Trigger</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#ececec]">
+                {highAbsence.map((h) => (
+                  <tr key={h.user_id}>
+                    <td className="px-3 py-2">
+                      <Link href={`/hr/records/${h.user_id}`} className="font-medium text-[#121212] underline-offset-2 hover:underline">
+                        {getDisplayName(h.full_name, h.preferred_name)}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-[#4a4a4a]">{h.reports_to_name ?? '—'}</td>
+                    <td className="px-3 py-2 tabular-nums">{h.spell_count}</td>
+                    <td className="px-3 py-2 tabular-nums">{h.total_days}</td>
+                    <td className="px-3 py-2 tabular-nums font-semibold text-[#b91c1c]">{h.bradford_score}</td>
+                    <td className="px-3 py-2 text-[#6b6b6b]">{h.trigger_reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

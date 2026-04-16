@@ -22,6 +22,45 @@ function mapReportRows(raw: unknown): BradfordReportRow[] {
   });
 }
 
+function mapTrendRows(raw: unknown): Array<{ month_key: string; leave_days: number; sickness_days: number; leave_request_count: number }> {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((r) => {
+    const o = r as Record<string, unknown>;
+    return {
+      month_key: String(o.month_key ?? ''),
+      leave_days: Number(o.leave_days ?? 0),
+      sickness_days: Number(o.sickness_days ?? 0),
+      leave_request_count: Number(o.leave_request_count ?? 0),
+    };
+  });
+}
+
+function mapHighAbsenceRows(raw: unknown): Array<{
+  user_id: string;
+  full_name: string;
+  preferred_name: string | null;
+  reports_to_name: string | null;
+  spell_count: number;
+  total_days: number;
+  bradford_score: number;
+  trigger_reason: string;
+}> {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((r) => {
+    const o = r as Record<string, unknown>;
+    return {
+      user_id: String(o.user_id ?? ''),
+      full_name: String(o.full_name ?? ''),
+      preferred_name: (o.preferred_name as string | null) ?? null,
+      reports_to_name: (o.reports_to_name as string | null) ?? null,
+      spell_count: Number(o.spell_count ?? 0),
+      total_days: Number(o.total_days ?? 0),
+      bradford_score: Number(o.bradford_score ?? 0),
+      trigger_reason: String(o.trigger_reason ?? ''),
+    };
+  });
+}
+
 export default async function AbsenceReportingPage() {
   const user = await getAuthUser();
   if (!user) redirect('/login');
@@ -38,9 +77,11 @@ export default async function AbsenceReportingPage() {
   if (!canViewAll && !canViewTeam) redirect('/broadcasts');
 
   const asOf = new Date().toISOString().slice(0, 10);
-  const [{ data: reportData, error }, { data: settings }] = await Promise.all([
+  const [{ data: reportData, error }, { data: settings }, { data: trendData }, { data: highAbsenceData }] = await Promise.all([
     supabase.rpc('hr_bradford_report', { p_on: asOf }),
     supabase.from('org_leave_settings').select('bradford_window_days').eq('org_id', orgId).maybeSingle(),
+    supabase.rpc('hr_leave_usage_trends', { p_on: asOf }),
+    supabase.rpc('hr_high_absence_triggers', { p_on: asOf }),
   ]);
 
   if (error) {
@@ -59,6 +100,8 @@ export default async function AbsenceReportingPage() {
       initialAsOf={asOf}
       bradfordWindowDays={bradfordWindowDays}
       canViewAll={canViewAll}
+      initialTrends={mapTrendRows(trendData)}
+      initialHighAbsence={mapHighAbsenceRows(highAbsenceData)}
     />
   );
 }
