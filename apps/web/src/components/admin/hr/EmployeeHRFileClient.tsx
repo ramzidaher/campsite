@@ -2054,7 +2054,7 @@ export function EmployeeHRFileClient({
             </p>
           </div>
           <div>
-            <p className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Sickness absence score</p>
+            <p className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Absence score (sickness + leave)</p>
             {absenceScore ? (
               <p className="mt-0.5 text-[#121212]">
                 {absenceScore.bradford_score}{' '}
@@ -2069,7 +2069,7 @@ export function EmployeeHRFileClient({
         </div>
         {canManage && absenceScore && absenceScore.bradford_score >= BRADFORD_ALERT_THRESHOLD ? (
           <div className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12.5px] text-[#b91c1c]">
-            <strong>HR warning:</strong> Bradford score is {absenceScore.bradford_score} (threshold {BRADFORD_ALERT_THRESHOLD}). Please review this employee&apos;s sickness record.
+            <strong>HR warning:</strong> Bradford score is {absenceScore.bradford_score} (threshold {BRADFORD_ALERT_THRESHOLD}). Please review this employee&apos;s leave and sickness history.
           </div>
         ) : null}
       </section>

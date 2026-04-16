@@ -790,7 +790,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
           >
             <Text style={[styles.cardTitle, { color: textPrimary }]}>Absence score</Text>
             <Text style={{ fontSize: 12, color: textSecondary, marginBottom: 10 }}>
-              Based on sickness episodes (Bradford-style S² × D). Annual leave and TOIL do not affect this score.
+              Based on sickness and leave episodes (Bradford-style S² × D) in the rolling policy window.
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               <View style={{ minWidth: '28%' }}>

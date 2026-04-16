@@ -69,7 +69,7 @@ export function BradfordReportClient({
   }, [rows, alertsOnly]);
 
   const exportCsv = useCallback(() => {
-    const header = ['Employee', 'Manager', 'Spells', 'Total sick days', 'Bradford score'];
+    const header = ['Employee', 'Manager', 'Spells', 'Total absence days', 'Bradford score'];
     const lines = [
       header.join(','),
       ...visible.map((r) => {
@@ -93,7 +93,7 @@ export function BradfordReportClient({
         <div>
           <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Absence reporting</h1>
           <p className="mt-1 max-w-xl text-[13.5px] text-[#6b6b6b]">
-            Bradford factor (S² × D) from sickness episodes in the rolling window ({bradfordWindowDays} days). Overlapping or
+            Bradford factor (S² × D) from sickness and leave episodes in the rolling window ({bradfordWindowDays} days). Overlapping or
             back-to-back absences count as one spell. Common UK guidance treats scores around {ALERT_THRESHOLD}+ as a review trigger.
           </p>
           {!canViewAll ? (

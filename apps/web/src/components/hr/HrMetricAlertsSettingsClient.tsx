@@ -146,7 +146,7 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
         <div className="space-y-2">
           {(
             [
-              ['bradford', 'Bradford factor (sickness absence)'],
+              ['bradford', 'Bradford factor (sickness + leave)'],
               ['working_hours', 'Working hours vs rota / contract'],
               ['diversity', 'Recruitment diversity share vs listing target'],
               ['probation', 'Probation review overdue'],
