@@ -99,6 +99,14 @@ type HolidayPeriod = {
   is_active: boolean;
 };
 
+type LeaveRequestDocument = {
+  id: string;
+  request_id: string;
+  document_kind: 'fit_note' | 'medical_letter' | 'adoption_document' | 'bereavement_evidence' | 'other';
+  file_name: string;
+  storage_path: string;
+};
+
 type TeamAbsence = {
   id: string;
   requester_id: string;
@@ -112,6 +120,7 @@ type TeamAbsence = {
 const REQUESTABLE_LEAVE_KINDS = ['annual', 'toil', 'parental', 'bereavement', 'compassionate', 'study', 'unpaid'] as const;
 type RequestableLeaveKind = (typeof REQUESTABLE_LEAVE_KINDS)[number];
 type ParentalSubtype = 'maternity' | 'paternity' | 'adoption' | 'shared_parental';
+const SUPPORTING_DOC_LEAVE_KINDS: RequestableLeaveKind[] = ['parental', 'bereavement', 'compassionate'];
 
 function leaveKindLabel(kind: string): string {
   switch (kind) {
@@ -133,6 +142,16 @@ function parentalSubtypeLabel(v: ParentalSubtype | string | null | undefined): s
     case 'adoption': return 'Adoption';
     case 'shared_parental': return 'Shared parental';
     default: return '';
+  }
+}
+
+function supportingDocKindLabel(kind: LeaveRequestDocument['document_kind']): string {
+  switch (kind) {
+    case 'fit_note': return 'Fit note';
+    case 'medical_letter': return 'Medical letter';
+    case 'adoption_document': return 'Adoption document';
+    case 'bereavement_evidence': return 'Bereavement evidence';
+    default: return 'Supporting document';
   }
 }
 
@@ -262,6 +281,7 @@ export function LeaveHubClient({
   const [sspSummary, setSspSummary] = useState<Record<string, unknown> | null>(null);
   const [holidayPeriods, setHolidayPeriods] = useState<HolidayPeriod[]>(initialHolidayPeriods ?? []);
   const [teamAbsences, setTeamAbsences] = useState<TeamAbsence[]>([]);
+  const [documentsByRequestId, setDocumentsByRequestId] = useState<Record<string, LeaveRequestDocument[]>>({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const d = new Date();
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -283,6 +303,8 @@ export function LeaveHubClient({
   const [formDayMode, setFormDayMode] = useState<'full' | 'half'>('full');
   const [formHalfDayPortion, setFormHalfDayPortion] = useState<'am' | 'pm'>('am');
   const [formParentalSubtype, setFormParentalSubtype] = useState<ParentalSubtype>('maternity');
+  const [formSupportingDoc, setFormSupportingDoc] = useState<File | null>(null);
+  const [formSupportingDocKind, setFormSupportingDocKind] = useState<LeaveRequestDocument['document_kind']>('fit_note');
 
   const [sickStart, setSickStart] = useState('');
   const [sickEnd, setSickEnd] = useState('');
@@ -502,12 +524,50 @@ export function LeaveHubClient({
           half_day_portion: (r.half_day_portion as 'am' | 'pm' | null | undefined) ?? null,
         })),
       );
+
+      const docRequestIds = [...new Set([
+        ...((mine ?? []) as LeaveRequest[]).map((r) => r.id),
+        ...pend.map((r) => r.id),
+      ])].filter(Boolean);
+      if (docRequestIds.length) {
+        const { data: docs } = await supabase
+          .from('leave_request_documents')
+          .select('id, request_id, document_kind, file_name, storage_path')
+          .eq('org_id', orgId)
+          .in('request_id', docRequestIds)
+          .order('created_at', { ascending: false });
+        const next: Record<string, LeaveRequestDocument[]> = {};
+        for (const d of (docs ?? []) as LeaveRequestDocument[]) {
+          if (!next[d.request_id]) next[d.request_id] = [];
+          next[d.request_id].push(d);
+        }
+        setDocumentsByRequestId(next);
+      } else {
+        setDocumentsByRequestId({});
+      }
     } else {
       setPendingForMe([]);
       setPendingToilForMe([]);
       setPendingCarryoverForMe([]);
       setPendingEncashmentForMe([]);
       setTeamAbsences([]);
+      const ownIds = ((mine ?? []) as LeaveRequest[]).map((r) => r.id).filter(Boolean);
+      if (ownIds.length) {
+        const { data: docs } = await supabase
+          .from('leave_request_documents')
+          .select('id, request_id, document_kind, file_name, storage_path')
+          .eq('org_id', orgId)
+          .in('request_id', ownIds)
+          .order('created_at', { ascending: false });
+        const next: Record<string, LeaveRequestDocument[]> = {};
+        for (const d of (docs ?? []) as LeaveRequestDocument[]) {
+          if (!next[d.request_id]) next[d.request_id] = [];
+          next[d.request_id].push(d);
+        }
+        setDocumentsByRequestId(next);
+      } else {
+        setDocumentsByRequestId({});
+      }
     }
   }, [supabase, orgId, userId, year, canApprove, canManage, calendarMonth]);
 
@@ -522,7 +582,7 @@ export function LeaveHubClient({
       return;
     }
     setBusy(true); setMsg(null);
-    const { error } = await supabase.rpc('leave_request_submit', {
+    const { data: requestId, error } = await supabase.rpc('leave_request_submit', {
       p_kind: formKind,
       p_start: formStart,
       p_end: formDayMode === 'half' ? formStart : formEnd,
@@ -532,8 +592,48 @@ export function LeaveHubClient({
     });
     setBusy(false);
     if (error) { setMsg(error.message); return; }
-    setFormStart(''); setFormEnd(''); setFormNote(''); setFormDayMode('full'); setFormHalfDayPortion('am'); setFormParentalSubtype('maternity'); setShowLeaveForm(false);
+    if (requestId && formSupportingDoc) {
+      const file = formSupportingDoc;
+      const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+      const path = `${orgId}/${userId}/${requestId}/${crypto.randomUUID()}.${ext}`;
+      setBusy(true);
+      const { error: upErr } = await supabase.storage.from('leave-supporting-documents').upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || undefined,
+      });
+      if (upErr) {
+        setBusy(false);
+        setMsg(upErr.message);
+        return;
+      }
+      const { error: metaErr } = await supabase.from('leave_request_documents').insert({
+        org_id: orgId,
+        request_id: requestId,
+        requester_id: userId,
+        document_kind: formSupportingDocKind,
+        file_name: file.name,
+        storage_path: path,
+        mime_type: file.type || null,
+        file_size_bytes: file.size,
+      });
+      setBusy(false);
+      if (metaErr) {
+        setMsg(metaErr.message);
+        return;
+      }
+    }
+    setFormStart(''); setFormEnd(''); setFormNote(''); setFormDayMode('full'); setFormHalfDayPortion('am'); setFormParentalSubtype('maternity'); setFormSupportingDoc(null); setFormSupportingDocKind('fit_note'); setShowLeaveForm(false);
     await load();
+  }
+
+  async function openSupportingDocument(doc: LeaveRequestDocument) {
+    const { data, error } = await supabase.storage.from('leave-supporting-documents').createSignedUrl(doc.storage_path, 3600);
+    if (error || !data?.signedUrl) {
+      setMsg(error?.message ?? 'Unable to open document.');
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   }
 
   async function submitSickness(e: React.FormEvent) {
@@ -1360,6 +1460,32 @@ export function LeaveHubClient({
                 </select>
               </label>
             ) : null}
+            {SUPPORTING_DOC_LEAVE_KINDS.includes(formKind) ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Supporting document type</span>
+                  <select
+                    value={formSupportingDocKind}
+                    onChange={(e) => setFormSupportingDocKind(e.target.value as LeaveRequestDocument['document_kind'])}
+                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                  >
+                    <option value="fit_note">Fit note</option>
+                    <option value="medical_letter">Medical letter</option>
+                    <option value="adoption_document">Adoption document</option>
+                    <option value="bereavement_evidence">Bereavement evidence</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Supporting file (optional)</span>
+                  <input
+                    type="file"
+                    onChange={(e) => setFormSupportingDoc(e.target.files?.[0] ?? null)}
+                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[12px] focus:border-[#121212] focus:outline-none"
+                  />
+                </label>
+              </div>
+            ) : null}
             {/* Dates */}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
@@ -1756,6 +1882,20 @@ export function LeaveHubClient({
                       <p className="mt-1 text-[12px] text-[#92400e]">Requested cancellation of this approved leave.</p>
                     ) : null}
                     {row.leave.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.leave.note}&rdquo;</p> : null}
+                    {documentsByRequestId[row.leave.id]?.length ? (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {documentsByRequestId[row.leave.id].map((d) => (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => void openSupportingDocument(d)}
+                            className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[11px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                          >
+                            {supportingDocKindLabel(d.document_kind)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <button type="button" disabled={busy} onClick={() => openApprovalDialog('leave', row.leave.id, true)} className="rounded-xl bg-[#14532d] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[#166534]">
@@ -2001,6 +2141,20 @@ export function LeaveHubClient({
                   </div>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{r.kind === 'parental' && r.parental_subtype ? `${parentalSubtypeLabel(r.parental_subtype)} · ` : ''}{fmtDate(r.start_date)} – {fmtDate(r.end_date)} &middot; {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : daysLabel(r.start_date, r.end_date)}</p>
                   {r.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{r.note}&rdquo;</p> : null}
+                  {documentsByRequestId[r.id]?.length ? (
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {documentsByRequestId[r.id].map((d) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => void openSupportingDocument(d)}
+                          className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[11px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                        >
+                          {supportingDocKindLabel(d.document_kind)}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                   {(r.status === 'approved' || r.status === 'rejected') && r.decision_note ? (
                     <p className="mt-1 text-[12px] text-[#6b6b6b]">
                       <span className="font-medium text-[#121212]">Approver note: </span>
