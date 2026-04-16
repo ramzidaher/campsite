@@ -1,4 +1,5 @@
 import { BroadcastDetailView } from '@/components/broadcasts/BroadcastDetailView';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -21,19 +22,14 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
 
   if (error || !b) notFound();
 
-  const { data: hasBroadcastAdmin } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: b.org_id as string,
-    p_permission_key: 'broadcasts.publish_without_approval',
-    p_context: {},
-  });
-
   const deptId = b.dept_id as string;
   const channelId = b.channel_id as string | null;
   const teamId = b.team_id as string | null;
   const createdBy = b.created_by as string;
+  const broadcastOrgId = b.org_id as string;
 
-  const [deptRes, channelRes, teamRes, senderRes, maySetCoverRes] = await Promise.all([
+  const [permissionKeys, deptRes, channelRes, teamRes, senderRes, maySetCoverRes] = await Promise.all([
+    getMyPermissions(broadcastOrgId),
     supabase.from('departments').select('name').eq('id', deptId).maybeSingle(),
     channelId
       ? supabase.from('broadcast_channels').select('name').eq('id', channelId).maybeSingle()
@@ -54,7 +50,7 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
   return (
     <BroadcastDetailView
       userId={user.id}
-      showAdminChannelNote={Boolean(hasBroadcastAdmin)}
+      showAdminChannelNote={permissionKeys.includes('broadcasts.publish_without_approval')}
       canSetCover={maySetCover === true}
       initial={{
         id: b.id as string,

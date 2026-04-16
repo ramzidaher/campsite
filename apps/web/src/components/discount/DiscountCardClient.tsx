@@ -240,10 +240,10 @@ export function DiscountCardClient({
           </div>
 
           <p className="mt-3 text-center text-[11px] text-[#6b6b6b] sm:text-left">
-            Placeholder QR (visual only). Real signed codes will replace this later.
+            Placeholder QR (visual only). Backend token generation has been removed for now.
           </p>
           <p className="mt-1 text-center text-[11px] text-[#6b6b6b] sm:text-left">
-            Countdown is a demo timer, not tied to token expiry yet.
+            Countdown is a demo timer for the frontend preview only.
           </p>
         </div>
 
@@ -295,12 +295,11 @@ export function DiscountCardClient({
           <div className="rounded-xl border border-[#d8d8d8] bg-white px-[18px] py-[18px]">
             <div className="text-[13.5px] font-medium text-[#121212]">How it works</div>
             <div className="mt-1.5 text-[13px] leading-[1.7] text-[#6b6b6b]">
-              Show your QR code at participating venues. The cashier will scan it using the Campsite app to verify
-              your employment status and apply the correct discount.
+              Show your QR code at participating venues. This page currently keeps the card UI and demo scanner
+              experience only while the verification backend is disabled.
               <br />
               <br />
-              QR codes rotate every 24 hours automatically for security. Your discount tier is based on your current
-              role.
+              Your discount tier is still based on your current role.
             </div>
           </div>
         </div>

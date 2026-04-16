@@ -93,7 +93,7 @@ export function EmployeeHrRecordGenZClient({
     <>
       <GraphExperience
         title="HR File Graph"
-        subtitle="Graph-only HR mode. Select a node to inspect and directly edit payroll modules in the sidebar."
+        subtitle="Interactive HR mode. Select a node to inspect and directly edit payroll modules in the sidebar."
         centerLabel={centerLabel}
         centerDescription={centerDescription}
         nodes={nodes}

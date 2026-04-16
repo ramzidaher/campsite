@@ -1,5 +1,6 @@
 import { AdminRecruitmentListClient } from '@/components/admin/AdminRecruitmentListClient';
 import { ManagerRecruitmentClient } from '@/components/manager/ManagerRecruitmentClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -18,37 +19,11 @@ export default async function HrRecruitmentPage() {
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const orgId = profile.org_id as string;
 
-  const [
-    { data: canCreateRequest },
-    { data: canViewRecruitment },
-    { data: canApproveRequest },
-    { data: canManageRecruitment },
-  ] = await Promise.all([
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'recruitment.create_request',
-      p_context: {},
-    }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'recruitment.view',
-      p_context: {},
-    }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'recruitment.approve_request',
-      p_context: {},
-    }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'recruitment.manage',
-      p_context: {},
-    }),
-  ]);
+  const permissionKeys = await getMyPermissions(orgId);
+  const canCreateRequest    = permissionKeys.includes('recruitment.create_request');
+  const canViewRecruitment  = permissionKeys.includes('recruitment.view');
+  const canApproveRequest   = permissionKeys.includes('recruitment.approve_request');
+  const canManageRecruitment = permissionKeys.includes('recruitment.manage');
 
   const canRaise = Boolean(canCreateRequest);
   const canUseRecruitmentWorkspace =

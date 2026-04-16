@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { withServerPerf } from '@/lib/perf/serverPerf';
 
 export type DeptRow = {
   id: string;
@@ -57,7 +58,12 @@ export async function loadDepartmentsDirectory(
     deptQuery = deptQuery.in('id', deptIdsFilter);
   }
 
-  const { data: departments } = await deptQuery;
+  const { data: departments } = await withServerPerf(
+    '/departments/directory',
+    'departments_base',
+    deptQuery,
+    350
+  );
   const deptIds = (departments ?? []).map((d) => d.id as string);
 
   const catsByDept: Record<string, { id: string; name: string }[]> = {};
@@ -69,12 +75,17 @@ export async function loadDepartmentsDirectory(
   const broadcastPermsByDept: Record<string, { permission: string; min_role: string }[]> = {};
 
   if (!deptIds.length) {
-    const { data: staffEmpty } = await supabase
-      .from('profiles')
-      .select('id, full_name, role')
-      .eq('org_id', orgId)
-      .eq('status', 'active')
-      .order('full_name');
+    const { data: staffEmpty } = await withServerPerf(
+      '/departments/directory',
+      'staff_empty_depts',
+      supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('org_id', orgId)
+        .eq('status', 'active')
+        .order('full_name'),
+      350
+    );
     return {
       departments: (departments ?? []) as DeptRow[],
       categoriesByDept: catsByDept,
@@ -89,17 +100,47 @@ export async function loadDepartmentsDirectory(
   }
 
   const [catsRes, teamsRes, dmsRes, dbpRes, udRes, staffRes] = await Promise.all([
-    supabase.from('broadcast_channels').select('id, name, dept_id').in('dept_id', deptIds),
-    supabase.from('department_teams').select('id, name, dept_id, lead_user_id').in('dept_id', deptIds).order('name'),
-    supabase.from('dept_managers').select('dept_id, user_id').in('dept_id', deptIds),
-    supabase.from('dept_broadcast_permissions').select('dept_id, permission, min_role').in('dept_id', deptIds),
-    supabase.from('user_departments').select('dept_id, user_id').in('dept_id', deptIds),
-    supabase
-      .from('profiles')
-      .select('id, full_name, role')
-      .eq('org_id', orgId)
-      .eq('status', 'active')
-      .order('full_name'),
+    withServerPerf(
+      '/departments/directory',
+      'broadcast_channels_by_dept',
+      supabase.from('broadcast_channels').select('id, name, dept_id').in('dept_id', deptIds),
+      350
+    ),
+    withServerPerf(
+      '/departments/directory',
+      'department_teams_by_dept',
+      supabase.from('department_teams').select('id, name, dept_id, lead_user_id').in('dept_id', deptIds).order('name'),
+      350
+    ),
+    withServerPerf(
+      '/departments/directory',
+      'dept_managers_by_dept',
+      supabase.from('dept_managers').select('dept_id, user_id').in('dept_id', deptIds),
+      350
+    ),
+    withServerPerf(
+      '/departments/directory',
+      'dept_broadcast_permissions',
+      supabase.from('dept_broadcast_permissions').select('dept_id, permission, min_role').in('dept_id', deptIds),
+      350
+    ),
+    withServerPerf(
+      '/departments/directory',
+      'user_departments_by_dept',
+      supabase.from('user_departments').select('dept_id, user_id').in('dept_id', deptIds),
+      350
+    ),
+    withServerPerf(
+      '/departments/directory',
+      'active_staff_lookup',
+      supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('org_id', orgId)
+        .eq('status', 'active')
+        .order('full_name'),
+      400
+    ),
   ]);
 
   const profById = new Map((staffRes.data ?? []).map((p) => [p.id as string, p]));
@@ -134,10 +175,15 @@ export async function loadDepartmentsDirectory(
 
   const allTeamIds = [...teamDeptById.keys()];
   if (allTeamIds.length) {
-    const { data: dtmRows } = await supabase
-      .from('department_team_members')
-      .select('user_id, team_id')
-      .in('team_id', allTeamIds);
+    const { data: dtmRows } = await withServerPerf(
+      '/departments/directory',
+      'department_team_members_by_team',
+      supabase
+        .from('department_team_members')
+        .select('user_id, team_id')
+        .in('team_id', allTeamIds),
+      350
+    );
     for (const row of dtmRows ?? []) {
       const uid = row.user_id as string;
       const tid = row.team_id as string;

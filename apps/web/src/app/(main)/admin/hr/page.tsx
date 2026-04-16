@@ -3,23 +3,46 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { normalizeUiMode } from '@/lib/uiMode';
+
+const HR_DASH_STATS_TIMEOUT_MS = 1200;
+
+async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: any): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return (await Promise.race([
+      Promise.resolve(promise),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ])) as T;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 export default async function HRDirectoryPage({
   searchParams,
 }: {
   searchParams?: Promise<{ q?: string | string[] }>;
 }) {
+  const pathStartedAtMs = Date.now();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const supabase = await createClient();
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status, ui_mode')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: profile } = await withServerPerf(
+    '/admin/hr',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, status, ui_mode')
+      .eq('id', user.id)
+      .maybeSingle(),
+    300
+  );
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
@@ -27,7 +50,7 @@ export default async function HRDirectoryPage({
 
   // Use the cached permissions — layout already called getMyPermissions(orgId),
   // so this is a free cache hit with no DB round trip.
-  const permissionKeys = await getMyPermissions(orgId);
+  const permissionKeys = await withServerPerf('/admin/hr', 'get_my_permissions', getMyPermissions(orgId), 300);
 
   const canViewAll = permissionKeys.includes('hr.view_records');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
@@ -38,9 +61,23 @@ export default async function HRDirectoryPage({
 
   // Both data fetches in parallel — no prior permission round trips needed.
   const [rows, dashStats] = await Promise.all([
-    supabase.rpc('hr_directory_list').then(({ data }) => data ?? []),
+    withServerPerf(
+      '/admin/hr',
+      'hr_directory_list',
+      supabase.rpc('hr_directory_list').then(({ data }) => data ?? []),
+      500
+    ),
     canViewAll
-      ? supabase.rpc('hr_dashboard_stats').then(({ data }) => data ?? null)
+      ? resolveWithTimeout(
+          withServerPerf(
+            '/admin/hr',
+            'hr_dashboard_stats',
+            supabase.rpc('hr_dashboard_stats').then(({ data }) => data ?? null),
+            400
+          ),
+          HR_DASH_STATS_TIMEOUT_MS,
+          null
+        )
       : Promise.resolve(null),
   ]);
 
@@ -48,7 +85,7 @@ export default async function HRDirectoryPage({
   const qRaw = params.q;
   const initialQuery = (Array.isArray(qRaw) ? qRaw[0] : qRaw ?? '').trim();
 
-  return (
+  const view = (
     <HRDirectoryClient
       orgId={orgId}
       canManage={canManage}
@@ -60,4 +97,6 @@ export default async function HRDirectoryPage({
       initialUiMode={normalizeUiMode(profile.ui_mode)}
     />
   );
+  warnIfSlowServerPath('/admin/hr', pathStartedAtMs);
+  return view;
 }

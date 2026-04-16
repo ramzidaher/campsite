@@ -1,44 +1,66 @@
 import { PerformanceCyclesClient } from '@/components/admin/hr/performance/PerformanceCyclesClient';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function PerformanceCyclesPage() {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: profile } = await withServerPerf(
+    '/admin/hr/performance',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, status')
+      .eq('id', user.id)
+      .maybeSingle(),
+    300
+  );
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const orgId = profile.org_id as string;
 
-  const [canManage, canView] = await Promise.all([
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.manage_cycles', p_context: {} }).then(({ data }) => !!data),
-    supabase.rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.view_reports', p_context: {} }).then(({ data }) => !!data),
-  ]);
+  const permissionKeys = await withServerPerf(
+    '/admin/hr/performance',
+    'get_my_permissions',
+    getMyPermissions(orgId),
+    300
+  );
+  const canManage = permissionKeys.includes('performance.manage_cycles');
+  const canView   = permissionKeys.includes('performance.view_reports');
 
   if (!canManage && !canView) redirect('/admin');
 
-  const { data: cycles } = await supabase
-    .from('review_cycles')
-    .select('id, name, type, status, period_start, period_end, self_assessment_due, manager_assessment_due, created_at')
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false });
+  const { data: cycles } = await withServerPerf(
+    '/admin/hr/performance',
+    'review_cycles_lookup',
+    supabase
+      .from('review_cycles')
+      .select('id, name, type, status, period_start, period_end, self_assessment_due, manager_assessment_due, created_at')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false }),
+    400
+  );
 
   // get review counts per cycle
   const cycleIds = (cycles ?? []).map((c) => c.id as string);
   const reviewCounts: Record<string, { total: number; completed: number }> = {};
   if (cycleIds.length) {
-    const { data: counts } = await supabase
-      .from('performance_reviews')
-      .select('cycle_id, status')
-      .eq('org_id', orgId)
-      .in('cycle_id', cycleIds);
+    const { data: counts } = await withServerPerf(
+      '/admin/hr/performance',
+      'performance_review_counts',
+      supabase
+        .from('performance_reviews')
+        .select('cycle_id, status')
+        .eq('org_id', orgId)
+        .in('cycle_id', cycleIds),
+      400
+    );
     for (const r of counts ?? []) {
       const cid = r.cycle_id as string;
       if (!reviewCounts[cid]) reviewCounts[cid] = { total: 0, completed: 0 };
@@ -47,7 +69,7 @@ export default async function PerformanceCyclesPage() {
     }
   }
 
-  return (
+  const view = (
     <PerformanceCyclesClient
       canManage={canManage}
       canViewCycleDetail={canManage}
@@ -66,4 +88,6 @@ export default async function PerformanceCyclesPage() {
       }))}
     />
   );
+  warnIfSlowServerPath('/admin/hr/performance', pathStartedAtMs);
+  return view;
 }

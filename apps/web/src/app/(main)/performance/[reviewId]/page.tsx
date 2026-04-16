@@ -1,4 +1,5 @@
 import { ReviewDetailClient } from '@/components/performance/ReviewDetailClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -29,17 +30,10 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ r
 
   const isReviewee = review.reviewee_id === user.id;
   const isReviewer = review.reviewer_id === user.id;
-  const [canViewReports, canManageCycles, canReviewDirectReports] = await Promise.all([
-    supabase
-      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.view_reports', p_context: {} })
-      .then(({ data }) => !!data),
-    supabase
-      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.manage_cycles', p_context: {} })
-      .then(({ data }) => !!data),
-    supabase
-      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'performance.review_direct_reports', p_context: {} })
-      .then(({ data }) => !!data),
-  ]);
+  const permissionKeys = await getMyPermissions(orgId);
+  const canViewReports          = permissionKeys.includes('performance.view_reports');
+  const canManageCycles         = permissionKeys.includes('performance.manage_cycles');
+  const canReviewDirectReports  = permissionKeys.includes('performance.review_direct_reports');
   const canHR = canViewReports || canManageCycles;
   const canReviewerWrite = isReviewer && canReviewDirectReports;
 

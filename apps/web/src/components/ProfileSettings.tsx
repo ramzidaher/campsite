@@ -595,11 +595,11 @@ export function ProfileSettings({
                   value={uiMode}
                   onChange={(e) => setUiModePref(normalizeUiMode(e.target.value))}
                 >
-                  <option value="millennial">Millennial mode</option>
-                  <option value="gen_z">Gen Z mode</option>
+                  <option value="classic">Classic mode</option>
+                  <option value="interactive">Interactive mode</option>
                 </select>
                 <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
-                  Gen Z mode enables graph-based profile and HR experiences with quicker navigation.
+                  Interactive mode enables graph-based and modern workflow experiences with quicker navigation.
                 </span>
               </label>
               <label className={fieldLabel}>

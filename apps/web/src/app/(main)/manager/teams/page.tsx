@@ -1,34 +1,48 @@
 import { ManagerTeamsClient } from '@/components/manager/ManagerTeamsClient';
 import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
 import { loadWorkspaceDepartmentIds } from '@/lib/manager/workspaceDepartmentIds';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 
 export default async function ManagerTeamsPage() {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
+  const { data: profile } = await withServerPerf(
+    '/manager/teams',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, role, status')
+      .eq('id', user.id)
+      .single(),
+    300
+  );
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const { data: canViewTeams } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: profile.org_id,
-    p_permission_key: 'teams.view',
-    p_context: {},
-  });
-  if (!canViewTeams) redirect('/broadcasts');
+  const orgId = profile.org_id as string;
+  const permissionKeys = await withServerPerf('/manager/teams', 'get_my_permissions', getMyPermissions(orgId), 300);
+  if (!permissionKeys.includes('teams.view')) redirect('/broadcasts');
 
-  const managedDeptIds = await loadWorkspaceDepartmentIds(supabase, user.id, profile.role);
-  const bundle = await loadDepartmentsDirectory(supabase, profile.org_id as string, managedDeptIds);
+  const managedDeptIds = await withServerPerf(
+    '/manager/teams',
+    'workspace_department_ids',
+    loadWorkspaceDepartmentIds(supabase, user.id, profile.role),
+    300
+  );
+  const bundle = await withServerPerf(
+    '/manager/teams',
+    'load_departments_directory',
+    loadDepartmentsDirectory(supabase, orgId, managedDeptIds),
+    500
+  );
 
-  return (
+  const view = (
     <ManagerTeamsClient
       currentUserId={user.id}
       departments={bundle.departments}
@@ -37,4 +51,6 @@ export default async function ManagerTeamsPage() {
       staffOptions={bundle.staffOptions}
     />
   );
+  warnIfSlowServerPath('/manager/teams', pathStartedAtMs);
+  return view;
 }

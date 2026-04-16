@@ -1,4 +1,5 @@
 import { WagesheetsClient } from '@/components/attendance/WagesheetsClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { redirect } from 'next/navigation';
@@ -18,22 +19,8 @@ export default async function HrWagesheetsPage() {
 
   const orgId = profile.org_id as string;
 
-  const [{ data: view }, { data: manage }] = await Promise.all([
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'payroll.view',
-      p_context: {},
-    }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'payroll.manage',
-      p_context: {},
-    }),
-  ]);
-
-  if (!view && !manage) redirect('/hr/records');
+  const permissionKeys = await getMyPermissions(orgId);
+  if (!permissionKeys.includes('payroll.view') && !permissionKeys.includes('payroll.manage')) redirect('/hr/records');
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">

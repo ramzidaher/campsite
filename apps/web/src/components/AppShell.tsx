@@ -156,7 +156,7 @@ export function AppShell({
   initialCelebrationAutoEnabled = true,
   orgCelebrationOverrides = [],
   initialShellBadgeCounts,
-  initialUiMode = 'millennial',
+  initialUiMode = 'classic',
 }: {
   children: React.ReactNode;
   orgName: string;

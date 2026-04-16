@@ -1,4 +1,5 @@
 import { EmployeeOnboardingClient } from '@/components/onboarding/EmployeeOnboardingClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -30,16 +31,16 @@ export default async function EmployeeOnboardingPage() {
 
   if (!run) redirect('/broadcasts');
 
-  const { data: tasks } = await supabase
-    .from('onboarding_run_tasks')
-    .select('id, title, description, assignee_type, category, due_date, sort_order, status, completed_at')
-    .eq('run_id', run.id as string)
-    .eq('org_id', orgId)
-    .order('sort_order');
-
-  const canComplete = await supabase
-    .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.complete_own_tasks', p_context: {} })
-    .then(({ data }) => !!data);
+  const [{ data: tasks }, permissionKeys] = await Promise.all([
+    supabase
+      .from('onboarding_run_tasks')
+      .select('id, title, description, assignee_type, category, due_date, sort_order, status, completed_at')
+      .eq('run_id', run.id as string)
+      .eq('org_id', orgId)
+      .order('sort_order'),
+    getMyPermissions(orgId),
+  ]);
+  const canComplete = permissionKeys.includes('onboarding.complete_own_tasks');
 
   return (
     <EmployeeOnboardingClient

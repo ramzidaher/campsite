@@ -278,7 +278,7 @@ export function HRDirectoryClient({
   initialRows,
   dashStats,
   initialQuery = '',
-  initialUiMode = 'millennial',
+  initialUiMode = 'classic',
 }: {
   orgId: string;
   canManage: boolean;
@@ -348,7 +348,7 @@ export function HRDirectoryClient({
   const [previewRow, setPreviewRow] = useState<HRDirectoryRow | null>(null);
   const deferredQ = useDeferredValue(q);
   const { uiMode } = useUiModePreference(initialUiMode);
-  const isGenZDirectoryView = uiMode === 'gen_z' && tab === 'directory';
+  const isInteractiveDirectoryView = uiMode === 'interactive' && tab === 'directory';
 
   useEffect(() => {
     if (tab !== 'directory') setPreviewRow(null);
@@ -398,12 +398,12 @@ export function HRDirectoryClient({
   return (
     <div
       className={
-        isGenZDirectoryView
+        isInteractiveDirectoryView
           ? 'w-full px-0 py-0'
           : 'mx-auto max-w-6xl px-5 py-8 sm:px-7'
       }
     >
-      <div className={isGenZDirectoryView ? 'px-5 pt-6 sm:px-7' : 'mb-6'}>
+      <div className={isInteractiveDirectoryView ? 'px-5 pt-6 sm:px-7' : 'mb-6'}>
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           {canViewAll ? 'Employee records' : 'Team records'}
         </h1>
@@ -413,7 +413,7 @@ export function HRDirectoryClient({
       </div>
 
       {/* Tabs */}
-      <div className={isGenZDirectoryView ? 'mt-4 flex border-b border-[#ececec] px-5 sm:px-7' : 'mb-6 flex border-b border-[#ececec]'}>
+      <div className={isInteractiveDirectoryView ? 'mt-4 flex border-b border-[#ececec] px-5 sm:px-7' : 'mb-6 flex border-b border-[#ececec]'}>
         {stats ? (
           <button type="button" onClick={() => setTab('dashboard')} className={['px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors', tab === 'dashboard' ? 'border-[#121212] text-[#121212]' : 'border-transparent text-[#9b9b9b] hover:text-[#4a4a4a]'].join(' ')}>
             Overview
@@ -648,7 +648,7 @@ export function HRDirectoryClient({
       {tab === 'directory' ? (
         <>
           {/* Filters */}
-          <div className={isGenZDirectoryView ? 'mt-3 mb-2 flex flex-wrap gap-3 px-5 sm:px-7' : 'mb-5 flex flex-wrap gap-3'}>
+          <div className={isInteractiveDirectoryView ? 'mt-3 mb-2 flex flex-wrap gap-3 px-5 sm:px-7' : 'mb-5 flex flex-wrap gap-3'}>
             <input
               type="search"
               placeholder="Search name, email, role…"
@@ -728,7 +728,7 @@ export function HRDirectoryClient({
             <span className="ml-auto flex items-center text-[12px] text-[#9b9b9b]">{filtered.length} of {initialRows.length}</span>
           </div>
 
-          {uiMode === 'gen_z' ? (
+          {uiMode === 'interactive' ? (
             <EmployeeDirectoryGraph rows={filtered} />
           ) : (
             <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-white">

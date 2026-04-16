@@ -1,32 +1,14 @@
 import { PROFILE_ROLES, canVerifyStaffDiscountQr, type ProfileRole } from '@campsite/types';
 import { useCampsiteTheme } from '@campsite/ui';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { TabSafeScreen } from '@/components/shell/TabSafeScreen';
 import type { ProfileRow } from '@/lib/AuthContext';
-import {
-  clearDiscountCache,
-  isDiscountCacheUsable,
-  readDiscountCache,
-  writeDiscountCache,
-  type DiscountQrCached,
-} from '@/lib/discountQrCache';
 import { buildRandomSeed, QR_SEED } from '@/lib/discountQrPlaceholderSeed';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
-import { callStaffEdgeFunction, type MintTokenResponse } from '@/lib/staffDiscountEdge';
 
 import { PlaceholderQrGrid } from './PlaceholderQrGrid';
 
@@ -51,29 +33,36 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-function useExpiresCountdown(expiresAtIso: string | null): string | null {
-  const [tick, setTick] = useState(0);
+function useMockCountdown(refreshKey: number): string {
+  const [tick, setTick] = useState(() => 23 * 3600 + 47 * 60 + 12);
+
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    const h = 20 + Math.floor(Math.random() * 4);
+    const m = Math.floor(Math.random() * 60);
+    const s = Math.floor(Math.random() * 60);
+    setTick(h * 3600 + m * 60 + s);
+  }, [refreshKey]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTick((current) => (current <= 0 ? 23 * 3600 + 59 * 60 + 59 : current - 1));
+    }, 1000);
     return () => clearInterval(id);
   }, []);
-  if (!expiresAtIso) return null;
-  void tick;
-  const ms = new Date(expiresAtIso).getTime() - Date.now();
-  if (ms <= 0) return '00:00:00';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
+
+  const h = Math.floor(tick / 3600);
+  const m = Math.floor((tick % 3600) / 60);
+  const s = tick % 60;
   return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
 }
 
 export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
   const { tokens } = useCampsiteTheme();
   const router = useRouter();
-  const qc = useQueryClient();
   const configured = isSupabaseConfigured();
   const canScan = canVerifyStaffDiscountQr(profile.role as ProfileRole);
   const [qrSeed, setQrSeed] = useState<number[][]>(() => QR_SEED);
+  const [countdownKey, setCountdownKey] = useState(0);
 
   const orgQuery = useQuery({
     queryKey: ['mobile-discount-org-name', profile.org_id],
@@ -115,48 +104,6 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
     },
   });
 
-  const fetchFreshToken = useCallback(async (): Promise<DiscountQrCached> => {
-    const res = await callStaffEdgeFunction(getSupabase(), 'staff-discount-token', {});
-    if (!res.ok) {
-      throw new Error(res.message);
-    }
-    const data = res.data as MintTokenResponse;
-    if (!data?.token || !data?.expiresAt) {
-      throw new Error('Invalid token response');
-    }
-    const cached: DiscountQrCached = {
-      token: data.token,
-      expiresAt: data.expiresAt,
-      issuedAt: data.issuedAt,
-    };
-    await writeDiscountCache(cached);
-    return cached;
-  }, []);
-
-  const tokenQuery = useQuery({
-    queryKey: ['discount-qr', profile.org_id, profile.id],
-    enabled: Boolean(profile.org_id && configured),
-    queryFn: async (): Promise<DiscountQrCached> => {
-      const cached = await readDiscountCache();
-      if (cached && isDiscountCacheUsable(cached.expiresAt)) {
-        return cached;
-      }
-      return fetchFreshToken();
-    },
-    staleTime: 60_000,
-  });
-
-  const refreshTokenMut = useMutation({
-    mutationFn: async () => {
-      await clearDiscountCache();
-      return fetchFreshToken();
-    },
-    onSuccess: (data) => {
-      qc.setQueryData(['discount-qr', profile.org_id!, profile.id], data);
-      setQrSeed(buildRandomSeed(QR_SEED.length, QR_SEED[0]!.length));
-    },
-  });
-
   const tierRow = tiersQuery.data?.mine ?? null;
   const allTiers = tiersQuery.data?.all ?? [];
   const tierLoading = tiersQuery.isPending;
@@ -164,28 +111,12 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
   const discountDisplay =
     tierRow?.discount_value?.trim() || tierRow?.label || (tierConfigured ? '-' : 'Not configured');
 
-  const tokenData = tokenQuery.data;
-  const tokenError =
-    tokenQuery.isError && tokenQuery.error
-      ? tokenQuery.error instanceof Error
-        ? tokenQuery.error.message
-        : String(tokenQuery.error)
-      : null;
-  const showRealQr = Boolean(tokenData?.token && !tokenQuery.isError);
-  const countdown = useExpiresCountdown(showRealQr ? tokenData!.expiresAt : null);
-
-  const refreshing =
-    tiersQuery.isRefetching ||
-    tokenQuery.isRefetching ||
-    orgQuery.isRefetching ||
-    refreshTokenMut.isPending;
+  const countdown = useMockCountdown(countdownKey);
+  const refreshing = tiersQuery.isRefetching || orgQuery.isRefetching;
 
   const onRefreshQr = () => {
-    refreshTokenMut.mutate(undefined, {
-      onError: (e: Error) => {
-        Alert.alert('Could not refresh QR', e.message);
-      },
-    });
+    setQrSeed(buildRandomSeed(QR_SEED.length, QR_SEED[0]!.length));
+    setCountdownKey((current) => current + 1);
   };
 
   if (!profile.org_id) {
@@ -208,7 +139,6 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
             refreshing={refreshing}
             onRefresh={() => {
               void tiersQuery.refetch();
-              void tokenQuery.refetch();
               void orgQuery.refetch();
             }}
             tintColor={tokens.textPrimary}
@@ -225,20 +155,8 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
           <Text style={styles.roleLine}>{formatRole(profile.role)}</Text>
 
           <View style={styles.qrFrame}>
-            {tokenQuery.isPending && !tokenData ? (
-              <ActivityIndicator color="#121212" />
-            ) : showRealQr ? (
-              <QRCode value={tokenData!.token} size={104} backgroundColor="#ffffff" color="#121212" />
-            ) : (
-              <PlaceholderQrGrid seed={qrSeed} size={104} />
-            )}
+            <PlaceholderQrGrid seed={qrSeed} size={104} />
           </View>
-
-          {tokenError ? (
-            <Text style={styles.tokenErr} numberOfLines={3}>
-              {tokenError}
-            </Text>
-          ) : null}
 
           <View style={styles.discountRow}>
             <Text style={styles.discountRowLabel}>Staff Discount</Text>
@@ -246,13 +164,7 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
           </View>
 
           <Text style={styles.countdownLine}>
-            {countdown ? (
-              <>
-                QR refreshes in <Text style={styles.countdownMono}>{countdown}</Text>
-              </>
-            ) : (
-              <>Pull to refresh if your code expired</>
-            )}
+            QR refreshes in <Text style={styles.countdownMono}>{countdown}</Text>
           </Text>
         </View>
 
@@ -260,11 +172,8 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
           <Pressable
             style={[styles.ghostBtn, { borderColor: tokens.border }]}
             onPress={onRefreshQr}
-            disabled={refreshTokenMut.isPending}
           >
-            <Text style={{ color: tokens.textPrimary, fontWeight: '600' }}>
-              {refreshTokenMut.isPending ? 'Refreshing…' : 'Refresh QR'}
-            </Text>
+            <Text style={{ color: tokens.textPrimary, fontWeight: '600' }}>Refresh QR</Text>
           </Pressable>
           {canScan ? (
             <Pressable
@@ -276,16 +185,9 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
           ) : null}
         </View>
 
-        {!showRealQr && !tokenQuery.isPending ? (
-          <Text style={[styles.hint, { color: tokens.textSecondary }]}>
-            If the server isn’t configured for signed QR codes yet, you’ll see a demo pattern only — it won’t scan at
-            checkout.
-          </Text>
-        ) : (
-          <Text style={[styles.hint, { color: tokens.textSecondary }]}>
-            Show this code at participating venues. It matches your role’s discount tier.
-          </Text>
-        )}
+        <Text style={[styles.hint, { color: tokens.textSecondary }]}>
+          Placeholder QR only. Backend token generation has been removed, so this stays as a frontend preview.
+        </Text>
 
         <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>Discount tiers</Text>
 
@@ -333,8 +235,8 @@ export function DiscountCardScreen({ profile }: { profile: ProfileRow }) {
         <View style={[styles.howBox, { borderColor: tokens.border }]}>
           <Text style={[styles.howTitle, { color: tokens.textPrimary }]}>How it works</Text>
           <Text style={[styles.howBody, { color: tokens.textSecondary }]}>
-            Show your QR code at participating venues. The cashier scans it with Campsite to verify your employment and
-            apply the correct discount. Your tier follows your current role.
+            Show your QR code at participating venues. This mobile screen now keeps the frontend card layout only while
+            verification backend work is disabled. Your tier still follows your current role.
           </Text>
         </View>
       </ScrollView>

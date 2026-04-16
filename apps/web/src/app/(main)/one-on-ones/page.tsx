@@ -1,4 +1,5 @@
 import { OneOnOnesHubClient, type OneOnOneMeetingRow } from '@/components/one-on-one/OneOnOnesHubClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -17,28 +18,12 @@ export default async function OneOnOnesPage() {
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const orgId = profile.org_id as string;
 
-  const [{ data: canView }, { data: canHr }] = await Promise.all([
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'one_on_one.view_own',
-      p_context: {},
-    }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'hr.view_records',
-      p_context: {},
-    }),
-  ]);
+  const permissionKeys = await getMyPermissions(orgId);
+  const canView   = permissionKeys.includes('one_on_one.view_own');
+  const canHr     = permissionKeys.includes('hr.view_records');
   if (!canView && !canHr) redirect('/broadcasts');
 
-  const { data: canManage } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: orgId,
-    p_permission_key: 'one_on_one.manage_direct_reports',
-    p_context: {},
-  });
+  const canManage = permissionKeys.includes('one_on_one.manage_direct_reports');
 
   const { data: meetingsRaw, error } = await supabase.rpc('one_on_one_meeting_list', {
     p_limit: 80,

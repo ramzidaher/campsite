@@ -1,5 +1,6 @@
 import { decryptMedicalNotes, encryptMedicalNotes, type MedicalSensitivePayload } from '@/lib/security/medicalNotesCrypto';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -12,24 +13,17 @@ async function getCtx(userId: string) {
   const { data: profile } = await supabase.from('profiles').select('org_id, status').eq('id', userId).maybeSingle();
   if (!profile?.org_id || profile.status !== 'active') return null;
   const orgId = profile.org_id as string;
-  const [viewAll, manageAll, viewOwn, revealSensitive, canExport, manageOwn] = await Promise.all([
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'hr.medical_notes.view_all', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'hr.medical_notes.manage_all', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'hr.medical_notes.view_own_summary', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'hr.medical_notes.reveal_sensitive', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'hr.medical_notes.export', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'hr.medical_notes.manage_own', p_context: {} }),
-  ]);
+  const permissionKeys = await getMyPermissions(orgId);
   return {
     supabase,
     orgId,
     permissions: {
-      viewAll: Boolean(viewAll.data),
-      manageAll: Boolean(manageAll.data),
-      viewOwn: Boolean(viewOwn.data),
-      revealSensitive: Boolean(revealSensitive.data),
-      canExport: Boolean(canExport.data),
-      manageOwn: Boolean(manageOwn.data),
+      viewAll: permissionKeys.includes('hr.medical_notes.view_all'),
+      manageAll: permissionKeys.includes('hr.medical_notes.manage_all'),
+      viewOwn: permissionKeys.includes('hr.medical_notes.view_own_summary'),
+      revealSensitive: permissionKeys.includes('hr.medical_notes.reveal_sensitive'),
+      canExport: permissionKeys.includes('hr.medical_notes.export'),
+      manageOwn: permissionKeys.includes('hr.medical_notes.manage_own'),
     },
   };
 }

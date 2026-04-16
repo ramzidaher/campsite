@@ -352,12 +352,6 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
-[functions.staff-discount-token]
-verify_jwt = true
-
-[functions.staff-discount-verify]
-verify_jwt = true
-
 # Service-role Bearer only; lists notification recipients per `broadcast_notification_jobs` row.
 [functions.process-broadcast-notifications]
 verify_jwt = false

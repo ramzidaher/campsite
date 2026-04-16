@@ -1,6 +1,7 @@
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { getCelebrationModeOptions, type OrgCelebrationModeOverride } from '@/lib/holidayThemes';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -63,15 +64,10 @@ export default async function SettingsPage({
   let canManageDiscounts = false;
   let orgCelebrationOverrides: OrgCelebrationModeOverride[] = [];
   if (orgId) {
-    const [{ data: orgDepts }, { data: subs }, { data: hasDiscounts }, { data: celebrationRows }] = await Promise.all([
+    const [{ data: orgDepts }, { data: subs }, permKeys, { data: celebrationRows }] = await Promise.all([
       supabase.from('departments').select('id, name').eq('org_id', orgId).eq('is_archived', false),
       supabase.from('user_subscriptions').select('channel_id, subscribed').eq('user_id', user.id),
-      supabase.rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: orgId,
-        p_permission_key: 'discounts.view',
-        p_context: {},
-      }),
+      getMyPermissions(orgId),
       supabase
         .from('org_celebration_modes')
         .select(
@@ -81,7 +77,7 @@ export default async function SettingsPage({
         .order('display_order', { ascending: true })
         .order('label', { ascending: true }),
     ]);
-    canManageDiscounts = Boolean(hasDiscounts);
+    canManageDiscounts = permKeys.includes('discounts.view');
     orgCelebrationOverrides = (celebrationRows ?? []) as OrgCelebrationModeOverride[];
     const deptIds = [...new Set((orgDepts ?? []).map((d) => d.id as string).filter(Boolean))];
     if (deptIds.length) {

@@ -1,4 +1,5 @@
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -11,19 +12,14 @@ async function getCtx(userId: string) {
   const { data: profile } = await supabase.from('profiles').select('org_id, status').eq('id', userId).maybeSingle();
   if (!profile?.org_id || profile.status !== 'active') return null;
   const orgId = profile.org_id as string;
-  const [canCreate, canReview, canExecute, canAudit] = await Promise.all([
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'privacy.erasure_request.create', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'privacy.erasure_request.review', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'privacy.erasure_request.execute', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'privacy.erasure_request.audit_view', p_context: {} }),
-  ]);
+  const permissionKeys = await getMyPermissions(orgId);
   return {
     supabase,
     orgId,
-    canCreate: Boolean(canCreate.data),
-    canReview: Boolean(canReview.data),
-    canExecute: Boolean(canExecute.data),
-    canAudit: Boolean(canAudit.data),
+    canCreate: permissionKeys.includes('privacy.erasure_request.create'),
+    canReview: permissionKeys.includes('privacy.erasure_request.review'),
+    canExecute: permissionKeys.includes('privacy.erasure_request.execute'),
+    canAudit: permissionKeys.includes('privacy.erasure_request.audit_view'),
   };
 }
 

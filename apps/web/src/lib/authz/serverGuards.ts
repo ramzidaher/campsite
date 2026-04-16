@@ -1,3 +1,4 @@
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import type { PermissionKey } from '@campsite/types';
 
@@ -23,40 +24,18 @@ export async function getViewerContext(): Promise<ViewerContext | null> {
 }
 
 export async function viewerHasPermission(permission: PermissionKey): Promise<boolean> {
-  const supabase = await createClient();
   const context = await getViewerContext();
   if (!context) return false;
-  const { data, error } = await supabase.rpc('has_permission', {
-    p_user_id: context.userId,
-    p_org_id: context.orgId,
-    p_permission_key: permission,
-    p_context: {},
-  });
-  if (error) return false;
-  return Boolean(data);
+  const keys = await getMyPermissions(context.orgId);
+  return keys.includes(permission);
 }
 
 /** True if the viewer may open the org-wide recruitment request queue (RLS still applies). */
 export async function viewerHasRecruitmentQueueAccess(): Promise<boolean> {
   const context = await getViewerContext();
   if (!context) return false;
-  const supabase = await createClient();
-  const keys: PermissionKey[] = [
-    'recruitment.view',
-    'recruitment.manage',
-    'recruitment.approve_request',
-  ];
-  const results = await Promise.all(
-    keys.map((p_permission_key) =>
-      supabase.rpc('has_permission', {
-        p_user_id: context.userId,
-        p_org_id: context.orgId,
-        p_permission_key,
-        p_context: {},
-      })
-    )
-  );
-  return results.some((r) => Boolean(r.data));
+  const keys = await getMyPermissions(context.orgId);
+  return keys.some((k) => (['recruitment.view', 'recruitment.manage', 'recruitment.approve_request'] as PermissionKey[]).includes(k));
 }
 
 export async function viewerHasAnyAdminAccess(): Promise<boolean> {

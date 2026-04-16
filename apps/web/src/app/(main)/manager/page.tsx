@@ -1,10 +1,13 @@
 import { ManagerDashboardClient } from '@/components/admin/ManagerDashboardClient';
 import { endOfWeekExclusive, startOfWeekMonday } from '@/lib/datetime';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 
 export default async function ManagerDashboardPage() {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
@@ -18,20 +21,9 @@ export default async function ManagerDashboardPage() {
   if (!profile?.org_id || profile.status !== 'active') {
     redirect('/broadcasts');
   }
-  const [{ data: canViewDepartments }, { data: canCreateRecruitment }] = await Promise.all([
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: profile.org_id,
-      p_permission_key: 'departments.view',
-      p_context: {},
-    }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: profile.org_id,
-      p_permission_key: 'recruitment.create_request',
-      p_context: {},
-    }),
-  ]);
+  const permissionKeys = await withServerPerf('/manager', 'get_my_permissions', getMyPermissions(profile.org_id as string), 300);
+  const canViewDepartments   = permissionKeys.includes('departments.view');
+  const canCreateRecruitment = permissionKeys.includes('recruitment.create_request');
   if (!canViewDepartments && !canCreateRecruitment) redirect('/broadcasts');
 
   if (!canCreateRecruitment) {
@@ -73,18 +65,18 @@ export default async function ManagerDashboardPage() {
       { data: eventRows },
       { data: upcomingShiftRows },
     ] = await Promise.all([
-      supabase.from('departments').select('id,name').in('id', deptIds),
-      supabase.from('user_departments').select('user_id,dept_id').in('dept_id', deptIds),
-      supabase.from('department_teams').select('id').in('dept_id', deptIds),
+      withServerPerf('/manager', 'departments_for_manager', supabase.from('departments').select('id,name').in('id', deptIds), 350),
+      withServerPerf('/manager', 'user_departments_for_manager', supabase.from('user_departments').select('user_id,dept_id').in('dept_id', deptIds), 350),
+      withServerPerf('/manager', 'team_rows_for_manager', supabase.from('department_teams').select('id').in('dept_id', deptIds), 350),
       supabase
         .from('broadcasts')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('org_id', profile.org_id)
         .eq('status', 'pending_approval')
         .in('dept_id', deptIds),
       supabase
         .from('broadcasts')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('org_id', profile.org_id)
         .eq('status', 'sent')
         .in('dept_id', deptIds)
@@ -92,14 +84,14 @@ export default async function ManagerDashboardPage() {
         .lt('sent_at', weekEnd.toISOString()),
       supabase
         .from('rota_shifts')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('org_id', profile.org_id)
         .in('dept_id', deptIds)
         .gte('start_time', weekStart.toISOString())
         .lt('start_time', weekEnd.toISOString()),
       supabase
         .from('rota_shifts')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('org_id', profile.org_id)
         .in('dept_id', deptIds)
         .gte('start_time', dayStart.toISOString())
@@ -157,13 +149,18 @@ export default async function ManagerDashboardPage() {
       membersByDept.get(deptId)?.add(userId);
     }
 
-    const { data: shiftsByDeptRaw } = await supabase
-      .from('rota_shifts')
-      .select('id,dept_id')
-      .eq('org_id', profile.org_id)
-      .in('dept_id', deptIds)
-      .gte('start_time', weekStart.toISOString())
-      .lt('start_time', weekEnd.toISOString());
+    const { data: shiftsByDeptRaw } = await withServerPerf(
+      '/manager',
+      'shifts_by_dept_week',
+      supabase
+        .from('rota_shifts')
+        .select('id,dept_id')
+        .eq('org_id', profile.org_id)
+        .in('dept_id', deptIds)
+        .gte('start_time', weekStart.toISOString())
+        .lt('start_time', weekEnd.toISOString()),
+      400
+    );
     const shiftsByDept = new Map<string, number>();
     for (const row of shiftsByDeptRaw ?? []) {
       const deptId = String(row.dept_id ?? '');
@@ -195,7 +192,7 @@ export default async function ManagerDashboardPage() {
       .slice(0, 6);
   }
 
-  return (
+  const view = (
     <ManagerDashboardClient
       stats={{
         pendingUsers,
@@ -213,4 +210,6 @@ export default async function ManagerDashboardPage() {
       departmentBreakdown={departmentBreakdown}
     />
   );
+  warnIfSlowServerPath('/manager', pathStartedAtMs);
+  return view;
 }

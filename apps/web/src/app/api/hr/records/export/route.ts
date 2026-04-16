@@ -1,6 +1,7 @@
 import { decryptBankDetails } from '@/lib/security/bankDetailsCrypto';
 import { decryptUkTaxDetails } from '@/lib/security/ukTaxCrypto';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -46,33 +47,33 @@ export async function GET(req: Request) {
   const includeSensitive = url.searchParams.get('includeSensitive') === '1';
   const reason = (url.searchParams.get('reason') || '').trim();
 
-  const [
-    canViewAll, canViewOwn, canViewDirect, canSensitive, canPdf, canCsv,
-  ] = await Promise.all([
-    supabase.rpc('has_permission', { p_user_id: me.id, p_org_id: orgId, p_permission_key: 'hr.records_export.view_all', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: me.id, p_org_id: orgId, p_permission_key: 'hr.records_export.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: me.id, p_org_id: orgId, p_permission_key: 'hr.records_export.view_direct_reports', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: me.id, p_org_id: orgId, p_permission_key: 'hr.records_export.include_sensitive', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: me.id, p_org_id: orgId, p_permission_key: 'hr.records_export.generate_pdf', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: me.id, p_org_id: orgId, p_permission_key: 'hr.records_export.generate_csv', p_context: {} }),
+  // Single RPC for all permissions + profile fetch in parallel — replaces 6 individual has_permission calls.
+  const [permissionKeys, { data: targetProfile }] = await Promise.all([
+    getMyPermissions(orgId),
+    supabase
+      .from('profiles')
+      .select('id, org_id, full_name, preferred_name, email, reports_to_user_id')
+      .eq('id', userId)
+      .eq('org_id', orgId)
+      .maybeSingle(),
   ]);
-
-  const { data: targetProfile } = await supabase
-    .from('profiles')
-    .select('id, org_id, full_name, preferred_name, email, reports_to_user_id')
-    .eq('id', userId)
-    .eq('org_id', orgId)
-    .maybeSingle();
   if (!targetProfile) return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
 
+  const canViewAll    = permissionKeys.includes('hr.records_export.view_all');
+  const canViewOwn    = permissionKeys.includes('hr.records_export.view_own');
+  const canViewDirect = permissionKeys.includes('hr.records_export.view_direct_reports');
+  const canSensitive  = permissionKeys.includes('hr.records_export.include_sensitive');
+  const canPdf        = permissionKeys.includes('hr.records_export.generate_pdf');
+  const canCsv        = permissionKeys.includes('hr.records_export.generate_csv');
+
   const canAccess =
-    Boolean(canViewAll.data) ||
-    (userId === me.id && Boolean(canViewOwn.data)) ||
-    (Boolean(canViewDirect.data) && (targetProfile.reports_to_user_id as string | null) === me.id);
+    canViewAll ||
+    (userId === me.id && canViewOwn) ||
+    (canViewDirect && (targetProfile.reports_to_user_id as string | null) === me.id);
   if (!canAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  if (format === 'pdf' && !canPdf.data) return NextResponse.json({ error: 'PDF export not allowed' }, { status: 403 });
-  if (format === 'csv' && !canCsv.data) return NextResponse.json({ error: 'CSV export not allowed' }, { status: 403 });
-  if (includeSensitive && !canSensitive.data) return NextResponse.json({ error: 'Sensitive export not allowed' }, { status: 403 });
+  if (format === 'pdf' && !canPdf) return NextResponse.json({ error: 'PDF export not allowed' }, { status: 403 });
+  if (format === 'csv' && !canCsv) return NextResponse.json({ error: 'CSV export not allowed' }, { status: 403 });
+  if (includeSensitive && !canSensitive) return NextResponse.json({ error: 'Sensitive export not allowed' }, { status: 403 });
   if (includeSensitive && !reason) return NextResponse.json({ error: 'Reason required for sensitive export' }, { status: 400 });
 
   const [{ data: hrFile }, { data: history }, { data: deps }, { data: customVals }] = await Promise.all([

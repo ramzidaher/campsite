@@ -1,0 +1,366 @@
+query,rolname,calls,mean_time,min_time,max_time,total_time,rows_read,cache_hit_rate,prop_total_time,index_advisor_result
+"SELECT wal->>$5 as type,
+       wal->>$6 as schema,
+       wal->>$7 as table,
+       COALESCE(wal->>$8, $9) as columns,
+       COALESCE(wal->>$10, $11) as record,
+       COALESCE(wal->>$12, $13) as old_record,
+       wal->>$14 as commit_timestamp,
+       subscription_ids,
+       errors
+FROM realtime.list_changes($1, $2, $3, $4)",supabase_admin,258246,5.42303892161352,3.473345,3832.803297,1400478.10935099,23,100.0000000000000000,17.427162512429046,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""main_shell_badge_counts_bundle""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""main_shell_badge_counts_bundle"".* FROM ""pgrst_source"" AS ""main_shell_badge_counts_bundle""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,3569,391.049366257495,2.759209,7544.523888,1395655.188173,3569,99.9990748844068066,17.367147414304863,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""main_shell_layout_bundle""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""main_shell_layout_bundle"".* FROM ""pgrst_source"" AS ""main_shell_layout_bundle""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,783,890.561545518518,2.779434,7710.217508,697309.690141,783,99.9988175060974726,8.677129053598911,null
+"select
+  net.http_post(
+      url:=$1,
+      headers:=jsonb_build_object($2, $3), 
+      timeout_milliseconds:=$4
+  )",postgres,18537,22.87740200383,2.196242,2506.690128,424078.400944999,18537,100.0000000000000000,5.277114409667168,null
+"WITH pgrst_source AS (SELECT ""pgrst_call"".* FROM (SELECT $1 AS json_data) pgrst_payload, LATERAL (SELECT ""p_org_id"" FROM json_to_record(pgrst_payload.json_data) AS _(""p_org_id"" uuid) LIMIT $4) pgrst_body , LATERAL ""public"".""get_my_permissions""(""p_org_id"" := pgrst_body.""p_org_id"") pgrst_call) SELECT $5::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t), $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""text"".* FROM ""pgrst_source"" AS ""text""   LIMIT $2 OFFSET $3) _postgrest_t",authenticated,2702,146.634043323834,1.323749,5846.061381,396205.185061001,2702,99.9999115961926248,4.930267815128421,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""broadcast_unread_count""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""broadcast_unread_count"".* FROM ""pgrst_source"" AS ""broadcast_unread_count""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,3862,100.680716722165,0.397568,4717.497146,388828.927981,3862,99.9990775111990140,4.838479710760119,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT $1 AS json_data) pgrst_payload, LATERAL (SELECT ""p_user_id"", ""p_org_id"", ""p_permission_key"", ""p_context"" FROM json_to_record(pgrst_payload.json_data) AS _(""p_user_id"" uuid, ""p_org_id"" uuid, ""p_permission_key"" text, ""p_context"" jsonb) LIMIT $4) pgrst_body , LATERAL (SELECT ""public"".""has_permission""(""p_user_id"" := pgrst_body.""p_user_id"", ""p_org_id"" := pgrst_body.""p_org_id"", ""p_permission_key"" := pgrst_body.""p_permission_key"", ""p_context"" := pgrst_body.""p_context"") pgrst_scalar) pgrst_call) SELECT $5::bigint AS total_result_set, $6 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$7, $8) AS body, nullif(current_setting($9, $10), $11) AS response_headers, nullif(current_setting($12, $13), $14) AS response_status, $15 AS response_inserted FROM (SELECT ""has_permission"".* FROM ""pgrst_source"" AS ""has_permission""   LIMIT $2 OFFSET $3) _postgrest_t",authenticated,3762,83.2818168112707,0.346926,5936.753017,313306.194844001,3762,99.9990907861403985,3.898695693449615,null
+"select set_config('search_path', $1, true), set_config($2, $3, true), set_config('role', $4, true), set_config('request.jwt.claims', $5, true), set_config('request.method', $6, true), set_config('request.path', $7, true), set_config('request.headers', $8, true), set_config('request.cookies', $9, true)",authenticated,79576,3.39115991702273,0.019233,2133.265382,269854.941557001,79576,100.0000000000000000,3.358000307106031,null
+SELECT name FROM pg_timezone_names,authenticator,327,757.859882,52.436331,7525.897679,247820.181414,391092,0,3.08380584210834,null
+"SELECT wal->>$5 as type,
+       wal->>$6 as schema,
+       wal->>$7 as table,
+       COALESCE(wal->>$8, $9) as columns,
+       COALESCE(wal->>$10, $11) as record,
+       COALESCE(wal->>$12, $13) as old_record,
+       wal->>$14 as commit_timestamp,
+       subscription_ids,
+       errors,
+       slot_changes_count
+FROM realtime.list_changes($1, $2, $3, $4)",supabase_admin,20227,11.6895186725664,5.252442,3798.998002,236443.894190001,20227,100.0000000000000000,2.9422424682027124,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""leave_pending_approval_count_for_me""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""leave_pending_approval_count_for_me"".* FROM ""pgrst_source"" AS ""leave_pending_approval_count_for_me""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,1552,137.912814656572,0.494348,4659.586854,214040.688347,1552,99.9970298206011643,2.6634631667495046,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""recruitment_requests_pending_review_count""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""recruitment_requests_pending_review_count"".* FROM ""pgrst_source"" AS ""recruitment_requests_pending_review_count""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,1517,133.52388054054,0.866078,7937.962288,202555.72678,1517,99.9984837974808295,2.5205474793562437,null
+"WITH pgrst_source AS ( SELECT ""public"".""profiles"".""id"" FROM ""public"".""profiles"" WHERE  ""public"".""profiles"".""org_id"" = $1 AND  ""public"".""profiles"".""status"" = $2   LIMIT $3 OFFSET $4 ) , pgrst_source_count AS (SELECT $7  FROM ""public"".""profiles"" WHERE  ""public"".""profiles"".""org_id"" = $5 AND  ""public"".""profiles"".""status"" = $6) SELECT (SELECT pg_catalog.count(*) FROM pgrst_source_count) AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, $8::text AS body, nullif(current_setting($9, $10), $11) AS response_headers, nullif(current_setting($12, $13), $14) AS response_status, $15 AS response_inserted FROM ( SELECT * FROM pgrst_source ) _postgrest_t",authenticated,881,169.222153298525,0.01655,3733.533498,149084.717056,881,100.0000000000000000,1.855169013286782,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""pending_approvals_nav_count""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""pending_approvals_nav_count"".* FROM ""pgrst_source"" AS ""pending_approvals_nav_count""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,2319,62.7473206002588,0.215809,4054.052087,145511.036472,2319,99.9984591738860790,1.8106991198346511,null
+"SELECT
+  e.name,
+  n.nspname AS schema,
+  e.default_version,
+  x.extversion AS installed_version,
+  e.comment,
+  ev.schema AS default_version_schema
+FROM
+  pg_available_extensions e
+  LEFT JOIN pg_extension x ON e.name = x.extname
+  LEFT JOIN pg_namespace n ON x.extnamespace = n.oid
+  LEFT JOIN pg_available_extension_versions ev
+    ON ev.name = e.name AND ev.version = e.default_version",postgres,109,1309.67331343119,63.088786,13063.126861,142754.391164,8502,100.0000000000000000,1.7763961875354066,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""hr_dashboard_stats""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""hr_dashboard_stats"".* FROM ""pgrst_source"" AS ""hr_dashboard_stats""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,269,526.812131921933,3.544285,5612.986969,141712.463487,269,99.9976095927044769,1.7634307275028385,null
+"WITH pgrst_source AS ( SELECT row_to_json(""user_departments_departments_1"".*)::jsonb AS ""departments"" FROM ""public"".""user_departments"" LEFT JOIN LATERAL ( SELECT ""departments_1"".""name"" FROM ""public"".""departments"" AS ""departments_1"" WHERE ""departments_1"".""id"" = ""public"".""user_departments"".""dept_id""   LIMIT $1 OFFSET $2 ) AS ""user_departments_departments_1"" ON $6 WHERE  ""public"".""user_departments"".""user_id"" = $3   LIMIT $4 OFFSET $5 )  SELECT $7::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t), $8) AS body, nullif(current_setting($9, $10), $11) AS response_headers, nullif(current_setting($12, $13), $14) AS response_status, $15 AS response_inserted FROM ( SELECT * FROM pgrst_source ) _postgrest_t",authenticated,2209,46.13989084201,0.01413,4136.327834,101923.01887,2209,100.0000000000000000,1.2683018761557099,null
+"WITH        rows AS (          SELECT id          FROM net.http_request_queue          ORDER BY id          LIMIT $1        )        DELETE FROM net.http_request_queue q        USING rows WHERE q.id = rows.id        RETURNING q.id, q.method, q.url, timeout_milliseconds, array(select key || $2 || value from jsonb_each_text(q.headers)), q.body",supabase_admin,45762,2.0147145798479,0.007861,854.401626,92197.3686030007,18538,100.0000000000000000,1.1472785723208565,null
+"WITH pgrst_source AS (SELECT ""pgrst_call"".* FROM (SELECT $1 AS json_data) pgrst_payload, LATERAL (SELECT ""p_user_id"", ""p_on"" FROM json_to_record(pgrst_payload.json_data) AS _(""p_user_id"" uuid, ""p_on"" date) LIMIT $4) pgrst_body , LATERAL ""public"".""bradford_factor_for_user""(""p_user_id"" := pgrst_body.""p_user_id"", ""p_on"" := pgrst_body.""p_on"") pgrst_call) SELECT $5::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t), $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""record"".* FROM ""pgrst_source"" AS ""record""   LIMIT $2 OFFSET $3) _postgrest_t",authenticated,339,252.007782469027,0.728602,7032.441898,85430.638257,339,99.9986943294729008,1.063075250162406,null
+"WITH pgrst_source AS (SELECT ""pgrst_call"".* FROM ""public"".""hr_directory_list""() pgrst_call) SELECT $3::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t), $4) AS body, nullif(current_setting($5, $6), $7) AS response_headers, nullif(current_setting($8, $9), $10) AS response_status, $11 AS response_inserted FROM (SELECT ""record"".* FROM ""pgrst_source"" AS ""record""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,229,347.138932951965,1.142556,5213.666702,79494.8156460001,229,99.9982422836251143,0.989211514202417,null
+"insert into cron.job_run_details (jobid, runid, database, username, command, status) values ($1,$2,$3,$4,$5,$6)",supabase_admin,18548,4.17285661197972,0.02601,2737.005686,77398.144439,18548,100.0000000000000000,0.9631211172047411,null
+"WITH pgrst_source AS ( SELECT ""public"".""profiles"".""org_id"", ""public"".""profiles"".""status"" FROM ""public"".""profiles"" WHERE  ""public"".""profiles"".""id"" = $1   LIMIT $2 OFFSET $3 )  SELECT $4::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t), $5) AS body, nullif(current_setting($6, $7), $8) AS response_headers, nullif(current_setting($9, $10), $11) AS response_status, $12 AS response_inserted FROM ( SELECT * FROM pgrst_source ) _postgrest_t",authenticated,1689,38.6924974499704,0.029669,1991.851891,65351.6281929999,1689,100.0000000000000000,0.8132175985949792,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT $1 AS json_data) pgrst_payload, LATERAL (SELECT ""p_user_id"", ""p_from"", ""p_to"" FROM json_to_record(pgrst_payload.json_data) AS _(""p_user_id"" uuid, ""p_from"" date, ""p_to"" date) LIMIT $4) pgrst_body , LATERAL (SELECT ""public"".""ssp_calculation_summary""(""p_user_id"" := pgrst_body.""p_user_id"", ""p_from"" := pgrst_body.""p_from"", ""p_to"" := pgrst_body.""p_to"") pgrst_scalar) pgrst_call) SELECT $5::bigint AS total_result_set, $6 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$7, $8) AS body, nullif(current_setting($9, $10), $11) AS response_headers, nullif(current_setting($12, $13), $14) AS response_status, $15 AS response_inserted FROM (SELECT ""ssp_calculation_summary"".* FROM ""pgrst_source"" AS ""ssp_calculation_summary""   LIMIT $2 OFFSET $3) _postgrest_t",authenticated,186,343.193903537634,0.86982,5281.280706,63834.066058,186,99.9877152033133852,0.794333474828412,null
+"SELECT users.aud, users.banned_until, users.confirmation_sent_at, users.confirmation_token, users.confirmed_at, users.created_at, users.deleted_at, users.email, users.email_change, users.email_change_confirm_status, users.email_change_sent_at, users.email_change_token_current, users.email_change_token_new, users.email_confirmed_at, users.encrypted_password, users.id, users.instance_id, users.invited_at, users.is_anonymous, users.is_sso_user, users.last_sign_in_at, users.phone, users.phone_change, users.phone_change_sent_at, users.phone_change_token, users.phone_confirmed_at, users.raw_app_meta_data, users.raw_user_meta_data, users.reauthentication_sent_at, users.reauthentication_token, users.recovery_sent_at, users.recovery_token, users.role, users.updated_at FROM users AS users WHERE instance_id = $1 and id = $2 LIMIT $3",supabase_auth_admin,23514,2.61225368682487,0.019569,4911.011941,61424.533192,23514,100.0000000000000000,0.7643499138184651,null
+"WITH
+-- Recursively get the base types of domains
+base_types AS (
+  WITH RECURSIVE
+  recurse AS (
+    SELECT
+      oid,
+      typbasetype,
+      typnamespace AS base_namespace,
+      COALESCE(NULLIF(typbasetype, $2), oid) AS base_type
+    FROM pg_type
+    UNION
+    SELECT
+      t.oid,
+      b.typbasetype,
+      b.typnamespace AS base_namespace,
+      COALESCE(NULLIF(b.typbasetype, $3), b.oid) AS base_type
+    FROM recurse t
+    JOIN pg_type b ON t.typbasetype = b.oid
+  )
+  SELECT
+    oid,
+    base_namespace,
+    base_type
+  FROM recurse
+  WHERE typbasetype = $4
+),
+columns AS (
+    SELECT
+        c.oid AS relid,
+        a.attname::name AS column_name,
+        d.description AS description,
+        -- typbasetype and typdefaultbin handles `CREATE DOMAIN .. DEFAULT val`,  attidentity/attgenerated handles generated columns, pg_get_expr gets the default of a column
+        CASE
+          WHEN (t.typbasetype != $5) AND (ad.adbin IS NULL) THEN pg_get_expr(t.typdefaultbin, $6)
+          WHEN a.attidentity  = $7 THEN format($8, seq.objid::regclass)
+          WHEN a.attgenerated = $9 THEN $10
+          ELSE pg_get_expr(ad.adbin, ad.adrelid)::text
+        END AS column_default,
+        not (a.attnotnull OR t.typtype = $11 AND t.typnotnull) AS is_nullable,
+        CASE
+            WHEN t.typtype = $12 THEN
+            CASE
+                WHEN bt.base_namespace = $13::regnamespace THEN format_type(bt.base_type, $14::integer)
+                ELSE format_type(a.atttypid, a.atttypmod)
+            END
+            ELSE
+            CASE
+                WHEN t.typnamespace = $15::regnamespace THEN format_type(a.atttypid, $16::integer)
+                ELSE format_type(a.atttypid, a.atttypmod)
+            END
+        END::text AS data_type,
+        format_type(a.atttypid, a.atttypmod)::text AS nominal_data_type,
+        information_schema._pg_char_max_length(
+            information_schema._pg_truetypid(a.*, t.*),
+            information_schema._pg_truetypmod(a.*, t.*)
+        )::integer AS character_maximum_length,
+        bt.base_type,
+        a.attnum::integer AS position
+    FROM pg_attribute a
+        LEFT JOIN pg_description AS d
+            ON d.objoid = a.attrelid and d.objsubid = a.attnum and d.classoid = $17::regclass
+        LEFT JOIN pg_attrdef ad
+            ON a.attrelid = ad.adrelid AND a.attnum = ad.adnum
+        JOIN pg_class c
+            ON a.attrelid = c.oid
+        JOIN pg_type t
+            ON a.atttypid = t.oid
+        LEFT JOIN base_types bt
+            ON t.oid = bt.oid
+        LEFT JOIN pg_depend seq
+            ON seq.refobjid = a.attrelid and seq.refobjsubid = a.attnum and seq.deptype = $18
+    WHERE
+        NOT pg_is_other_temp_schema(c.relnamespace)
+        AND a.attnum > $19
+        AND NOT a.attisdropped
+        AND c.relkind in ($20, $21, $22, $23, $24)
+        AND c.relnamespace = ANY($1::regnamespace[])
+),
+columns_agg AS (
+  SELECT
+    relid,
+    array_agg(row(
+      column_name,
+      description,
+      is_nullable::boolean,
+      data_type,
+      nominal_data_type,
+      character_maximum_length,
+      column_default,
+      coalesce(
+        (SELECT array_agg(enumlabel ORDER BY enumsortorder) FROM pg_enum WHERE enumtypid = base_type),
+        $25
+      )
+    ) order by position) as columns
+  FROM columns
+  GROUP BY relid
+),
+tbl_pk_cols AS (
+  SELECT
+    r.oid AS relid,
+    array_agg(a.attname ORDER BY a.attname) AS pk_cols
+  FROM pg_class r
+  JOIN pg_constraint c
+    ON r.oid = c.conrelid
+  JOIN pg_attribute a
+    ON a.attrelid = r.oid AND a.attnum = ANY (c.conkey)
+  WHERE
+    c.contype in ($26)
+    AND r.relkind IN ($27, $28)
+    AND r.relnamespace NOT IN ($29::regnamespace, $30::regnamespace)
+    AND NOT pg_is_other_temp_schema(r.relnamespace)
+    AND NOT a.attisdropped
+  GROUP BY r.oid
+)
+SELECT
+  n.nspname AS table_schema,
+  c.relname AS table_name,
+  d.description AS table_description,
+  c.relkind IN ($31,$32) as is_view,
+  (
+    c.relkind IN ($33,$34)
+    OR (
+      c.relkind in ($35,$36)
+      -- The function `pg_relation_is_updateable` returns a bitmask where 8
+      -- corresponds to `1 << CMD_INSERT` in the PostgreSQL source code, i.e.
+      -- it's possible to insert into the relation.
+      AND (pg_relation_is_updatable(c.oid::regclass, $37) & $38) = $39
+    )
+  ) AS insertable,
+  (
+    c.relkind IN ($40,$41)
+    OR (
+      c.relkind in ($42,$43)
+      -- CMD_UPDATE
+      AND (pg_relation_is_updatable(c.oid::regclass, $44) & $45) = $46
+    )
+  ) AS updatable,
+  (
+    c.relkind IN ($47,$48)
+    OR (
+      c.relkind in ($49,$50)
+      -- CMD_DELETE
+      AND (pg_relation_is_updatable(c.oid::regclass, $51) & $52) = $53
+    )
+  ) AS deletable,
+  coalesce(tpks.pk_cols, $54) as pk_cols,
+  coalesce(cols_agg.columns, $55) as columns
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+LEFT JOIN pg_description d on d.objoid = c.oid and d.objsubid = $56 and d.classoid = $57::regclass
+LEFT JOIN tbl_pk_cols tpks ON c.oid = tpks.relid
+LEFT JOIN columns_agg cols_agg ON c.oid = cols_agg.relid
+WHERE c.relkind IN ($58,$59,$60,$61,$62)
+AND c.relnamespace NOT IN ($63::regnamespace, $64::regnamespace)
+AND not c.relispartition
+ORDER BY table_schema, table_name",authenticator,330,176.776206227273,2.511202,6023.734402,58336.148055,33380,99.9911405638145188,0.7259189027772345,null
+"select
+      *
+    from supabase_migrations.schema_migrations sm
+    order by sm.version desc
+
+-- source: dashboard
+-- user: 6f1d8d56-8605-4c7a-8264-1d6c93ced39f
+-- date: 2026-03-25T20:31:51.585Z",postgres,72,792.314178138889,1.613429,6924.238452,57046.620826,7964,100.0000000000000000,0.7098723823540058,null
+"WITH pgrst_source AS ( SELECT ""public"".""profiles"".""role"", ""public"".""profiles"".""org_id"", ""public"".""profiles"".""full_name"", ""public"".""profiles"".""avatar_url"", ""public"".""profiles"".""status"" FROM ""public"".""profiles"" WHERE  ""public"".""profiles"".""id"" = $1   LIMIT $2 OFFSET $3 )  SELECT $4::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t), $5) AS body, nullif(current_setting($6, $7), $8) AS response_headers, nullif(current_setting($9, $10), $11) AS response_status, $12 AS response_inserted FROM ( SELECT * FROM pgrst_source ) _postgrest_t",authenticated,983,57.7535969521872,0.620698,3265.678379,56771.785804,983,100.0000000000000000,0.7064524113023193,null
+WITH        rows AS (          SELECT ctid          FROM net._http_response          WHERE created < now() - $1          ORDER BY created          LIMIT $2        )        DELETE FROM net._http_response r        USING rows WHERE r.ctid = rows.ctid,supabase_admin,45762,1.14896234950395,0.009445,474.290671,52578.8150379999,18181,100.0000000000000000,0.654276241991961,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""recruitment_notifications_unread_count""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""recruitment_notifications_unread_count"".* FROM ""pgrst_source"" AS ""recruitment_notifications_unread_count""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,1683,25.4434216345811,0.221447,1122.48202,42821.278611,1683,99.9964557440574642,0.5328561555951259,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT $1 AS json_data) pgrst_payload, LATERAL (SELECT ""p_limit"", ""p_include_cancelled"" FROM json_to_record(pgrst_payload.json_data) AS _(""p_limit"" integer, ""p_include_cancelled"" boolean) LIMIT $4) pgrst_body , LATERAL (SELECT ""public"".""one_on_one_meeting_list""(""p_limit"" := pgrst_body.""p_limit"", ""p_include_cancelled"" := pgrst_body.""p_include_cancelled"") pgrst_scalar) pgrst_call) SELECT $5::bigint AS total_result_set, $6 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$7, $8) AS body, nullif(current_setting($9, $10), $11) AS response_headers, nullif(current_setting($12, $13), $14) AS response_status, $15 AS response_inserted FROM (SELECT ""one_on_one_meeting_list"".* FROM ""pgrst_source"" AS ""one_on_one_meeting_list""   LIMIT $2 OFFSET $3) _postgrest_t",authenticated,110,382.451055463636,1.072075,4374.566616,42069.616101,110,99.9581086034455674,0.5235026750738624,null
+SELECT * FROM pgbouncer.get_auth($1),pgbouncer,1513,26.7878995228024,0.060332,2331.172913,40530.091978,1513,99.9975730806101275,0.5043452623987302,null
+"WITH pgrst_source AS ( SELECT ""public"".""calendar_events"".""id"", ""public"".""calendar_events"".""title"", ""public"".""calendar_events"".""start_time"" FROM ""public"".""calendar_events"" WHERE  ""public"".""calendar_events"".""org_id"" = $1 AND  ""public"".""calendar_events"".""start_time"" >= $2  ORDER BY ""public"".""calendar_events"".""start_time"" ASC  LIMIT $3 OFFSET $4 )  SELECT $5::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t), $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM ( SELECT * FROM pgrst_source ) _postgrest_t",authenticated,1139,34.1795586795435,0.214956,5837.914943,38930.517336,1139,100.0000000000000000,0.48444059766261893,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""application_notifications_unread_count""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""application_notifications_unread_count"".* FROM ""pgrst_source"" AS ""application_notifications_unread_count""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,1288,30.0191884673913,0.227544,2013.364331,38664.7147460001,1288,99.9943225904127477,0.48113302369825367,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""hr_metric_notifications_unread_count""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""hr_metric_notifications_unread_count"".* FROM ""pgrst_source"" AS ""hr_metric_notifications_unread_count""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,865,40.5852031710983,0.252059,2873.98392,35106.200743,865,99.9860515395613209,0.4368518589881705,null
+"with sub_tables as (
+        select
+        rr.entity
+        from
+        pg_publication_tables pub,
+        lateral (
+        select
+        format($8, pub.schemaname, pub.tablename)::regclass entity
+        ) rr
+        where
+        pub.pubname = $1
+        and pub.schemaname like (case $2 when $9 then $10 else $2 end)
+        and pub.tablename like (case $3 when $11 then $12 else $3 end)
+     )
+     insert into realtime.subscription as x(
+        subscription_id,
+        entity,
+        filters,
+        claims,
+        action_filter
+      )
+      select
+        $4::text::uuid,
+        sub_tables.entity,
+        $6,
+        $5,
+        $7
+      from
+        sub_tables
+        on conflict
+        (subscription_id, entity, filters, action_filter)
+        do update set
+        claims = excluded.claims,
+        created_at = now()
+      returning
+         id",supabase_admin,110,315.093676663636,0.108511,2480.143445,34660.304433,107,99.9958344615000104,0.4313032485485088,null
+"WITH
+-- Recursively get the base types of domains
+base_types AS (
+  WITH RECURSIVE
+  recurse AS (
+    SELECT
+      oid,
+      typbasetype,
+      typnamespace AS base_namespace,
+      COALESCE(NULLIF(typbasetype, $3), oid) AS base_type
+    FROM pg_type
+    UNION
+    SELECT
+      t.oid,
+      b.typbasetype,
+      b.typnamespace AS base_namespace,
+      COALESCE(NULLIF(b.typbasetype, $4), b.oid) AS base_type
+    FROM recurse t
+    JOIN pg_type b ON t.typbasetype = b.oid
+  )
+  SELECT
+    oid,
+    base_namespace,
+    base_type
+  FROM recurse
+  WHERE typbasetype = $5
+),
+arguments AS (
+  SELECT
+    oid,
+    array_agg((
+      COALESCE(name, $6), -- name
+      type::regtype::text, -- type
+      CASE type
+        WHEN $7::regtype THEN $8
+        WHEN $9::regtype THEN $10
+        WHEN $11::regtype THEN $12
+        WHEN $13::regtype THEN $14
+        ELSE type::regtype::text
+      END, -- convert types that ignore the length and accept any value till maximum size
+      idx <= (pronargs - pronargdefaults), -- is_required
+      COALESCE(mode = $15, $16) -- is_variadic
+    ) ORDER BY idx) AS args,
+    CASE COUNT(*) - COUNT(name) -- number of unnamed arguments
+      WHEN $17 THEN $18
+      WHEN $19 THEN (array_agg(type))[$20] IN ($21::regtype, $22::regtype, $23::regtype, $24::regtype, $25::regtype)
+      ELSE $26
+    END AS callable
+  FROM pg_proc,
+       unnest(proargnames, proargtypes, proargmodes)
+         WITH ORDINALITY AS _ (name, type, mode, idx)
+  WHERE type IS NOT NULL -- only input arguments
+  GROUP BY oid
+)
+SELECT
+  pn.nspname AS proc_schema,
+  p.proname AS proc_name,
+  d.description AS proc_description,
+  COALESCE(a.args, $27) AS args,
+  tn.nspname AS schema,
+  COALESCE(comp.relname, t.typname) AS name,
+  p.proretset AS rettype_is_setof,
+  (t.typtype = $28
+   -- if any TABLE, INOUT or OUT arguments present, treat as composite
+   or COALESCE(proargmodes::text[] && $29, $30)
+  ) AS rettype_is_composite,
+  bt.oid <> bt.base_type as rettype_is_composite_alias,
+  p.provolatile,
+  p.provariadic > $31 as hasvariadic,
+  lower((regexp_split_to_array((regexp_split_to_array(iso_config, $32))[$33], $34))[$35]) AS transaction_isolation_level,
+  coalesce(func_settings.kvs, $36) as kvs
+FROM pg_proc p
+LEFT JOIN arguments a ON a.oid = p.oid
+JOIN pg_namespace pn ON pn.oid = p.pronamespace
+JOIN base_types bt ON bt.oid = p.prorettype
+JOIN pg_type t ON t.oid = bt.base_type
+JOIN pg_namespace tn ON tn.oid = t.typnamespace
+LEFT JOIN pg_class comp ON comp.oid = t.typrelid
+LEFT JOIN pg_description as d ON d.objoid = p.oid AND d.classoid = $37::regclass
+LEFT JOIN LATERAL unnest(proconfig) iso_config ON iso_config LIKE $38
+LEFT JOIN LATERAL (
+  SELECT
+    array_agg(row(
+      substr(setting, $39, strpos(setting, $40) - $41),
+      substr(setting, strpos(setting, $42) + $43)
+    )) as kvs
+  FROM unnest(proconfig) setting
+  WHERE setting ~ ANY($2)
+) func_settings ON $44
+WHERE t.oid <> $45::regtype AND COALESCE(a.callable, $46)
+AND prokind = $47
+AND p.pronamespace = ANY($1::regnamespace[])",authenticator,328,105.454946634146,19.274621,7232.822483,34589.222496,36751,99.9687655140802777,0.4304187245709286,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT ""public"".""leave_notifications_unread_count""() pgrst_scalar) pgrst_call) SELECT $3::bigint AS total_result_set, $4 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$5, $6) AS body, nullif(current_setting($7, $8), $9) AS response_headers, nullif(current_setting($10, $11), $12) AS response_status, $13 AS response_inserted FROM (SELECT ""leave_notifications_unread_count"".* FROM ""pgrst_source"" AS ""leave_notifications_unread_count""   LIMIT $1 OFFSET $2) _postgrest_t",authenticated,1082,29.6077149177449,0.229889,1029.567116,32035.547541,1082,99.9904484454845026,0.39864149924512277,null
+"WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT $1 AS json_data) pgrst_payload, LATERAL (SELECT ""p_org_id"", ""p_target_user_id"", ""p_mode"", ""p_permission_key"" FROM json_to_record(pgrst_payload.json_data) AS _(""p_org_id"" uuid, ""p_target_user_id"" uuid, ""p_mode"" text, ""p_permission_key"" text) LIMIT $4) pgrst_body , LATERAL (SELECT ""public"".""user_permission_override_upsert""(""p_org_id"" := pgrst_body.""p_org_id"", ""p_target_user_id"" := pgrst_body.""p_target_user_id"", ""p_mode"" := pgrst_body.""p_mode"", ""p_permission_key"" := pgrst_body.""p_permission_key"") pgrst_scalar) pgrst_call) SELECT $5::bigint AS total_result_set, $6 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->$7, $8) AS body, nullif(current_setting($9, $10), $11) AS response_headers, nullif(current_setting($12, $13), $14) AS response_status, $15 AS response_inserted FROM (SELECT ""user_permission_override_upsert"".* FROM ""pgrst_source"" AS ""user_permission_override_upsert""   LIMIT $2 OFFSET $3) _postgrest_t",authenticated,143,191.645107825175,2.979753,6445.210888,27405.250419,143,99.9881502547695225,0.3410233616340171,null
+"WITH pgrst_source AS ( SELECT ""public"".""profiles"".""id"", ""public"".""profiles"".""org_id"", ""public"".""profiles"".""role"", ""public"".""profiles"".""full_name"", ""public"".""profiles"".""status"" FROM ""public"".""profiles"" WHERE  ""public"".""profiles"".""id"" = $1   LIMIT $2 OFFSET $3 )  SELECT $4::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t), $5) AS body, nullif(current_setting($6, $7), $8) AS response_headers, nullif(current_setting($9, $10), $11) AS response_status, $12 AS response_inserted FROM ( SELECT * FROM pgrst_source ) _postgrest_t",authenticated,697,37.9791698263988,0.033074,1144.874456,26471.481369,697,100.0000000000000000,0.32940379766170497,null
+update cron.job_run_details set status = $1 where runid = $2,supabase_admin,18548,1.37309846145137,0.033436,316.747572,25468.230263,18548,100.0000000000000000,0.31691961818878306,null

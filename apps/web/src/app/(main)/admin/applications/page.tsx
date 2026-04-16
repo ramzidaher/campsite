@@ -1,5 +1,6 @@
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { jobApplicationStageLabel } from '@/lib/jobs/labels';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { createClient } from '@/lib/supabase/server';
 import { JOB_APPLICATION_STAGES } from '@campsite/types';
 import Link from 'next/link';
@@ -22,15 +23,21 @@ export default async function AdminApplicationsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
+  const { data: profile } = await withServerPerf(
+    '/admin/applications',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, role, status')
+      .eq('id', user.id)
+      .single(),
+    300
+  );
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   if (!(await viewerHasPermission('applications.view'))) redirect('/broadcasts');
@@ -59,7 +66,8 @@ export default async function AdminApplicationsPage({
         `
     )
     .eq('org_id', orgId)
-    .order('submitted_at', { ascending: false });
+    .order('submitted_at', { ascending: false })
+    .limit(300);
 
   if (filterJobId) applicationsQuery = applicationsQuery.eq('job_listing_id', filterJobId);
   if (filterStage) applicationsQuery = applicationsQuery.eq('stage', filterStage);
@@ -74,7 +82,7 @@ export default async function AdminApplicationsPage({
       .eq('org_id', orgId)
       .order('title', { ascending: true }),
     supabase.from('departments').select('id, name').eq('org_id', orgId).order('name', { ascending: true }),
-    applicationsQuery,
+    withServerPerf('/admin/applications', 'applications_query', applicationsQuery, 500),
   ]);
 
   if (error) notFound();
@@ -84,7 +92,7 @@ export default async function AdminApplicationsPage({
   const controlClass =
     'h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
 
-  return (
+  const view = (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
       <div>
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
@@ -252,4 +260,6 @@ export default async function AdminApplicationsPage({
       </div>
     </div>
   );
+  warnIfSlowServerPath('/admin/applications', pathStartedAtMs);
+  return view;
 }

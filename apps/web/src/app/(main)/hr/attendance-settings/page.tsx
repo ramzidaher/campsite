@@ -1,4 +1,5 @@
 import { AttendanceSettingsClient } from '@/components/attendance/AttendanceSettingsClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { redirect } from 'next/navigation';
@@ -18,14 +19,8 @@ export default async function AttendanceSettingsPage() {
 
   const orgId = profile.org_id as string;
 
-  const { data: ok } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: orgId,
-    p_permission_key: 'hr.manage_records',
-    p_context: {},
-  });
-
-  if (!ok) redirect('/hr/records');
+  const permissionKeys = await getMyPermissions(orgId);
+  if (!permissionKeys.includes('hr.manage_records')) redirect('/hr/records');
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">

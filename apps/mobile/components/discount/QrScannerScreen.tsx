@@ -10,9 +10,6 @@ import {
   View,
 } from 'react-native';
 
-import { getSupabase } from '@/lib/supabase';
-import { callStaffEdgeFunction } from '@/lib/staffDiscountEdge';
-
 type VerifyResult = {
   valid: true;
   name: string;
@@ -25,6 +22,22 @@ type VerifyResult = {
   valid: false;
   error: string;
 };
+
+function buildDemoResult(data: string): VerifyResult {
+  if (!data.trim()) {
+    return { valid: false, error: 'No QR data found.' };
+  }
+
+  return {
+    valid: true,
+    name: 'Demo staff member',
+    role: 'org_admin',
+    department: 'Frontend preview',
+    discount_label: 'Frontend preview only',
+    discount_value: null,
+    valid_at: 'Verification backend removed',
+  };
+}
 
 function formatRole(role: string): string {
   return role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -48,16 +61,9 @@ export function QrScannerScreen() {
       setResult(null);
 
       try {
-        const res = await callStaffEdgeFunction(getSupabase(), 'staff-discount-verify', {
-          token: data,
-        });
-        if (!res.ok) {
-          setResult({ valid: false, error: res.message });
-        } else {
-          setResult(res.data as VerifyResult);
-        }
+        setResult(buildDemoResult(data));
       } catch (e) {
-        setResult({ valid: false, error: e instanceof Error ? e.message : 'Verification failed' });
+        setResult({ valid: false, error: e instanceof Error ? e.message : 'Preview failed' });
       } finally {
         setScanning(false);
         // Allow re-scan after 3s
@@ -142,7 +148,7 @@ export function QrScannerScreen() {
       {/* Hint */}
       {!result && !scanning ? (
         <View style={styles.hintBox} pointerEvents="none">
-          <Text style={styles.hintText}>Point at a staff member's QR code</Text>
+          <Text style={styles.hintText}>Point at a staff member's QR code for a frontend-only preview</Text>
         </View>
       ) : null}
 
@@ -150,7 +156,7 @@ export function QrScannerScreen() {
       {scanning ? (
         <View style={styles.hintBox} pointerEvents="none">
           <ActivityIndicator color="#fff" style={{ marginBottom: 6 }} />
-          <Text style={styles.hintText}>Verifying…</Text>
+          <Text style={styles.hintText}>Loading preview…</Text>
         </View>
       ) : null}
 
@@ -185,7 +191,7 @@ export function QrScannerScreen() {
             <View style={[styles.resultCard, styles.resultCardInvalid]}>
               <View style={styles.resultHeader}>
                 <View style={styles.invalidDot} />
-                <Text style={styles.invalidLabel}>Invalid card</Text>
+                <Text style={styles.invalidLabel}>Preview unavailable</Text>
               </View>
               <Text style={styles.invalidMessage}>{result.error}</Text>
               <Pressable style={styles.scanAgainBtn} onPress={reset}>

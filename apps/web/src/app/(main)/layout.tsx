@@ -14,6 +14,7 @@ import { resolveTenantGovernanceRedirect } from '@/lib/tenantGovernanceGate';
 import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { normalizeUiMode } from '@/lib/uiMode';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { createClient } from '@/lib/supabase/server';
 import {
   type PermissionKey,
@@ -40,12 +41,13 @@ function roleLabel(role: string): string {
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathStartedAtMs = Date.now();
   const headerStore = await headers();
   const pathname = headerStore.get('x-campsite-pathname') ?? '';
 
   // Two parallel shell RPCs (structural + badge counts), merged to one bundle shape.
   // Cached so child routes (e.g. dashboard) reuse the same result in one request.
-  const b = await getCachedMainShellLayoutBundle();
+  const b = await withServerPerf('/(main)/layout', 'main_shell_layout_bundle_cached', getCachedMainShellLayoutBundle());
   const initialShellBadgeCounts = parseShellBadgeCounts(b);
 
   const str = (k: string): string | null =>
@@ -84,14 +86,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let orgCelebrationOverrides: OrgCelebrationModeOverride[] = [];
   if (currentOrgId) {
     const supabase = await createClient();
-    const { data } = await supabase
-      .from('org_celebration_modes')
-      .select(
-        'mode_key,label,is_enabled,display_order,auto_start_month,auto_start_day,auto_end_month,auto_end_day,gradient_override,emoji_primary,emoji_secondary'
-      )
-      .eq('org_id', currentOrgId)
-      .order('display_order', { ascending: true })
-      .order('label', { ascending: true });
+    const { data } = await withServerPerf(
+      '/(main)/layout',
+      'org_celebration_modes',
+      supabase
+        .from('org_celebration_modes')
+        .select(
+          'mode_key,label,is_enabled,display_order,auto_start_month,auto_start_day,auto_end_month,auto_end_day,gradient_override,emoji_primary,emoji_secondary'
+        )
+        .eq('org_id', currentOrgId)
+        .order('display_order', { ascending: true })
+        .order('label', { ascending: true }),
+      350
+    );
     orgCelebrationOverrides = (data ?? []) as OrgCelebrationModeOverride[];
   }
 
@@ -259,7 +266,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const profileReauthRequiredAt = str('profile_reauth_required_at');
 
-  return (
+  const view = (
     <ThemeRoot>
       <MainProviders
         reauthRequiredAt={profileReauthRequiredAt}
@@ -311,4 +318,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </MainProviders>
     </ThemeRoot>
   );
+
+  warnIfSlowServerPath('/(main)/layout', pathStartedAtMs);
+  return view;
 }

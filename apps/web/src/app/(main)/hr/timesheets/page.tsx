@@ -1,4 +1,5 @@
 import { TimesheetReviewClient } from '@/components/attendance/TimesheetReviewClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { redirect } from 'next/navigation';
@@ -18,22 +19,8 @@ export default async function HrTimesheetsPage() {
 
   const orgId = profile.org_id as string;
 
-  const [{ data: a }, { data: b }] = await Promise.all([
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'leave.approve_direct_reports',
-      p_context: {},
-    }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: orgId,
-      p_permission_key: 'leave.manage_org',
-      p_context: {},
-    }),
-  ]);
-
-  if (!a && !b) redirect('/hr/records');
+  const permissionKeys = await getMyPermissions(orgId);
+  if (!permissionKeys.includes('leave.approve_direct_reports') && !permissionKeys.includes('leave.manage_org')) redirect('/hr/records');
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">

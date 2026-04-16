@@ -4,26 +4,36 @@ import type { PermissionKey } from '@campsite/types';
 import { SystemOverviewGraphClient } from '@/components/system/SystemOverviewGraphClient';
 import { loadAdminOverview } from '@/lib/admin/loadAdminOverview';
 import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { buildSystemOverviewGraph } from '@/lib/systemOverview/buildSystemOverviewGraph';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminSystemOverviewPage() {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status, role, full_name')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: profile } = await withServerPerf(
+    '/admin/system-overview',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, status, role, full_name')
+      .eq('id', user.id)
+      .maybeSingle(),
+    300
+  );
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
-  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id });
-  const permissionKeys = (Array.isArray(perms)
-    ? (perms as Array<{ permission_key?: string }>).map((x) => String(x.permission_key ?? ''))
-    : []) as PermissionKey[];
+  const permissionKeys = (await withServerPerf(
+    '/admin/system-overview',
+    'get_my_permissions',
+    getMyPermissions(profile.org_id as string),
+    300
+  )) as PermissionKey[];
 
   const hasGraphAccess = permissionKeys.some(
     (k) =>
@@ -44,12 +54,22 @@ export default async function AdminSystemOverviewPage() {
   if (!hasGraphAccess) redirect('/admin');
 
   const [bundle, adminOverview] = await Promise.all([
-    loadDepartmentsDirectory(supabase, profile.org_id as string, null),
-    loadAdminOverview(supabase, profile.org_id as string, {
-      role: String(profile.role ?? ''),
-      full_name: (profile.full_name as string | null) ?? null,
-      permissions: permissionKeys,
-    }),
+    withServerPerf(
+      '/admin/system-overview',
+      'load_departments_directory',
+      loadDepartmentsDirectory(supabase, profile.org_id as string, null),
+      500
+    ),
+    withServerPerf(
+      '/admin/system-overview',
+      'load_admin_overview',
+      loadAdminOverview(supabase, profile.org_id as string, {
+        role: String(profile.role ?? ''),
+        full_name: (profile.full_name as string | null) ?? null,
+        permissions: permissionKeys,
+      }),
+      500
+    ),
   ]);
 
   const graph = buildSystemOverviewGraph({
@@ -59,7 +79,7 @@ export default async function AdminSystemOverviewPage() {
     isManagerScoped: false,
   });
 
-  return (
+  const view = (
     <SystemOverviewGraphClient
       title="System overview"
       subtitle="Permission-scoped connected map of modules, entities, and operations."
@@ -67,5 +87,7 @@ export default async function AdminSystemOverviewPage() {
       edges={graph.edges}
     />
   );
+  warnIfSlowServerPath('/admin/system-overview', pathStartedAtMs);
+  return view;
 }
 

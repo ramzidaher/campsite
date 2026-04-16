@@ -1,5 +1,6 @@
 import { decryptBankDetails, encryptBankDetails, maskAccountNumber, maskIban, maskSortCode, type BankDetailPayload } from '@/lib/security/bankDetailsCrypto';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -16,22 +17,16 @@ async function getOrgAndPermissions(userId: string) {
     .maybeSingle();
   if (!profile?.org_id || profile.status !== 'active') return null;
   const orgId = profile.org_id as string;
-  const [viewAll, manageAll, viewOwn, manageOwn, canExport] = await Promise.all([
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.bank_details.view_all', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.bank_details.manage_all', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.bank_details.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.bank_details.manage_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.bank_details.export', p_context: {} }),
-  ]);
+  const permissionKeys = await getMyPermissions(orgId);
   return {
     supabase,
     orgId,
     permissions: {
-      viewAll: Boolean(viewAll.data),
-      manageAll: Boolean(manageAll.data),
-      viewOwn: Boolean(viewOwn.data),
-      manageOwn: Boolean(manageOwn.data),
-      canExport: Boolean(canExport.data),
+      viewAll: permissionKeys.includes('payroll.bank_details.view_all'),
+      manageAll: permissionKeys.includes('payroll.bank_details.manage_all'),
+      viewOwn: permissionKeys.includes('payroll.bank_details.view_own'),
+      manageOwn: permissionKeys.includes('payroll.bank_details.manage_own'),
+      canExport: permissionKeys.includes('payroll.bank_details.export'),
     },
   };
 }

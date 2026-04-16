@@ -24,7 +24,7 @@ export function AppTopBar({
   orgId = null,
   orgName,
   paletteSections,
-  uiMode = 'millennial',
+  uiMode = 'classic',
   onToggleUiMode,
 }: {
   userInitials: string;
@@ -78,30 +78,30 @@ export function AppTopBar({
         <button
           type="button"
           role="switch"
-          aria-checked={uiMode === 'gen_z'}
+          aria-checked={uiMode === 'interactive'}
           onClick={onToggleUiMode}
           className="inline-flex h-9 items-center gap-2 rounded-full border px-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] transition-colors hover:bg-[#f5f4f1]"
           style={{
             borderColor: 'var(--org-brand-border)',
             color: 'var(--org-brand-muted)',
           }}
-          title={`Switch to ${uiMode === 'gen_z' ? 'Millennial' : 'Gen Z'} mode`}
-          aria-label={`Switch to ${uiMode === 'gen_z' ? 'Millennial' : 'Gen Z'} mode`}
+          title={`Switch to ${uiMode === 'interactive' ? 'Classic' : 'Interactive'} mode`}
+          aria-label={`Switch to ${uiMode === 'interactive' ? 'Classic' : 'Interactive'} mode`}
         >
-          <span style={{ color: uiMode === 'gen_z' ? 'var(--org-brand-primary)' : 'var(--org-brand-muted)' }}>
-            Gen Z
+          <span style={{ color: uiMode === 'interactive' ? 'var(--org-brand-primary)' : 'var(--org-brand-muted)' }}>
+            Interactive
           </span>
           <span
             aria-hidden
             className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
             style={{
-              background: uiMode === 'gen_z' ? 'var(--org-brand-primary)' : 'var(--org-brand-border)',
+              background: uiMode === 'interactive' ? 'var(--org-brand-primary)' : 'var(--org-brand-border)',
             }}
           >
             <span
               className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
               style={{
-                transform: uiMode === 'gen_z' ? 'translateX(18px)' : 'translateX(2px)',
+                transform: uiMode === 'interactive' ? 'translateX(18px)' : 'translateX(2px)',
               }}
             />
           </span>

@@ -1,5 +1,6 @@
 import { decryptUkTaxDetails, encryptUkTaxDetails, maskNiNumber, maskTaxCode, type UkTaxPayload } from '@/lib/security/ukTaxCrypto';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -12,22 +13,16 @@ async function getCtx(userId: string) {
   const { data: profile } = await supabase.from('profiles').select('org_id, status').eq('id', userId).maybeSingle();
   if (!profile?.org_id || profile.status !== 'active') return null;
   const orgId = profile.org_id as string;
-  const [viewAll, manageAll, viewOwn, manageOwn, canExport] = await Promise.all([
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.view_all', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.manage_all', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.view_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.manage_own', p_context: {} }),
-    supabase.rpc('has_permission', { p_user_id: userId, p_org_id: orgId, p_permission_key: 'payroll.uk_tax.export', p_context: {} }),
-  ]);
+  const permissionKeys = await getMyPermissions(orgId);
   return {
     supabase,
     orgId,
     permissions: {
-      viewAll: Boolean(viewAll.data),
-      manageAll: Boolean(manageAll.data),
-      viewOwn: Boolean(viewOwn.data),
-      manageOwn: Boolean(manageOwn.data),
-      canExport: Boolean(canExport.data),
+      viewAll: permissionKeys.includes('payroll.uk_tax.view_all'),
+      manageAll: permissionKeys.includes('payroll.uk_tax.manage_all'),
+      viewOwn: permissionKeys.includes('payroll.uk_tax.view_own'),
+      manageOwn: permissionKeys.includes('payroll.uk_tax.manage_own'),
+      canExport: permissionKeys.includes('payroll.uk_tax.export'),
     },
   };
 }

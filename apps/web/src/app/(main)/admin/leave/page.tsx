@@ -1,44 +1,63 @@
 import { OrgLeaveAdminClient } from '@/components/admin/OrgLeaveAdminClient';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminLeavePage() {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: profile } = await withServerPerf(
+    '/admin/leave',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, status')
+      .eq('id', user.id)
+      .maybeSingle(),
+    300
+  );
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
 
-  const permissionKeys = await getMyPermissions(orgId);
+  const permissionKeys = await withServerPerf('/admin/leave', 'get_my_permissions', getMyPermissions(orgId), 300);
   if (!permissionKeys.includes('leave.manage_org')) redirect('/admin');
 
-  const [{ data: members }, { data: settings }] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id, full_name, email')
-      .eq('org_id', orgId)
-      .eq('status', 'active')
-      .order('full_name'),
-    supabase
-      .from('org_leave_settings')
-      .select(
-        'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings, carry_over_enabled, carry_over_requires_approval, carry_over_max_days, encashment_enabled, encashment_requires_approval, encashment_max_days, leave_accrual_enabled, leave_accrual_frequency, leave_law_country_code, leave_law_profile',
-      )
-      .eq('org_id', orgId)
-      .maybeSingle(),
+  const [membersRes, settingsRes] = await Promise.all([
+    withServerPerf(
+      '/admin/leave',
+      'active_members_lookup',
+      supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('org_id', orgId)
+        .eq('status', 'active')
+        .order('full_name'),
+      400
+    ),
+    withServerPerf(
+      '/admin/leave',
+      'org_leave_settings_lookup',
+      supabase
+        .from('org_leave_settings')
+        .select(
+          'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings, carry_over_enabled, carry_over_requires_approval, carry_over_max_days, encashment_enabled, encashment_requires_approval, encashment_max_days, leave_accrual_enabled, leave_accrual_frequency, leave_law_country_code, leave_law_profile',
+        )
+        .eq('org_id', orgId)
+        .maybeSingle(),
+      350
+    ),
   ]);
+  const members = membersRes.data;
+  const settings = settingsRes.data;
 
-  return (
+  const view = (
     <OrgLeaveAdminClient
       orgId={orgId}
       members={(members ?? []) as { id: string; full_name: string; email: string | null }[]}
@@ -79,4 +98,6 @@ export default async function AdminLeavePage() {
       }
     />
   );
+  warnIfSlowServerPath('/admin/leave', pathStartedAtMs);
+  return view;
 }

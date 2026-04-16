@@ -12,6 +12,7 @@ import { calendarYmdInTimeZone } from '@/lib/datetime';
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
+import { withServerPerf } from '@/lib/perf/serverPerf';
 
 export type PendingPreviewRow = {
   id: string;
@@ -104,7 +105,7 @@ export async function loadDashboardHome(
   userId: string,
   orgId: string,
   profile: { full_name: string | null; role: string },
-  options?: { initialBroadcastUnread?: number }
+  options?: { initialBroadcastUnread?: number; initialPendingApprovals?: number }
 ): Promise<DashboardHomeModel> {
   const { data: orgRow } = await supabase
     .from('organisations')
@@ -122,61 +123,98 @@ export async function loadDashboardHome(
 
   const canUnreadKpi = canViewDashboardUnreadBroadcastKpi(profile.role);
   const useCachedUnread = canUnreadKpi && options?.initialBroadcastUnread !== undefined;
-  const unreadRpcPromise = useCachedUnread
+  const unreadRpcPromise: Promise<{ data: number; error: unknown }> = useCachedUnread
     ? Promise.resolve({ data: options!.initialBroadcastUnread!, error: null })
     : canUnreadKpi
-      ? supabase.rpc('broadcast_unread_count')
+      ? Promise.resolve(supabase.rpc('broadcast_unread_count')).then((res) => ({
+          data:
+            res.data === null || res.data === undefined
+              ? 0
+              : typeof res.data === 'number'
+                ? res.data
+                : Number(res.data),
+          error: res.error,
+        }))
       : Promise.resolve({ data: 0, error: null });
+  const useCachedPendingApprovals = options?.initialPendingApprovals !== undefined;
 
-  const [
-    statCounts,
-    { count: shiftsThisWeek },
-    { data: nextShifts },
-    { data: recentRaw },
-    { data: eventsRaw },
-    { data: shiftCalendarRaw },
-    unreadRpc,
-  ] = await Promise.all([
-    fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
-    supabase
-      .from('rota_shifts')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('start_time', w0.toISOString())
-      .lt('start_time', w1.toISOString()),
-    supabase
-      .from('rota_shifts')
-      .select('start_time,end_time,role_label')
-      .eq('user_id', userId)
-      .gte('start_time', now.toISOString())
-      .order('start_time', { ascending: true })
-      .limit(1),
-    supabase
-      .from('broadcasts')
-      .select(
-        'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
-      )
-      .eq('org_id', orgId)
-      .eq('status', 'sent')
-      .order('sent_at', { ascending: false })
-      .limit(3),
-    supabase
-      .from('calendar_events')
-      .select('id,title,start_time')
-      .eq('org_id', orgId)
-      .gte('start_time', now.toISOString())
-      .order('start_time', { ascending: true })
-      .limit(5),
-    supabase
-      .from('rota_shifts')
-      .select('id,start_time,role_label')
-      .eq('user_id', userId)
-      .gte('start_time', now.toISOString())
-      .lt('start_time', monthEnd.toISOString())
-      .order('start_time', { ascending: true })
-      .limit(8),
-    unreadRpcPromise,
-  ]);
+  const [statCounts, shiftsWeekRes, nextShiftRes, recentRawRes, eventsRawRes, shiftCalendarRawRes, unreadRpc] =
+    await Promise.all([
+      withServerPerf(
+        '/dashboard',
+        'fetch_dashboard_stat_counts',
+        fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
+        400
+      ),
+      withServerPerf(
+        '/dashboard',
+        'rota_shifts_week_count',
+        supabase
+          .from('rota_shifts')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .gte('start_time', w0.toISOString())
+          .lt('start_time', w1.toISOString()),
+        350
+      ),
+      withServerPerf(
+        '/dashboard',
+        'next_shift_lookup',
+        supabase
+          .from('rota_shifts')
+          .select('start_time,end_time,role_label')
+          .eq('user_id', userId)
+          .gte('start_time', now.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(1),
+        350
+      ),
+      withServerPerf(
+        '/dashboard',
+        'recent_broadcasts',
+        supabase
+          .from('broadcasts')
+          .select(
+            'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
+          )
+          .eq('org_id', orgId)
+          .eq('status', 'sent')
+          .order('sent_at', { ascending: false })
+          .limit(3),
+        350
+      ),
+      withServerPerf(
+        '/dashboard',
+        'upcoming_calendar_events',
+        supabase
+          .from('calendar_events')
+          .select('id,title,start_time')
+          .eq('org_id', orgId)
+          .gte('start_time', now.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(5),
+        350
+      ),
+      withServerPerf(
+        '/dashboard',
+        'upcoming_shifts_calendar',
+        supabase
+          .from('rota_shifts')
+          .select('id,start_time,role_label')
+          .eq('user_id', userId)
+          .gte('start_time', now.toISOString())
+          .lt('start_time', monthEnd.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(8),
+        350
+      ),
+      withServerPerf('/dashboard', 'unread_count', unreadRpcPromise, 300),
+    ]);
+  const shiftsThisWeek = shiftsWeekRes.count;
+  const nextShifts = nextShiftRes.data;
+  const recentRaw = recentRawRes.data;
+  const eventsRaw = eventsRawRes.data;
+  const shiftCalendarRaw = shiftCalendarRawRes.data;
 
   const recentBroadcasts = await enrichBroadcastRows(
     supabase,
@@ -186,9 +224,15 @@ export async function loadDashboardHome(
 
   let pendingCount: number | null = null;
   if (isApproverRole(profile.role) || canFinalApproveRotaRequests(profile.role)) {
-    const { data: navN } = await supabase.rpc('pending_approvals_nav_count');
-    pendingCount =
-      navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
+    if (useCachedPendingApprovals) {
+      const navN = options?.initialPendingApprovals;
+      pendingCount =
+        navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
+    } else {
+      const { data: navN } = await supabase.rpc('pending_approvals_nav_count');
+      pendingCount =
+        navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
+    }
   }
 
   const unreadRaw = unreadRpc.data;

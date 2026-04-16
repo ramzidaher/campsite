@@ -1,13 +1,16 @@
 import { AdminUsersClient } from '@/components/admin/AdminUsersClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 
 export default async function AdminUsersPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; role?: string; dept?: string; q?: string }>;
 }) {
+  const pathStartedAtMs = Date.now();
   const sp = await searchParams;
   const supabase = await createClient();
   const user = await getAuthUser();
@@ -20,40 +23,21 @@ export default async function AdminUsersPage({
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const { data: canViewMembers } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: profile.org_id,
-    p_permission_key: 'members.view',
-    p_context: {},
-  });
+  const permissionKeys = await withServerPerf('/admin/users', 'get_my_permissions', getMyPermissions(profile.org_id as string), 300);
+  const canViewMembers = permissionKeys.includes('members.view');
   if (!canViewMembers) redirect('/admin');
 
-  const { data: canEditRoles } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: profile.org_id,
-    p_permission_key: 'members.edit_roles',
-    p_context: {},
-  });
+  const canEditRoles   = permissionKeys.includes('members.edit_roles');
+  const canOpenHrFile  = permissionKeys.includes('hr.view_records') || permissionKeys.includes('hr.view_direct_reports');
 
-  const [{ data: hrViewRecords }, { data: hrViewDirectReports }] = await Promise.all([
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
+  const { data: assignableRows, error: assignableErr } = await withServerPerf(
+    '/admin/users',
+    'list_assignable_org_roles',
+    supabase.rpc('list_assignable_org_roles', {
       p_org_id: profile.org_id,
-      p_permission_key: 'hr.view_records',
-      p_context: {},
     }),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: profile.org_id,
-      p_permission_key: 'hr.view_direct_reports',
-      p_context: {},
-    }),
-  ]);
-  const canOpenHrFile = Boolean(hrViewRecords || hrViewDirectReports);
-
-  const { data: assignableRows, error: assignableErr } = await supabase.rpc('list_assignable_org_roles', {
-    p_org_id: profile.org_id,
-  });
+    350
+  );
   if (assignableErr) {
     return <p className="text-sm text-red-300">{assignableErr.message}</p>;
   }
@@ -64,12 +48,17 @@ export default async function AdminUsersPage({
     is_system: boolean;
   }[];
 
-  const { data: orgRolesForFilter } = await supabase
-    .from('org_roles')
-    .select('key, label')
-    .eq('org_id', profile.org_id)
-    .eq('is_archived', false)
-    .order('label');
+  const { data: orgRolesForFilter } = await withServerPerf(
+    '/admin/users',
+    'org_roles_for_filter',
+    supabase
+      .from('org_roles')
+      .select('key, label')
+      .eq('org_id', profile.org_id)
+      .eq('is_archived', false)
+      .order('label'),
+    350
+  );
 
   const [{ data: orgRow }, { count: totalMemberCount }] = await Promise.all([
     supabase.from('organisations').select('name, slug').eq('id', profile.org_id).single(),
@@ -87,7 +76,7 @@ export default async function AdminUsersPage({
     .select('id, full_name, email, role, status, created_at, reports_to_user_id')
     .eq('org_id', profile.org_id)
     .order('created_at', { ascending: false })
-    .limit(500);
+    .limit(350);
 
   if (sp.status && sp.status !== 'all' && ['pending', 'active', 'inactive'].includes(sp.status)) {
     q = q.eq('status', sp.status);
@@ -96,33 +85,40 @@ export default async function AdminUsersPage({
     q = q.eq('role', sp.role);
   }
 
-  const { data: profiles, error } = await q;
+  // Push basic text search down to DB to reduce in-memory filtering costs.
+  if (sp.q?.trim()) {
+    const raw = sp.q.trim();
+    const escaped = raw.replace(/[%_]/g, '\\$&');
+    q = q.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%`);
+  }
+
+  const { data: profiles, error } = await withServerPerf('/admin/users', 'profiles_query', q, 450);
   if (error) {
     return <p className="text-sm text-red-300">{error.message}</p>;
   }
 
-  let rows = profiles ?? [];
-  if (sp.q?.trim()) {
-    const low = sp.q.trim().toLowerCase();
-    rows = rows.filter(
-      (p) =>
-        (p.full_name as string)?.toLowerCase().includes(low) ||
-        (p.email as string | null)?.toLowerCase().includes(low)
-    );
-  }
-
-  let filtered = rows;
+  let filtered = profiles ?? [];
   if (sp.dept && sp.dept !== 'all') {
-    const { data: ud } = await supabase.from('user_departments').select('user_id').eq('dept_id', sp.dept);
+    const { data: ud } = await withServerPerf(
+      '/admin/users',
+      'dept_filter_user_ids',
+      supabase.from('user_departments').select('user_id').eq('dept_id', sp.dept),
+      300
+    );
     const set = new Set((ud ?? []).map((u) => u.user_id as string));
-    filtered = rows.filter((p) => set.has(p.id as string));
+    filtered = filtered.filter((p) => set.has(p.id as string));
   }
 
-  const { data: departments } = await supabase
-    .from('departments')
-    .select('id, name, type, is_archived')
-    .eq('org_id', profile.org_id)
-    .order('name');
+  const { data: departments } = await withServerPerf(
+    '/admin/users',
+    'departments_for_filter',
+    supabase
+      .from('departments')
+      .select('id, name, type, is_archived')
+      .eq('org_id', profile.org_id)
+      .order('name'),
+    350
+  );
 
   const userIds = filtered.map((p) => p.id as string);
   const deptByUser: Record<string, string[]> = {};
@@ -142,14 +138,19 @@ export default async function AdminUsersPage({
     }
   }
 
-  const { data: managerChoicesRows } = await supabase
-    .from('profiles')
-    .select('id, full_name')
-    .eq('org_id', profile.org_id)
-    .eq('status', 'active')
-    .order('full_name');
+  const { data: managerChoicesRows } = await withServerPerf(
+    '/admin/users',
+    'manager_choices',
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('org_id', profile.org_id)
+      .eq('status', 'active')
+      .order('full_name'),
+    350
+  );
 
-  return (
+  const view = (
     <AdminUsersClient
       currentUserId={user.id}
       canEditRoles={Boolean(canEditRoles)}
@@ -179,4 +180,6 @@ export default async function AdminUsersPage({
       canOpenHrFile={canOpenHrFile}
     />
   );
+  warnIfSlowServerPath('/admin/users', pathStartedAtMs);
+  return view;
 }

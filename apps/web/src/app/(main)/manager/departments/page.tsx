@@ -1,15 +1,18 @@
 import { AdminDepartmentsClient } from '@/components/admin/AdminDepartmentsClient';
 import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
 import { loadWorkspaceDepartmentIds } from '@/lib/manager/workspaceDepartmentIds';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 
 export default async function ManagerDepartmentsPage({
   searchParams,
 }: {
   searchParams: Promise<{ dept?: string }>;
 }) {
+  const pathStartedAtMs = Date.now();
   const sp = await searchParams;
   const openDeptId = typeof sp.dept === 'string' && sp.dept.trim() ? sp.dept.trim() : null;
 
@@ -17,28 +20,44 @@ export default async function ManagerDepartmentsPage({
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
+  const { data: profile } = await withServerPerf(
+    '/manager/departments',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, role, status')
+      .eq('id', user.id)
+      .single(),
+    300
+  );
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const { data: canViewDepartments } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: profile.org_id,
-    p_permission_key: 'departments.view',
-    p_context: {},
-  });
-  if (!canViewDepartments) redirect('/broadcasts');
+  const orgId = profile.org_id as string;
+  const permissionKeys = await withServerPerf(
+    '/manager/departments',
+    'get_my_permissions',
+    getMyPermissions(orgId),
+    300
+  );
+  if (!permissionKeys.includes('departments.view')) redirect('/broadcasts');
 
-  const managedDeptIds = await loadWorkspaceDepartmentIds(supabase, user.id, profile.role);
+  const managedDeptIds = await withServerPerf(
+    '/manager/departments',
+    'workspace_department_ids',
+    loadWorkspaceDepartmentIds(supabase, user.id, profile.role),
+    300
+  );
 
-  const bundle = await loadDepartmentsDirectory(supabase, profile.org_id as string, managedDeptIds);
+  const bundle = await withServerPerf(
+    '/manager/departments',
+    'load_departments_directory',
+    loadDepartmentsDirectory(supabase, orgId, managedDeptIds),
+    500
+  );
 
-  return (
+  const view = (
     <AdminDepartmentsClient
-      orgId={profile.org_id}
+      orgId={orgId}
       currentUserId={user.id}
       isOrgAdmin={false}
       openDeptIdFromUrl={openDeptId}
@@ -53,4 +72,6 @@ export default async function ManagerDepartmentsPage({
       staffOptions={bundle.staffOptions}
     />
   );
+  warnIfSlowServerPath('/manager/departments', pathStartedAtMs);
+  return view;
 }

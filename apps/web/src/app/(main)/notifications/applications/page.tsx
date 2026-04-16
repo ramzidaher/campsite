@@ -1,4 +1,5 @@
 import { ApplicationNotificationsClient } from '@/components/recruitment/ApplicationNotificationsClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { redirect } from 'next/navigation';
@@ -16,15 +17,12 @@ export default async function ApplicationNotificationsPage() {
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
-  const [{ data: notifications }, { data: canManageApplications }] = await Promise.all([
+  const orgId = profile.org_id as string;
+  const [{ data: notifications }, permissionKeys] = await Promise.all([
     supabase.rpc('application_notifications_for_me'),
-    supabase.rpc('has_permission', {
-      p_user_id: user.id,
-      p_org_id: profile.org_id,
-      p_permission_key: 'applications.manage',
-      p_context: {},
-    }),
+    getMyPermissions(orgId),
   ]);
+  const canManageApplications = permissionKeys.includes('applications.manage');
 
   return (
     <ApplicationNotificationsClient

@@ -1,4 +1,6 @@
 import { OnboardingHubClient } from '@/components/admin/hr/onboarding/OnboardingHubClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
@@ -9,62 +11,79 @@ export default async function OnboardingHubPage({
 }: {
   searchParams: Promise<{ template?: string }>;
 }) {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: profile } = await withServerPerf(
+    '/admin/hr/onboarding',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, status')
+      .eq('id', user.id)
+      .maybeSingle(),
+    300
+  );
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const orgId = profile.org_id as string;
 
-  const [canTemplates, canManageRuns, canCompleteOwnTasks] = await Promise.all([
-    supabase
-      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.manage_templates', p_context: {} })
-      .then(({ data }) => !!data),
-    supabase
-      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.manage_runs', p_context: {} })
-      .then(({ data }) => !!data),
-    supabase
-      .rpc('has_permission', { p_user_id: user.id, p_org_id: orgId, p_permission_key: 'onboarding.complete_own_tasks', p_context: {} })
-      .then(({ data }) => !!data),
-  ]);
+  const permissionKeys = await withServerPerf(
+    '/admin/hr/onboarding',
+    'get_my_permissions',
+    getMyPermissions(orgId),
+    300
+  );
+  const canTemplates        = permissionKeys.includes('onboarding.manage_templates');
+  const canManageRuns       = permissionKeys.includes('onboarding.manage_runs');
+  const canCompleteOwnTasks = permissionKeys.includes('onboarding.complete_own_tasks');
 
   const canViewRuns = canManageRuns || canCompleteOwnTasks;
   if (!canTemplates && !canViewRuns) redirect('/admin');
 
   const { template: rawTemplateId } = await searchParams;
 
+  let runsQuery = supabase
+    .from('onboarding_runs')
+    .select('id, user_id, status, employment_start_date, created_at, template_id')
+    .eq('org_id', orgId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (!canManageRuns && canCompleteOwnTasks) {
+    // Apply self-only scope in SQL instead of filtering in memory.
+    runsQuery = runsQuery.eq('user_id', user.id);
+  }
+
   const [templatesRes, runsRes, membersRes] = await Promise.all([
-    supabase
-      .from('onboarding_templates')
-      .select('id, name, description, is_default, is_archived, created_at')
-      .eq('org_id', orgId)
-      .order('name'),
-    supabase
-      .from('onboarding_runs')
-      .select('id, user_id, status, employment_start_date, created_at, template_id')
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(100),
-    supabase
-      .from('profiles')
-      .select('id, full_name, preferred_name, email')
-      .eq('org_id', orgId)
-      .eq('status', 'active')
-      .order('full_name'),
+    withServerPerf(
+      '/admin/hr/onboarding',
+      'templates_lookup',
+      supabase
+        .from('onboarding_templates')
+        .select('id, name, description, is_default, is_archived, created_at')
+        .eq('org_id', orgId)
+        .order('name'),
+      350
+    ),
+    withServerPerf('/admin/hr/onboarding', 'runs_lookup', runsQuery, 450),
+    withServerPerf(
+      '/admin/hr/onboarding',
+      'active_members_lookup',
+      supabase
+        .from('profiles')
+        .select('id, full_name, preferred_name, email')
+        .eq('org_id', orgId)
+        .eq('status', 'active')
+        .order('full_name'),
+      400
+    ),
   ]);
 
   const templates = templatesRes.data ?? [];
   const members = membersRes.data ?? [];
-  const allRuns = runsRes.data ?? [];
-  const runs = canManageRuns
-    ? allRuns
-    : allRuns.filter((r) => canCompleteOwnTasks && (r.user_id as string) === user.id);
+  const runs = runsRes.data ?? [];
 
   // resolve names
   const memberMap: Record<string, { display_name: string; email: string | null }> = {};
@@ -85,13 +104,18 @@ export default async function OnboardingHubPage({
       : null;
 
   const templateTasks = validSelectedTemplateId
-    ? await supabase
-        .from('onboarding_template_tasks')
-        .select('id, template_id, title, category, assignee_type, due_offset_days, sort_order')
-        .eq('org_id', orgId)
-        .eq('template_id', validSelectedTemplateId)
-        .order('sort_order')
-        .then(({ data }) => data ?? [])
+    ? await withServerPerf(
+        '/admin/hr/onboarding',
+        'template_tasks_lookup',
+        supabase
+          .from('onboarding_template_tasks')
+          .select('id, template_id, title, category, assignee_type, due_offset_days, sort_order')
+          .eq('org_id', orgId)
+          .eq('template_id', validSelectedTemplateId)
+          .order('sort_order')
+          .then(({ data }) => data ?? []),
+        350
+      )
     : [];
 
   const enrichedRuns = (runs ?? []).map((r) => ({
@@ -105,7 +129,7 @@ export default async function OnboardingHubPage({
     template_name: templateMap[r.template_id as string] ?? '—',
   }));
 
-  return (
+  const view = (
     <OnboardingHubClient
       orgId={orgId}
       canTemplates={canTemplates}
@@ -137,4 +161,6 @@ export default async function OnboardingHubPage({
       }))}
     />
   );
+  warnIfSlowServerPath('/admin/hr/onboarding', pathStartedAtMs);
+  return view;
 }

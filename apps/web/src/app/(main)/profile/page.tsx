@@ -22,6 +22,24 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getDisplayName } from '@/lib/names';
 import { normalizeUiMode } from '@/lib/uiMode';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { warnIfSlowServerPath } from '@/lib/perf/serverPerf';
+import { withServerPerf } from '@/lib/perf/serverPerf';
+
+const PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS = 1400;
+
+async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: any): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return (await Promise.race([
+      Promise.resolve(promise),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ])) as T;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function labelContract(value: string | null) {
   if (value === 'full_time') return 'Full-time';
@@ -42,20 +60,26 @@ const sectionLink =
   'rounded-full border border-[#e4e4e4] bg-[#faf9f6] px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#f0efe9]';
 
 export default async function MyProfilePage() {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status, full_name, preferred_name, email, avatar_url, role, reports_to_user_id, ui_mode')
-    .eq('id', user.id)
-    .maybeSingle();
+  const { data: profile } = await withServerPerf(
+    '/profile',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, status, full_name, preferred_name, email, avatar_url, role, reports_to_user_id, ui_mode')
+      .eq('id', user.id)
+      .maybeSingle(),
+    300
+  );
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
   const orgId = profile.org_id as string;
   // Reuse request-cached permission bundle from layout to avoid many per-page RPC calls.
-  const permissionKeys = await getMyPermissions(orgId);
+  const permissionKeys = await withServerPerf('/profile', 'get_my_permissions', getMyPermissions(orgId), 350);
   const canViewOwn = permissionKeys.includes('hr.view_own');
   if (!canViewOwn) redirect('/dashboard');
   const canPerf = permissionKeys.includes('performance.view_own');
@@ -87,14 +111,26 @@ export default async function MyProfilePage() {
   const canRecordExportCsv = permissionKeys.includes('hr.records_export.generate_csv');
   const canRecordExportPdf = permissionKeys.includes('hr.records_export.generate_pdf');
 
-  const [{ data: leaveSettingsForYear }, { data: orgForTz }] = await Promise.all([
-    supabase
-      .from('org_leave_settings')
-      .select('leave_year_start_month, leave_year_start_day')
-      .eq('org_id', orgId)
-      .maybeSingle(),
-    supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
+  const [leaveSettingsRes, orgTzRes] = await Promise.all([
+    withServerPerf(
+      '/profile',
+      'leave_settings_year',
+      supabase
+        .from('org_leave_settings')
+        .select('leave_year_start_month, leave_year_start_day')
+        .eq('org_id', orgId)
+        .maybeSingle(),
+      350
+    ),
+    withServerPerf(
+      '/profile',
+      'org_timezone_lookup',
+      supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
+      300
+    ),
   ]);
+  const leaveSettingsForYear = leaveSettingsRes.data;
+  const orgForTz = orgTzRes.data;
 
   const orgTz = (orgForTz?.timezone as string | null) ?? null;
   const sm = Number(leaveSettingsForYear?.leave_year_start_month ?? 1);
@@ -118,13 +154,12 @@ export default async function MyProfilePage() {
     ownTaxDocsRes,
     ownEmploymentHistoryRes,
     ownCaseRowsRes,
-    ownCaseEventRowsRes,
     ownMedicalRowsRes,
     ownMedicalEventsRes,
     ownCustomFieldDefsRes,
     ownCustomFieldValuesRes,
   ] = await Promise.all([
-    supabase.rpc('hr_employee_file', { p_user_id: user.id }),
+    withServerPerf('/profile', 'rpc_hr_employee_file', supabase.rpc('hr_employee_file', { p_user_id: user.id }), 450),
     supabase
       .from('leave_allowances')
       .select('annual_entitlement_days, toil_balance_days')
@@ -155,88 +190,126 @@ export default async function MyProfilePage() {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('status', 'active'),
-    supabase.rpc('my_probation_alerts'),
-    supabase
-      .from('employee_hr_documents')
-      .select('id, category, document_kind, bucket_id, label, storage_path, file_name, byte_size, created_at, id_document_type, id_number_last4, expires_on, is_current')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .in('document_kind', ['employee_photo', 'id_document'])
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('employee_dependants')
-      .select('full_name, relationship, date_of_birth, is_student, is_disabled, is_beneficiary, beneficiary_percentage, phone, email, address, notes, is_emergency_contact')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('employee_bank_details')
-      .select('id, status, is_active, account_holder_display, account_number_last4, sort_code_last4, iban_last4, bank_country, currency, effective_from, submitted_by, reviewed_by, reviewed_at, review_note, created_at')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('employee_uk_tax_details')
-      .select('id, status, is_active, ni_number_masked, ni_number_last2, tax_code_masked, tax_code_last2, effective_from, review_note, created_at')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('employee_tax_documents')
-      .select('id, document_type, tax_year, issue_date, payroll_period_end, status, finance_reference, wagesheet_id, payroll_run_reference, bucket_id, storage_path, file_name, byte_size, is_current, created_at')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('employee_employment_history')
-      .select('role_title, department_name, team_name, manager_name, employment_type, contract_type, fte, location_type, start_date, end_date, change_reason, pay_grade, salary_band, notes, source')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .order('start_date', { ascending: false })
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('employee_case_records')
-      .select('id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, linked_documents, archived_at, created_at')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('employee_case_record_events')
-      .select('id, case_id, event_type, old_status, new_status, created_at')
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(100),
-    supabase
-      .from('employee_medical_notes')
-      .select('id, case_ref, referral_reason, status, fit_for_work_outcome, recommended_adjustments, review_date, next_review_date, summary_for_employee, archived_at, created_at')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('employee_medical_note_events')
-      .select('id, medical_note_id, event_type, reason, created_at')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(100),
-    supabase
-      .from('hr_custom_field_definitions')
-      .select('id, key, label, section, field_type, options, is_required, visible_to_manager, visible_to_self')
-      .eq('org_id', orgId)
-      .eq('is_active', true)
-      .eq('visible_to_self', true)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('hr_custom_field_values')
-      .select('definition_id, value')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id),
+    withServerPerf('/profile', 'rpc_my_probation_alerts', supabase.rpc('my_probation_alerts'), 350),
+    resolveWithTimeout(
+      supabase
+        .from('employee_hr_documents')
+        .select('id, category, document_kind, bucket_id, label, storage_path, file_name, byte_size, created_at, id_document_type, id_number_last4, expires_on, is_current')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .in('document_kind', ['employee_photo', 'id_document'])
+        .order('created_at', { ascending: false }),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('employee_dependants')
+        .select('full_name, relationship, date_of_birth, is_student, is_disabled, is_beneficiary, beneficiary_percentage, phone, email, address, notes, is_emergency_contact')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('employee_bank_details')
+        .select('id, status, is_active, account_holder_display, account_number_last4, sort_code_last4, iban_last4, bank_country, currency, effective_from, submitted_by, reviewed_by, reviewed_at, review_note, created_at')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('employee_uk_tax_details')
+        .select('id, status, is_active, ni_number_masked, ni_number_last2, tax_code_masked, tax_code_last2, effective_from, review_note, created_at')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('employee_tax_documents')
+        .select('id, document_type, tax_year, issue_date, payroll_period_end, status, finance_reference, wagesheet_id, payroll_run_reference, bucket_id, storage_path, file_name, byte_size, is_current, created_at')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('employee_employment_history')
+        .select('role_title, department_name, team_name, manager_name, employment_type, contract_type, fte, location_type, start_date, end_date, change_reason, pay_grade, salary_band, notes, source')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .order('start_date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('employee_case_records')
+        .select('id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, linked_documents, archived_at, created_at')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('employee_medical_notes')
+        .select('id, case_ref, referral_reason, status, fit_for_work_outcome, recommended_adjustments, review_date, next_review_date, summary_for_employee, archived_at, created_at')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('employee_medical_note_events')
+        .select('id, medical_note_id, event_type, reason, created_at')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('hr_custom_field_definitions')
+        .select('id, key, label, section, field_type, options, is_required, visible_to_manager, visible_to_self')
+        .eq('org_id', orgId)
+        .eq('is_active', true)
+        .eq('visible_to_self', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true }),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
+    resolveWithTimeout(
+      supabase
+        .from('hr_custom_field_values')
+        .select('definition_id, value')
+        .eq('org_id', orgId)
+        .eq('user_id', user.id),
+      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+      { data: [], error: null }
+    ),
   ]);
 
   const fileRow = (fileRows.data ?? [])[0];
@@ -277,10 +350,25 @@ export default async function MyProfilePage() {
   const ownTaxDocs = ownTaxDocsRes.data ?? [];
   const ownEmploymentHistory = ownEmploymentHistoryRes.data ?? [];
   const ownCases = ownCaseRowsRes.data ?? [];
+  const ownCaseIds = ownCases.map((r) => String(r.id));
+  const ownCaseEventsRes =
+    ownCaseIds.length === 0
+      ? { data: [], error: null }
+      : await resolveWithTimeout(
+          supabase
+            .from('employee_case_record_events')
+            .select('id, case_id, event_type, old_status, new_status, created_at')
+            .eq('org_id', orgId)
+            .in('case_id', ownCaseIds)
+            .order('created_at', { ascending: false })
+            .limit(100),
+          PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
+          { data: [], error: null }
+        );
   const ownMedical = ownMedicalRowsRes.data ?? [];
   const ownCustomDefs = ownCustomFieldDefsRes.data ?? [];
 
-  const genZNodes = [
+  const interactiveNodes = [
     {
       id: 'personal-node',
       label: 'Personal',
@@ -461,23 +549,25 @@ export default async function MyProfilePage() {
     },
   ];
 
-  if (uiMode === 'gen_z') {
-    return (
+  if (uiMode === 'interactive') {
+    const view = (
       <div className="min-h-[calc(100vh-60px)]">
         <ProfileUiModeSync initialMode={uiMode} />
         <GraphExperience
           title="My Profile Graph"
-          subtitle="Graph-only view. Every profile area is represented as connected nodes."
+          subtitle="Interactive view. Every profile area is represented as connected nodes."
           centerLabel={profileDisplayName}
           centerDescription="Select nodes to inspect details and jump to related actions."
-          nodes={genZNodes}
+          nodes={interactiveNodes}
           fullScreen
         />
       </div>
     );
+    warnIfSlowServerPath('/profile', pathStartedAtMs);
+    return view;
   }
 
-  return (
+  const view = (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
       <ProfileUiModeSync initialMode={uiMode} />
       <header className="border-b border-[#e8e8e8] pb-5">
@@ -1001,9 +1091,7 @@ export default async function MyProfilePage() {
                 archived_at: (r.archived_at as string | null) ?? null,
                 created_at: r.created_at as string,
               }))}
-              initialEvents={(ownCaseEventRowsRes.data ?? [])
-                .filter((e) => (ownCaseRowsRes.data ?? []).some((c) => (c.id as string) === (e.case_id as string)))
-                .map((e) => ({
+              initialEvents={(ownCaseEventsRes.data ?? []).map((e) => ({
                   id: e.id as string,
                   case_id: e.case_id as string,
                   event_type: (e.event_type as string) ?? 'updated',
@@ -1085,4 +1173,6 @@ export default async function MyProfilePage() {
       </section>
     </div>
   );
+  warnIfSlowServerPath('/profile', pathStartedAtMs);
+  return view;
 }

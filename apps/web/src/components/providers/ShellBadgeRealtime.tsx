@@ -13,17 +13,24 @@ export function ShellBadgeRealtime() {
   const queryClient = useQueryClient();
   const supabase = useMemo(() => createClient(), []);
   const debounceRef = useRef<number | null>(null);
+  const lastRefreshAtRef = useRef(0);
+  const MIN_REFRESH_INTERVAL_MS = 1200;
 
   useEffect(() => {
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const scheduleRefresh = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       if (debounceRef.current !== null) {
         window.clearTimeout(debounceRef.current);
       }
       debounceRef.current = window.setTimeout(() => {
         debounceRef.current = null;
+        const now = Date.now();
+        if (now - lastRefreshAtRef.current < MIN_REFRESH_INTERVAL_MS) return;
+        lastRefreshAtRef.current = now;
         void queryClient.invalidateQueries({
           queryKey: SHELL_BADGE_COUNTS_QUERY_KEY,
           refetchType: 'active',
@@ -32,10 +39,15 @@ export function ShellBadgeRealtime() {
     };
 
     const refreshNow = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       if (debounceRef.current !== null) {
         window.clearTimeout(debounceRef.current);
         debounceRef.current = null;
       }
+      const now = Date.now();
+      if (now - lastRefreshAtRef.current < MIN_REFRESH_INTERVAL_MS) return;
+      lastRefreshAtRef.current = now;
       void queryClient.invalidateQueries({
         queryKey: SHELL_BADGE_COUNTS_QUERY_KEY,
         refetchType: 'active',

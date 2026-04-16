@@ -1,12 +1,37 @@
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
-import { callStaffEdgeFunction, type VerifyTokenResponse } from '@/lib/staffDiscountEdge';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+type VerifyTokenResponse =
+  | {
+      valid: true;
+      name: string;
+      role: string;
+      department: string;
+      discount_label: string | null;
+      discount_value?: string | null;
+      valid_at?: string | null;
+    }
+  | { valid: false; error?: string };
+
+function buildDemoResult(token: string): VerifyTokenResponse {
+  if (!token.trim()) {
+    return { valid: false, error: 'No QR data found.' };
+  }
+
+  return {
+    valid: true,
+    name: 'Demo staff member',
+    role: 'org_admin',
+    department: 'Frontend preview',
+    discount_label: 'Frontend preview only',
+    discount_value: null,
+    valid_at: 'Verification backend removed',
+  };
+}
 
 export function DiscountScannerClient() {
-  const supabase = useMemo(() => createClient(), []);
   const [result, setResult] = useState<VerifyTokenResponse | null>(null);
   const [scannerReady, setScannerReady] = useState(false);
   const [sessionKey, setSessionKey] = useState(0);
@@ -38,15 +63,7 @@ export function DiscountScannerClient() {
           } catch {
             /* */
           }
-          const res = await callStaffEdgeFunction(supabase, 'staff-discount-verify', {
-            token: decodedText.trim(),
-          });
-          if (!res.ok) {
-            setResult({ valid: false, error: res.message });
-            busyRef.current = false;
-            return;
-          }
-          setResult(res.data as VerifyTokenResponse);
+          setResult(buildDemoResult(decodedText));
           busyRef.current = false;
         },
         () => {},
@@ -59,7 +76,7 @@ export function DiscountScannerClient() {
       setScannerReady(false);
       void scanner?.clear().catch(() => {});
     };
-  }, [supabase, result, sessionKey]);
+  }, [result, sessionKey]);
 
   function scanAgain() {
     busyRef.current = false;
@@ -78,7 +95,7 @@ export function DiscountScannerClient() {
       <div>
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Verify staff QR</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Point the camera at a colleague&apos;s discount QR code.
+          Point the camera at a colleague&apos;s discount QR code for a frontend-only preview.
         </p>
       </div>
 
@@ -115,6 +132,12 @@ export function DiscountScannerClient() {
               <dt className="text-[#9b9b9b]">Entitled to</dt>
               <dd className="text-[#121212]">{result.discount_label ?? '-'}</dd>
             </div>
+            {result.valid_at ? (
+              <div>
+                <dt className="text-[#9b9b9b]">Status</dt>
+                <dd className="text-[#121212]">{result.valid_at}</dd>
+              </div>
+            ) : null}
           </dl>
           <button
             type="button"
@@ -127,7 +150,7 @@ export function DiscountScannerClient() {
       ) : (
         <div className="space-y-4 rounded-xl border border-red-200 bg-red-50 p-4">
           <div className="rounded-lg bg-[#b91c1c] px-3 py-2 text-center text-[13px] font-semibold text-white">
-            Invalid or expired card
+            QR preview unavailable
           </div>
           <p className="text-[13px] text-[#6b6b6b]">{result.error ?? 'Try again.'}</p>
           <button

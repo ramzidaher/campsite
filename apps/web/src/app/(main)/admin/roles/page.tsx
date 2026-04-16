@@ -1,34 +1,38 @@
 import { AdminRolesAndPermissionsView } from '@/components/admin/AdminRolesAndPermissionsView';
+import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminRolesPage() {
+  const pathStartedAtMs = Date.now();
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
+  const { data: profile } = await withServerPerf(
+    '/admin/roles',
+    'profile_lookup',
+    supabase
+      .from('profiles')
+      .select('org_id, role, status')
+      .eq('id', user.id)
+      .single(),
+    300
+  );
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const { data: canViewRoles } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: profile.org_id,
-    p_permission_key: 'roles.view',
-    p_context: {},
-  });
-  if (!canViewRoles) redirect('/admin');
+  const permissionKeys = await withServerPerf(
+    '/admin/roles',
+    'get_my_permissions',
+    getMyPermissions(profile.org_id as string),
+    300
+  );
+  if (!permissionKeys.includes('roles.view')) redirect('/admin');
+  const canManageRoles = permissionKeys.includes('roles.manage');
 
-  const { data: canManageRoles } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: profile.org_id,
-    p_permission_key: 'roles.manage',
-    p_context: {},
-  });
-
-  return <AdminRolesAndPermissionsView canManageRoles={Boolean(canManageRoles)} />;
+  const view = <AdminRolesAndPermissionsView canManageRoles={Boolean(canManageRoles)} />;
+  warnIfSlowServerPath('/admin/roles', pathStartedAtMs);
+  return view;
 }

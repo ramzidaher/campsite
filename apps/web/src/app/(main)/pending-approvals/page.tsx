@@ -1,5 +1,6 @@
 import { PendingApprovalsClient, type PendingRow } from '@/components/PendingApprovalsClient';
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -15,27 +16,10 @@ export default async function PendingApprovalsPage() {
   if (!me || me.status !== 'active' || !me.org_id) {
     redirect('/dashboard');
   }
-  const [{ data: canReviewApprovals }, { data: canViewManagerTeams }, { data: canManageManagerWorkspace }] =
-    await Promise.all([
-      supabase.rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: me.org_id,
-        p_permission_key: 'approvals.members.review',
-        p_context: {},
-      }),
-      supabase.rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: me.org_id,
-        p_permission_key: 'teams.view',
-        p_context: {},
-      }),
-      supabase.rpc('has_permission', {
-        p_user_id: user.id,
-        p_org_id: me.org_id,
-        p_permission_key: 'recruitment.create_request',
-        p_context: {},
-      }),
-    ]);
+  const permissionKeys = await getMyPermissions(me.org_id as string);
+  const canReviewApprovals      = permissionKeys.includes('approvals.members.review');
+  const canViewManagerTeams     = permissionKeys.includes('teams.view');
+  const canManageManagerWorkspace = permissionKeys.includes('recruitment.create_request');
   if (!canReviewApprovals) {
     redirect('/dashboard');
   }

@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { userIdsWithMembershipInDepartments } from '@/lib/admin/pendingApprovalScope';
+import { withServerPerf } from '@/lib/perf/serverPerf';
 
 export type PendingApprovalRow = {
   id: string;
@@ -28,27 +29,47 @@ async function scopedPendingProfiles(
   orgId: string,
   viewerRole: string
 ): Promise<PendingProfileScoped[]> {
-  const { data: pending } = await supabase
-    .from('profiles')
-    .select('id,full_name,email,created_at,role')
-    .eq('org_id', orgId)
-    .eq('status', 'pending');
+  const { data: pending } = await withServerPerf(
+    '/admin/pending',
+    'pending_profiles_base',
+    supabase
+      .from('profiles')
+      .select('id,full_name,email,created_at,role')
+      .eq('org_id', orgId)
+      .eq('status', 'pending'),
+    350
+  );
 
   let list = (pending ?? []) as PendingProfileScoped[];
 
   if (viewerRole === 'manager' || viewerRole === 'coordinator') {
     let deptIds: string[] = [];
     if (viewerRole === 'manager') {
-      const { data: managed } = await supabase.from('dept_managers').select('dept_id').eq('user_id', viewerId);
+      const { data: managed } = await withServerPerf(
+        '/admin/pending',
+        'managed_dept_ids',
+        supabase.from('dept_managers').select('dept_id').eq('user_id', viewerId),
+        300
+      );
       deptIds = (managed ?? []).map((m) => m.dept_id as string);
     } else {
-      const { data: ud } = await supabase.from('user_departments').select('dept_id').eq('user_id', viewerId);
+      const { data: ud } = await withServerPerf(
+        '/admin/pending',
+        'coordinator_dept_ids',
+        supabase.from('user_departments').select('dept_id').eq('user_id', viewerId),
+        300
+      );
       deptIds = [...new Set((ud ?? []).map((u) => u.dept_id as string))];
     }
     if (!deptIds.length) {
       list = [];
     } else {
-      const { data: ud } = await supabase.from('user_departments').select('user_id, dept_id').in('dept_id', deptIds);
+      const { data: ud } = await withServerPerf(
+        '/admin/pending',
+        'dept_memberships_for_scope',
+        supabase.from('user_departments').select('user_id, dept_id').in('dept_id', deptIds),
+        350
+      );
       const allowed = userIdsWithMembershipInDepartments(
         (ud ?? []) as { user_id: string; dept_id: string }[],
         deptIds
@@ -72,10 +93,15 @@ export async function loadPendingApprovalRows(
   const ids = list.map((p) => p.id as string);
   const deptNames: Record<string, string[]> = {};
   if (ids.length) {
-    const { data: ud } = await supabase
-      .from('user_departments')
-      .select('user_id, departments(name)')
-      .in('user_id', ids);
+    const { data: ud } = await withServerPerf(
+      '/admin/pending',
+      'pending_user_departments_enrichment',
+      supabase
+        .from('user_departments')
+        .select('user_id, departments(name)')
+        .in('user_id', ids),
+      350
+    );
     for (const row of ud ?? []) {
       const uid = row.user_id as string;
       if (!deptNames[uid]) deptNames[uid] = [];
