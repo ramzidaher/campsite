@@ -7,6 +7,14 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Member = { id: string; full_name: string; email: string | null };
+type HolidayPeriod = {
+  id: string;
+  name: string;
+  holiday_kind: 'bank_holiday' | 'public_holiday' | 'org_break' | 'custom';
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+};
 
 const ISO_WEEKDAY_SHORT: Record<number, string> = {
   1: 'Mon',
@@ -99,6 +107,11 @@ export function OrgLeaveAdminClient({
   const [msg, setMsg] = useState<string | null>(null);
   const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok');
   const [busy, setBusy] = useState(false);
+  const [holidayPeriods, setHolidayPeriods] = useState<HolidayPeriod[]>([]);
+  const [holidayName, setHolidayName] = useState('');
+  const [holidayKind, setHolidayKind] = useState<HolidayPeriod['holiday_kind']>('custom');
+  const [holidayStart, setHolidayStart] = useState('');
+  const [holidayEnd, setHolidayEnd] = useState('');
 
   const yearOptions = useMemo(() => {
     const cy = new Date().getFullYear();
@@ -129,8 +142,22 @@ export function OrgLeaveAdminClient({
     }
   }, [supabase, orgId, targetId, year]);
 
+  const loadHolidayPeriods = useCallback(async () => {
+    const { data } = await supabase
+      .from('org_leave_holiday_periods')
+      .select('id, name, holiday_kind, start_date, end_date, is_active')
+      .eq('org_id', orgId)
+      .order('start_date', { ascending: true })
+      .limit(200);
+    setHolidayPeriods((data ?? []) as HolidayPeriod[]);
+  }, [supabase, orgId]);
+
   useEffect(() => { void loadRow(); }, [loadRow]);
-  useShellRefresh(() => void loadRow());
+  useEffect(() => { void loadHolidayPeriods(); }, [loadHolidayPeriods]);
+  useShellRefresh(() => {
+    void loadRow();
+    void loadHolidayPeriods();
+  });
 
   function flash(text: string, kind: 'ok' | 'err' = 'ok') {
     setMsg(text);
@@ -234,6 +261,70 @@ export function OrgLeaveAdminClient({
     setBusy(false);
     if (error) flash(error.message, 'err');
     else flash(`Applied default to ${typeof data === 'number' ? data : 0} people for ${year}.`);
+  }
+
+  async function addHolidayPeriod(e: React.FormEvent) {
+    e.preventDefault();
+    if (!holidayName.trim() || !holidayStart || !holidayEnd) return;
+    if (holidayEnd < holidayStart) {
+      flash('Holiday end date must be on or after start date.', 'err');
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase.from('org_leave_holiday_periods').insert({
+      org_id: orgId,
+      name: holidayName.trim(),
+      holiday_kind: holidayKind,
+      start_date: holidayStart,
+      end_date: holidayEnd,
+      is_active: true,
+    });
+    setBusy(false);
+    if (error) {
+      flash(error.message, 'err');
+      return;
+    }
+    setHolidayName('');
+    setHolidayKind('custom');
+    setHolidayStart('');
+    setHolidayEnd('');
+    await loadHolidayPeriods();
+    flash('Holiday period added.');
+  }
+
+  async function toggleHolidayPeriod(id: string, nextActive: boolean) {
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase
+      .from('org_leave_holiday_periods')
+      .update({ is_active: nextActive })
+      .eq('org_id', orgId)
+      .eq('id', id);
+    setBusy(false);
+    if (error) {
+      flash(error.message, 'err');
+      return;
+    }
+    await loadHolidayPeriods();
+    flash(nextActive ? 'Holiday period enabled.' : 'Holiday period disabled.');
+  }
+
+  async function deleteHolidayPeriod(id: string) {
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase
+      .from('org_leave_holiday_periods')
+      .delete()
+      .eq('org_id', orgId)
+      .eq('id', id);
+    setBusy(false);
+    if (error) {
+      flash(error.message, 'err');
+      return;
+    }
+    await loadHolidayPeriods();
+    flash('Holiday period removed.');
   }
 
   const selectedMember = members.find((m) => m.id === targetId);
@@ -421,6 +512,104 @@ export function OrgLeaveAdminClient({
                 <p className="mt-2 text-[11px] text-[#9b9b9b]">Highlighted = excluded from leave (default Sat–Sun).</p>
               </div>
             ) : null}
+          </div>
+
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <p className="text-[12.5px] font-medium text-[#121212]">Public / bank holiday calendar</p>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              Add organisation-specific holiday timelines (for example longer university Christmas breaks). These dates are auto-excluded from leave day deduction.
+            </p>
+            <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={(e) => void addHolidayPeriod(e)}>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
+                Name
+                <input
+                  type="text"
+                  required
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                  value={holidayName}
+                  onChange={(e) => setHolidayName(e.target.value)}
+                  placeholder="e.g. Christmas closure"
+                />
+              </label>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Type
+                <select
+                  value={holidayKind}
+                  onChange={(e) => setHolidayKind(e.target.value as HolidayPeriod['holiday_kind'])}
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                >
+                  <option value="bank_holiday">Bank holiday</option>
+                  <option value="public_holiday">Public holiday</option>
+                  <option value="org_break">Organisation break</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              <div />
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                Start date
+                <input
+                  type="date"
+                  required
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                  value={holidayStart}
+                  onChange={(e) => setHolidayStart(e.target.value)}
+                />
+              </label>
+              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
+                End date
+                <input
+                  type="date"
+                  required
+                  min={holidayStart || undefined}
+                  className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                  value={holidayEnd}
+                  onChange={(e) => setHolidayEnd(e.target.value)}
+                />
+              </label>
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={busy || !holidayName.trim() || !holidayStart || !holidayEnd}
+                  className="rounded-lg border border-[#121212] bg-white px-4 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
+                >
+                  {busy ? 'Adding…' : 'Add holiday period'}
+                </button>
+              </div>
+            </form>
+            <div className="mt-4 space-y-2">
+              {holidayPeriods.length === 0 ? (
+                <p className="text-[11px] text-[#9b9b9b]">No holiday periods configured yet.</p>
+              ) : (
+                holidayPeriods.map((h) => (
+                  <div key={h.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#e8e8e8] bg-white px-3 py-2">
+                    <div>
+                      <p className="text-[12.5px] font-medium text-[#121212]">{h.name}</p>
+                      <p className="text-[11px] text-[#6b6b6b]">
+                        {h.holiday_kind.replace('_', ' ')} · {h.start_date} to {h.end_date} · {h.is_active ? 'Active' : 'Disabled'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void toggleHolidayPeriod(h.id, !h.is_active)}
+                        className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1] disabled:opacity-50"
+                      >
+                        {h.is_active ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void deleteHolidayPeriod(h.id)}
+                        className="rounded-lg border border-[#fecaca] bg-white px-3 py-1.5 text-[12px] text-[#b91c1c] hover:bg-[#fef2f2] disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">

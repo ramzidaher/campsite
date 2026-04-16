@@ -90,6 +90,15 @@ type EncashmentRequest = {
   profiles?: { full_name: string } | { full_name: string }[] | null;
 };
 
+type HolidayPeriod = {
+  id: string;
+  name: string;
+  holiday_kind: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+};
+
 const REQUESTABLE_LEAVE_KINDS = ['annual', 'toil', 'parental', 'bereavement', 'compassionate', 'study', 'unpaid'] as const;
 type RequestableLeaveKind = (typeof REQUESTABLE_LEAVE_KINDS)[number];
 type ParentalSubtype = 'maternity' | 'paternity' | 'adoption' | 'shared_parental';
@@ -185,6 +194,7 @@ export function LeaveHubClient({
   leaveUseWorkingDays,
   nonWorkingIsoDows,
   toilMinutesPerDay,
+  initialHolidayPeriods,
 }: {
   orgId: string;
   userId: string;
@@ -203,6 +213,7 @@ export function LeaveHubClient({
   nonWorkingIsoDows: number[];
   /** Minutes counted as one day when converting earned overtime into TOIL balance (e.g. 480 = 8h). */
   toilMinutesPerDay: number;
+  initialHolidayPeriods: HolidayPeriod[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [year, setYear] = useState(initialYear);
@@ -225,6 +236,7 @@ export function LeaveHubClient({
   const [pendingEncashmentForMe, setPendingEncashmentForMe] = useState<EncashmentRequest[]>([]);
   const [sickness, setSickness] = useState<SicknessRow[]>([]);
   const [sspSummary, setSspSummary] = useState<Record<string, unknown> | null>(null);
+  const [holidayPeriods, setHolidayPeriods] = useState<HolidayPeriod[]>(initialHolidayPeriods ?? []);
   const [absenceScore, setAbsenceScore] = useState<{ spell_count: number; total_days: number; bradford_score: number } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -292,7 +304,7 @@ export function LeaveHubClient({
     setMsg(null);
     const toIso = new Date().toISOString().slice(0, 10);
     const fromIso = new Date(Date.now() - 730 * 86400000).toISOString().slice(0, 10);
-  const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }, { data: myCarry }, { data: myEncash }] = await Promise.all([
+  const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }, { data: myCarry }, { data: myEncash }, { data: holidays }] = await Promise.all([
       supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
       supabase.from('leave_requests').select('id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
       supabase.from('sickness_absences').select('id, start_date, end_date, half_day_portion, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
@@ -319,6 +331,12 @@ export function LeaveHubClient({
         .eq('requester_id', userId)
         .order('created_at', { ascending: false })
         .limit(40),
+      supabase
+        .from('org_leave_holiday_periods')
+        .select('id, name, holiday_kind, start_date, end_date, is_active')
+        .eq('org_id', orgId)
+        .eq('is_active', true)
+        .order('start_date', { ascending: true }),
     ]);
 
     setAllowance(al ? { leave_year: String(al.leave_year), annual_entitlement_days: Number(al.annual_entitlement_days ?? 0), toil_balance_days: Number(al.toil_balance_days ?? 0) } : { leave_year: year, annual_entitlement_days: 0, toil_balance_days: 0 });
@@ -327,6 +345,7 @@ export function LeaveHubClient({
     setMyCarryoverRequests((myCarry ?? []) as CarryoverRequest[]);
     setMyEncashmentRequests((myEncash ?? []) as EncashmentRequest[]);
     setSickness((sick ?? []) as SicknessRow[]);
+    setHolidayPeriods((holidays ?? []) as HolidayPeriod[]);
     setSspSummary(ssp && typeof ssp === 'object' ? (ssp as Record<string, unknown>) : null);
 
     const b0 = Array.isArray(bf) ? bf[0] : bf;
@@ -697,8 +716,21 @@ export function LeaveHubClient({
     () => ({
       leaveUseWorkingDays,
       nonWorkingIsoDows: nonWorkingIsoDows.length ? nonWorkingIsoDows : [6, 7],
+      excludedDates: (() => {
+        const s = new Set<string>();
+        for (const h of holidayPeriods) {
+          let d = h.start_date;
+          while (d <= h.end_date) {
+            s.add(d);
+            const t = new Date(`${d}T12:00:00Z`);
+            t.setUTCDate(t.getUTCDate() + 1);
+            d = t.toISOString().slice(0, 10);
+          }
+        }
+        return s;
+      })(),
     }),
-    [leaveUseWorkingDays, nonWorkingIsoDows],
+    [leaveUseWorkingDays, nonWorkingIsoDows, holidayPeriods],
   );
 
   const usedAnnual = useMemo(

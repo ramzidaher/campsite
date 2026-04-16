@@ -61,6 +61,15 @@ type ToilCreditRequest = {
   requester_name?: string;
 };
 
+type HolidayPeriod = {
+  id: string;
+  name: string;
+  holiday_kind: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+};
+
 function daysBetween(start: string, end: string): number {
   const a = new Date(`${start}T12:00:00Z`);
   const b = new Date(`${end}T12:00:00Z`);
@@ -176,6 +185,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
     total_days: number;
     bradford_score: number;
   } | null>(null);
+  const [holidayPeriods, setHolidayPeriods] = useState<HolidayPeriod[]>([]);
 
   const orgId = profile.org_id ?? '';
   const userId = profile.id;
@@ -231,6 +241,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
       { data: mine },
       { data: mineToil },
       bfRes,
+      { data: holidays },
     ] = await Promise.all([
       supabase.rpc('get_my_permissions', { p_org_id: orgId }),
       supabase
@@ -255,6 +266,12 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         .order('created_at', { ascending: false })
         .limit(40),
       supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: todayIso }),
+      supabase
+        .from('org_leave_holiday_periods')
+        .select('id, name, holiday_kind, start_date, end_date, is_active')
+        .eq('org_id', orgId)
+        .eq('is_active', true)
+        .order('start_date', { ascending: true }),
     ]);
 
     if (!bfRes.error && bfRes.data != null) {
@@ -293,6 +310,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
     );
     setMyRequests((mine ?? []) as LeaveRequest[]);
     setMyToilCredits((mineToil ?? []) as ToilCreditRequest[]);
+    setHolidayPeriods((holidays ?? []) as HolidayPeriod[]);
 
     if (approve) {
       const isManager = keys.includes('leave.manage_org');
@@ -390,8 +408,21 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
     () => ({
       leaveUseWorkingDays,
       nonWorkingIsoDows: nonWorkingIsoDows.length ? nonWorkingIsoDows : [6, 7],
+      excludedDates: (() => {
+        const s = new Set<string>();
+        for (const h of holidayPeriods) {
+          let d = h.start_date;
+          while (d <= h.end_date) {
+            s.add(d);
+            const t = new Date(`${d}T12:00:00Z`);
+            t.setUTCDate(t.getUTCDate() + 1);
+            d = t.toISOString().slice(0, 10);
+          }
+        }
+        return s;
+      })(),
     }),
-    [leaveUseWorkingDays, nonWorkingIsoDows],
+    [leaveUseWorkingDays, nonWorkingIsoDows, holidayPeriods],
   );
 
   const usedAnnual = useMemo(

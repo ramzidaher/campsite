@@ -32,7 +32,7 @@ export default async function LeavePage() {
   const canApprove = keys.includes('leave.approve_direct_reports') || keys.includes('leave.manage_org');
   const canManage = keys.includes('leave.manage_org');
 
-  const [{ data: leaveSettings }, { data: orgRow }] = await Promise.all([
+  const [{ data: leaveSettings }, { data: orgRow }, { data: holidayPeriods }] = await Promise.all([
     supabase
       .from('org_leave_settings')
       .select(
@@ -41,6 +41,12 @@ export default async function LeavePage() {
       .eq('org_id', orgId)
       .maybeSingle(),
     supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
+    supabase
+      .from('org_leave_holiday_periods')
+      .select('id, name, holiday_kind, start_date, end_date, is_active')
+      .eq('org_id', orgId)
+      .eq('is_active', true)
+      .order('start_date', { ascending: true }),
   ]);
 
   const orgTimezone = (orgRow?.timezone as string | null) ?? null;
@@ -71,6 +77,16 @@ export default async function LeavePage() {
       leaveUseWorkingDays={leaveUseWorkingDays}
       nonWorkingIsoDows={nonWorkingIsoDows}
       toilMinutesPerDay={toilMinutesPerDay}
+      initialHolidayPeriods={
+        (holidayPeriods ?? []) as Array<{
+          id: string;
+          name: string;
+          holiday_kind: string;
+          start_date: string;
+          end_date: string;
+          is_active: boolean;
+        }>
+      }
     />
   );
 }
