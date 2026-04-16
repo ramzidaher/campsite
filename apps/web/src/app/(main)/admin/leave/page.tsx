@@ -1,4 +1,5 @@
 import { OrgLeaveAdminClient } from '@/components/admin/OrgLeaveAdminClient';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -18,13 +19,8 @@ export default async function AdminLeavePage() {
 
   const orgId = profile.org_id as string;
 
-  const { data: allowed } = await supabase.rpc('has_permission', {
-    p_user_id: user.id,
-    p_org_id: orgId,
-    p_permission_key: 'leave.manage_org',
-    p_context: {},
-  });
-  if (!allowed) redirect('/admin');
+  const permissionKeys = await getMyPermissions(orgId);
+  if (!permissionKeys.includes('leave.manage_org')) redirect('/admin');
 
   const [{ data: members }, { data: settings }] = await Promise.all([
     supabase
@@ -36,7 +32,7 @@ export default async function AdminLeavePage() {
     supabase
       .from('org_leave_settings')
       .select(
-        'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings',
+        'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings, carry_over_enabled, carry_over_requires_approval, carry_over_max_days',
       )
       .eq('org_id', orgId)
       .maybeSingle(),
@@ -68,6 +64,9 @@ export default async function AdminLeavePage() {
                 settings.ssp_lel_weekly_gbp != null ? Number(settings.ssp_lel_weekly_gbp) : null,
               ssp_waiting_qualifying_days: Number(settings.ssp_waiting_qualifying_days ?? 0),
               ssp_reform_percent_of_earnings: Number(settings.ssp_reform_percent_of_earnings ?? 0.8),
+              carry_over_enabled: Boolean(settings.carry_over_enabled),
+              carry_over_requires_approval: Boolean(settings.carry_over_requires_approval ?? true),
+              carry_over_max_days: Number(settings.carry_over_max_days ?? 0),
             }
           : null
       }

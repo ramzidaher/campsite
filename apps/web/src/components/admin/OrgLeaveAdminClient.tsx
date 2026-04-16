@@ -39,6 +39,9 @@ export function OrgLeaveAdminClient({
     ssp_lel_weekly_gbp: number | null;
     ssp_waiting_qualifying_days: number;
     ssp_reform_percent_of_earnings: number;
+    carry_over_enabled: boolean;
+    carry_over_requires_approval: boolean;
+    carry_over_max_days: number;
   } | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -84,6 +87,9 @@ export function OrgLeaveAdminClient({
   const [clearSspLel, setClearSspLel] = useState(false);
   const [sspWaiting, setSspWaiting] = useState(String(initialSettings?.ssp_waiting_qualifying_days ?? 0));
   const [sspPct, setSspPct] = useState(String(initialSettings?.ssp_reform_percent_of_earnings ?? 0.8));
+  const [carryOverEnabled, setCarryOverEnabled] = useState(initialSettings?.carry_over_enabled ?? false);
+  const [carryOverRequiresApproval, setCarryOverRequiresApproval] = useState(initialSettings?.carry_over_requires_approval ?? true);
+  const [carryOverMaxDays, setCarryOverMaxDays] = useState(String(initialSettings?.carry_over_max_days ?? 0));
   const [msg, setMsg] = useState<string | null>(null);
   const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok');
   const [busy, setBusy] = useState(false);
@@ -165,6 +171,9 @@ export function OrgLeaveAdminClient({
       p_clear_ssp_lel?: boolean;
       p_ssp_waiting_qualifying_days: number;
       p_ssp_reform_percent_of_earnings: number;
+      p_carry_over_enabled: boolean;
+      p_carry_over_requires_approval: boolean;
+      p_carry_over_max_days: number;
     } = {
       p_bradford_window_days: Number(bradfordDays),
       p_leave_year_start_month: Number(lyM),
@@ -177,6 +186,9 @@ export function OrgLeaveAdminClient({
       p_ssp_flat_weekly_rate_gbp: Number(sspFlat),
       p_ssp_waiting_qualifying_days: Number(sspWaiting),
       p_ssp_reform_percent_of_earnings: Number(sspPct),
+      p_carry_over_enabled: carryOverEnabled,
+      p_carry_over_requires_approval: carryOverRequiresApproval,
+      p_carry_over_max_days: Number(carryOverMaxDays),
     };
     if (clearSspLel) {
       payload.p_clear_ssp_lel = true;
@@ -397,6 +409,44 @@ export function OrgLeaveAdminClient({
                 <p className="mt-2 text-[11px] text-[#9b9b9b]">Highlighted = excluded from leave (default Sat–Sun).</p>
               </div>
             ) : null}
+          </div>
+
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <p className="text-[12.5px] font-medium text-[#121212]">Carry-over requests</p>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              Allow staff to request carry-over of unused annual leave into next leave year. Requests are reviewed case by case.
+            </p>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12.5px] font-medium text-[#121212]">
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded border-[#d8d8d8]"
+                checked={carryOverEnabled}
+                onChange={(e) => setCarryOverEnabled(e.target.checked)}
+              />
+              <span>Enable carry-over requests</span>
+            </label>
+            <label className="mt-2 flex cursor-pointer items-start gap-2 text-[12.5px] font-medium text-[#121212]">
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded border-[#d8d8d8]"
+                checked={carryOverRequiresApproval}
+                disabled={!carryOverEnabled}
+                onChange={(e) => setCarryOverRequiresApproval(e.target.checked)}
+              />
+              <span>Require manager/admin approval for each request</span>
+            </label>
+            <label className="mt-3 block text-[12.5px] font-medium text-[#6b6b6b]">
+              Max carry-over per request (days)
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                disabled={!carryOverEnabled}
+                className="mt-1 w-full max-w-[180px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] disabled:opacity-50"
+                value={carryOverMaxDays}
+                onChange={(e) => setCarryOverMaxDays(e.target.value)}
+              />
+            </label>
           </div>
 
           <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">

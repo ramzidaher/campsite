@@ -61,6 +61,20 @@ type ToilCreditRequest = {
   profiles?: { full_name: string } | { full_name: string }[] | null;
 };
 
+type CarryoverRequest = {
+  id: string;
+  from_leave_year: string;
+  to_leave_year: string;
+  days_requested: number;
+  days_approved?: number | null;
+  note: string | null;
+  status: string;
+  decision_note?: string | null;
+  created_at: string;
+  requester_id?: string;
+  profiles?: { full_name: string } | { full_name: string }[] | null;
+};
+
 function daysBetween(start: string, end: string): number {
   const a = new Date(`${start}T12:00:00Z`);
   const b = new Date(`${end}T12:00:00Z`);
@@ -83,7 +97,7 @@ function fmtDate(iso: string) {
   });
 }
 
-function displayName(p: LeaveRequest | ToilCreditRequest): string {
+function displayName(p: LeaveRequest | ToilCreditRequest | CarryoverRequest): string {
   const raw = p.profiles;
   const row = Array.isArray(raw) ? raw[0] : raw;
   return row?.full_name?.trim() || 'Team member';
@@ -161,8 +175,10 @@ export function LeaveHubClient({
   const [allowance, setAllowance] = useState<AllowanceRow | null>(null);
   const [myRequests, setMyRequests] = useState<LeaveRequest[]>([]);
   const [myToilCreditRequests, setMyToilCreditRequests] = useState<ToilCreditRequest[]>([]);
+  const [myCarryoverRequests, setMyCarryoverRequests] = useState<CarryoverRequest[]>([]);
   const [pendingForMe, setPendingForMe] = useState<LeaveRequest[]>([]);
   const [pendingToilForMe, setPendingToilForMe] = useState<ToilCreditRequest[]>([]);
+  const [pendingCarryoverForMe, setPendingCarryoverForMe] = useState<CarryoverRequest[]>([]);
   const [sickness, setSickness] = useState<SicknessRow[]>([]);
   const [sspSummary, setSspSummary] = useState<Record<string, unknown> | null>(null);
   const [absenceScore, setAbsenceScore] = useState<{ spell_count: number; total_days: number; bradford_score: number } | null>(null);
@@ -170,6 +186,7 @@ export function LeaveHubClient({
   const [busy, setBusy] = useState(false);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [showToilEarnForm, setShowToilEarnForm] = useState(false);
+  const [showCarryoverForm, setShowCarryoverForm] = useState(false);
   const [showSickForm, setShowSickForm] = useState(false);
   const [showSickHistory, setShowSickHistory] = useState(false);
 
@@ -193,13 +210,16 @@ export function LeaveHubClient({
   const [editDayMode, setEditDayMode] = useState<'full' | 'half'>('full');
   const [editHalfDayPortion, setEditHalfDayPortion] = useState<'am' | 'pm'>('am');
   const [approvalModal, setApprovalModal] = useState<
-    null | { source: 'leave' | 'toil_credit'; id: string; approve: boolean }
+    null | { source: 'leave' | 'toil_credit' | 'carryover'; id: string; approve: boolean }
   >(null);
   const [approvalNote, setApprovalNote] = useState('');
   const [toilEarnWorkDate, setToilEarnWorkDate] = useState('');
   const [toilEarnAmount, setToilEarnAmount] = useState('');
   const [toilEarnUnit, setToilEarnUnit] = useState<'minutes' | 'hours' | 'days'>('hours');
   const [toilEarnNote, setToilEarnNote] = useState('');
+  const [carryoverFromYear, setCarryoverFromYear] = useState('');
+  const [carryoverDays, setCarryoverDays] = useState('');
+  const [carryoverNote, setCarryoverNote] = useState('');
 
   const selectedLeavePeriodLabel = useMemo(
     () => formatLeaveYearPeriodRange(year, leaveYearStartMonth, leaveYearStartDay),
@@ -222,7 +242,7 @@ export function LeaveHubClient({
     setMsg(null);
     const toIso = new Date().toISOString().slice(0, 10);
     const fromIso = new Date(Date.now() - 730 * 86400000).toISOString().slice(0, 10);
-    const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }] = await Promise.all([
+  const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }, { data: myCarry }] = await Promise.all([
       supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
       supabase.from('leave_requests').select('id, kind, start_date, end_date, half_day_portion, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
       supabase.from('sickness_absences').select('id, start_date, end_date, half_day_portion, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
@@ -235,11 +255,19 @@ export function LeaveHubClient({
         .order('created_at', { ascending: false })
         .limit(40),
       supabase.rpc('ssp_calculation_summary', { p_user_id: userId, p_from: fromIso, p_to: toIso }),
+      supabase
+        .from('leave_carryover_requests')
+        .select('id, from_leave_year, to_leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+        .eq('org_id', orgId)
+        .eq('requester_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(40),
     ]);
 
     setAllowance(al ? { leave_year: String(al.leave_year), annual_entitlement_days: Number(al.annual_entitlement_days ?? 0), toil_balance_days: Number(al.toil_balance_days ?? 0) } : { leave_year: year, annual_entitlement_days: 0, toil_balance_days: 0 });
     setMyRequests((mine ?? []) as LeaveRequest[]);
     setMyToilCreditRequests((mineToil ?? []) as ToilCreditRequest[]);
+    setMyCarryoverRequests((myCarry ?? []) as CarryoverRequest[]);
     setSickness((sick ?? []) as SicknessRow[]);
     setSspSummary(ssp && typeof ssp === 'object' ? (ssp as Record<string, unknown>) : null);
 
@@ -251,6 +279,7 @@ export function LeaveHubClient({
     if (canApprove || canManage) {
       let pend: LeaveRequest[] = [];
       let pendToil: ToilCreditRequest[] = [];
+      let pendCarry: CarryoverRequest[] = [];
       if (canManage) {
         const { data } = await supabase
           .from('leave_requests')
@@ -266,6 +295,13 @@ export function LeaveHubClient({
           .eq('status', 'pending')
           .order('created_at', { ascending: false });
         pendToil = (toilData ?? []) as ToilCreditRequest[];
+        const { data: carryData } = await supabase
+          .from('leave_carryover_requests')
+          .select('id, requester_id, from_leave_year, to_leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+          .eq('org_id', orgId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+        pendCarry = (carryData ?? []) as CarryoverRequest[];
       } else {
         const { data: reportIds } = await supabase.from('profiles').select('id').eq('org_id', orgId).eq('reports_to_user_id', userId);
         const ids = (reportIds ?? []).map((r) => r.id as string).filter(Boolean);
@@ -286,9 +322,17 @@ export function LeaveHubClient({
             .in('requester_id', ids)
             .order('created_at', { ascending: false });
           pendToil = (toilData ?? []) as ToilCreditRequest[];
+          const { data: carryData } = await supabase
+            .from('leave_carryover_requests')
+            .select('id, requester_id, from_leave_year, to_leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+            .eq('org_id', orgId)
+            .eq('status', 'pending')
+            .in('requester_id', ids)
+            .order('created_at', { ascending: false });
+          pendCarry = (carryData ?? []) as CarryoverRequest[];
         }
       }
-      const nameIds = [...new Set([...pend.map((r) => r.requester_id as string), ...pendToil.map((t) => t.requester_id as string)])];
+      const nameIds = [...new Set([...pend.map((r) => r.requester_id as string), ...pendToil.map((t) => t.requester_id as string), ...pendCarry.map((c) => c.requester_id as string)])];
       const names: Record<string, string> = {};
       if (nameIds.length) {
         const { data: profs } = await supabase
@@ -299,9 +343,11 @@ export function LeaveHubClient({
       }
       setPendingForMe(pend.map((r) => ({ ...r, profiles: { full_name: names[r.requester_id as string] ?? '' } })));
       setPendingToilForMe(pendToil.map((t) => ({ ...t, profiles: { full_name: names[t.requester_id as string] ?? '' } })));
+      setPendingCarryoverForMe(pendCarry.map((c) => ({ ...c, profiles: { full_name: names[c.requester_id as string] ?? '' } })));
     } else {
       setPendingForMe([]);
       setPendingToilForMe([]);
+      setPendingCarryoverForMe([]);
     }
   }, [supabase, orgId, userId, year, canApprove, canManage]);
 
@@ -401,7 +447,7 @@ export function LeaveHubClient({
     setMsg(null);
   }
 
-  function openApprovalDialog(source: 'leave' | 'toil_credit', id: string, approve: boolean) {
+  function openApprovalDialog(source: 'leave' | 'toil_credit' | 'carryover', id: string, approve: boolean) {
     setApprovalModal({ source, id, approve });
     setApprovalNote('');
     setMsg(null);
@@ -435,6 +481,28 @@ export function LeaveHubClient({
     await load();
   }
 
+  async function submitCarryoverRequest(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setBusy(true);
+    setMsg(null);
+    const { error } = await supabase.rpc('leave_carryover_request_submit', {
+      p_from_leave_year: carryoverFromYear || year,
+      p_days_requested: Number(carryoverDays),
+      p_note: carryoverNote.trim() || null,
+    });
+    setBusy(false);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setCarryoverFromYear('');
+    setCarryoverDays('');
+    setCarryoverNote('');
+    setShowCarryoverForm(false);
+    await load();
+  }
+
   async function submitApprovalDecision() {
     if (!approvalModal) return;
     setBusy(true);
@@ -446,7 +514,13 @@ export function LeaveHubClient({
             p_approve: approvalModal.approve,
             p_note: note,
           })
-        : await supabase.rpc('toil_credit_request_decide', {
+        : approvalModal.source === 'toil_credit'
+        ? await supabase.rpc('toil_credit_request_decide', {
+            p_request_id: approvalModal.id,
+            p_approve: approvalModal.approve,
+            p_note: note,
+          })
+        : await supabase.rpc('leave_carryover_request_decide', {
             p_request_id: approvalModal.id,
             p_approve: approvalModal.approve,
             p_note: note,
@@ -464,7 +538,8 @@ export function LeaveHubClient({
   const mergedApprovalQueue = useMemo(() => {
     type Row =
       | { key: string; created_at: string; kind: 'leave'; leave: LeaveRequest }
-      | { key: string; created_at: string; kind: 'toil'; toil: ToilCreditRequest };
+      | { key: string; created_at: string; kind: 'toil'; toil: ToilCreditRequest }
+      | { key: string; created_at: string; kind: 'carryover'; carryover: CarryoverRequest };
     const rows: Row[] = [
       ...pendingForMe.map((leave) => ({
         key: `leave-${leave.id}`,
@@ -478,10 +553,16 @@ export function LeaveHubClient({
         kind: 'toil' as const,
         toil,
       })),
+      ...pendingCarryoverForMe.map((carryover) => ({
+        key: `carry-${carryover.id}`,
+        created_at: carryover.created_at,
+        kind: 'carryover' as const,
+        carryover,
+      })),
     ];
     rows.sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
     return rows;
-  }, [pendingForMe, pendingToilForMe]);
+  }, [pendingForMe, pendingToilForMe, pendingCarryoverForMe]);
 
   const leaveYearStartIso = useMemo(() => {
     const y = Number(year);
@@ -637,6 +718,7 @@ export function LeaveHubClient({
                   setShowToilEarnForm((v) => !v);
                   setShowLeaveForm(false);
                   setShowSickForm(false);
+                  setShowCarryoverForm(false);
                   setMsg(null);
                 }}
                 className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-xl border border-[#008B60] bg-[#f0fdf9] px-3 text-[12.5px] font-semibold text-[#065f46] hover:bg-[#d1fae5]"
@@ -662,6 +744,7 @@ export function LeaveHubClient({
                     setShowLeaveForm((v) => !v);
                     setShowSickForm(false);
                     setShowToilEarnForm(false);
+                    setShowCarryoverForm(false);
                   }}
                   className="inline-flex h-9 items-center justify-center rounded-xl bg-[#121212] px-4 text-[13px] font-medium text-white hover:bg-[#2a2a2a]"
                 >
@@ -673,10 +756,23 @@ export function LeaveHubClient({
                     setShowSickForm((v) => !v);
                     setShowLeaveForm(false);
                     setShowToilEarnForm(false);
+                    setShowCarryoverForm(false);
                   }}
                   className="inline-flex h-9 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
                 >
                   {showSickForm ? 'Close' : '+ Log sick day'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCarryoverForm((v) => !v);
+                    setShowLeaveForm(false);
+                    setShowSickForm(false);
+                    setShowToilEarnForm(false);
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+                >
+                  {showCarryoverForm ? 'Close' : '+ Request carry-over'}
                 </button>
               </div>
             ) : null}
@@ -700,6 +796,7 @@ export function LeaveHubClient({
               onClick={() => {
                 setShowToilEarnForm(false);
                 setShowLeaveForm(true);
+                setShowCarryoverForm(false);
               }}
             >
               Book time off instead
@@ -769,6 +866,57 @@ export function LeaveHubClient({
         </div>
       ) : null}
 
+      {showCarryoverForm && canSubmit ? (
+        <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
+          <h2 className="mb-1 text-[15px] font-semibold text-[#121212]">Request annual leave carry-over</h2>
+          <p className="mb-4 text-[12px] text-[#9b9b9b]">Ask to carry unused annual leave into next leave year. Reviewed case by case.</p>
+          <form className="space-y-4" onSubmit={(e) => void submitCarryoverRequest(e)}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">From leave year</span>
+                <select
+                  value={carryoverFromYear}
+                  onChange={(e) => setCarryoverFromYear(e.target.value)}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                >
+                  <option value="">Select year</option>
+                  {yearOptions.map((y) => <option key={`carry-${y}`} value={y}>{y}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Days requested</span>
+                <input
+                  type="number"
+                  required
+                  min={0.5}
+                  step={0.5}
+                  value={carryoverDays}
+                  onChange={(e) => setCarryoverDays(e.target.value)}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                />
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Reason (optional)</span>
+              <input
+                type="text"
+                value={carryoverNote}
+                onChange={(e) => setCarryoverNote(e.target.value)}
+                className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                placeholder="e.g. project deadlines prevented leave usage"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={busy || !carryoverFromYear || !carryoverDays}
+              className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50"
+            >
+              {busy ? 'Sending…' : 'Send request'}
+            </button>
+          </form>
+        </div>
+      ) : null}
+
       {/* Leave request form (slide-in) */}
       {showLeaveForm && canSubmit ? (
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
@@ -780,6 +928,7 @@ export function LeaveHubClient({
               onClick={() => {
                 setShowLeaveForm(false);
                 setShowToilEarnForm(true);
+                setShowCarryoverForm(false);
                 setMsg(null);
               }}
             >
@@ -960,9 +1109,13 @@ export function LeaveHubClient({
                 ? approvalModal.approve
                   ? 'Approve TOIL credit'
                   : 'Decline TOIL credit'
-                : approvalModal.approve
-                  ? 'Approve leave request'
-                  : 'Decline leave request'}
+                : approvalModal.source === 'carryover'
+                  ? approvalModal.approve
+                    ? 'Approve carry-over request'
+                    : 'Decline carry-over request'
+                  : approvalModal.approve
+                    ? 'Approve leave request'
+                    : 'Decline leave request'}
             </h2>
             <p className="mb-4 text-[12px] text-[#9b9b9b]">
               Optional note for the employee (shown when the decision is saved).
@@ -1118,7 +1271,7 @@ export function LeaveHubClient({
                     </button>
                   </div>
                 </div>
-              ) : (
+              ) : row.kind === 'toil' ? (
                 <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#a7f3d0] bg-[#ecfdf5] p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="font-semibold text-[#121212]">{displayName(row.toil)}</p>
@@ -1132,6 +1285,24 @@ export function LeaveHubClient({
                       Approve
                     </button>
                     <button type="button" disabled={busy} onClick={() => openApprovalDialog('toil_credit', row.toil.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#121212]">{displayName(row.carryover)}</p>
+                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                      Carry-over request &middot; {row.carryover.days_requested} day{row.carryover.days_requested === 1 ? '' : 's'} from {row.carryover.from_leave_year} to {row.carryover.to_leave_year}
+                    </p>
+                    {row.carryover.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.carryover.note}&rdquo;</p> : null}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('carryover', row.carryover.id, true)} className="rounded-xl bg-[#14532d] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[#166534]">
+                      Approve
+                    </button>
+                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('carryover', row.carryover.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
                       Reject
                     </button>
                   </div>
@@ -1162,6 +1333,35 @@ export function LeaveHubClient({
                     <p className="mt-1 text-[12px] text-[#6b6b6b]">
                       <span className="font-medium text-[#121212]">Approver note: </span>
                       {t.decision_note}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {canSubmit && myCarryoverRequests.length > 0 ? (
+        <section className="mb-6">
+          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My carry-over requests</h2>
+          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+            {myCarryoverRequests.map((c, i) => (
+              <div key={c.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13.5px] font-medium text-[#121212]">Carry-over</span>
+                    <StatusPill status={c.status} />
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                    {c.days_requested} day{c.days_requested === 1 ? '' : 's'} from {c.from_leave_year} to {c.to_leave_year}
+                    {c.status === 'approved' && c.days_approved != null ? ` · ${c.days_approved} approved` : ''}
+                  </p>
+                  {c.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{c.note}&rdquo;</p> : null}
+                  {(c.status === 'approved' || c.status === 'rejected') && c.decision_note ? (
+                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                      <span className="font-medium text-[#121212]">Approver note: </span>
+                      {c.decision_note}
                     </p>
                   ) : null}
                 </div>
