@@ -20,6 +20,7 @@ type LeaveRequest = {
   start_date: string;
   end_date: string;
   half_day_portion?: 'am' | 'pm' | null;
+  parental_subtype?: 'maternity' | 'paternity' | 'adoption' | 'shared_parental' | null;
   status: string;
   note: string | null;
   decision_note?: string | null;
@@ -31,6 +32,7 @@ type LeaveRequest = {
   proposed_end_date?: string | null;
   proposed_note?: string | null;
   proposed_half_day_portion?: 'am' | 'pm' | null;
+  proposed_parental_subtype?: 'maternity' | 'paternity' | 'adoption' | 'shared_parental' | null;
   requester_id?: string;
   profiles?: { full_name: string } | { full_name: string }[] | null;
 };
@@ -90,6 +92,7 @@ type EncashmentRequest = {
 
 const REQUESTABLE_LEAVE_KINDS = ['annual', 'toil', 'parental', 'bereavement', 'compassionate', 'study', 'unpaid'] as const;
 type RequestableLeaveKind = (typeof REQUESTABLE_LEAVE_KINDS)[number];
+type ParentalSubtype = 'maternity' | 'paternity' | 'adoption' | 'shared_parental';
 
 function leaveKindLabel(kind: string): string {
   switch (kind) {
@@ -101,6 +104,16 @@ function leaveKindLabel(kind: string): string {
     case 'study': return 'Study leave';
     case 'unpaid': return 'Unpaid leave';
     default: return kind;
+  }
+}
+
+function parentalSubtypeLabel(v: ParentalSubtype | string | null | undefined): string {
+  switch (v) {
+    case 'maternity': return 'Maternity';
+    case 'paternity': return 'Paternity';
+    case 'adoption': return 'Adoption';
+    case 'shared_parental': return 'Shared parental';
+    default: return '';
   }
 }
 
@@ -228,6 +241,7 @@ export function LeaveHubClient({
   const [formNote, setFormNote] = useState('');
   const [formDayMode, setFormDayMode] = useState<'full' | 'half'>('full');
   const [formHalfDayPortion, setFormHalfDayPortion] = useState<'am' | 'pm'>('am');
+  const [formParentalSubtype, setFormParentalSubtype] = useState<ParentalSubtype>('maternity');
 
   const [sickStart, setSickStart] = useState('');
   const [sickEnd, setSickEnd] = useState('');
@@ -241,6 +255,7 @@ export function LeaveHubClient({
   const [editNote, setEditNote] = useState('');
   const [editDayMode, setEditDayMode] = useState<'full' | 'half'>('full');
   const [editHalfDayPortion, setEditHalfDayPortion] = useState<'am' | 'pm'>('am');
+  const [editParentalSubtype, setEditParentalSubtype] = useState<ParentalSubtype>('maternity');
   const [approvalModal, setApprovalModal] = useState<
     null | { source: 'leave' | 'toil_credit' | 'carryover' | 'encashment'; id: string; approve: boolean }
   >(null);
@@ -279,7 +294,7 @@ export function LeaveHubClient({
     const fromIso = new Date(Date.now() - 730 * 86400000).toISOString().slice(0, 10);
   const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }, { data: myCarry }, { data: myEncash }] = await Promise.all([
       supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
-      supabase.from('leave_requests').select('id, kind, start_date, end_date, half_day_portion, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
+      supabase.from('leave_requests').select('id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
       supabase.from('sickness_absences').select('id, start_date, end_date, half_day_portion, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
       supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: toIso }),
       supabase
@@ -327,7 +342,7 @@ export function LeaveHubClient({
       if (canManage) {
         const { data } = await supabase
           .from('leave_requests')
-          .select('id, requester_id, kind, start_date, end_date, half_day_portion, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion')
+          .select('id, requester_id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype')
           .eq('org_id', orgId)
           .in('status', ['pending', 'pending_cancel', 'pending_edit'])
           .order('created_at', { ascending: false });
@@ -359,7 +374,7 @@ export function LeaveHubClient({
         if (ids.length) {
           const { data } = await supabase
             .from('leave_requests')
-            .select('id, requester_id, kind, start_date, end_date, half_day_portion, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion')
+            .select('id, requester_id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype')
             .eq('org_id', orgId)
             .in('status', ['pending', 'pending_cancel', 'pending_edit'])
             .in('requester_id', ids)
@@ -429,10 +444,11 @@ export function LeaveHubClient({
       p_end: formDayMode === 'half' ? formStart : formEnd,
       p_note: formNote.trim() || null,
       p_half_day_portion: formDayMode === 'half' ? formHalfDayPortion : null,
+      p_parental_subtype: formKind === 'parental' ? formParentalSubtype : null,
     });
     setBusy(false);
     if (error) { setMsg(error.message); return; }
-    setFormStart(''); setFormEnd(''); setFormNote(''); setFormDayMode('full'); setFormHalfDayPortion('am'); setShowLeaveForm(false);
+    setFormStart(''); setFormEnd(''); setFormNote(''); setFormDayMode('full'); setFormHalfDayPortion('am'); setFormParentalSubtype('maternity'); setShowLeaveForm(false);
     await load();
   }
 
@@ -482,6 +498,7 @@ export function LeaveHubClient({
       p_end: editDayMode === 'half' ? editStart : editEnd,
       p_note: editNote.trim() || null,
       p_half_day_portion: editDayMode === 'half' ? editHalfDayPortion : null,
+      p_parental_subtype: editKind === 'parental' ? editParentalSubtype : null,
     });
     setBusy(false);
     if (error) {
@@ -494,6 +511,7 @@ export function LeaveHubClient({
     setEditNote('');
     setEditDayMode('full');
     setEditHalfDayPortion('am');
+    setEditParentalSubtype('maternity');
     await load();
   }
 
@@ -508,6 +526,7 @@ export function LeaveHubClient({
     setEditNote(r.note ?? '');
     setEditDayMode(r.half_day_portion ? 'half' : 'full');
     setEditHalfDayPortion((r.half_day_portion === 'pm' ? 'pm' : 'am') as 'am' | 'pm');
+    setEditParentalSubtype((r.parental_subtype ?? 'maternity') as ParentalSubtype);
     setMsg(null);
   }
 
@@ -1108,12 +1127,27 @@ export function LeaveHubClient({
             {/* Kind */}
             <div className="flex gap-2">
               {REQUESTABLE_LEAVE_KINDS.map((k) => (
-                <button key={k} type="button" onClick={() => setFormKind(k)}
+                <button key={k} type="button" onClick={() => { setFormKind(k); if (k !== 'parental') setFormParentalSubtype('maternity'); }}
                   className={`flex-1 rounded-xl border py-2.5 text-[13px] font-medium transition-colors ${formKind === k ? 'border-[#121212] bg-[#121212] text-white' : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#121212]'}`}>
                   {leaveKindLabel(k)}
                 </button>
               ))}
             </div>
+            {formKind === 'parental' ? (
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Parental leave type</span>
+                <select
+                  value={formParentalSubtype}
+                  onChange={(e) => setFormParentalSubtype(e.target.value as ParentalSubtype)}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                >
+                  <option value="maternity">Maternity</option>
+                  <option value="paternity">Paternity</option>
+                  <option value="adoption">Adoption</option>
+                  <option value="shared_parental">Shared parental</option>
+                </select>
+              </label>
+            ) : null}
             {/* Dates */}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
@@ -1342,13 +1376,28 @@ export function LeaveHubClient({
                 <button
                   key={k}
                   type="button"
-                  onClick={() => setEditKind(k)}
+                  onClick={() => { setEditKind(k); if (k !== 'parental') setEditParentalSubtype('maternity'); }}
                   className={`flex-1 rounded-xl border py-2.5 text-[13px] font-medium transition-colors ${editKind === k ? 'border-[#121212] bg-[#121212] text-white' : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#121212]'}`}
                 >
                   {leaveKindLabel(k)}
                 </button>
               ))}
             </div>
+            {editKind === 'parental' ? (
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Parental leave type</span>
+                <select
+                  value={editParentalSubtype}
+                  onChange={(e) => setEditParentalSubtype(e.target.value as ParentalSubtype)}
+                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                >
+                  <option value="maternity">Maternity</option>
+                  <option value="paternity">Paternity</option>
+                  <option value="adoption">Adoption</option>
+                  <option value="shared_parental">Shared parental</option>
+                </select>
+              </label>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">First day off</span>
@@ -1424,11 +1473,11 @@ export function LeaveHubClient({
                   <div className="min-w-0">
                     <p className="font-semibold text-[#121212]">{displayName(row.leave)}</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                      {leaveKindLabel(row.leave.kind)} &middot; {fmtDate(row.leave.start_date)} – {fmtDate(row.leave.end_date)} &middot; {daysLabel(row.leave.start_date, row.leave.end_date)}
+                      {leaveKindLabel(row.leave.kind)}{row.leave.kind === 'parental' && row.leave.parental_subtype ? ` (${parentalSubtypeLabel(row.leave.parental_subtype)})` : ''} &middot; {fmtDate(row.leave.start_date)} – {fmtDate(row.leave.end_date)} &middot; {daysLabel(row.leave.start_date, row.leave.end_date)}
                     </p>
                     {row.leave.status === 'pending_edit' && row.leave.proposed_start_date && row.leave.proposed_end_date ? (
                       <p className="mt-1 text-[12px] text-[#92400e]">
-                        Requested edit to {leaveKindLabel(row.leave.proposed_kind ?? row.leave.kind)} &middot; {fmtDate(row.leave.proposed_start_date)} – {fmtDate(row.leave.proposed_end_date)}
+                        Requested edit to {leaveKindLabel(row.leave.proposed_kind ?? row.leave.kind)}{(row.leave.proposed_kind ?? row.leave.kind) === 'parental' && row.leave.proposed_parental_subtype ? ` (${parentalSubtypeLabel(row.leave.proposed_parental_subtype)})` : ''} &middot; {fmtDate(row.leave.proposed_start_date)} – {fmtDate(row.leave.proposed_end_date)}
                         {row.leave.proposed_note ? ` · "${row.leave.proposed_note}"` : ''}
                       </p>
                     ) : null}
@@ -1609,7 +1658,7 @@ export function LeaveHubClient({
                     <span className="text-[13.5px] font-medium text-[#121212]">{leaveKindLabel(r.kind)}</span>
                     <StatusPill status={r.status} />
                   </div>
-                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{fmtDate(r.start_date)} – {fmtDate(r.end_date)} &middot; {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : daysLabel(r.start_date, r.end_date)}</p>
+                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">{r.kind === 'parental' && r.parental_subtype ? `${parentalSubtypeLabel(r.parental_subtype)} · ` : ''}{fmtDate(r.start_date)} – {fmtDate(r.end_date)} &middot; {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : daysLabel(r.start_date, r.end_date)}</p>
                   {r.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{r.note}&rdquo;</p> : null}
                   {(r.status === 'approved' || r.status === 'rejected') && r.decision_note ? (
                     <p className="mt-1 text-[12px] text-[#6b6b6b]">
@@ -1619,7 +1668,7 @@ export function LeaveHubClient({
                   ) : null}
                   {r.status === 'pending_edit' && r.proposed_start_date && r.proposed_end_date ? (
                     <p className="mt-1 text-[12px] text-[#92400e]">
-                      Edit requested: {leaveKindLabel(r.proposed_kind ?? r.kind)} &middot; {fmtDate(r.proposed_start_date)} – {fmtDate(r.proposed_end_date)}
+                      Edit requested: {leaveKindLabel(r.proposed_kind ?? r.kind)}{(r.proposed_kind ?? r.kind) === 'parental' && r.proposed_parental_subtype ? ` (${parentalSubtypeLabel(r.proposed_parental_subtype)})` : ''} &middot; {fmtDate(r.proposed_start_date)} – {fmtDate(r.proposed_end_date)}
                       {r.proposed_half_day_portion ? ` · Half day (${r.proposed_half_day_portion.toUpperCase()})` : ''}
                     </p>
                   ) : null}

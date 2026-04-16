@@ -32,6 +32,7 @@ type LeaveRequest = {
   start_date: string;
   end_date: string;
   half_day_portion?: 'am' | 'pm' | null;
+  parental_subtype?: 'maternity' | 'paternity' | 'adoption' | 'shared_parental' | null;
   status: string;
   note: string | null;
   decision_note?: string | null;
@@ -114,6 +115,16 @@ function kindLabel(k: string): string {
   }
 }
 
+function parentalSubtypeLabel(v: string | null | undefined): string {
+  switch (v) {
+    case 'maternity': return 'Maternity';
+    case 'paternity': return 'Paternity';
+    case 'adoption': return 'Adoption';
+    case 'shared_parental': return 'Shared parental';
+    default: return '';
+  }
+}
+
 export function LeaveScreen({ profile }: { profile: ProfileRow }) {
   const { tokens, scheme } = useCampsiteTheme();
   const isDark = scheme === 'dark';
@@ -138,6 +149,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
   const [formNote, setFormNote] = useState('');
   const [formDayMode, setFormDayMode] = useState<'full' | 'half'>('full');
   const [formHalfDayPortion, setFormHalfDayPortion] = useState<'am' | 'pm'>('am');
+  const [formParentalSubtype, setFormParentalSubtype] = useState<'maternity' | 'paternity' | 'adoption' | 'shared_parental'>('maternity');
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -230,7 +242,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         .maybeSingle(),
       supabase
         .from('leave_requests')
-        .select('id, kind, start_date, end_date, half_day_portion, status, note, decision_note, created_at, proposed_start_date, proposed_end_date, proposed_half_day_portion')
+        .select('id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, decision_note, created_at, proposed_start_date, proposed_end_date, proposed_half_day_portion')
         .eq('org_id', orgId)
         .eq('requester_id', userId)
         .order('created_at', { ascending: false })
@@ -289,7 +301,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
       if (isManager) {
         const { data } = await supabase
           .from('leave_requests')
-          .select('id, requester_id, kind, start_date, end_date, half_day_portion, status, note, created_at')
+          .select('id, requester_id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, created_at')
           .eq('org_id', orgId)
           .in('status', ['pending', 'pending_cancel', 'pending_edit'])
           .order('created_at', { ascending: false });
@@ -311,7 +323,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         if (ids.length) {
           const { data } = await supabase
             .from('leave_requests')
-            .select('id, requester_id, kind, start_date, end_date, half_day_portion, status, note, created_at')
+            .select('id, requester_id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, created_at')
             .eq('org_id', orgId)
             .in('status', ['pending', 'pending_cancel', 'pending_edit'])
             .in('requester_id', ids)
@@ -513,6 +525,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
       p_end: formDayMode === 'half' ? start : end,
       p_note: formNote.trim() || null,
       p_half_day_portion: formDayMode === 'half' ? formHalfDayPortion : null,
+      p_parental_subtype: formKind === 'parental' ? formParentalSubtype : null,
     });
     setBusy(false);
     if (error) {
@@ -522,6 +535,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
     setFormNote('');
     setFormDayMode('full');
     setFormHalfDayPortion('am');
+    setFormParentalSubtype('maternity');
     setShowForm(false);
     await load();
     Alert.alert('Submitted', 'Your leave request has been submitted for approval.');
@@ -893,7 +907,10 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                     <Pressable
                       key={k}
                       style={[styles.segment, formKind === k && { backgroundColor: cardBg }]}
-                      onPress={() => setFormKind(k)}
+                      onPress={() => {
+                        setFormKind(k);
+                        if (k !== 'parental') setFormParentalSubtype('maternity');
+                      }}
                     >
                       <Text style={[styles.segmentLabel, { color: formKind === k ? textPrimary : textSecondary, fontWeight: formKind === k ? '600' : '400' }]}>
                         {kindLabel(k)}
@@ -901,6 +918,24 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                     </Pressable>
                   ))}
                 </View>
+                {formKind === 'parental' ? (
+                  <>
+                    <Text style={[styles.fieldLabel, { color: textSecondary }]}>Parental leave type</Text>
+                    <View style={[styles.segmentRow, { backgroundColor: isDark ? '#2a2a2a' : '#f0eeea', marginBottom: 12 }]}>
+                      {(['maternity', 'paternity', 'adoption', 'shared_parental'] as const).map((v) => (
+                        <Pressable
+                          key={v}
+                          style={[styles.segment, formParentalSubtype === v && { backgroundColor: cardBg }]}
+                          onPress={() => setFormParentalSubtype(v)}
+                        >
+                          <Text style={[styles.segmentLabel, { color: formParentalSubtype === v ? textPrimary : textSecondary, fontWeight: formParentalSubtype === v ? '600' : '400' }]}>
+                            {parentalSubtypeLabel(v)}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
                 <Text style={[styles.fieldLabel, { color: textSecondary }]}>Duration</Text>
                 <View style={[styles.segmentRow, { backgroundColor: isDark ? '#2a2a2a' : '#f0eeea', marginBottom: 12 }]}>
                   {(['full', 'half'] as const).map((m) => (
@@ -1051,7 +1086,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                 return (
                   <View key={r.id} style={[styles.requestCard, { backgroundColor: cardBg, borderColor: border }]}>
                     <View style={styles.requestRow}>
-                      <Text style={[styles.requestKind, { color: textPrimary }]}>{kindLabel(r.kind)}</Text>
+                      <Text style={[styles.requestKind, { color: textPrimary }]}>{kindLabel(r.kind)}{r.kind === 'parental' && r.parental_subtype ? ` (${parentalSubtypeLabel(r.parental_subtype)})` : ''}</Text>
                       <Text style={[styles.requestStatus, { color: st.color }]}>{st.text}</Text>
                     </View>
                     <Text style={[styles.requestDates, { color: textSecondary }]}>
@@ -1094,7 +1129,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                     <View key={row.key} style={[styles.requestCard, { backgroundColor: cardBg, borderColor: border }]}>
                       <Text style={[styles.requestKind, { color: textPrimary }]}>{name}</Text>
                       <Text style={[styles.requestDates, { color: textSecondary }]}>
-                        {kindLabel(r.kind)} · {fmtDate(r.start_date)} – {fmtDate(r.end_date)} · {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : `${days} day${days === 1 ? '' : 's'}`}
+                        {kindLabel(r.kind)}{r.kind === 'parental' && r.parental_subtype ? ` (${parentalSubtypeLabel(r.parental_subtype)})` : ''} · {fmtDate(r.start_date)} – {fmtDate(r.end_date)} · {r.half_day_portion ? `Half day (${r.half_day_portion.toUpperCase()})` : `${days} day${days === 1 ? '' : 's'}`}
                       </Text>
                       {r.note ? <Text style={[styles.requestNote, { color: textSecondary }]}>{r.note}</Text> : null}
                       <View style={styles.decideRow}>
