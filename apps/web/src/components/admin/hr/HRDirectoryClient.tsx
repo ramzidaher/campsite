@@ -648,7 +648,7 @@ export function HRDirectoryClient({
       {tab === 'directory' ? (
         <>
           {/* Filters */}
-          <div className={isGenZDirectoryView ? 'mb-2 flex flex-wrap gap-3 px-5 sm:px-7' : 'mb-5 flex flex-wrap gap-3'}>
+          <div className={isGenZDirectoryView ? 'mt-3 mb-2 flex flex-wrap gap-3 px-5 sm:px-7' : 'mb-5 flex flex-wrap gap-3'}>
             <input
               type="search"
               placeholder="Search name, email, role…"
@@ -674,7 +674,7 @@ export function HRDirectoryClient({
               <option value="yes">Has HR record</option>
               <option value="no">Missing HR record</option>
             </select>
-            <div ref={columnsMenuRef} className="relative">
+            <div ref={columnsMenuRef} className="relative z-40">
               <button
                 type="button"
                 onClick={() => setIsColumnsMenuOpen((prev) => !prev)}
@@ -683,7 +683,7 @@ export function HRDirectoryClient({
                 Columns
               </button>
               {isColumnsMenuOpen ? (
-                <div className="absolute right-0 z-10 mt-1 w-56 rounded-lg border border-[#d8d8d8] bg-white p-2 shadow-sm">
+                <div className="absolute right-0 z-50 mt-1 w-56 rounded-lg border border-[#d8d8d8] bg-white p-2 shadow-sm">
                   {columnOptions.map((c) => (
                     <label key={c.key} className="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 text-[12.5px] text-[#4a4a4a] hover:bg-[#faf9f6]">
                       <span>{c.label}</span>

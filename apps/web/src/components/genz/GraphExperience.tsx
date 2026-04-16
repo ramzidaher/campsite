@@ -80,13 +80,13 @@ type GraphColors = {
 };
 
 const DEFAULT_COLORS: GraphColors = {
-  pageBg: '#faf9f6',
+  pageBg: '#f6f5f2',
   nodeCenterFill: '#121212',
-  nodeDefaultFill: '#ece9e2',
-  nodeDefaultBorder: '#b6ada0',
-  nodeSelectedFill: '#efe7ec',
-  nodeSelectedBorder: '#7c4a66',
-  link: '#d6d0c5',
+  nodeDefaultFill: '#ffffff',
+  nodeDefaultBorder: '#d7d4cf',
+  nodeSelectedFill: '#fff9f7',
+  nodeSelectedBorder: '#b45a48',
+  link: '#d8d3cb',
   text: '#121212',
   textInverse: '#FFFFFF',
   textSecondary: '#6b6b6b',
@@ -163,49 +163,81 @@ function PhysicsGraphCanvas({
         const node = nodeRaw as GraphNode;
         const x = node.x ?? 0;
         const y = node.y ?? 0;
-        const radius = node.isCenter ? 30 : 20;
+        const radius = node.isCenter ? 42 : 27;
         const labels = wrapLabel(node.label, 18);
         const isSelected = selectedId === node.id;
 
         if (node.isCenter) {
+          const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+          const pulseA = (t % 2.4) / 2.4;
+          const pulseB = ((t + 1.2) % 2.4) / 2.4;
+          const rippleA = radius + 10 + pulseA * 16;
+          const rippleB = radius + 10 + pulseB * 16;
+
           ctx.beginPath();
-          ctx.arc(x, y, radius + 14, 0, 2 * Math.PI, false);
-          ctx.fillStyle = 'rgba(244, 84, 97, 0.14)';
-          ctx.fill();
+          ctx.arc(x, y, rippleA, 0, 2 * Math.PI, false);
+          ctx.strokeStyle = colors.nodeSelectedBorder;
+          ctx.globalAlpha = 0.2 * (1 - pulseA);
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+
           ctx.beginPath();
-          ctx.arc(x, y, radius + 7, 0, 2 * Math.PI, false);
-          ctx.fillStyle = 'rgba(244, 84, 97, 0.2)';
-          ctx.fill();
+          ctx.arc(x, y, rippleB, 0, 2 * Math.PI, false);
+          ctx.strokeStyle = colors.nodeSelectedBorder;
+          ctx.globalAlpha = 0.16 * (1 - pulseB);
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 9, 0, 2 * Math.PI, false);
+          ctx.strokeStyle = colors.nodeSelectedBorder;
+          ctx.globalAlpha = 0.14;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          const grad = ctx.createRadialGradient(x - 8, y - 10, radius * 0.2, x, y, radius);
+          grad.addColorStop(0, colors.nodeSelectedBorder);
+          grad.addColorStop(1, colors.nodeCenterFill);
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-          ctx.fillStyle = '#f45461';
+          ctx.fillStyle = grad;
           ctx.fill();
         } else {
+          const outerStroke = isSelected ? colors.nodeSelectedBorder : colors.nodeDefaultBorder;
+          const innerStroke = isSelected ? colors.nodeSelectedBorder : colors.nodeDefaultBorder;
+
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-          ctx.shadowColor = 'rgba(15, 23, 42, 0.14)';
-          ctx.shadowBlur = 16;
-          ctx.shadowOffsetY = 4;
-          ctx.fillStyle = isSelected ? '#fff7f8' : '#ffffff';
+          ctx.fillStyle = colors.text;
           ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetY = 0;
-          ctx.lineWidth = isSelected ? 2 : 1.5;
-          ctx.strokeStyle = isSelected ? '#f45461' : '#d6d8de';
+          ctx.lineWidth = isSelected ? 2.1 : 1.4;
+          ctx.strokeStyle = outerStroke;
           ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(x, y, radius - 4, 0, 2 * Math.PI, false);
+          ctx.fillStyle = colors.pageBg;
+          ctx.fill();
+          ctx.lineWidth = isSelected ? 1.6 : 1.2;
+          ctx.strokeStyle = innerStroke;
+          ctx.globalAlpha = isSelected ? 0.62 : 0.4;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
         }
 
-        const fontSize = Math.max(10, 12 / globalScale);
-        ctx.font = `${node.isCenter ? 700 : 500} ${fontSize}px Inter, ui-sans-serif, system-ui, sans-serif`;
-        ctx.fillStyle = labelColor(node);
-        ctx.strokeStyle = 'rgba(250,249,246,0.95)';
-        ctx.lineWidth = Math.max(1.5, 2.5 / globalScale);
+        const fontSize = node.isCenter ? Math.max(13, 15 / globalScale) : Math.max(10, 11.5 / globalScale);
+        ctx.font = `${node.isCenter ? 700 : 500} ${fontSize}px ${node.isCenter ? 'Lora, Georgia, serif' : 'Inter, ui-sans-serif, system-ui, sans-serif'}`;
+        ctx.fillStyle = node.isCenter ? '#ffffff' : colors.text;
+        ctx.strokeStyle = 'rgba(246,245,242,0.95)';
+        ctx.lineWidth = Math.max(1.2, 2.1 / globalScale);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const labelY = y + radius + 12;
+        const labelY = node.isCenter ? y : y - radius - 13;
         labels.forEach((line, idx) => {
-          const ly = labelY + idx * (fontSize + 1.5);
-          ctx.strokeText(line, x, ly);
+          const ly = labelY + idx * (fontSize + 2);
+          if (!node.isCenter) ctx.strokeText(line, x, ly);
           ctx.fillText(line, x, ly);
         });
       }}
@@ -215,7 +247,11 @@ function PhysicsGraphCanvas({
       }}
       linkWidth={(link) => {
         const target = linkTargetId(link);
-        return selectedId === target ? 2.2 : 0.9;
+        return selectedId === target ? 2 : 1;
+      }}
+      linkLineDash={(link) => {
+        const target = linkTargetId(link);
+        return selectedId === target ? [7, 7] : [6, 8];
       }}
       onNodeClick={(nodeRaw, event) => {
         const node = nodeRaw as GraphNode;
@@ -229,23 +265,23 @@ function PhysicsGraphCanvas({
       onBackgroundClick={onClearSelection}
       onEngineTick={() => {
         const chargeForce = fgRef.current?.d3Force('charge') as { strength: (n: number) => void } | undefined;
-        chargeForce?.strength(-260);
+        chargeForce?.strength(-340);
         const linkForce = fgRef.current?.d3Force('link') as
           | { distance: (n: number) => void; strength: (n: number) => void }
           | undefined;
-        linkForce?.distance(180);
-        linkForce?.strength(0.8);
+        linkForce?.distance(205);
+        linkForce?.strength(0.72);
       }}
       onEngineStop={() => {
         if (hasAutoFitRef.current) return;
         hasAutoFitRef.current = true;
-        fgRef.current?.zoomToFit(420, 22);
+        fgRef.current?.zoomToFit(420, 44);
       }}
       linkDirectionalParticles={(link) => {
         const target = linkTargetId(link);
         return selectedId === target ? 1 : 0;
       }}
-      linkDirectionalParticleWidth={1.8}
+      linkDirectionalParticleWidth={1.4}
       linkDirectionalParticleColor={() => colors.nodeSelectedBorder}
       enableNodeDrag
       nodePointerAreaPaint={(nodeRaw, color, ctx) => {
@@ -258,7 +294,8 @@ function PhysicsGraphCanvas({
         ctx.arc(x, y, r, 0, 2 * Math.PI, false);
         ctx.fill();
       }}
-      backgroundColor={colors.pageBg}
+      autoPauseRedraw={false}
+      backgroundColor="rgba(0,0,0,0)"
     />
   );
 }
@@ -393,8 +430,12 @@ export function GraphExperience({
       {!hideHeader ? (
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-[19px] font-semibold tracking-tight" style={{ color: 'var(--org-brand-text)' }}>{title}</h2>
-            <p className="mt-1 text-[12px]" style={{ color: 'var(--org-brand-muted)' }}>{subtitle}</p>
+            <h2 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em]" style={{ color: 'var(--org-brand-text)' }}>
+              {title}
+            </h2>
+            <p className="mt-1 text-[13px]" style={{ color: 'var(--org-brand-muted)' }}>
+              {subtitle}
+            </p>
           </div>
         </div>
       ) : null}
@@ -409,7 +450,10 @@ export function GraphExperience({
           }
           style={{
             borderColor: borderless ? 'transparent' : 'var(--org-brand-border)',
-            background: 'var(--org-brand-surface)',
+            backgroundColor: 'var(--org-brand-surface)',
+            backgroundImage:
+              'linear-gradient(to right, color-mix(in srgb, var(--org-brand-border) 45%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--org-brand-border) 45%, transparent) 1px, transparent 1px)',
+            backgroundSize: '56px 56px',
           }}
         >
           <PhysicsGraphCanvas

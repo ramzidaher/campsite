@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { ForceGraphMethods } from 'react-force-graph-2d';
 import type { HRDirectoryRow } from '@/components/admin/hr/HRDirectoryClient';
 
@@ -49,6 +49,7 @@ const DEFAULT_COLORS: GraphColors = {
 };
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
+const DEPARTMENT_PALETTE = ['#d65745', '#2fa882', '#4a96e2', '#c38a1f', '#7f70d8', '#ca5b92', '#2b9fb0', '#9b7a5b'];
 
 function safeColor(value: string, fallback: string) {
   const v = value.trim();
@@ -112,7 +113,21 @@ function linkNodeId(endpoint: string | number | { id?: string | number } | undef
   return '';
 }
 
-export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
+function primaryDepartmentName(departments: string[]): string {
+  if (!departments.length) return 'Unassigned';
+  return [...departments].sort((a, b) => a.localeCompare(b))[0];
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const cleaned = hex.replace('#', '').trim();
+  if (cleaned.length !== 6) return `rgba(0,0,0,${alpha})`;
+  const r = Number.parseInt(cleaned.slice(0, 2), 16);
+  const g = Number.parseInt(cleaned.slice(2, 4), 16);
+  const b = Number.parseInt(cleaned.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export const EmployeeDirectoryGraph = memo(function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const fgRef = useRef<ForceGraphMethods<DirectoryGraphNode, DirectoryGraphLink> | undefined>(undefined);
   const [colors, setColors] = useState<GraphColors>(DEFAULT_COLORS);
@@ -150,6 +165,25 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
 
     return { nodes: graphNodes, links: graphLinks };
   }, [rows]);
+
+  const deptColorMap = useMemo(() => {
+    const names = Array.from(
+      new Set(
+        rows.flatMap((r) => (r.department_names?.length ? r.department_names : ['Unassigned']))
+      )
+    ).sort((a, b) => a.localeCompare(b));
+    const map = new Map<string, string>();
+    names.forEach((name, idx) => map.set(name, DEPARTMENT_PALETTE[idx % DEPARTMENT_PALETTE.length]));
+    return map;
+  }, [rows]);
+
+  const deptLegend = useMemo(
+    () =>
+      Array.from(deptColorMap.entries())
+        .map(([name, color]) => ({ name, color }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [deptColorMap]
+  );
 
   const selected = useMemo(
     () => nodes.find((node) => node.id === selectedId) ?? null,
@@ -212,29 +246,24 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
       className="flex min-h-[calc(100vh-60px)] flex-col p-4 sm:p-5"
       style={{ background: 'var(--org-brand-bg)' }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-[19px] font-semibold tracking-tight" style={{ color: 'var(--org-brand-text)' }}>
-            Connected employee graph
-          </h2>
-          <p className="mt-1 text-[12px]" style={{ color: 'var(--org-brand-muted)' }}>
-            Explore reporting lines and employee connections across the directory.
-          </p>
-        </div>
-      </div>
-
       <div className="mt-3 flex-1">
       <div
         ref={canvasRef}
         className="relative h-[calc(100vh-142px)] overflow-hidden rounded-xl border"
-        style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-surface)' }}
+        style={{
+          borderColor: 'var(--org-brand-border)',
+          backgroundColor: 'var(--org-brand-surface)',
+          backgroundImage:
+            'linear-gradient(to right, color-mix(in srgb, var(--org-brand-border) 45%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--org-brand-border) 45%, transparent) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
       >
         <ForceGraph2D
           ref={fgRef as never}
           width={canvasSize.width}
           height={canvasSize.height}
           graphData={{ nodes, links }}
-          backgroundColor={colors.pageBg}
+          backgroundColor="rgba(0,0,0,0)"
           cooldownTicks={140}
           warmupTicks={70}
           d3AlphaDecay={0.035}
@@ -255,18 +284,15 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
             const teamBump = Math.min(node.teamSize, 6);
             const radius = 14 + teamBump;
             const isSelected = selectedId === node.id;
+            const deptKey = primaryDepartmentName(node.departments);
+            const deptColor = deptColorMap.get(deptKey) ?? colors.nodeSelectedBorder;
 
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-            ctx.shadowColor = 'rgba(15, 23, 42, 0.14)';
-            ctx.shadowBlur = 14;
-            ctx.shadowOffsetY = 4;
-            ctx.fillStyle = isSelected ? '#fff7f8' : '#ffffff';
+            ctx.fillStyle = isSelected ? hexToRgba(deptColor, 0.2) : hexToRgba(deptColor, 0.14);
             ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetY = 0;
             ctx.lineWidth = isSelected ? 2 : 1.1;
-            ctx.strokeStyle = isSelected ? '#f45461' : '#d6d8de';
+            ctx.strokeStyle = deptColor;
             ctx.stroke();
 
             const lines = wrapLabel(node.label);
@@ -319,6 +345,23 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
             ctx.fill();
           }}
         />
+        <div className="pointer-events-none absolute inset-x-3 top-3 z-[2]">
+          <div
+            className="inline-flex max-w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border px-3 py-2 text-[12px]"
+            style={{ borderColor: 'var(--org-brand-border)', background: 'color-mix(in srgb, var(--org-brand-surface) 94%, transparent)' }}
+          >
+            {deptLegend.map((item) => (
+              <span key={item.name} className="inline-flex items-center gap-1.5" style={{ color: 'var(--org-brand-text)' }}>
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ background: item.color, boxShadow: `0 0 0 1px ${hexToRgba(item.color, 0.25)}` }}
+                  aria-hidden
+                />
+                {item.name}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       {selected && selectedPoint ? (
@@ -413,4 +456,4 @@ export function EmployeeDirectoryGraph({ rows }: { rows: HRDirectoryRow[] }) {
       </div>
     </section>
   );
-}
+});
