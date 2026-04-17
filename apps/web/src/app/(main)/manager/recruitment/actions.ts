@@ -191,7 +191,9 @@ export async function createRecruitmentRequest(form: {
 
   revalidatePath('/manager/recruitment');
   revalidatePath('/admin/recruitment');
-  revalidatePath('/hr/recruitment');
+  revalidatePath('/hr/hiring/requests');
+  revalidatePath('/hr/hiring/requests');
+  revalidatePath('/hr/hiring');
 
   // In-app notification to HR approvers
   try {

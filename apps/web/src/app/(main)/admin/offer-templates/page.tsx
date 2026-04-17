@@ -1,3 +1,4 @@
+import { HideInHiringHub } from '@/app/(main)/hr/hiring/HideInHiringHub';
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
@@ -42,17 +43,21 @@ export default async function OfferTemplatesPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Templates</h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Offer letters, contracts, and recruitment emails. Merge fields auto-fill from candidate and job data where
-            applicable.
-          </p>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Merge fields: <code className="text-[12px]">{`{{candidate_name}}`}</code>,{' '}
-            <code className="text-[12px]">{`{{job_title}}`}</code>, <code className="text-[12px]">{`{{salary}}`}</code>,{' '}
-            <code className="text-[12px]">{`{{start_date}}`}</code>, <code className="text-[12px]">{`{{contract_type}}`}</code>
-          </p>
+        <div className="min-w-0 flex-1">
+          <HideInHiringHub>
+            <div>
+              <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Templates</h1>
+              <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                Offer letters, contracts, and recruitment emails. Merge fields auto-fill from candidate and job data where
+                applicable.
+              </p>
+              <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                Merge fields: <code className="text-[12px]">{`{{candidate_name}}`}</code>,{' '}
+                <code className="text-[12px]">{`{{job_title}}`}</code>, <code className="text-[12px]">{`{{salary}}`}</code>,{' '}
+                <code className="text-[12px]">{`{{start_date}}`}</code>, <code className="text-[12px]">{`{{contract_type}}`}</code>
+              </p>
+            </div>
+          </HideInHiringHub>
         </div>
         <Link
           href="/hr/offer-templates/new"

@@ -20,7 +20,10 @@ function revalidateJobs(jobId?: string) {
   revalidatePath('/admin/recruitment');
   revalidatePath('/hr/jobs');
   if (jobId) revalidatePath(`/hr/jobs/${jobId}/edit`);
-  revalidatePath('/hr/recruitment');
+  revalidatePath('/hr/hiring/requests');
+  revalidatePath('/hr/hiring/jobs');
+  revalidatePath('/hr/hiring/requests');
+  revalidatePath('/hr/hiring');
   revalidatePath('/jobs'); // public listing segment
 }
 

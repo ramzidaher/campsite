@@ -79,8 +79,10 @@ export async function setRecruitmentRequestStatusAction(
 
   revalidatePath('/admin/recruitment');
   revalidatePath(`/admin/recruitment/${id}`);
-  revalidatePath('/hr/recruitment');
-  revalidatePath(`/hr/recruitment/${id}`);
+  revalidatePath('/hr/hiring/requests');
+  revalidatePath(`/hr/hiring/requests/${id}`);
+  revalidatePath('/hr/hiring/requests');
+  revalidatePath('/hr/hiring');
   revalidatePath('/manager/recruitment');
 
   return { ok: true };

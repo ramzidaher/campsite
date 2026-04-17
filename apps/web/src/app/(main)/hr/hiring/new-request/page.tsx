@@ -1,11 +1,14 @@
-import { AdminRecruitmentListClient } from '@/components/admin/AdminRecruitmentListClient';
 import { ManagerRecruitmentClient } from '@/components/manager/ManagerRecruitmentClient';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-export default async function HrRecruitmentPage() {
+/**
+ * Dedicated “raise request” surface for users who also see the org queue on `/hr/hiring/requests`
+ * (the queue page only renders `AdminRecruitmentListClient`).
+ */
+export default async function HiringNewRequestPage() {
   const bundle = await getCachedMainShellLayoutBundle();
   const orgId = shellBundleOrgId(bundle);
   if (!orgId) redirect('/login');
@@ -18,27 +21,11 @@ export default async function HrRecruitmentPage() {
   if (!user) redirect('/login');
 
   const permissionKeys = parseShellPermissionKeys(bundle);
-  const canCreateRequest    = permissionKeys.includes('recruitment.create_request');
-  const canViewRecruitment  = permissionKeys.includes('recruitment.view');
-  const canApproveRequest   = permissionKeys.includes('recruitment.approve_request');
+  const canCreateRequest = permissionKeys.includes('recruitment.create_request');
+  if (!canCreateRequest) redirect('/hr/hiring/requests');
+
+  const canApproveRequest = permissionKeys.includes('recruitment.approve_request');
   const canManageRecruitment = permissionKeys.includes('recruitment.manage');
-
-  const canRaise = Boolean(canCreateRequest);
-  const canUseRecruitmentWorkspace =
-    canRaise || canViewRecruitment || canApproveRequest || canManageRecruitment;
-  if (!canUseRecruitmentWorkspace) redirect('/broadcasts');
-
-  const canViewQueue = Boolean(canViewRecruitment || canApproveRequest || canManageRecruitment);
-  if (canViewQueue) {
-    const { data: rows } = await supabase
-      .from('recruitment_requests')
-      .select(
-        'id, job_title, status, urgency, archived_at, created_at, department_id, departments(name), submitter:profiles!recruitment_requests_created_by_fkey(full_name)'
-      )
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false });
-    return <AdminRecruitmentListClient rows={(rows ?? []) as Parameters<typeof AdminRecruitmentListClient>[0]['rows']} />;
-  }
 
   const [{ data: ownDeptRows }, { data: dmRows }, { data: directReportRows }] = await Promise.all([
     supabase.from('user_departments').select('dept_id').eq('user_id', user.id),
@@ -87,7 +74,7 @@ export default async function HrRecruitmentPage() {
   }
 
   const isHierarchyLeader = Boolean((directReportManagerRows ?? []).length || (indirectReportRows ?? []).length);
-  if (canRaise && (canApproveRequest || canManageRecruitment || isHierarchyLeader)) {
+  if (canCreateRequest && (canApproveRequest || canManageRecruitment || isHierarchyLeader)) {
     const { data: allDeptRows } = await supabase
       .from('departments')
       .select('id, name, is_archived')
@@ -99,21 +86,20 @@ export default async function HrRecruitmentPage() {
   }
 
   let initialRequests: Parameters<typeof ManagerRecruitmentClient>[0]['initialRequests'] = [];
-  if (canRaise) {
-    const { data: reqRows } = await supabase
-      .from('recruitment_requests')
-      .select('id, job_title, status, urgency, archived_at, created_at, department_id, departments(name)')
-      .eq('created_by', user.id)
-      .order('created_at', { ascending: false });
-    initialRequests = (reqRows ?? []) as typeof initialRequests;
-  }
+  const { data: reqRows } = await supabase
+    .from('recruitment_requests')
+    .select('id, job_title, status, urgency, archived_at, created_at, department_id, departments(name)')
+    .eq('created_by', user.id)
+    .order('created_at', { ascending: false });
+  initialRequests = (reqRows ?? []) as typeof initialRequests;
 
   return (
     <ManagerRecruitmentClient
       managedDepartments={managedDepartments}
       initialRequests={initialRequests}
-      canRaise={canRaise}
+      canRaise
       showHrAdminLink={Boolean(canApproveRequest || canManageRecruitment)}
+      hiringHubRaise
     />
   );
 }

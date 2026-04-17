@@ -106,21 +106,21 @@ export function buildSystemOverviewGraph(params: {
   const recruitmentNode = canRecruitment
     ? addNode({
         id: 'recruitment',
-        label: 'Requests',
+        label: 'Hiring',
         group: 'module',
         tier: 'hr',
-        href: '/hr/recruitment',
+        href: '/hr/hiring',
       })
     : null;
-  const jobsNode = canJobs ? addNode({ id: 'jobs', label: 'Jobs', group: 'entity', tier: 'hr', href: '/hr/jobs' }) : null;
+  const jobsNode = canJobs ? addNode({ id: 'jobs', label: 'Jobs', group: 'entity', tier: 'hr', href: '/hr/hiring/jobs' }) : null;
   const applicationsNode = canApplications
-    ? addNode({ id: 'applications', label: 'Applications', group: 'entity', tier: 'hr', href: '/hr/applications' })
+    ? addNode({ id: 'applications', label: 'Applicants', group: 'entity', tier: 'hr', href: '/hr/hiring/applications' })
     : null;
   const offersNode = canOffers
-    ? addNode({ id: 'offers', label: 'Templates', group: 'entity', tier: 'hr', href: '/hr/offer-templates' })
+    ? addNode({ id: 'offers', label: 'Templates', group: 'entity', tier: 'hr', href: '/hr/hiring/templates' })
     : null;
   const interviewsNode = canInterviews
-    ? addNode({ id: 'interviews', label: 'Interviews', group: 'entity', tier: 'hr', href: '/hr/interviews' })
+    ? addNode({ id: 'interviews', label: 'Interviews', group: 'entity', tier: 'hr', href: '/hr/hiring/interviews' })
     : null;
   const leaveNode = canLeave ? addNode({ id: 'leave', label: 'Leave', group: 'module', tier: 'hr', href: '/leave' }) : null;
   const hrRecordsNode = canHrRecords

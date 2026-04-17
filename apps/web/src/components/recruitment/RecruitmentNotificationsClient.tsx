@@ -111,7 +111,7 @@ export function RecruitmentNotificationsClient({
             return (
               <li key={n.id}>
                 <Link
-                  href={`/hr/recruitment/${n.request_id}`}
+                  href={`/hr/hiring/requests/${n.request_id}`}
                   onClick={() => {
                     if (isUnread) void markRead(n.id);
                     else playUiSound('recruitment_read');
@@ -171,7 +171,7 @@ export function RecruitmentNotificationsClient({
 
       <div className="mt-8 text-center">
         <Link
-          href="/hr/recruitment"
+          href="/hr/hiring/requests"
           className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
         >
           View full recruitment queue →

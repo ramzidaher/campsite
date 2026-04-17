@@ -1,11 +1,10 @@
 import { JobPipelineClient } from '@/app/(main)/admin/jobs/[id]/applications/JobPipelineClient';
 import type { PipelineApplicationRow } from '@/app/(main)/admin/jobs/[id]/applications/JobPipelineClient';
-import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function JobApplicationsPipelinePage({ params }: { params: Promise<{ id: string }> }) {
   const pathStartedAtMs = Date.now();
@@ -13,31 +12,20 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
   const id = rawId?.trim();
   if (!id) notFound();
 
+  /** Reuses `(main)/layout` cache — avoids duplicate profile + `get_my_permissions` round trips. */
+  const bundle = await withServerPerf(
+    '/admin/jobs/[id]/applications',
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  if (!permissionKeys.includes('applications.view')) redirect('/broadcasts');
+
   const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
-    '/admin/jobs/[id]/applications',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, role, status')
-      .eq('id', user.id)
-      .single(),
-    300
-  );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('applications.view'))) redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-  const permissionKeys = await withServerPerf(
-    '/admin/jobs/[id]/applications',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
-  );
   const canMoveStage         = permissionKeys.includes('applications.move_stage');
   const canBookInterviewSlot = permissionKeys.includes('interviews.book_slot');
   const canManageInterviews  = permissionKeys.includes('interviews.manage');

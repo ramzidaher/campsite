@@ -7,7 +7,7 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 export default async function AdminRecruitmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params;
   const id = rawId?.trim();
-  if (!id) redirect('/hr/recruitment');
+  if (!id) redirect('/hr/hiring/requests');
 
   const supabase = await createClient();
   const user = await getAuthUser();
@@ -52,7 +52,7 @@ export default async function AdminRecruitmentDetailPage({ params }: { params: P
     .eq('org_id', orgId)
     .maybeSingle();
 
-  if (reqErr || !req) redirect('/hr/recruitment');
+  if (reqErr || !req) redirect('/hr/hiring/requests');
 
   const [{ data: evRows }, { data: orgRow }, { data: jobRows }] = await Promise.all([
     supabase

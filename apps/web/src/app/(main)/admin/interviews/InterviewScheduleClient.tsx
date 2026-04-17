@@ -1,5 +1,6 @@
 'use client';
 
+import { useInHiringHub } from '@/app/(main)/hr/hiring/HiringHubContext';
 import {
   bulkCreateInterviewSlots,
   cancelAvailableInterviewSlot,
@@ -228,6 +229,7 @@ export function InterviewScheduleClient({
   profiles: ProfileOption[];
   initialSlots: SlotListRow[];
 }) {
+  const inHiringHub = useInHiringHub();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -304,17 +306,19 @@ export function InterviewScheduleClient({
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-5 py-7 sm:px-7">
-      <div>
-        <h1 className="mt-1 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
-          Interview slots
-        </h1>
-        <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-[#6b6b6b]">
-          Describe the slots you need in plain text, assign panel members, and create them in one go.
-          Once a candidate is moved to <strong>Interview scheduled</strong> on the hiring pipeline, they get a
-          confirmation email and the slot is booked.
-        </p>
-      </div>
+    <div className={inHiringHub ? 'min-w-0 space-y-8 pt-0' : 'mx-auto max-w-6xl space-y-8 px-5 py-7 sm:px-7'}>
+      {inHiringHub ? null : (
+        <div>
+          <h1 className="mt-1 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+            Interview slots
+          </h1>
+          <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-[#6b6b6b]">
+            Describe the slots you need in plain text, assign panel members, and create them in one go.
+            Once a candidate is moved to <strong>Interview scheduled</strong> on the hiring pipeline, they get a
+            confirmation email and the slot is booked.
+          </p>
+        </div>
+      )}
 
       {msg ? (
         <div

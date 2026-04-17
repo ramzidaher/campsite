@@ -1,5 +1,7 @@
 'use client';
 
+import { useInHiringHub } from '@/app/(main)/hr/hiring/HiringHubContext';
+import { campusFormControl, campusText } from '@campsite/ui/web';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
@@ -33,6 +35,7 @@ export function AdminJobsListClient({
   departments: DeptFilterOption[];
   orgSlug: string;
 }) {
+  const inHiringHub = useInHiringHub();
   const [listScope, setListScope] = useState<ListScope>('active');
   const [status, setStatus] = useState<string>('');
   const [deptId, setDeptId] = useState<string>('');
@@ -75,23 +78,24 @@ export function AdminJobsListClient({
     if (next !== 'all') setStatus('');
   }
 
-  const sel =
-    'h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
+  const sel = `${campusFormControl} px-2.5`;
 
   const scopeBtn = (on: boolean) =>
     `rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
-      on ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]'
+      on ? `bg-white ${campusText.ink} shadow-sm` : `${campusText.muted} hover:text-[#121212]`
     }`;
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
-      <header className="mb-6">
-        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Job listings</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          HR publishes approved requests as shareable public job URLs. Filter by department, grade, contract,
-          salary band, and year posted. Use Active for live and draft listings, or Archived for closed roles.
-        </p>
-      </header>
+    <div className={inHiringHub ? 'min-w-0 pt-0' : 'mx-auto max-w-6xl px-5 py-7 sm:px-7'}>
+      {inHiringHub ? null : (
+        <header className="mb-6">
+          <h1 className={`font-authSerif text-[26px] leading-tight tracking-[-0.03em] ${campusText.ink}`}>Job listings</h1>
+          <p className={`mt-1 text-[13px] ${campusText.muted}`}>
+            HR publishes approved requests as shareable public job URLs. Filter by department, grade, contract,
+            salary band, and year posted. Use Active for live and draft listings, or Archived for closed roles.
+          </p>
+        </header>
+      )}
 
       <div className="mb-5 flex flex-wrap items-center gap-2 sm:gap-3">
         <div

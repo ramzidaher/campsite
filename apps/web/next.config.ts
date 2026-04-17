@@ -37,6 +37,26 @@ for (const name of rootEnvFiles) {
 }
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: '/admin/hr/onboarding/:runId', destination: '/hr/onboarding/:runId', permanent: true },
+      { source: '/admin/hr/onboarding', destination: '/hr/onboarding', permanent: true },
+      { source: '/admin/hr/performance/:cycleId', destination: '/hr/performance/:cycleId', permanent: true },
+      { source: '/admin/hr/performance', destination: '/hr/performance', permanent: true },
+      { source: '/admin/hr/custom-fields', destination: '/hr/custom-fields', permanent: true },
+      { source: '/admin/hr/org-chart', destination: '/hr/org-chart', permanent: true },
+      { source: '/admin/hr/one-on-ones', destination: '/hr/one-on-ones', permanent: true },
+      { source: '/admin/hr/absence-reporting', destination: '/hr/absence-reporting', permanent: true },
+      { source: '/admin/hr/hr-metric-alerts', destination: '/hr/hr-metric-alerts', permanent: true },
+      { source: '/admin/hr/:userId', destination: '/hr/records/:userId', permanent: true },
+      { source: '/admin/hr', destination: '/hr/records', permanent: true },
+      { source: '/admin/recruitment/:id', destination: '/hr/hiring/requests/:id', permanent: true },
+      { source: '/admin/recruitment', destination: '/hr/hiring/requests', permanent: true },
+      { source: '/hr/recruitment/:id', destination: '/hr/hiring/requests/:id', permanent: true },
+      { source: '/hr/recruitment', destination: '/hr/hiring/requests', permanent: true },
+      { source: '/hr/people', destination: '/hr/records', permanent: true },
+    ];
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

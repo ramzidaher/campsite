@@ -34,11 +34,14 @@ export function ManagerRecruitmentClient({
   initialRequests,
   canRaise,
   showHrAdminLink,
+  hiringHubRaise = false,
 }: {
   managedDepartments: ManagedDeptOption[];
   initialRequests: ManagerRecruitmentRow[];
   canRaise: boolean;
   showHrAdminLink: boolean;
+  /** When true, omit the default “Requests” hero — used under `/hr/hiring` chrome. */
+  hiringHubRaise?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -105,13 +108,29 @@ export function ManagerRecruitmentClient({
     'mt-0 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#008B60] focus:ring-1 focus:ring-[#008B60]';
 
   return (
-    <div className="space-y-10">
-      <header>
-        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Requests</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Raise a recruitment request to HR using a structured brief. Your submissions are never deleted and keep full history.
-        </p>
-      </header>
+    <div className={`space-y-10 ${hiringHubRaise ? 'font-sans text-[#121212]' : ''}`}>
+      {hiringHubRaise ? (
+        <header className="space-y-2">
+          <Link
+            href="/hr/hiring/requests"
+            prefetch={false}
+            className="inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
+          >
+            ← Hiring requests
+          </Link>
+          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">New request</h1>
+          <p className="max-w-2xl text-[13.5px] text-[#6b6b6b]">
+            Raise a recruitment request to HR using a structured brief. Submissions keep full history.
+          </p>
+        </header>
+      ) : (
+        <header>
+          <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Requests</h1>
+          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+            Raise a recruitment request to HR using a structured brief. Your submissions are never deleted and keep full history.
+          </p>
+        </header>
+      )}
 
       {!canRaise ? (
         <div
@@ -130,7 +149,9 @@ export function ManagerRecruitmentClient({
         </div>
       ) : (
         <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <h2 className="font-authSerif text-lg text-[#121212]">Raise Recruitment Request</h2>
+          <h2 className={hiringHubRaise ? 'text-[15px] font-semibold text-[#121212]' : 'font-authSerif text-lg text-[#121212]'}>
+            Raise recruitment request
+          </h2>
           <form className="mt-5 space-y-4" onSubmit={onSubmit}>
             {success ? (
               <div
@@ -263,7 +284,9 @@ export function ManagerRecruitmentClient({
 
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-authSerif text-lg text-[#121212]">My requests</h2>
+          <h2 className={hiringHubRaise ? 'text-[15px] font-semibold text-[#121212]' : 'font-authSerif text-lg text-[#121212]'}>
+            My requests
+          </h2>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-2 rounded-lg border border-[#e8e8e8] bg-[#fafafa] p-1 text-[12px]">
               <button
@@ -355,12 +378,12 @@ export function ManagerRecruitmentClient({
 
       {showHrAdminLink ? (
         <p className="text-[12px] text-[#9b9b9b]">
-          Open requests (HR queue):{' '}
+          Open the organisation hiring queue (requests):{' '}
           <Link
-            href="/admin/recruitment"
+            href="/hr/hiring/requests"
             className="text-[#008B60] underline decoration-[#008B60]/30 hover:decoration-[#008B60]"
           >
-            Admin → Requests
+            Hiring requests
           </Link>
           .
         </p>

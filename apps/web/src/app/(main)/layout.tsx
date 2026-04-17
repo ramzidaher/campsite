@@ -177,7 +177,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       if (item.href === '/admin/pending' && pendingApprovalCount > 0) {
         return { ...item, badge: pendingApprovalCount };
       }
-      if (item.href === '/hr/recruitment' && recruitmentPendingReviewCount > 0) {
+      if (item.href === '/hr/hiring' && recruitmentPendingReviewCount > 0) {
         return { ...item, badge: recruitmentPendingReviewCount };
       }
       return item;
@@ -223,7 +223,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     {
       id: 'recruitment-pending',
       label: 'Recruitment requests to review',
-      href: '/hr/recruitment',
+      href: '/hr/hiring/requests',
       count: canApproveRecruitment ? recruitmentPendingReviewCount : 0,
     },
     {

@@ -128,11 +128,7 @@ export function getMainShellAdminNavItems(
     { href: '/admin/teams', label: 'Teams', icon: 'teams', section: 'Content' },
     { href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' },
     { href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' },
-    { href: '/hr/recruitment', label: 'Requests', icon: 'recruitment', section: 'HR' },
-    { href: '/hr/jobs', label: 'Job listings', icon: 'jobs', section: 'HR' },
-    { href: '/hr/applications', label: 'Applications', icon: 'applications', section: 'HR' },
-    { href: '/hr/offer-templates', label: 'Templates', icon: 'offerTemplates', section: 'HR' },
-    { href: '/hr/interviews', label: 'Interview schedule', icon: 'interviews', section: 'HR' },
+    { href: '/hr/hiring', label: 'Hiring', icon: 'recruitment', section: 'HR' },
     { href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'HR' },
     { href: '/hr/absence-reporting', label: 'Absence reporting', icon: 'absenceReport', section: 'HR' },
     { href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'HR' },
@@ -172,8 +168,8 @@ export function getMainShellManagerNavItems(
     section: 'People',
   };
   const recruitment: MainShellAdminNavItem = {
-    href: '/hr/recruitment',
-    label: 'Requests',
+    href: '/hr/hiring',
+    label: 'Hiring',
     icon: 'recruitment',
     section: 'People',
   };
@@ -301,41 +297,25 @@ export function getMainShellHrNavItemsByPermissions(
   if (!canSeeAnyHr) return null;
 
   const items: MainShellAdminNavItem[] = [];
+  /** No `section` → AppShell renders this row as the HR “overview” entry (icon + /hr home). */
+  items.push({ href: '/hr', label: 'People overview', icon: 'home', exact: true });
   const canSeeRecruitment =
     p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request');
   const canSeeJobs = p.includes('jobs.view');
   const canSeeApplications = p.includes('applications.view');
   const canSeeOffers = p.includes('offers.view');
   const canSeeInterviews = p.includes('interviews.view') || p.includes('interviews.book_slot');
+  const canSeeHiringHub =
+    canSeeRecruitment ||
+    canSeeJobs ||
+    canSeeApplications ||
+    canSeeOffers ||
+    canSeeInterviews ||
+    p.includes('recruitment.create_request');
 
-  if (canSeeRecruitment)
-    items.push({ href: '/hr/recruitment', label: 'Requests', icon: 'recruitment', section: 'Recruitment' });
-  if (canSeeJobs)
-    items.push({ href: '/hr/jobs', label: 'Job listings', icon: 'jobs', nested: canSeeRecruitment, section: 'Recruitment' });
-  if (canSeeApplications)
-    items.push({
-      href: '/hr/applications',
-      label: 'Applications',
-      icon: 'applications',
-      nested: canSeeRecruitment,
-      section: 'Recruitment',
-    });
-  if (canSeeOffers)
-    items.push({
-      href: '/hr/offer-templates',
-      label: 'Templates',
-      icon: 'offerTemplates',
-      nested: canSeeRecruitment,
-      section: 'Recruitment',
-    });
-  if (canSeeInterviews)
-    items.push({
-      href: '/hr/interviews',
-      label: 'Interview schedule',
-      icon: 'interviews',
-      nested: canSeeRecruitment,
-      section: 'Recruitment',
-    });
+  if (canSeeHiringHub) {
+    items.push({ href: '/hr/hiring', label: 'Hiring', icon: 'recruitment', section: 'Recruitment' });
+  }
   if (p.includes('leave.manage_org') && !p.includes('hr.view_records'))
     items.push({ href: '/hr/org-chart', label: 'Org chart', icon: 'orgChart', section: 'People' });
   if (p.includes('hr.view_records'))
@@ -394,6 +374,15 @@ export function getMainShellManagerNavItemsByPermissions(
   if (!canManageWorkspace && !canViewDepts && !canViewTeams && !canReviewMembers) return null;
 
   if (canManageWorkspace) items.push({ href: '/manager', label: 'Overview', icon: 'home', exact: true });
+  if (
+    canManageWorkspace ||
+    p.includes('recruitment.view') ||
+    p.includes('recruitment.manage') ||
+    p.includes('recruitment.approve_request') ||
+    p.includes('hr.view_direct_reports')
+  ) {
+    items.push({ href: '/hr', label: 'People overview', icon: 'dashboard', exact: true });
+  }
   if (canManageWorkspace || canViewDepts || canViewTeams || canReviewMembers) {
     items.push({
       href: '/manager/system-overview',
@@ -411,8 +400,13 @@ export function getMainShellManagerNavItemsByPermissions(
       section: 'People',
     });
   }
-  if (p.includes('recruitment.view') || p.includes('recruitment.manage') || p.includes('recruitment.approve_request'))
-    items.push({ href: '/hr/recruitment', label: 'Requests', icon: 'recruitment', section: 'People' });
+  if (
+    p.includes('recruitment.view') ||
+    p.includes('recruitment.manage') ||
+    p.includes('recruitment.approve_request') ||
+    p.includes('recruitment.create_request')
+  )
+    items.push({ href: '/hr/hiring', label: 'Hiring', icon: 'recruitment', section: 'People' });
   if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team HR records', icon: 'hrRecords', section: 'People' });
   if (canViewDepts)

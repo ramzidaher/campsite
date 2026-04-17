@@ -1,11 +1,12 @@
-import { viewerHasPermission } from '@/lib/authz/serverGuards';
+import { HideInHiringHub } from '@/app/(main)/hr/hiring/HideInHiringHub';
 import { jobApplicationStageLabel } from '@/lib/jobs/labels';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { JOB_APPLICATION_STAGES } from '@campsite/types';
 import Link from 'next/link';
 import { redirect, notFound } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 function spVal(v: string | string[] | undefined): string {
   if (typeof v === 'string') return v.trim();
@@ -24,25 +25,20 @@ export default async function AdminApplicationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
+  /** Reuses `(main)/layout` + `hr/layout` cache — avoids duplicate profile + `get_my_permissions` round trips. */
+  const bundle = await withServerPerf(
     '/admin/applications',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, role, status')
-      .eq('id', user.id)
-      .single(),
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
     300
   );
+  const orgId = shellBundleOrgId(bundle);
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  if (!permissionKeys.includes('applications.view')) redirect('/broadcasts');
 
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('applications.view'))) redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
+  const supabase = await createClient();
   const sp = await searchParams;
   const filterJobId = spVal(sp.job);
   const filterStage = spVal(sp.stage);
@@ -93,15 +89,15 @@ export default async function AdminApplicationsPage({
     'h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
 
   const view = (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
-      <div>
-        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
-          Application tracker
-        </h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Flat database view across all jobs. Filter by job, stage, department, and date applied.
-        </p>
-      </div>
+    <div>
+      <HideInHiringHub>
+        <header className="mb-8">
+          <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Who has applied</h1>
+          <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-[#6b6b6b]">
+            Everyone in your hiring inbox across roles. Narrow the list with job, stage, department, or dates.
+          </p>
+        </header>
+      </HideInHiringHub>
 
       <form
         method="get"
@@ -217,7 +213,7 @@ export default async function AdminApplicationsPage({
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-[#9b9b9b]">
-                  No applications match these filters. Try broadening your search.
+                  No candidates match these filters. Try broadening your search.
                 </td>
               </tr>
             ) : (
@@ -247,7 +243,7 @@ export default async function AdminApplicationsPage({
                     </td>
                     <td className="px-4 py-3">
                       <Link href={`/hr/jobs/${jid}/applications`} className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-                        Pipeline
+                        Open job
                       </Link>
                     </td>
                   </tr>

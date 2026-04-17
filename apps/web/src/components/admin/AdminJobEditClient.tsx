@@ -78,8 +78,8 @@ export function AdminJobEditClient({
   );
 
   const fieldClass =
-    'mt-0 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
-  const labelClass = 'mb-1 block text-[12px] font-medium text-[#505050]';
+    'mt-0 w-full rounded-xl border border-[#d8d8d8] bg-white px-4 py-3 text-[14px] leading-relaxed text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
+  const labelClass = 'mb-2 block text-[12px] font-semibold text-[#6b6b6b]';
 
   const showPublic = job.status === 'live' && job.slug && !job.slug.startsWith('draft-');
   const publicUrl = showPublic ? tenantJobPublicUrl(orgSlug, job.slug) : '';
@@ -158,50 +158,69 @@ export function AdminJobEditClient({
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-5 py-7 sm:px-7">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">
-            <Link href="/hr/jobs" className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
+    <div className="mx-auto min-w-0 w-full space-y-10 py-10 lg:space-y-12 lg:py-12 font-sans text-[#121212]">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 max-w-3xl">
+          <nav aria-label="Breadcrumb" className="text-[13px] font-medium text-[#6b6b6b]">
+            <Link href="/hr/hiring/jobs" className="text-[#121212] underline-offset-2 hover:underline">
               Job listings
             </Link>
-            <span aria-hidden className="mx-1.5 text-[#cfcfcf]">
+            <span aria-hidden className="mx-2 text-[#d0d0d0]">
               /
             </span>
-            Edit
-          </p>
-          <h1 className="mt-1 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+            <span className="text-[#6b6b6b]">{title || 'Job'}</span>
+            <span aria-hidden className="mx-2 text-[#d0d0d0]">
+              /
+            </span>
+            <span className="text-[#6b6b6b]">Edit</span>
+          </nav>
+          <h1 className="mt-4 font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
             {title || 'Job'}
           </h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            Status: {jobListingStatusLabel(job.status)}
-            {job.status === 'draft' ? ' · Drafts use a temporary URL until you publish.' : null}
-            {isArchived ? ' · Archived — restore to draft to edit or publish again.' : null}
+          {job.status === 'live' ? (
+            <p className="mt-4 flex items-center gap-2 text-[13px] font-semibold text-[#121212]">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-[#16a34a]" aria-hidden />
+              Live
+            </p>
+          ) : null}
+          <p className={`max-w-2xl text-[13.5px] leading-relaxed text-[#6b6b6b] ${job.status === 'live' ? 'mt-2' : 'mt-4'}`}>
+            {job.status === 'live' ? (
+              <>
+                Public listing is visible on your careers site. Anonymous and internal visits both count toward funnel
+                metrics below.
+              </>
+            ) : (
+              <>
+                Status: {jobListingStatusLabel(job.status)}
+                {job.status === 'draft' ? ' · Drafts use a temporary URL until you publish.' : null}
+                {isArchived ? ' · Archived — restore to draft to edit or publish again.' : null}
+              </>
+            )}
           </p>
-          <p className="mt-2 text-[12px] text-[#9b9b9b]">
-            Prefilled from approved recruitment brief: title, grade/level, salary band, contract type.
+          <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-[#6b6b6b]">
+            Prefilled from approved recruitment brief — title, grade / level, salary band, and contract type.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-3">
           {showPublic ? (
             <button
               type="button"
               onClick={() => void navigator.clipboard.writeText(publicUrl)}
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
             >
               Copy public link
             </button>
           ) : null}
           <Link
             href={requestHref}
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
           >
             Recruitment request
           </Link>
           {job.status === 'live' ? (
             <Link
               href={`/hr/jobs/${job.id}/applications`}
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#f5f4f1]"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
             >
               View pipeline
             </Link>
@@ -213,7 +232,7 @@ export function AdminJobEditClient({
         <div
           role={msg.type === 'err' ? 'alert' : 'status'}
           className={[
-            'rounded-lg border px-3 py-2 text-[13px]',
+            'rounded-xl border px-4 py-3 text-[13px]',
             msg.type === 'err'
               ? 'border-red-200 bg-red-50 text-red-900'
               : 'border-emerald-200 bg-emerald-50 text-emerald-950',
@@ -224,40 +243,43 @@ export function AdminJobEditClient({
       ) : null}
 
       {job.status === 'live' && publicMetrics ? (
-        <section
-          className="rounded-xl border border-[#dbeafe] bg-[#f8fbff] p-5"
-          aria-label="Public careers site analytics"
-        >
-          <h2 className="font-authSerif text-lg text-[#121212]">Public careers funnel</h2>
-          <p className="mt-1 text-[12px] text-[#6b6b6b]">
-            Counts from the org-scoped job board and apply flow (anonymous visitors included). Internal preview
-            traffic may appear if staff open the public URL.
+        <section aria-label="Public careers site analytics">
+          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Public careers funnel</h2>
+          <p className="max-w-3xl text-[13.5px] leading-relaxed text-[#6b6b6b]">
+            Counts from the org-scoped job board and apply flow (anonymous visitors included). Internal preview traffic
+            may appear if staff open the public URL.
           </p>
-          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-[#bfdbfe] bg-white px-4 py-3">
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">Listing views</dt>
-              <dd className="mt-1 font-authSerif text-[22px] text-[#121212]">{publicMetrics.impressions}</dd>
+          <dl className="mt-8 grid gap-4 sm:grid-cols-3 lg:gap-6">
+            <div className="rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm">
+              <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Listing views</dt>
+              <dd className="mt-3 text-[30px] font-bold leading-none tracking-tight text-[#121212] tabular-nums">
+                {publicMetrics.impressions}
+              </dd>
             </div>
-            <div className="rounded-lg border border-[#bfdbfe] bg-white px-4 py-3">
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">Apply starts</dt>
-              <dd className="mt-1 font-authSerif text-[22px] text-[#121212]">{publicMetrics.applyStarts}</dd>
+            <div className="rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm">
+              <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Apply starts</dt>
+              <dd className="mt-3 text-[30px] font-bold leading-none tracking-tight text-[#121212] tabular-nums">
+                {publicMetrics.applyStarts}
+              </dd>
             </div>
-            <div className="rounded-lg border border-[#bfdbfe] bg-white px-4 py-3">
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">Applications submitted</dt>
-              <dd className="mt-1 font-authSerif text-[22px] text-[#121212]">{publicMetrics.applySubmits}</dd>
+            <div className="rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm">
+              <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Submitted</dt>
+              <dd className="mt-3 text-[30px] font-bold leading-none tracking-tight text-[#121212] tabular-nums">
+                {publicMetrics.applySubmits}
+              </dd>
             </div>
           </dl>
         </section>
       ) : null}
 
       {eqCategoryOptions.length > 0 && !isArchived ? (
-        <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
-          <h2 className="font-authSerif text-lg text-[#121212]">Diversity monitoring (optional)</h2>
-          <p className="mt-1 text-[12px] text-[#6b6b6b]">
+        <section className="rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+          <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Diversity monitoring (optional)</h2>
+          <p className="mt-3 max-w-3xl text-[13.5px] leading-relaxed text-[#6b6b6b]">
             When set, in-app alerts can fire if the share of applicants (with equality data) in the selected codes
             falls below the minimum % over the org&apos;s rolling window. Configure codes under HR metric alerts.
           </p>
-          <div className="mt-4">
+          <div className="mt-8">
             <label className={labelClass} htmlFor="div_tgt">
               Minimum share of applicants (%)
             </label>
@@ -273,8 +295,8 @@ export function AdminJobEditClient({
               onChange={(e) => setDiversityTargetPct(e.target.value)}
             />
           </div>
-          <p className={`${labelClass} mt-4`}>Count toward diversity share</p>
-          <div className="mt-2 space-y-2">
+          <p className={`${labelClass} mt-8`}>Count toward diversity share</p>
+          <div className="mt-3 space-y-3">
             {eqCategoryOptions.map((o) => (
               <label key={o.code} className="flex items-center gap-2 text-[13px] text-[#121212]">
                 <input
@@ -296,9 +318,9 @@ export function AdminJobEditClient({
         </section>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4 rounded-xl border border-[#d8d8d8] bg-white p-5">
-          <h2 className="font-authSerif text-lg text-[#121212]">Core details</h2>
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
+        <div className="space-y-6 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+          <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Core details</h2>
           <div>
             <label className={labelClass} htmlFor="title">
               Job title
@@ -311,7 +333,7 @@ export function AdminJobEditClient({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="grade">
                 Grade / level
@@ -357,14 +379,17 @@ export function AdminJobEditClient({
           </div>
         </div>
 
-        <div className="space-y-4 rounded-xl border border-[#d8d8d8] bg-white p-5">
-          <h2 className="font-authSerif text-lg text-[#121212]">Application options</h2>
-          <p className="text-[12px] text-[#6b6b6b]">
-            Choose exactly how applicants apply for this job.
+        <div className="space-y-6 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+          <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Application options</h2>
+          <p className="text-[13.5px] leading-relaxed text-[#6b6b6b]">
+            Choose how applicants apply for this job.
           </p>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {JOB_APPLICATION_MODES.map((m) => (
-              <label key={m} className="flex cursor-pointer items-center gap-2 rounded-lg border border-transparent px-2 py-1 text-[13px] transition-colors hover:border-[#ececec] hover:bg-[#faf9f6]">
+              <label
+                key={m}
+                className="flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-[14px] transition-colors hover:border-[#ececec] hover:bg-[#faf9f6]"
+              >
                 <input
                   type="radio"
                   name="appMode"
@@ -391,12 +416,12 @@ export function AdminJobEditClient({
               </label>
             ))}
           </div>
-          <div className="rounded-lg border border-[#e8e8e8] bg-[#faf9f6] p-3 text-[12px] text-[#6b6b6b]">
+          <div className="rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4 text-[13px] leading-relaxed text-[#6b6b6b]">
             Modes: CV upload, Loom 1-minute link, StaffSavvy score (out of 5), or Combination.
           </div>
           {applicationMode === 'combination' ? (
-            <div className="mt-3 space-y-2 border-t border-[#f0f0f0] pt-3">
-              <p className="text-[12px] font-medium text-[#505050]">Enable for this role</p>
+            <div className="mt-6 space-y-3 border-t border-[#f0f0f0] pt-6">
+              <p className="text-[12px] font-semibold text-[#6b6b6b]">Enable for this role</p>
               <label className="flex items-center gap-2 text-[13px]">
                 <input
                   type="checkbox"
@@ -429,16 +454,16 @@ export function AdminJobEditClient({
         </div>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <h2 className="font-authSerif text-lg text-[#121212]">Listing copy</h2>
+      <div className="space-y-6 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+        <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Listing copy</h2>
         <div>
           <label className={labelClass} htmlFor="advert">
             Advert / overview
           </label>
           <textarea
             id="advert"
-            rows={8}
-            className={fieldClass}
+            rows={10}
+            className={`${fieldClass} min-h-[12rem]`}
             value={advertCopy}
             disabled={isArchived}
             onChange={(e) => setAdvertCopy(e.target.value)}
@@ -450,8 +475,8 @@ export function AdminJobEditClient({
           </label>
           <textarea
             id="reqs"
-            rows={5}
-            className={fieldClass}
+            rows={7}
+            className={`${fieldClass} min-h-[9rem]`}
             value={requirements}
             disabled={isArchived}
             onChange={(e) => setRequirements(e.target.value)}
@@ -463,8 +488,8 @@ export function AdminJobEditClient({
           </label>
           <textarea
             id="benefits"
-            rows={4}
-            className={fieldClass}
+            rows={6}
+            className={`${fieldClass} min-h-[7rem]`}
             value={benefits}
             disabled={isArchived}
             onChange={(e) => setBenefits(e.target.value)}
@@ -472,18 +497,20 @@ export function AdminJobEditClient({
         </div>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-authSerif text-lg text-[#121212]">Job listing preview</h2>
-          <span className="rounded-full border border-[#e8e8e8] bg-[#faf9f6] px-2.5 py-1 text-[11px] font-medium text-[#6b6b6b]">
+      <div className="space-y-6 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Job listing preview</h2>
+          <span className="rounded-full border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">
             {job.status === 'live' ? 'Live format' : 'Draft preview'}
           </span>
         </div>
-        <div className="overflow-hidden rounded-xl border border-[#ececec] bg-[#faf9f6]">
-          <header className="border-b border-[#ececec] bg-white px-5 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Your organisation</p>
-            <h3 className="font-authSerif text-[24px] tracking-tight text-[#121212]">{title || 'Untitled role'}</h3>
-            <p className="mt-1 text-[13px] text-[#6b6b6b]">
+        <div className="overflow-hidden rounded-2xl border border-[#ececec] bg-[#faf9f6]">
+          <header className="border-b border-[#ececec] bg-white px-8 py-6">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Your organisation</p>
+            <h3 className="mt-2 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+              {title || 'Untitled role'}
+            </h3>
+            <p className="mt-2 text-[13.5px] text-[#6b6b6b]">
               {gradeLevel || 'Grade / level'}
               {' · '}
               {recruitmentContractLabel(contractType)}
@@ -491,31 +518,31 @@ export function AdminJobEditClient({
               {salaryBand || 'Salary band'}
             </p>
           </header>
-          <div className="mx-auto max-w-2xl px-5 py-8">
-            <section className="rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">About the role</h4>
-              <div className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-[#242424]">
+          <div className="mx-auto max-w-3xl px-6 py-10 sm:px-10 sm:py-12">
+            <section className="rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">
+              <h4 className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">About the role</h4>
+              <div className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-[#242424]">
                 {advertCopy?.trim() || 'Details coming soon.'}
               </div>
             </section>
 
             {requirements?.trim() ? (
-              <section className="mt-5 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Requirements</h4>
-                <div className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#242424]">{requirements}</div>
+              <section className="mt-6 rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">
+                <h4 className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Requirements</h4>
+                <div className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed text-[#242424]">{requirements}</div>
               </section>
             ) : null}
 
             {benefits?.trim() ? (
-              <section className="mt-5 rounded-xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Benefits</h4>
-                <div className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#242424]">{benefits}</div>
+              <section className="mt-6 rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">
+                <h4 className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Benefits</h4>
+                <div className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed text-[#242424]">{benefits}</div>
               </section>
             ) : null}
 
-            <section className="mt-5 rounded-xl border border-[#d8ece5] bg-[#f0fdf9] p-5">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[#0f5132]">How to apply</h4>
-              <p className="mt-2 text-[13px] leading-relaxed text-[#14532d]">
+            <section className="mt-6 rounded-xl border border-[#d8ece5] bg-[#f0fdf9] p-6 sm:p-8">
+              <h4 className="text-[11px] font-semibold uppercase tracking-widest text-[#0f5132]">How to apply</h4>
+              <p className="mt-3 text-[13.5px] leading-relaxed text-[#14532d]">
                 Apply online - this vacancy accepts: {previewApplySummary}.
               </p>
               <button
@@ -530,13 +557,13 @@ export function AdminJobEditClient({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-4 pt-2">
         {isArchived ? (
           <button
             type="button"
             disabled={pending}
             onClick={restoreToDraft}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="inline-flex h-11 min-w-[10rem] items-center justify-center rounded-full bg-[#121212] px-6 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {pending ? 'Restoring…' : 'Restore to draft'}
           </button>
@@ -546,7 +573,7 @@ export function AdminJobEditClient({
               type="button"
               disabled={pending}
               onClick={save}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="inline-flex h-11 min-w-[10rem] items-center justify-center rounded-full bg-[#121212] px-6 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {pending ? 'Saving…' : 'Save draft'}
             </button>
@@ -555,7 +582,7 @@ export function AdminJobEditClient({
                 type="button"
                 disabled={pending}
                 onClick={publish}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212] disabled:opacity-60"
+                className="inline-flex h-11 min-w-[10rem] items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-6 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6] disabled:opacity-60"
               >
                 Publish
               </button>
@@ -565,7 +592,7 @@ export function AdminJobEditClient({
                 type="button"
                 disabled={pending}
                 onClick={archive}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#b91c1c] hover:bg-red-50 disabled:opacity-60"
+                className="inline-flex h-11 min-w-[10rem] items-center justify-center rounded-full border border-[#fecaca] bg-white px-6 text-[13px] font-medium text-[#b91c1c] hover:bg-red-50 disabled:opacity-60"
               >
                 Archive
               </button>

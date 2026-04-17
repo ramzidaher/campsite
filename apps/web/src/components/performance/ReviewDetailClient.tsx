@@ -174,7 +174,7 @@ export function ReviewDetailClient({
   const canEditManager = isReviewer && isOpen && cycleOpen;
   const canAddGoals = (isReviewee || isReviewer) && isOpen && cycleOpen;
 
-  const backHref = (isReviewee && !isReviewer && !canHR) ? '/performance' : '/admin/hr/performance';
+  const backHref = (isReviewee && !isReviewer && !canHR) ? '/performance' : '/hr/performance';
   const backLabel = (isReviewee && !isReviewer && !canHR) ? '← My reviews' : '← Performance reviews';
 
   const today = new Date().toISOString().slice(0, 10);

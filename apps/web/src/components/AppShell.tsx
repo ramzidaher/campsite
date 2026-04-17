@@ -245,7 +245,7 @@ export function AppShell({
       case '/admin/pending':
       case '/pending-approvals':
         return { ...item, badge: live.pending_approvals || undefined };
-      case '/hr/recruitment':
+      case '/hr/hiring':
         return { ...item, badge: live.recruitment_pending_review || undefined };
       case '/broadcasts':
         return { ...item, secondaryBadge: live.broadcast_pending_approvals || undefined };
@@ -266,7 +266,7 @@ export function AppShell({
         { id: 'profile-pending',            label: 'Pending member approvals',       href: isAdmin ? '/admin/pending' : '/pending-approvals', count: live.pending_approvals },
         { id: 'rota-peer',                  label: 'Rota swaps awaiting your OK',    href: '/rota',                         count: live.rota_pending_peer },
         { id: 'rota-final',                 label: 'Rota requests awaiting approval',href: '/rota',                         count: live.rota_pending_final },
-        { id: 'recruitment-pending',        label: 'Recruitment requests to review', href: '/hr/recruitment',               count: live.recruitment_pending_review },
+        { id: 'recruitment-pending',        label: 'Recruitment requests to review', href: '/hr/hiring/requests',            count: live.recruitment_pending_review },
         { id: 'leave-pending',              label: 'Leave requests to approve',      href: '/leave',                        count: live.leave_pending_approval },
         { id: 'recruitment-notifications',  label: 'Recruitment updates',            href: '/notifications/recruitment',    count: live.recruitment_notifications },
         { id: 'application-notifications',  label: 'Application updates',            href: '/notifications/applications',   count: live.application_notifications },
