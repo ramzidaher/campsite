@@ -95,7 +95,7 @@ export function EmployeeOnboardingClient({
 
   if (runStatus === 'completed') {
     return (
-      <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
+      <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
         <div className="py-12 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#dcfce7]">
             <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#16a34a]" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -115,7 +115,7 @@ export function EmployeeOnboardingClient({
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           Getting started
@@ -125,73 +125,24 @@ export function EmployeeOnboardingClient({
         </p>
       </div>
 
-      {msg ? (
-        <p className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p>
-      ) : null}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        <div className="min-w-0 space-y-6 lg:col-span-8">
+          {msg ? (
+            <p className="rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p>
+          ) : null}
 
-      {overdueMyTasks.length > 0 ? (
-        <div className="mb-4 rounded-xl border border-[#fecaca] bg-[#fef2f2] p-4">
-          <p className="text-[13px] font-semibold text-[#b91c1c]">
-            {overdueMyTasks.length} task{overdueMyTasks.length === 1 ? ' is' : 's are'} overdue
-          </p>
-          <p className="mt-0.5 text-[12px] text-[#b91c1c]">
-            {overdueMyTasks.map((t) => t.title).join(', ')}
-          </p>
-        </div>
-      ) : null}
+          {overdueMyTasks.length > 0 ? (
+            <div className="rounded-xl border border-[#fecaca] bg-[#fef2f2] p-4">
+              <p className="text-[13px] font-semibold text-[#b91c1c]">
+                {overdueMyTasks.length} task{overdueMyTasks.length === 1 ? ' is' : 's are'} overdue
+              </p>
+              <p className="mt-0.5 text-[12px] text-[#b91c1c]">
+                {overdueMyTasks.map((t) => t.title).join(', ')}
+              </p>
+            </div>
+          ) : null}
 
-      {/* Progress hero */}
-      <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-5">
-        <div className="mb-4 grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-[22px] font-bold text-[#121212]">{myProgress}%</p>
-            <p className="text-[11.5px] text-[#6b6b6b]">Your tasks</p>
-          </div>
-          <div>
-            <p className="text-[22px] font-bold text-[#121212]">{myDone}/{myTasks.length}</p>
-            <p className="text-[11.5px] text-[#6b6b6b]">Tasks done</p>
-          </div>
-          <div>
-            <p className="text-[22px] font-bold text-[#121212]">{progress}%</p>
-            <p className="text-[11.5px] text-[#6b6b6b]">Overall</p>
-          </div>
-        </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[#ececec]">
-          <div
-            className="h-2 rounded-full bg-[#121212] transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        {otherTasks.length > 0 ? (
-          <p className="mt-2.5 text-[11.5px] text-[#9b9b9b]">
-            {otherTasks.filter((t) => t.status !== 'pending').length} of {otherTasks.length} tasks for your manager/HR also completed
-          </p>
-        ) : null}
-      </div>
-
-      <div className="mb-6 rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4">
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            data-no-checkbox-sound
-            checked={campfirePrefs.enabled}
-            onChange={(e) => {
-              const enabled = e.target.checked;
-              setCampfireEnabled(enabled);
-              playUiSound(enabled ? 'toggle_on' : 'toggle_off');
-            }}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212]"
-          />
-          <span className="text-[13px] leading-snug text-[#121212]">
-            <span className="font-medium">Campfire on the home dashboard</span>
-            <span className="mt-0.5 block text-[12.5px] text-[#6b6b6b]">
-              Optional ambience on Dashboard — you can change this anytime in Settings → Notifications.
-            </span>
-          </span>
-        </label>
-      </div>
-
-      <div className="space-y-8">
+          <div className="space-y-8">
         {grouped.map((g) => (
           <section key={g.key}>
             <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
@@ -271,6 +222,61 @@ export function EmployeeOnboardingClient({
             </ul>
           </section>
         ))}
+          </div>
+        </div>
+
+        <aside className="min-w-0 space-y-6 lg:col-span-4">
+          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+            <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Progress</h2>
+            <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-[20px] font-bold text-[#121212]">{myProgress}%</p>
+                <p className="mt-0.5 text-[11px] text-[#6b6b6b]">Your tasks</p>
+              </div>
+              <div>
+                <p className="text-[20px] font-bold text-[#121212]">{myDone}/{myTasks.length}</p>
+                <p className="mt-0.5 text-[11px] text-[#6b6b6b]">Done</p>
+              </div>
+              <div>
+                <p className="text-[20px] font-bold text-[#121212]">{progress}%</p>
+                <p className="mt-0.5 text-[11px] text-[#6b6b6b]">Overall</p>
+              </div>
+            </div>
+            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#ececec]">
+              <div
+                className="h-2 rounded-full bg-[#121212] transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {otherTasks.length > 0 ? (
+              <p className="mt-3 text-[11.5px] text-[#9b9b9b]">
+                {otherTasks.filter((t) => t.status !== 'pending').length} of {otherTasks.length} manager/HR tasks completed
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                data-no-checkbox-sound
+                checked={campfirePrefs.enabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setCampfireEnabled(enabled);
+                  playUiSound(enabled ? 'toggle_on' : 'toggle_off');
+                }}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212]"
+              />
+              <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="font-medium">Campfire on the home dashboard</span>
+                <span className="mt-0.5 block text-[12.5px] text-[#6b6b6b]">
+                  Optional ambience on Dashboard — change anytime in Settings → Notifications.
+                </span>
+              </span>
+            </label>
+          </div>
+        </aside>
       </div>
     </div>
   );

@@ -255,7 +255,7 @@ export function OnboardingHubClient({
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Onboarding</h1>

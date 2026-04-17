@@ -296,7 +296,7 @@ export function BroadcastsClient({
   }, [searchParams, composeAllowed, showScheduledTab, profile.role]);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-7xl">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 px-5 sm:px-[28px]">
         <div>
           <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Broadcasts</h1>

@@ -130,7 +130,7 @@ export function OnboardingRunClient({
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <Link href="/hr/onboarding" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
         ← Onboarding
       </Link>
@@ -164,22 +164,10 @@ export function OnboardingRunClient({
 
       {msg ? <p className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p> : null}
 
-      {/* Progress */}
-      <div className="mt-5 rounded-xl border border-[#d8d8d8] bg-white p-4">
-        <div className="flex items-center justify-between text-[13px]">
-          <span className="font-medium text-[#121212]">{completedCount} of {tasks.length} tasks done</span>
-          <span className="text-[#9b9b9b]">{progress}%</span>
-        </div>
-        <div className="mt-2 h-1.5 w-full rounded-full bg-[#ececec]">
-          <div
-            className="h-1.5 rounded-full bg-[#121212] transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-
+      <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        <div className="min-w-0 space-y-6 lg:col-span-8">
       {/* Tasks grouped by category */}
-      <div className="mt-6 space-y-6">
+      <div className="space-y-6">
         {grouped.map((g) => (
           <section key={g.key}>
             <h2 className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
@@ -306,6 +294,24 @@ export function OnboardingRunClient({
           )}
         </div>
       ) : null}
+        </div>
+
+        <aside className="min-w-0 space-y-4 lg:col-span-4">
+          <div className="rounded-xl border border-[#d8d8d8] bg-white p-4">
+            <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Run progress</h2>
+            <div className="mt-3 flex items-center justify-between text-[13px]">
+              <span className="font-medium text-[#121212]">{completedCount} of {tasks.length} tasks done</span>
+              <span className="text-[#9b9b9b]">{progress}%</span>
+            </div>
+            <div className="mt-2 h-1.5 w-full rounded-full bg-[#ececec]">
+              <div
+                className="h-1.5 rounded-full bg-[#121212] transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

@@ -342,7 +342,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
     const view = (
       <>
       {(canRecordExportCsv || canRecordExportPdf) ? (
-        <div className="mx-auto mt-4 flex max-w-3xl flex-wrap gap-2 px-5 sm:px-7">
+        <div className="mx-auto mt-4 flex max-w-7xl flex-wrap gap-2 px-5 sm:px-7">
           {canRecordExportCsv ? (
             <a
               href={`/api/hr/records/export?userId=${encodeURIComponent(userId)}&format=csv`}
@@ -365,7 +365,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
         </div>
       ) : null}
       {activePrivacyRequest ? (
-        <div className="mx-auto mt-4 max-w-3xl rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[12.5px] text-[#854d0e]">
+        <div className="mx-auto mt-4 max-w-7xl rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[12.5px] text-[#854d0e]">
           Active GDPR erasure request: <strong>{String(activePrivacyRequest.status)}</strong> (submitted {String(activePrivacyRequest.created_at).slice(0, 10)}).
         </div>
       ) : null}
@@ -587,7 +587,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
   const view = (
     <>
     {(canRecordExportCsv || canRecordExportPdf) ? (
-      <div className="mx-auto mt-4 flex max-w-3xl flex-wrap gap-2 px-5 sm:px-7">
+      <div className="mx-auto mt-4 flex max-w-7xl flex-wrap gap-2 px-5 sm:px-7">
         {canRecordExportCsv ? (
           <a
             href={`/api/hr/records/export?userId=${encodeURIComponent(userId)}&format=csv`}
@@ -610,7 +610,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {activePrivacyRequest ? (
-      <div className="mx-auto mt-4 max-w-3xl rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[12.5px] text-[#854d0e]">
+      <div className="mx-auto mt-4 max-w-7xl rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[12.5px] text-[#854d0e]">
         Active GDPR erasure request: <strong>{String(activePrivacyRequest.status)}</strong> (submitted {String(activePrivacyRequest.created_at).slice(0, 10)}).
       </div>
     ) : null}
@@ -692,7 +692,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       />
     </div>
     {(canPayrollBankViewAll || canPayrollBankManageAll) ? (
-      <div id="bank-details" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
+      <div id="bank-details" className="mx-auto max-w-7xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <BankDetailsClient
           title="Bank details (payroll)"
           description="Masked by default. Full reveal and export are audited."
@@ -725,7 +725,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canUkTaxViewAll || canUkTaxManageAll) ? (
-      <div id="uk-tax" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
+      <div id="uk-tax" className="mx-auto max-w-7xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <UkTaxDetailsClient
           subjectUserId={userId}
           initialRows={(ukTaxRows ?? []).map((r) => ({
@@ -751,7 +751,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canTaxDocsViewAll || canTaxDocsManageAll) ? (
-      <div id="tax-documents" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
+      <div id="tax-documents" className="mx-auto max-w-7xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <TaxDocumentsClient
           orgId={orgId}
           subjectUserId={userId}
@@ -784,7 +784,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canEmploymentHistoryViewAll || canEmploymentHistoryManageAll) ? (
-      <div id="employment-history" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
+      <div id="employment-history" className="mx-auto max-w-7xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <EmploymentHistoryClient
           subjectUserId={userId}
           canEdit={Boolean(canEmploymentHistoryManageAll)}
@@ -809,7 +809,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canDisciplinaryViewAll || canDisciplinaryManageAll || canGrievanceViewAll || canGrievanceManageAll || canViewTeam) ? (
-      <div id="case-log" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
+      <div id="case-log" className="mx-auto max-w-7xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <DisciplinaryGrievanceLogClient
           orgId={orgId}
           subjectUserId={userId}
@@ -856,7 +856,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canMedicalViewAll || canMedicalManageAll) ? (
-      <div id="medical-notes" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
+      <div id="medical-notes" className="mx-auto max-w-7xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <MedicalNotesClient
           subjectUserId={userId}
           initialRows={(medicalRows ?? []).map((r) => ({
@@ -891,7 +891,7 @@ export default async function EmployeeHRFilePage({ params }: { params: Promise<{
       </div>
     ) : null}
     {(canCustomFieldsView || canCustomFieldsManageValuesAll) ? (
-      <div id="custom-fields" className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-8 sm:px-7">
+      <div id="custom-fields" className="mx-auto max-w-7xl scroll-mt-24 px-5 pb-8 sm:px-7">
         <CustomHrFieldsValuesClient
           orgId={orgId}
           subjectUserId={userId}

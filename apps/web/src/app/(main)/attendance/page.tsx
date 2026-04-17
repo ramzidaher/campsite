@@ -28,7 +28,7 @@ export default async function AttendancePage() {
   const enabled = Boolean(hr?.timesheet_clock_enabled);
 
   return (
-    <div className="mx-auto max-w-lg px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
       <h1 className="font-authSerif text-[26px] tracking-[-0.03em] text-[#121212]">Attendance</h1>
       <p className="mt-1 text-[13px] text-[#6b6b6b]">Clock in and out at work. Submitted weeks go to your line manager.</p>
       <div className="mt-8">

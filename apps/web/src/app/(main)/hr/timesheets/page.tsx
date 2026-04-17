@@ -23,7 +23,7 @@ export default async function HrTimesheetsPage() {
   if (!permissionKeys.includes('leave.approve_direct_reports') && !permissionKeys.includes('leave.manage_org')) redirect('/hr/records');
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <h1 className="font-authSerif text-[26px] tracking-[-0.03em] text-[#121212]">Timesheet review</h1>
       <p className="mt-1 text-[13px] text-[#6b6b6b]">
         Approve or reject submitted weeks. Approved timesheets generate wagesheet lines.

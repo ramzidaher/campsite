@@ -61,7 +61,8 @@ export function AppTopBar({
       className="sticky top-0 z-50 flex h-[60px] shrink-0 items-center gap-3 border-b px-4 sm:gap-4 sm:px-7"
       style={{
         borderColor: 'var(--org-brand-border)',
-        background: 'var(--org-brand-surface)',
+        // Keep header on the same tone as page body for a seamless, single-canvas feel.
+        background: 'var(--org-brand-bg)',
         color: 'var(--org-brand-text)',
       }}
     >

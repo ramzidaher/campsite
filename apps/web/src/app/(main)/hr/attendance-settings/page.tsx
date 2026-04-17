@@ -23,7 +23,7 @@ export default async function AttendanceSettingsPage() {
   if (!permissionKeys.includes('hr.manage_records')) redirect('/hr/records');
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <h1 className="font-authSerif text-[26px] tracking-[-0.03em] text-[#121212]">Attendance & work sites</h1>
       <p className="mt-1 text-[13px] text-[#6b6b6b]">Geofences for clock-in and rejection policy for weekly timesheets.</p>
       <div className="mt-8">

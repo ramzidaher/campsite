@@ -436,7 +436,7 @@ export function CalendarClient({ profile }: { profile: Profile }) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-[28px]">
+    <div className="mx-auto max-w-7xl px-5 py-7 sm:px-[28px]">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Calendar</h1>

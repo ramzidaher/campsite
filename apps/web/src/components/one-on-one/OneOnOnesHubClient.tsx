@@ -85,115 +85,179 @@ export function OneOnOnesHubClient({
     else await refresh();
   };
 
+  const scheduleSidebar = canManage && directReports.length > 0;
+
   return (
-    <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">1:1 check-ins</h1>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">
-            {canManage ? 'Schedule and run 1:1s with your team.' : 'Your upcoming and past 1:1 meetings.'}
-          </p>
-        </div>
-        {canManage && directReports.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setShowNew(true)}
-            className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
-          >
-            New 1:1
-          </button>
-        ) : null}
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
+      <div className="mb-6">
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">1:1 check-ins</h1>
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">
+          {canManage ? 'Schedule and run 1:1s with your team.' : 'Your upcoming and past 1:1 meetings.'}
+        </p>
       </div>
 
-      {err ? <p className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{err}</p> : null}
+      <div className={`grid grid-cols-1 gap-6 ${scheduleSidebar ? 'lg:grid-cols-12 lg:gap-8' : ''}`}>
+        <div className={`min-w-0 space-y-6 ${scheduleSidebar ? 'lg:col-span-8' : ''}`}>
+          {err ? <p className="rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{err}</p> : null}
 
-      {showNew ? (
-        <div className="mb-6 rounded-xl border border-[#e8e8e8] bg-white p-4 shadow-sm">
-          <p className="mb-3 text-[13px] font-medium text-[#121212]">Schedule a 1:1</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-[12px] text-[#6b6b6b]">
-              Direct report
-              <select
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
-                value={reportId}
-                onChange={(e) => setReportId(e.target.value)}
+          {!scheduleSidebar && showNew ? (
+            <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 shadow-sm">
+              <p className="mb-3 text-[13px] font-medium text-[#121212]">Schedule a 1:1</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-[12px] text-[#6b6b6b]">
+                  Direct report
+                  <select
+                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                    value={reportId}
+                    onChange={(e) => setReportId(e.target.value)}
+                  >
+                    {directReports.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-[12px] text-[#6b6b6b]">
+                  Starts
+                  <input
+                    type="datetime-local"
+                    className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+                    value={startsLocal}
+                    onChange={(e) => setStartsLocal(e.target.value)}
+                  />
+                </label>
+                <label className="block text-[12px] text-[#6b6b6b] sm:col-span-2">
+                  Template (optional)
+                  <TemplatePicker supabase={supabase} value={templateId} onChange={setTemplateId} />
+                </label>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={createMeeting}
+                  className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6]"
+                >
+                  Create
+                </button>
+                <button type="button" onClick={() => setShowNew(false)} className="rounded-lg border border-[#d8d8d8] px-4 py-2 text-[13px]">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
+            {loading ? <p className="text-[13px] text-[#6b6b6b]">Loading…</p> : null}
+            {meetings.length === 0 && !loading ? (
+              <p className="rounded-xl border border-dashed border-[#d8d8d8] bg-[#faf9f6] px-4 py-8 text-center text-[13px] text-[#6b6b6b]">
+                No 1:1 meetings yet.
+              </p>
+            ) : null}
+            {meetings.map((m) => (
+              <Link
+                key={m.id}
+                href={`/one-on-ones/${m.id}`}
+                className="block rounded-xl border border-[#e8e8e8] bg-white p-4 transition-colors hover:bg-[#faf9f6]"
               >
-                {directReports.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.full_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-[12px] text-[#6b6b6b]">
-              Starts
-              <input
-                type="datetime-local"
-                className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
-                value={startsLocal}
-                onChange={(e) => setStartsLocal(e.target.value)}
-              />
-            </label>
-            <label className="block text-[12px] text-[#6b6b6b] sm:col-span-2">
-              Template (optional)
-              <TemplatePicker supabase={supabase} value={templateId} onChange={setTemplateId} />
-            </label>
-          </div>
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              onClick={createMeeting}
-              className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6]"
-            >
-              Create
-            </button>
-            <button type="button" onClick={() => setShowNew(false)} className="rounded-lg border border-[#d8d8d8] px-4 py-2 text-[13px]">
-              Cancel
-            </button>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[14px] font-medium text-[#121212]">
+                    {m.manager_user_id === userId ? m.report_name : m.manager_name} ·{' '}
+                    {new Date(m.starts_at).toLocaleString(undefined, {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                  <span
+                    className={[
+                      'rounded-full px-2 py-0.5 text-[11px] font-medium',
+                      m.status === 'completed'
+                        ? 'bg-[#dcfce7] text-[#166534]'
+                        : m.status === 'cancelled'
+                          ? 'bg-[#f5f4f1] text-[#6b6b6b]'
+                          : 'bg-[#eff6ff] text-[#1d4ed8]',
+                    ].join(' ')}
+                  >
+                    {m.status.replace('_', ' ')}
+                  </span>
+                </div>
+                {m.notes_preview ? <p className="mt-2 line-clamp-2 text-[12px] text-[#6b6b6b]">{m.notes_preview}</p> : null}
+              </Link>
+            ))}
           </div>
         </div>
-      ) : null}
 
-      <div className="space-y-2">
-        {loading ? <p className="text-[13px] text-[#6b6b6b]">Loading…</p> : null}
-        {meetings.length === 0 && !loading ? (
-          <p className="rounded-xl border border-dashed border-[#d8d8d8] bg-[#faf9f6] px-4 py-8 text-center text-[13px] text-[#6b6b6b]">
-            No 1:1 meetings yet.
-          </p>
-        ) : null}
-        {meetings.map((m) => (
-          <Link
-            key={m.id}
-            href={`/one-on-ones/${m.id}`}
-            className="block rounded-xl border border-[#e8e8e8] bg-white p-4 transition-colors hover:bg-[#faf9f6]"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[14px] font-medium text-[#121212]">
-                {m.manager_user_id === userId ? m.report_name : m.manager_name} ·{' '}
-                {new Date(m.starts_at).toLocaleString(undefined, {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-              <span
-                className={[
-                  'rounded-full px-2 py-0.5 text-[11px] font-medium',
-                  m.status === 'completed'
-                    ? 'bg-[#dcfce7] text-[#166534]'
-                    : m.status === 'cancelled'
-                      ? 'bg-[#f5f4f1] text-[#6b6b6b]'
-                      : 'bg-[#eff6ff] text-[#1d4ed8]',
-                ].join(' ')}
+        {scheduleSidebar ? (
+          <aside className="min-w-0 space-y-4 lg:col-span-4">
+            <div className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+              <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Schedule</h2>
+              <p className="mt-1 text-[12.5px] text-[#6b6b6b]">Pick a direct report and time. You can attach an optional template.</p>
+              <button
+                type="button"
+                onClick={() => setShowNew((v) => !v)}
+                className="mt-4 w-full rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
               >
-                {m.status.replace('_', ' ')}
-              </span>
+                {showNew ? 'Close' : 'New 1:1'}
+              </button>
+              {showNew ? (
+                <div className="mt-4 border-t border-[#f0f0f0] pt-4">
+                  <div className="grid gap-3">
+                    <label className="block text-[12px] text-[#6b6b6b]">
+                      Direct report
+                      <select
+                        className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                        value={reportId}
+                        onChange={(e) => setReportId(e.target.value)}
+                      >
+                        {directReports.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.full_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block text-[12px] text-[#6b6b6b]">
+                      Starts
+                      <input
+                        type="datetime-local"
+                        className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+                        value={startsLocal}
+                        onChange={(e) => setStartsLocal(e.target.value)}
+                      />
+                    </label>
+                    <label className="block text-[12px] text-[#6b6b6b]">
+                      Template (optional)
+                      <TemplatePicker supabase={supabase} value={templateId} onChange={setTemplateId} />
+                    </label>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={createMeeting}
+                      className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6]"
+                    >
+                      Create
+                    </button>
+                    <button type="button" onClick={() => setShowNew(false)} className="rounded-lg border border-[#d8d8d8] px-4 py-2 text-[13px]">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                disabled={loading}
+                className="mt-4 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#f0efe9] disabled:opacity-50"
+              >
+                {loading ? 'Refreshing…' : 'Refresh list'}
+              </button>
             </div>
-            {m.notes_preview ? <p className="mt-2 line-clamp-2 text-[12px] text-[#6b6b6b]">{m.notes_preview}</p> : null}
-          </Link>
-        ))}
+          </aside>
+        ) : null}
       </div>
     </div>
   );

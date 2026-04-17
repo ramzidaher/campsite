@@ -331,6 +331,8 @@ function probationAlertLevel(
   return 'due_soon';
 }
 
+type Tab = 'overview' | 'job' | 'leave' | 'documents' | 'emergency' | 'audit';
+
 export function EmployeeHRFileClient({
   orgId,
   currentUserId,
@@ -468,6 +470,7 @@ export function EmployeeHRFileClient({
   const [customFieldRows, setCustomFieldRows] = useState<CustomFieldRow[]>(() =>
     customFieldRowsFromEmployee(employee.custom_fields),
   );
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   function resetFormFromEmployee(emp: Employee) {
     setJobTitle(emp.job_title ?? '');
@@ -871,7 +874,7 @@ export function EmployeeHRFileClient({
   );
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       {/* Back */}
       <Link
         href="/hr/records"
@@ -886,34 +889,29 @@ export function EmployeeHRFileClient({
           <img
             src={employee.avatar_url}
             alt=""
-            className="h-14 w-14 shrink-0 rounded-full object-cover"
+            className="h-16 w-16 shrink-0 rounded-full object-cover"
           />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] text-[16px] font-bold text-[#6b6b6b]">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#e8e4dc] text-[18px] font-bold text-[#6b6b6b]">
             {initials(employee.display_name ?? employee.full_name)}
           </div>
         )}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
             {employee.display_name ?? employee.full_name}
           </h1>
           <p className="mt-0.5 text-[13px] text-[#6b6b6b]">
-            {employee.email ?? ''}
-            {employee.department_names.length > 0
-              ? ` · ${employee.department_names.join(', ')}`
-              : ''}
+            {[employee.job_title, employee.department_names.join(', ')].filter(Boolean).join(' · ') || employee.email || ''}
           </p>
-          {employee.reports_to_name ? (
-            <p className="mt-0.5 text-[12px] text-[#9b9b9b]">
-              Line manager: {employee.reports_to_name}
-            </p>
+          {employee.email && (employee.job_title || employee.department_names.length > 0) ? (
+            <p className="mt-0.5 text-[12px] text-[#9b9b9b]">{employee.email}</p>
           ) : null}
         </div>
         {canManage && !editing ? (
           <button
             type="button"
-            onClick={() => setEditing(true)}
-            className="mt-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+            onClick={() => { setActiveTab('job'); setEditing(true); }}
+            className="mt-1 shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
           >
             {employee.hr_record_id ? 'Edit record' : 'Create HR record'}
           </button>
@@ -933,33 +931,114 @@ export function EmployeeHRFileClient({
         </p>
       ) : null}
 
-      {employee.probation_end_date && !employee.probation_check_completed_at && pbLevel ? (
-        <div
-          className={[
-            'mt-4 rounded-lg border px-3 py-2.5 text-[13px]',
-            pbLevel === 'critical'
-              ? 'border-[#fecaca] bg-[#fef2f2] text-[#991b1b]'
-              : pbLevel === 'overdue'
-                ? 'border-[#fed7aa] bg-[#fffbeb] text-[#9a3412]'
-                : 'border-[#fde68a] bg-[#fffbeb] text-[#854d0e]',
-          ].join(' ')}
-          role="status"
-        >
-          <p className="font-medium">
-            {pbLevel === 'critical'
-              ? 'Probation review is more than one week overdue.'
-              : pbLevel === 'overdue'
-                ? 'Probation end date has passed — complete the probation review as soon as possible.'
-                : 'Probation is ending soon — schedule the probation review before the end date.'}
-          </p>
-          <p className="mt-0.5 text-[12px] opacity-90">
-            Probation ends {employee.probation_end_date}. Completing a probation-cycle performance review also records this automatically.
-          </p>
-        </div>
-      ) : null}
+      {/* Tab bar */}
+      <nav className="mt-6 flex overflow-x-auto border-b border-[#e8e8e8]" aria-label="Profile sections">
+        {(['overview', 'job', 'leave', 'documents', 'emergency', 'audit'] as Tab[]).map((t) => {
+          const labels: Record<Tab, string> = {
+            overview: 'Overview',
+            job: 'Job',
+            leave: 'Leave',
+            documents: 'Documents',
+            emergency: 'Emergency',
+            audit: 'Audit',
+          };
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => { setActiveTab(t); if (t !== 'job') setEditing(false); }}
+              className={[
+                'shrink-0 px-4 py-2.5 text-[12.5px] font-medium transition-colors',
+                activeTab === t
+                  ? 'border-b-2 border-[#121212] text-[#121212]'
+                  : 'text-[#9b9b9b] hover:text-[#4a4a4a]',
+              ].join(' ')}
+            >
+              {labels[t]}
+            </button>
+          );
+        })}
+      </nav>
 
-      {/* HR record — view or edit */}
-      {editing ? (
+      {/* Overview tab */}
+      {activeTab === 'overview' && (
+        <div className="mt-6 space-y-4">
+          {employee.probation_end_date && !employee.probation_check_completed_at && pbLevel ? (
+            <div
+              className={[
+                'rounded-lg border px-3 py-2.5 text-[13px]',
+                pbLevel === 'critical'
+                  ? 'border-[#fecaca] bg-[#fef2f2] text-[#991b1b]'
+                  : pbLevel === 'overdue'
+                    ? 'border-[#fed7aa] bg-[#fffbeb] text-[#9a3412]'
+                    : 'border-[#fde68a] bg-[#fffbeb] text-[#854d0e]',
+              ].join(' ')}
+              role="status"
+            >
+              <p className="font-medium">
+                {pbLevel === 'critical'
+                  ? 'Probation review is more than one week overdue.'
+                  : pbLevel === 'overdue'
+                    ? 'Probation end date has passed — complete the probation review as soon as possible.'
+                    : 'Probation is ending soon — schedule the probation review before the end date.'}
+              </p>
+              <p className="mt-0.5 text-[12px] opacity-90">
+                Probation ends {employee.probation_end_date}. Completing a probation-cycle performance review also records this automatically.
+              </p>
+            </div>
+          ) : null}
+          <div className="rounded-xl border border-[#e8e8e8] bg-white p-5">
+            <dl className="grid gap-x-8 gap-y-4 text-[13px] sm:grid-cols-2">
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Status</dt>
+                <dd className="mt-1">
+                  <span className={[
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+                    employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-[#f3f3f3] text-[#6b6b6b]',
+                  ].join(' ')}>
+                    <span className={['h-1.5 w-1.5 rounded-full', employee.status === 'active' ? 'bg-emerald-500' : 'bg-[#9b9b9b]'].join(' ')} />
+                    {employee.status === 'active' ? 'Active' : employee.status}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Department</dt>
+                <dd className="mt-1 text-[#121212]">{employee.department_names.length ? employee.department_names.join(', ') : '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Email</dt>
+                <dd className="mt-1 text-[#121212]">{employee.email ?? '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Manager</dt>
+                <dd className="mt-1 text-[#121212]">{employee.reports_to_name ?? '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Job title</dt>
+                <dd className="mt-1 text-[#121212]">{employee.job_title || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Contract</dt>
+                <dd className="mt-1 text-[#121212]">
+                  {contractLabel(employee.contract_type ?? '')}
+                  {employee.fte && employee.fte < 1 ? ` · ${Math.round(employee.fte * 100)}% FTE` : ''}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Start date</dt>
+                <dd className="mt-1 text-[#121212]">{employee.employment_start_date ?? '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Work location</dt>
+                <dd className="mt-1 text-[#121212]">{locationLabel(employee.work_location ?? '')}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      )}
+
+      {/* HR record — view or edit (Job tab) */}
+      {activeTab === 'job' && (editing ? (
         <form className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5" onSubmit={(e) => void save(e)}>
           <h2 className="text-[15px] font-semibold text-[#121212]">HR record</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -1750,31 +1829,6 @@ export function EmployeeHRFileClient({
                   Contract document: <a href={employee.contract_document_url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#121212]">Open link</a>
                 </p>
               ) : null}
-              {(employee.home_address_line1 ||
-                employee.home_address_line2 ||
-                employee.home_city ||
-                employee.home_county ||
-                employee.home_postcode ||
-                employee.home_country) ? (
-                <div className="mt-4 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3 text-[13px] text-[#4a4a4a]">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Home address</p>
-                  <p>{employee.home_address_line1 || '—'}</p>
-                  {employee.home_address_line2 ? <p>{employee.home_address_line2}</p> : null}
-                  <p>{[employee.home_city, employee.home_county].filter(Boolean).join(', ') || '—'}</p>
-                  <p>{[employee.home_postcode, employee.home_country].filter(Boolean).join(', ') || '—'}</p>
-                </div>
-              ) : null}
-              {(employee.emergency_contact_name ||
-                employee.emergency_contact_relationship ||
-                employee.emergency_contact_phone ||
-                employee.emergency_contact_email) ? (
-                <div className="mt-4 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3 text-[13px] text-[#4a4a4a]">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Emergency contact</p>
-                  <p>{employee.emergency_contact_name || '—'}{employee.emergency_contact_relationship ? ` (${employee.emergency_contact_relationship})` : ''}</p>
-                  <p>{employee.emergency_contact_phone || '—'}</p>
-                  {employee.emergency_contact_email ? <p>{employee.emergency_contact_email}</p> : null}
-                </div>
-              ) : null}
               {employee.custom_fields &&
               typeof employee.custom_fields === 'object' &&
               !Array.isArray(employee.custom_fields) &&
@@ -1818,9 +1872,66 @@ export function EmployeeHRFileClient({
             </>
           )}
         </section>
+      ))}
+
+      {/* Emergency tab */}
+      {activeTab === 'emergency' && (
+        <div className="mt-6 space-y-4">
+          {(employee.emergency_contact_name ||
+            employee.emergency_contact_relationship ||
+            employee.emergency_contact_phone ||
+            employee.emergency_contact_email) ? (
+            <div className="rounded-xl border border-[#e8e8e8] bg-white p-5">
+              <h2 className="text-[14px] font-semibold text-[#121212]">Emergency contact</h2>
+              <dl className="mt-3 grid gap-x-8 gap-y-3 text-[13px] sm:grid-cols-2">
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Name</dt>
+                  <dd className="mt-1 text-[#121212]">
+                    {employee.emergency_contact_name || '—'}
+                    {employee.emergency_contact_relationship ? ` (${employee.emergency_contact_relationship})` : ''}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Phone</dt>
+                  <dd className="mt-1 text-[#121212]">{employee.emergency_contact_phone || '—'}</dd>
+                </div>
+                {employee.emergency_contact_email ? (
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Email</dt>
+                    <dd className="mt-1 text-[#121212]">{employee.emergency_contact_email}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+          ) : null}
+          {(employee.home_address_line1 ||
+            employee.home_address_line2 ||
+            employee.home_city ||
+            employee.home_county ||
+            employee.home_postcode ||
+            employee.home_country) ? (
+            <div className="rounded-xl border border-[#e8e8e8] bg-white p-5">
+              <h2 className="text-[14px] font-semibold text-[#121212]">Home address</h2>
+              <address className="mt-3 not-italic text-[13px] text-[#4a4a4a] leading-relaxed">
+                <p>{employee.home_address_line1 || '—'}</p>
+                {employee.home_address_line2 ? <p>{employee.home_address_line2}</p> : null}
+                <p>{[employee.home_city, employee.home_county].filter(Boolean).join(', ') || '—'}</p>
+                <p>{[employee.home_postcode, employee.home_country].filter(Boolean).join(', ') || '—'}</p>
+              </address>
+            </div>
+          ) : null}
+          {!employee.emergency_contact_name && !employee.emergency_contact_phone && !employee.home_address_line1 ? (
+            <p className="rounded-xl border border-[#e8e8e8] bg-white p-5 text-[13px] text-[#9b9b9b]">
+              No emergency contact or home address on record.
+              {canManage ? ' Edit the HR record (Job tab) to add this information.' : ''}
+            </p>
+          ) : null}
+        </div>
       )}
 
       {/* Documents & evidence */}
+      {activeTab === 'documents' && (
+      <>
       <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
         <h2 className="text-[15px] font-semibold text-[#121212]">Documents &amp; evidence</h2>
         <p className="mt-1 text-[12px] text-[#9b9b9b]">
@@ -2012,99 +2123,109 @@ export function EmployeeHRFileClient({
         initialDependants={initialDependants}
         canEdit={canManage}
       />
+      </>
+      )}
 
-      {/* Leave & sickness summary */}
-      <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[15px] font-semibold text-[#121212]">
-            Leave ({leaveEntitlementYearLabel})
-          </h2>
-          <div className="flex flex-wrap items-center gap-3">
-            {showAbsenceReportingLink ? (
-              <Link
-                href="/hr/absence-reporting"
-                className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-              >
-                Absence reporting
+      {/* Leave tab */}
+      {activeTab === 'leave' && (
+        <div className="mt-6">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-[15px] font-semibold text-[#121212]">Leave ({leaveEntitlementYearLabel})</h2>
+            <div className="flex flex-wrap gap-3">
+              {showAbsenceReportingLink ? (
+                <Link href="/hr/absence-reporting" className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
+                  Absence reporting
+                </Link>
+              ) : null}
+              <Link href="/hr/leave" className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
+                Manage allowances
               </Link>
-            ) : null}
-            <Link
-              href="/hr/leave"
-              className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-            >
-              Manage allowances
-            </Link>
+            </div>
           </div>
-        </div>
-        <div className="mt-3 grid gap-4 text-[13px] sm:grid-cols-3">
-          <div>
-            <p className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Annual entitlement</p>
-            <p className="mt-0.5 text-[#121212]">
-              {employee.annual_leave_entitlement_exempt
-                ? 'Not eligible'
-                : leaveAllowance
-                  ? `${leaveAllowance.annual_entitlement_days} days`
-                  : '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">TOIL balance</p>
-            <p className="mt-0.5 text-[#121212]">
-              {leaveAllowance ? `${leaveAllowance.toil_balance_days} days` : '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Absence score (sickness + leave)</p>
-            {absenceScore ? (
-              <p className="mt-0.5 text-[#121212]">
-                {absenceScore.bradford_score}{' '}
-                <span className="text-[11.5px] text-[#9b9b9b]">
-                  ({absenceScore.spell_count} spell{absenceScore.spell_count === 1 ? '' : 's'} · {absenceScore.total_days} day{absenceScore.total_days === 1 ? '' : 's'})
-                </span>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Annual entitlement</p>
+              <p className="mt-2 text-[34px] font-bold leading-none tracking-tight text-[#121212]">
+                {employee.annual_leave_entitlement_exempt ? '—' : leaveAllowance ? leaveAllowance.annual_entitlement_days : '—'}
               </p>
-            ) : (
-              <p className="mt-0.5 text-[#9b9b9b]">—</p>
-            )}
+              <p className="mt-1.5 text-[12px] text-[#9b9b9b]">
+                {employee.annual_leave_entitlement_exempt ? 'Not eligible for paid annual leave' : 'days / year'}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">TOIL balance</p>
+              <p className="mt-2 text-[34px] font-bold leading-none tracking-tight text-[#121212]">
+                {leaveAllowance ? leaveAllowance.toil_balance_days : '—'}
+              </p>
+              <p className="mt-1.5 text-[12px] text-[#9b9b9b]">days remaining</p>
+            </div>
+            <div className={[
+              'rounded-2xl border p-5',
+              absenceScore && absenceScore.bradford_score >= BRADFORD_ALERT_THRESHOLD
+                ? 'border-[#fecaca] bg-[#fef2f2]'
+                : 'border-[#e8e8e8] bg-white',
+            ].join(' ')}>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Absence score (Bradford)</p>
+              <p className={[
+                'mt-2 text-[34px] font-bold leading-none tracking-tight',
+                absenceScore && absenceScore.bradford_score >= BRADFORD_ALERT_THRESHOLD ? 'text-[#b91c1c]' : 'text-[#121212]',
+              ].join(' ')}>
+                {absenceScore ? absenceScore.bradford_score : '—'}
+              </p>
+              {absenceScore ? (
+                <p className="mt-1.5 text-[12px] text-[#9b9b9b]">
+                  {absenceScore.spell_count} spell{absenceScore.spell_count === 1 ? '' : 's'} · {absenceScore.total_days} day{absenceScore.total_days === 1 ? '' : 's'}
+                </p>
+              ) : (
+                <p className="mt-1.5 text-[12px] text-[#9b9b9b]">No absences recorded</p>
+              )}
+            </div>
           </div>
+          {canManage && absenceScore && absenceScore.bradford_score >= BRADFORD_ALERT_THRESHOLD ? (
+            <div className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12.5px] text-[#b91c1c]">
+              <strong>HR warning:</strong> Bradford score is {absenceScore.bradford_score} (threshold {BRADFORD_ALERT_THRESHOLD}). Please review this employee&apos;s leave and sickness history.
+            </div>
+          ) : null}
         </div>
-        {canManage && absenceScore && absenceScore.bradford_score >= BRADFORD_ALERT_THRESHOLD ? (
-          <div className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12.5px] text-[#b91c1c]">
-            <strong>HR warning:</strong> Bradford score is {absenceScore.bradford_score} (threshold {BRADFORD_ALERT_THRESHOLD}). Please review this employee&apos;s leave and sickness history.
-          </div>
-        ) : null}
-      </section>
+      )}
 
-      {/* Audit trail */}
-      {auditEvents.length > 0 ? (
-        <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
-          <h2 className="text-[15px] font-semibold text-[#121212]">Change history</h2>
-          <ul className="mt-3 divide-y divide-[#ececec]">
-            {auditEvents.map((ev) => (
-              <li key={ev.id} className="py-2.5 text-[12.5px]">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <span className="font-medium text-[#121212]">{fieldLabel(ev.field_name)}</span>
-                    {ev.field_name !== 'record' ? (
-                      <>
-                        <span className="mx-1 text-[#9b9b9b]">·</span>
-                        <span className="text-[#6b6b6b]">
-                          {fmt(ev.old_value)} → {fmt(ev.new_value)}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="ml-1 text-[#6b6b6b]">created</span>
-                    )}
-                  </div>
-                  <div className="shrink-0 text-right text-[11.5px] text-[#9b9b9b]">
-                    <div>{ev.changer_name}</div>
-                    <div>{formatDateStable(ev.created_at)}</div>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      {/* Audit tab */}
+      {activeTab === 'audit' && (
+        <div className="mt-6">
+          {auditEvents.length > 0 ? (
+            <section className="rounded-xl border border-[#e8e8e8] bg-white p-5">
+              <h2 className="text-[15px] font-semibold text-[#121212]">Change history</h2>
+              <ul className="mt-3 divide-y divide-[#ececec]">
+                {auditEvents.map((ev) => (
+                  <li key={ev.id} className="py-2.5 text-[12.5px]">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <span className="font-medium text-[#121212]">{fieldLabel(ev.field_name)}</span>
+                        {ev.field_name !== 'record' ? (
+                          <>
+                            <span className="mx-1 text-[#9b9b9b]">·</span>
+                            <span className="text-[#6b6b6b]">
+                              {fmt(ev.old_value)} → {fmt(ev.new_value)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="ml-1 text-[#6b6b6b]">created</span>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right text-[11.5px] text-[#9b9b9b]">
+                        <div>{ev.changer_name}</div>
+                        <div>{formatDateStable(ev.created_at)}</div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <p className="rounded-xl border border-[#e8e8e8] bg-white p-5 text-[13px] text-[#9b9b9b]">No audit events recorded yet.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

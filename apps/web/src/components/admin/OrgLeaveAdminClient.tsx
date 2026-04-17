@@ -346,7 +346,7 @@ export function OrgLeaveAdminClient({
   const selectedMember = members.find((m) => m.id === targetId);
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <div className="mb-6">
         <Link href="/leave" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
           ← Back to time off

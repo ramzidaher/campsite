@@ -114,7 +114,7 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
   const previewTier = rows.find((r) => r.role === previewRole);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-5 py-7 sm:px-[28px]">
+    <div className="mx-auto max-w-7xl space-y-6 px-5 py-7 sm:px-[28px]">
       <Link
         href="/settings"
         className="text-[13px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"

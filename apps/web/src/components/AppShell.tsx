@@ -958,8 +958,8 @@ export function AppShell({
           className="flex h-[60px] items-center border-b px-4 md:hidden"
           style={{
             borderColor: 'var(--org-brand-border)',
-            background: '#121212',
-            color: '#fff',
+            background: 'var(--org-brand-bg)',
+            color: 'var(--org-brand-text)',
           }}
         >
           <button

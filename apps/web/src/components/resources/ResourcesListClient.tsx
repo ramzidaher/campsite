@@ -324,7 +324,7 @@ export function ResourcesListClient({
   const showFolderTiles = !archiveOnly && !searchActive && folderFilter === null && folders.length > 0;
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-8 sm:px-6">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-authSerif text-3xl leading-tight text-[#121212]">

@@ -1053,7 +1053,7 @@ export function LeaveHubClient({
   }, [calendarMonth, teamAbsences]);
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       {/* Page header */}
       <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -1080,41 +1080,104 @@ export function LeaveHubClient({
 
       {msg ? <p className="mb-5 rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-[13px] text-[#b91c1c]">{msg}</p> : null}
 
-      {/* Balance hero */}
-      <div className="mb-6 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
-        <div className="grid divide-y divide-[#f0f0f0] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {/* Remaining */}
-          <div className="flex flex-col gap-1 p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Remaining</p>
-            <p className="mt-1 text-[42px] font-bold leading-none tracking-tighter text-[#121212]">
-              {remaining}
-              <span className="ml-1.5 text-[16px] font-normal text-[#9b9b9b]">days</span>
-            </p>
-            {leaveUseWorkingDays ? (
-              <p className="mt-1 text-[11px] text-[#9b9b9b]">Annual leave is counted in working days (weekends and other non-working weekdays excluded).</p>
-            ) : null}
-            {entitlement > 0 ? (
-              <>
-                <div className="mt-3 h-1.5 w-full rounded-full bg-[#f0f0f0]">
-                  <div className={`h-1.5 rounded-full transition-all ${usedPct >= 90 ? 'bg-amber-400' : 'bg-[#121212]'}`} style={{ width: `${usedPct}%` }} />
-                </div>
-                <p className="mt-1.5 text-[11.5px] text-[#9b9b9b]">
-                  {usedAnnual} of {entitlement} {leaveUseWorkingDays ? 'working ' : ''}days used
-                </p>
-              </>
-            ) : null}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        <div className="min-w-0 space-y-6 lg:col-span-8">
+      <section>
+        <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Balances</h2>
+        <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+          <div className="grid divide-y divide-[#f0f0f0] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="flex flex-col gap-1 p-4 sm:p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Remaining</p>
+              <p className="mt-1 text-[42px] font-bold leading-none tracking-tighter text-[#121212]">
+                {remaining}
+                <span className="ml-1.5 text-[16px] font-normal text-[#9b9b9b]">days</span>
+              </p>
+              {leaveUseWorkingDays ? (
+                <p className="mt-1 text-[11px] text-[#9b9b9b]">Annual leave is counted in working days (weekends and other non-working weekdays excluded).</p>
+              ) : null}
+              {entitlement > 0 ? (
+                <>
+                  <div className="mt-3 h-1.5 w-full rounded-full bg-[#f0f0f0]">
+                    <div className={`h-1.5 rounded-full transition-all ${usedPct >= 90 ? 'bg-amber-400' : 'bg-[#121212]'}`} style={{ width: `${usedPct}%` }} />
+                  </div>
+                  <p className="mt-1.5 text-[11.5px] text-[#9b9b9b]">
+                    {usedAnnual} of {entitlement} {leaveUseWorkingDays ? 'working ' : ''}days used
+                  </p>
+                </>
+              ) : null}
+            </div>
+            <div className="flex flex-col gap-1 p-4 sm:p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">TOIL balance</p>
+              <p className="mt-1 text-[42px] font-bold leading-none tracking-tighter text-[#121212]">
+                {toilBalance}
+                <span className="ml-1.5 text-[16px] font-normal text-[#9b9b9b]">days</span>
+              </p>
+              <p className="mt-3 text-[11.5px] text-[#9b9b9b]">
+                Overtime earned back as paid time off. Credits use {toilMinutesPerDay} min ({toilMinutesPerDay >= 60 ? `${Math.round((toilMinutesPerDay / 60) * 10) / 10}h` : `${toilMinutesPerDay} min`}) = 1 day at your organisation.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1 p-4 sm:p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Entitlement</p>
+              <p className="mt-1 text-[42px] font-bold leading-none tracking-tighter text-[#121212]">
+                {entitlement}
+                <span className="ml-1.5 text-[16px] font-normal text-[#9b9b9b]">days / yr</span>
+              </p>
+            </div>
           </div>
-          {/* TOIL */}
-          <div className="flex flex-col gap-1 p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">TOIL balance</p>
-            <p className="mt-1 text-[42px] font-bold leading-none tracking-tighter text-[#121212]">
-              {toilBalance}
-              <span className="ml-1.5 text-[16px] font-normal text-[#9b9b9b]">days</span>
-            </p>
-            <p className="mt-3 text-[11.5px] text-[#9b9b9b]">
-              Overtime earned back as paid time off. Credits use {toilMinutesPerDay} min ({toilMinutesPerDay >= 60 ? `${Math.round((toilMinutesPerDay / 60) * 10) / 10}h` : `${toilMinutesPerDay} min`}) = 1 day at your organisation.
-            </p>
-            {canSubmit ? (
+          {canSubmit ? (
+            <div className="flex flex-wrap gap-2 border-t border-[#f0f0f0] px-4 py-4 sm:px-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLeaveForm((v) => !v);
+                  setShowSickForm(false);
+                  setShowToilEarnForm(false);
+                  setShowCarryoverForm(false);
+                  setShowEncashmentForm(false);
+                }}
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-[#121212] px-4 text-[13px] font-medium text-white hover:bg-[#2a2a2a]"
+              >
+                {showLeaveForm ? 'Close' : '+ Book time off'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSickForm((v) => !v);
+                  setShowLeaveForm(false);
+                  setShowToilEarnForm(false);
+                  setShowCarryoverForm(false);
+                  setShowEncashmentForm(false);
+                }}
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+              >
+                {showSickForm ? 'Close' : '+ Log sick day'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCarryoverForm((v) => !v);
+                  setShowLeaveForm(false);
+                  setShowSickForm(false);
+                  setShowToilEarnForm(false);
+                  setShowEncashmentForm(false);
+                }}
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+              >
+                {showCarryoverForm ? 'Close' : '+ Request carry-over'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEncashmentForm((v) => !v);
+                  setShowLeaveForm(false);
+                  setShowSickForm(false);
+                  setShowToilEarnForm(false);
+                  setShowCarryoverForm(false);
+                }}
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+              >
+                {showEncashmentForm ? 'Close' : '+ Request encashment'}
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -1125,85 +1188,19 @@ export function LeaveHubClient({
                   setShowEncashmentForm(false);
                   setMsg(null);
                 }}
-                className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-xl border border-[#008B60] bg-[#f0fdf9] px-3 text-[12.5px] font-semibold text-[#065f46] hover:bg-[#d1fae5]"
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#008B60] bg-[#f0fdf9] px-4 text-[12.5px] font-semibold text-[#065f46] hover:bg-[#d1fae5]"
               >
                 {showToilEarnForm ? 'Close' : '+ Add TOIL (overtime)'}
               </button>
-            ) : null}
-          </div>
-          {/* Action / entitlement */}
-          <div className="flex flex-col justify-between gap-4 p-6">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Entitlement</p>
-              <p className="mt-1 text-[42px] font-bold leading-none tracking-tighter text-[#121212]">
-                {entitlement}
-                <span className="ml-1.5 text-[16px] font-normal text-[#9b9b9b]">days / yr</span>
-              </p>
             </div>
-            {canSubmit ? (
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowLeaveForm((v) => !v);
-                    setShowSickForm(false);
-                    setShowToilEarnForm(false);
-                    setShowCarryoverForm(false);
-                    setShowEncashmentForm(false);
-                  }}
-                  className="inline-flex h-9 items-center justify-center rounded-xl bg-[#121212] px-4 text-[13px] font-medium text-white hover:bg-[#2a2a2a]"
-                >
-                  {showLeaveForm ? 'Close' : '+ Book time off'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSickForm((v) => !v);
-                    setShowLeaveForm(false);
-                    setShowToilEarnForm(false);
-                    setShowCarryoverForm(false);
-                    setShowEncashmentForm(false);
-                  }}
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
-                >
-                  {showSickForm ? 'Close' : '+ Log sick day'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCarryoverForm((v) => !v);
-                    setShowLeaveForm(false);
-                    setShowSickForm(false);
-                    setShowToilEarnForm(false);
-                    setShowEncashmentForm(false);
-                  }}
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
-                >
-                  {showCarryoverForm ? 'Close' : '+ Request carry-over'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEncashmentForm((v) => !v);
-                    setShowLeaveForm(false);
-                    setShowSickForm(false);
-                    setShowToilEarnForm(false);
-                    setShowCarryoverForm(false);
-                  }}
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
-                >
-                  {showEncashmentForm ? 'Close' : '+ Request encashment'}
-                </button>
-              </div>
-            ) : null}
-          </div>
+          ) : null}
         </div>
-      </div>
+      </section>
 
       {/* Employee leave balance dashboard */}
-      <section className="mb-6">
+      <section>
         <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Leave balance dashboard</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Annual leave left</p>
             <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{remaining}<span className="ml-1 text-[14px] font-normal text-[#9b9b9b]">days</span></p>
@@ -1630,78 +1627,6 @@ export function LeaveHubClient({
         </div>
       ) : null}
 
-      {approvalModal ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="leave-approval-modal-title"
-          onClick={() => {
-            if (!busy) {
-              setApprovalModal(null);
-              setApprovalNote('');
-            }
-          }}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-[#e8e8e8] bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="leave-approval-modal-title" className="mb-1 text-[15px] font-semibold text-[#121212]">
-              {approvalModal.source === 'toil_credit'
-                ? approvalModal.approve
-                  ? 'Approve TOIL credit'
-                  : 'Decline TOIL credit'
-                : approvalModal.source === 'carryover'
-                  ? approvalModal.approve
-                    ? 'Approve carry-over request'
-                    : 'Decline carry-over request'
-                  : approvalModal.source === 'encashment'
-                    ? approvalModal.approve
-                      ? 'Approve encashment request'
-                      : 'Decline encashment request'
-                  : approvalModal.approve
-                    ? 'Approve leave request'
-                    : 'Decline leave request'}
-            </h2>
-            <p className="mb-4 text-[12px] text-[#9b9b9b]">
-              Optional note for the employee (shown when the decision is saved).
-            </p>
-            <label className="block">
-              <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Note (optional)</span>
-              <textarea
-                value={approvalNote}
-                onChange={(e) => setApprovalNote(e.target.value)}
-                rows={3}
-                className="w-full resize-y rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                placeholder="e.g. approved — enjoy your break"
-              />
-            </label>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void submitApprovalDecision()}
-                className={`inline-flex h-10 items-center rounded-xl px-5 text-[13px] font-medium text-white disabled:opacity-50 ${approvalModal.approve ? 'bg-[#14532d] hover:bg-[#166534]' : 'bg-[#b91c1c] hover:bg-[#991b1b]'}`}
-              >
-                {busy ? 'Saving…' : approvalModal.approve ? 'Approve' : 'Decline'}
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  setApprovalModal(null);
-                  setApprovalNote('');
-                }}
-                className="inline-flex h-10 items-center rounded-xl border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#6b6b6b]"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {editTarget ? (
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
           <h2 className="mb-4 text-[15px] font-semibold text-[#121212]">Request changes to approved leave</h2>
@@ -1799,7 +1724,7 @@ export function LeaveHubClient({
 
       {/* Pending approvals (leave + TOIL credits) */}
       {(canApprove || canManage) && mergedApprovalQueue.length > 0 ? (
-        <section className="mb-6">
+        <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pending approval</h2>
             <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">{mergedApprovalQueue.length}</span>
@@ -2003,7 +1928,7 @@ export function LeaveHubClient({
       ) : null}
 
       {(canApprove || canManage) ? (
-        <section className="mb-6">
+        <section>
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Team absence calendar</h2>
             <div className="flex items-center gap-2">
@@ -2036,95 +1961,11 @@ export function LeaveHubClient({
         </section>
       ) : null}
 
-      {/* My TOIL credit (overtime) submissions */}
-      {canSubmit && myToilCreditRequests.length > 0 ? (
-        <section className="mb-6">
-          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My overtime (TOIL) requests</h2>
-          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
-            {myToilCreditRequests.map((t, i) => (
-              <div key={t.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[13.5px] font-medium text-[#121212]">Overtime credit</span>
-                    <StatusPill status={t.status} />
-                  </div>
-                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                    {fmtDate(t.work_date)} &middot; {formatToilMinutes(t.minutes_earned, toilMinutesPerDay)}
-                  </p>
-                  {t.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{t.note}&rdquo;</p> : null}
-                  {(t.status === 'approved' || t.status === 'rejected') && t.decision_note ? (
-                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                      <span className="font-medium text-[#121212]">Approver note: </span>
-                      {t.decision_note}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {canSubmit && myCarryoverRequests.length > 0 ? (
-        <section className="mb-6">
-          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My carry-over requests</h2>
-          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
-            {myCarryoverRequests.map((c, i) => (
-              <div key={c.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[13.5px] font-medium text-[#121212]">Carry-over</span>
-                    <StatusPill status={c.status} />
-                  </div>
-                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                    {c.days_requested} day{c.days_requested === 1 ? '' : 's'} from {c.from_leave_year} to {c.to_leave_year}
-                    {c.status === 'approved' && c.days_approved != null ? ` · ${c.days_approved} approved` : ''}
-                  </p>
-                  {c.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{c.note}&rdquo;</p> : null}
-                  {(c.status === 'approved' || c.status === 'rejected') && c.decision_note ? (
-                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                      <span className="font-medium text-[#121212]">Approver note: </span>
-                      {c.decision_note}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {canSubmit && myEncashmentRequests.length > 0 ? (
-        <section className="mb-6">
-          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My encashment requests</h2>
-          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
-            {myEncashmentRequests.map((e, i) => (
-              <div key={e.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[13.5px] font-medium text-[#121212]">Encashment</span>
-                    <StatusPill status={e.status} />
-                  </div>
-                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                    {e.days_requested} day{e.days_requested === 1 ? '' : 's'} from leave year {e.leave_year}
-                    {e.status === 'approved' && e.days_approved != null ? ` · ${e.days_approved} approved` : ''}
-                  </p>
-                  {e.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{e.note}&rdquo;</p> : null}
-                  {(e.status === 'approved' || e.status === 'rejected') && e.decision_note ? (
-                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                      <span className="font-medium text-[#121212]">Approver note: </span>
-                      {e.decision_note}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+        </div>
+        <aside className="min-w-0 space-y-6 lg:col-span-4">
 
       {/* My requests */}
-      <section className="mb-6">
+      <section>
         <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My requests</h2>
         {myRequests.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#d8d8d8] px-6 py-10 text-center">
@@ -2191,9 +2032,95 @@ export function LeaveHubClient({
         )}
       </section>
 
+      {canSubmit && myToilCreditRequests.length > 0 ? (
+        <section>
+          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My overtime (TOIL) requests</h2>
+          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+            {myToilCreditRequests.map((t, i) => (
+              <div key={t.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13.5px] font-medium text-[#121212]">Overtime credit</span>
+                    <StatusPill status={t.status} />
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                    {fmtDate(t.work_date)} &middot; {formatToilMinutes(t.minutes_earned, toilMinutesPerDay)}
+                  </p>
+                  {t.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{t.note}&rdquo;</p> : null}
+                  {(t.status === 'approved' || t.status === 'rejected') && t.decision_note ? (
+                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                      <span className="font-medium text-[#121212]">Approver note: </span>
+                      {t.decision_note}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {canSubmit && myCarryoverRequests.length > 0 ? (
+        <section>
+          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My carry-over requests</h2>
+          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+            {myCarryoverRequests.map((c, i) => (
+              <div key={c.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13.5px] font-medium text-[#121212]">Carry-over</span>
+                    <StatusPill status={c.status} />
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                    {c.days_requested} day{c.days_requested === 1 ? '' : 's'} from {c.from_leave_year} to {c.to_leave_year}
+                    {c.status === 'approved' && c.days_approved != null ? ` · ${c.days_approved} approved` : ''}
+                  </p>
+                  {c.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{c.note}&rdquo;</p> : null}
+                  {(c.status === 'approved' || c.status === 'rejected') && c.decision_note ? (
+                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                      <span className="font-medium text-[#121212]">Approver note: </span>
+                      {c.decision_note}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {canSubmit && myEncashmentRequests.length > 0 ? (
+        <section>
+          <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My encashment requests</h2>
+          <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+            {myEncashmentRequests.map((e, i) => (
+              <div key={e.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13.5px] font-medium text-[#121212]">Encashment</span>
+                    <StatusPill status={e.status} />
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                    {e.days_requested} day{e.days_requested === 1 ? '' : 's'} from leave year {e.leave_year}
+                    {e.status === 'approved' && e.days_approved != null ? ` · ${e.days_approved} approved` : ''}
+                  </p>
+                  {e.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{e.note}&rdquo;</p> : null}
+                  {(e.status === 'approved' || e.status === 'rejected') && e.decision_note ? (
+                    <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                      <span className="font-medium text-[#121212]">Approver note: </span>
+                      {e.decision_note}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {/* SSP estimate (UK) */}
       {canSubmit && sspSummary ? (
-        <section className="mb-6">
+        <section>
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">
             Statutory Sick Pay (estimate)
           </h2>
@@ -2239,7 +2166,7 @@ export function LeaveHubClient({
 
       {/* Sickness history */}
       {canSubmit && sickness.length > 0 ? (
-        <section className="mb-6">
+        <section>
           <button type="button" onClick={() => setShowSickHistory((v) => !v)} className="mb-3 flex w-full items-center justify-between text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b] hover:text-[#6b6b6b]">
             <span>Sick day history</span>
             <span>{showSickHistory ? '▲' : '▼'}</span>
@@ -2281,6 +2208,80 @@ export function LeaveHubClient({
             ) : null}
           </div>
         </section>
+      ) : null}
+        </aside>
+      </div>
+
+      {approvalModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="leave-approval-modal-title"
+          onClick={() => {
+            if (!busy) {
+              setApprovalModal(null);
+              setApprovalNote('');
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-[#e8e8e8] bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="leave-approval-modal-title" className="mb-1 text-[15px] font-semibold text-[#121212]">
+              {approvalModal.source === 'toil_credit'
+                ? approvalModal.approve
+                  ? 'Approve TOIL credit'
+                  : 'Decline TOIL credit'
+                : approvalModal.source === 'carryover'
+                  ? approvalModal.approve
+                    ? 'Approve carry-over request'
+                    : 'Decline carry-over request'
+                  : approvalModal.source === 'encashment'
+                    ? approvalModal.approve
+                      ? 'Approve encashment request'
+                      : 'Decline encashment request'
+                  : approvalModal.approve
+                    ? 'Approve leave request'
+                    : 'Decline leave request'}
+            </h2>
+            <p className="mb-4 text-[12px] text-[#9b9b9b]">
+              Optional note for the employee (shown when the decision is saved).
+            </p>
+            <label className="block">
+              <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Note (optional)</span>
+              <textarea
+                value={approvalNote}
+                onChange={(e) => setApprovalNote(e.target.value)}
+                rows={3}
+                className="w-full resize-y rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                placeholder="e.g. approved — enjoy your break"
+              />
+            </label>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void submitApprovalDecision()}
+                className={`inline-flex h-10 items-center rounded-xl px-5 text-[13px] font-medium text-white disabled:opacity-50 ${approvalModal.approve ? 'bg-[#14532d] hover:bg-[#166534]' : 'bg-[#b91c1c] hover:bg-[#991b1b]'}`}
+              >
+                {busy ? 'Saving…' : approvalModal.approve ? 'Approve' : 'Decline'}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setApprovalModal(null);
+                  setApprovalNote('');
+                }}
+                className="inline-flex h-10 items-center rounded-xl border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#6b6b6b]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

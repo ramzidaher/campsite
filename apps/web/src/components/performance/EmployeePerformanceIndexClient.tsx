@@ -127,68 +127,13 @@ export function EmployeePerformanceIndexClient({
   const completed = reviews.filter((r) => r.status === 'completed').length;
 
   return (
-    <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Performance</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
           Your reviews and any team members waiting on your feedback.
         </p>
       </div>
-
-      {/* Stats row */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4 text-center">
-          <p className="text-[22px] font-bold text-[#121212]">{reviews.length}</p>
-          <p className="mt-0.5 text-[11.5px] text-[#6b6b6b]">Total reviews</p>
-        </div>
-        <div className={`rounded-2xl border p-4 text-center ${totalActionNeeded > 0 ? 'border-[#fde68a] bg-[#fffbeb]' : 'border-[#e8e8e8] bg-white'}`}>
-          <p className={`text-[22px] font-bold ${totalActionNeeded > 0 ? 'text-[#d97706]' : 'text-[#121212]'}`}>{totalActionNeeded}</p>
-          <p className={`mt-0.5 text-[11.5px] ${totalActionNeeded > 0 ? 'text-[#92400e]' : 'text-[#6b6b6b]'}`}>Need attention</p>
-        </div>
-        <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4 text-center">
-          <p className="text-[22px] font-bold text-[#16a34a]">{completed}</p>
-          <p className="mt-0.5 text-[11.5px] text-[#6b6b6b]">Completed</p>
-        </div>
-      </div>
-
-      {/* Action needed banner */}
-      {totalActionNeeded > 0 ? (
-        <div className="mb-6 rounded-xl border border-[#fde68a] bg-[#fffbeb] p-4">
-          <p className="text-[13px] font-semibold text-[#92400e]">
-            {totalActionNeeded === 1 ? '1 review needs your attention' : `${totalActionNeeded} reviews need your attention`}
-          </p>
-          <ul className="mt-1.5 space-y-0.5 text-[12px] text-[#78350f]">
-            {myActionNeeded.length > 0 ? (
-              <li>→ {myActionNeeded.length} self-assessment{myActionNeeded.length === 1 ? '' : 's'} to complete</li>
-            ) : null}
-            {theirActionNeeded.length > 0 ? (
-              <li>→ {theirActionNeeded.length} team member{theirActionNeeded.length === 1 ? '' : 's'} waiting for your assessment</li>
-            ) : null}
-          </ul>
-        </div>
-      ) : null}
-
-      {mine.length > 0 ? (
-        <section className="mb-8">
-          <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">My reviews</h2>
-          <ul className="space-y-2">
-            {mine.map((r) => (
-              <li key={r.id}><ReviewCard r={r} /></li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {reviewing.length > 0 ? (
-        <section className="mb-8">
-          <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Direct reports to review</h2>
-          <ul className="space-y-2">
-            {reviewing.map((r) => (
-              <li key={r.id}><ReviewCard r={r} /></li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       {reviews.length === 0 ? (
         <div className="rounded-2xl border border-[#e8e8e8] bg-white p-8 text-center">
@@ -199,7 +144,70 @@ export function EmployeePerformanceIndexClient({
               : 'Reviews will appear here when your organisation starts a review cycle and you’re included.'}
           </p>
         </div>
-      ) : null}
+      ) : (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+          <div className="min-w-0 space-y-6 lg:col-span-8">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4 text-center">
+                <p className="text-[22px] font-bold text-[#121212]">{reviews.length}</p>
+                <p className="mt-0.5 text-[11.5px] text-[#6b6b6b]">Total reviews</p>
+              </div>
+              <div className={`rounded-2xl border p-4 text-center ${totalActionNeeded > 0 ? 'border-[#fde68a] bg-[#fffbeb]' : 'border-[#e8e8e8] bg-white'}`}>
+                <p className={`text-[22px] font-bold ${totalActionNeeded > 0 ? 'text-[#d97706]' : 'text-[#121212]'}`}>{totalActionNeeded}</p>
+                <p className={`mt-0.5 text-[11.5px] ${totalActionNeeded > 0 ? 'text-[#92400e]' : 'text-[#6b6b6b]'}`}>Need attention</p>
+              </div>
+              <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4 text-center">
+                <p className="text-[22px] font-bold text-[#16a34a]">{completed}</p>
+                <p className="mt-0.5 text-[11.5px] text-[#6b6b6b]">Completed</p>
+              </div>
+            </div>
+
+            {totalActionNeeded > 0 ? (
+              <div className="rounded-xl border border-[#fde68a] bg-[#fffbeb] p-4">
+                <p className="text-[13px] font-semibold text-[#92400e]">
+                  {totalActionNeeded === 1 ? '1 review needs your attention' : `${totalActionNeeded} reviews need your attention`}
+                </p>
+                <ul className="mt-1.5 space-y-0.5 text-[12px] text-[#78350f]">
+                  {myActionNeeded.length > 0 ? (
+                    <li>→ {myActionNeeded.length} self-assessment{myActionNeeded.length === 1 ? '' : 's'} to complete</li>
+                  ) : null}
+                  {theirActionNeeded.length > 0 ? (
+                    <li>→ {theirActionNeeded.length} team member{theirActionNeeded.length === 1 ? '' : 's'} waiting for your assessment</li>
+                  ) : null}
+                </ul>
+              </div>
+            ) : null}
+
+            {reviewing.length > 0 ? (
+              <section>
+                <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Direct reports to review</h2>
+                <ul className="space-y-2">
+                  {reviewing.map((r) => (
+                    <li key={r.id}><ReviewCard r={r} /></li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </div>
+
+          <aside className="min-w-0 space-y-6 lg:col-span-4">
+              <section>
+                <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">My reviews</h2>
+                {mine.length > 0 ? (
+                  <ul className="space-y-2">
+                    {mine.map((r) => (
+                      <li key={r.id}><ReviewCard r={r} /></li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[#d8d8d8] bg-[#faf9f6] px-4 py-6 text-[12.5px] text-[#6b6b6b]">
+                    You&apos;re not enrolled in a cycle yet, or HR hasn&apos;t assigned you a review.
+                  </div>
+                )}
+              </section>
+            </aside>
+        </div>
+      )}
     </div>
   );
 }

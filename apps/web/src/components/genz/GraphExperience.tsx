@@ -80,16 +80,16 @@ type GraphColors = {
 };
 
 const DEFAULT_COLORS: GraphColors = {
-  pageBg: '#f6f5f2',
-  nodeCenterFill: '#121212',
+  pageBg: '#f6f3f1',
+  nodeCenterFill: '#a65843',
   nodeDefaultFill: '#ffffff',
-  nodeDefaultBorder: '#d7d4cf',
+  nodeDefaultBorder: 'rgba(35,31,32,0.18)',
   nodeSelectedFill: '#fff9f7',
-  nodeSelectedBorder: '#b45a48',
-  link: '#d8d3cb',
-  text: '#121212',
+  nodeSelectedBorder: '#a65843',
+  link: 'rgba(35,31,32,0.18)',
+  text: '#231f20',
   textInverse: '#FFFFFF',
-  textSecondary: '#6b6b6b',
+  textSecondary: '#746a65',
 };
 
 function cssVar(name: string, fallback: string) {
@@ -163,78 +163,62 @@ function PhysicsGraphCanvas({
         const node = nodeRaw as GraphNode;
         const x = node.x ?? 0;
         const y = node.y ?? 0;
-        const radius = node.isCenter ? 42 : 27;
+        const radius = node.isCenter ? 56 : 36;
         const labels = wrapLabel(node.label, 18);
         const isSelected = selectedId === node.id;
 
         if (node.isCenter) {
-          const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-          const pulseA = (t % 2.4) / 2.4;
-          const pulseB = ((t + 1.2) % 2.4) / 2.4;
-          const rippleA = radius + 10 + pulseA * 16;
-          const rippleB = radius + 10 + pulseB * 16;
-
           ctx.beginPath();
-          ctx.arc(x, y, rippleA, 0, 2 * Math.PI, false);
-          ctx.strokeStyle = colors.nodeSelectedBorder;
-          ctx.globalAlpha = 0.2 * (1 - pulseA);
-          ctx.lineWidth = 1.4;
-          ctx.stroke();
-          ctx.globalAlpha = 1;
-
+          ctx.arc(x, y, radius + 20, 0, 2 * Math.PI, false);
+          ctx.fillStyle = 'rgba(166,88,67,0.10)';
+          ctx.fill();
           ctx.beginPath();
-          ctx.arc(x, y, rippleB, 0, 2 * Math.PI, false);
-          ctx.strokeStyle = colors.nodeSelectedBorder;
-          ctx.globalAlpha = 0.16 * (1 - pulseB);
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
-          ctx.globalAlpha = 1;
+          ctx.arc(x, y, radius + 34, 0, 2 * Math.PI, false);
+          ctx.fillStyle = 'rgba(166,88,67,0.06)';
+          ctx.fill();
 
-          ctx.beginPath();
-          ctx.arc(x, y, radius + 9, 0, 2 * Math.PI, false);
-          ctx.strokeStyle = colors.nodeSelectedBorder;
-          ctx.globalAlpha = 0.14;
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
-          ctx.globalAlpha = 1;
-          const grad = ctx.createRadialGradient(x - 8, y - 10, radius * 0.2, x, y, radius);
-          grad.addColorStop(0, colors.nodeSelectedBorder);
+          const grad = ctx.createRadialGradient(x - 12, y - 14, radius * 0.2, x, y, radius);
+          grad.addColorStop(0, '#e78d7a');
           grad.addColorStop(1, colors.nodeCenterFill);
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
           ctx.fillStyle = grad;
           ctx.fill();
-        } else {
-          const outerStroke = isSelected ? colors.nodeSelectedBorder : colors.nodeDefaultBorder;
-          const innerStroke = isSelected ? colors.nodeSelectedBorder : colors.nodeDefaultBorder;
 
+          ctx.beginPath();
+          ctx.arc(x, y, radius - 16, 0, 2 * Math.PI, false);
+          ctx.fillStyle = 'rgba(255,255,255,0.22)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+          ctx.lineWidth = 1.1;
+          ctx.stroke();
+        } else {
+          if (isSelected) {
+            ctx.beginPath();
+            ctx.arc(x, y, radius + 10, 0, 2 * Math.PI, false);
+            ctx.fillStyle = 'rgba(166,88,67,0.14)';
+            ctx.fill();
+          }
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-          ctx.fillStyle = colors.text;
+          const rg = ctx.createRadialGradient(x - 10, y - 10, radius * 0.2, x, y, radius);
+          rg.addColorStop(0, '#ffffff');
+          rg.addColorStop(1, '#f0e8e4');
+          ctx.fillStyle = rg;
           ctx.fill();
-          ctx.lineWidth = isSelected ? 2.1 : 1.4;
-          ctx.strokeStyle = outerStroke;
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = isSelected ? colors.nodeSelectedBorder : '#111111';
           ctx.stroke();
-
-          ctx.beginPath();
-          ctx.arc(x, y, radius - 4, 0, 2 * Math.PI, false);
-          ctx.fillStyle = colors.pageBg;
-          ctx.fill();
-          ctx.lineWidth = isSelected ? 1.6 : 1.2;
-          ctx.strokeStyle = innerStroke;
-          ctx.globalAlpha = isSelected ? 0.62 : 0.4;
-          ctx.stroke();
-          ctx.globalAlpha = 1;
         }
 
-        const fontSize = node.isCenter ? Math.max(13, 15 / globalScale) : Math.max(10, 11.5 / globalScale);
-        ctx.font = `${node.isCenter ? 700 : 500} ${fontSize}px ${node.isCenter ? 'Lora, Georgia, serif' : 'Inter, ui-sans-serif, system-ui, sans-serif'}`;
+        const fontSize = node.isCenter ? Math.max(11, 12 / globalScale) : Math.max(11, 12 / globalScale);
+        ctx.font = `${node.isCenter ? 700 : 600} ${fontSize}px Inter, ui-sans-serif, system-ui, sans-serif`;
         ctx.fillStyle = node.isCenter ? '#ffffff' : colors.text;
         ctx.strokeStyle = 'rgba(246,245,242,0.95)';
         ctx.lineWidth = Math.max(1.2, 2.1 / globalScale);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const labelY = node.isCenter ? y : y - radius - 13;
+        const labelY = node.isCenter ? y : y + radius + 18;
         labels.forEach((line, idx) => {
           const ly = labelY + idx * (fontSize + 2);
           if (!node.isCenter) ctx.strokeText(line, x, ly);
@@ -247,11 +231,11 @@ function PhysicsGraphCanvas({
       }}
       linkWidth={(link) => {
         const target = linkTargetId(link);
-        return selectedId === target ? 2 : 1;
+        return selectedId === target ? 3 : 1.5;
       }}
       linkLineDash={(link) => {
         const target = linkTargetId(link);
-        return selectedId === target ? [7, 7] : [6, 8];
+        return selectedId === target ? [] : [9, 14];
       }}
       onNodeClick={(nodeRaw, event) => {
         const node = nodeRaw as GraphNode;
@@ -265,12 +249,12 @@ function PhysicsGraphCanvas({
       onBackgroundClick={onClearSelection}
       onEngineTick={() => {
         const chargeForce = fgRef.current?.d3Force('charge') as { strength: (n: number) => void } | undefined;
-        chargeForce?.strength(-340);
+        chargeForce?.strength(-420);
         const linkForce = fgRef.current?.d3Force('link') as
           | { distance: (n: number) => void; strength: (n: number) => void }
           | undefined;
-        linkForce?.distance(205);
-        linkForce?.strength(0.72);
+        linkForce?.distance(250);
+        linkForce?.strength(0.74);
       }}
       onEngineStop={() => {
         if (hasAutoFitRef.current) return;
@@ -313,7 +297,6 @@ export function GraphExperience({
   borderless = false,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedPoint, setSelectedPoint] = useState<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const floatingPanelRef = useRef<HTMLDivElement | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 900, height: 640 });
@@ -321,8 +304,8 @@ export function GraphExperience({
   const [panelPos, setPanelPos] = useState<{ left: number; top: number; width: number; maxHeight: number }>({
     left: 12,
     top: 12,
-    width: 360,
-    maxHeight: 420,
+    width: 430,
+    maxHeight: 520,
   });
 
   const selected = useMemo(
@@ -407,77 +390,71 @@ export function GraphExperience({
   }, []);
 
   useEffect(() => {
-    if (!selectedId || !selectedPoint) return;
-    const panelEl = floatingPanelRef.current;
-    const width = Math.max(260, Math.min(360, canvasSize.width - 24));
-    const maxHeight = Math.max(240, Math.min(Math.floor(canvasSize.height * 0.72), canvasSize.height - 24));
-    const measuredHeight = panelEl ? Math.ceil(panelEl.getBoundingClientRect().height) : maxHeight;
-    const effectiveHeight = Math.min(measuredHeight, maxHeight);
-    const left = Math.max(12, Math.min(selectedPoint.x + 14, canvasSize.width - width - 12));
-    const top = Math.max(12, Math.min(selectedPoint.y - 10, canvasSize.height - effectiveHeight - 12));
+    if (!selectedId) return;
+    const width = Math.max(320, Math.min(430, canvasSize.width - 32));
+    const maxHeight = Math.max(280, Math.min(Math.floor(canvasSize.height * 0.68), canvasSize.height - 40));
+    const left = Math.max(16, Math.floor((canvasSize.width - width) / 2));
+    const top = Math.max(16, Math.floor((canvasSize.height - maxHeight) / 2));
     setPanelPos({ left, top, width, maxHeight });
-  }, [selectedId, selectedPoint, canvasSize.width, canvasSize.height]);
+  }, [selectedId, canvasSize.width, canvasSize.height]);
 
   return (
     <section
-      className={
-        fullScreen
-          ? 'flex min-h-[calc(100vh-60px)] flex-col p-4 sm:p-5'
-          : 'mt-5 rounded-2xl border border-[#d8d8d8] bg-white p-5 sm:p-6'
-      }
-      style={fullScreen ? { background: 'var(--org-brand-bg)' } : undefined}
+      className={fullScreen ? 'flex min-h-[calc(100vh-60px)] flex-col p-3 sm:p-4' : 'mt-5 rounded-[24px] border border-black/10 bg-white/70 p-3 sm:p-4'}
+      style={{
+        background:
+          'linear-gradient(rgba(35,31,32,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(35,31,32,0.07) 1px, transparent 1px), linear-gradient(180deg, #f6f3f1 0%, #efe8e3 100%)',
+        backgroundSize: '56px 56px, 56px 56px, 100% 100%',
+      }}
     >
-      {!hideHeader ? (
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em]" style={{ color: 'var(--org-brand-text)' }}>
-              {title}
-            </h2>
-            <p className="mt-1 text-[13px]" style={{ color: 'var(--org-brand-muted)' }}>
-              {subtitle}
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      <div className={fullScreen ? `${hideHeader ? 'mt-0' : 'mt-3'} flex-1` : 'mt-4'}>
+      <div className={fullScreen ? 'flex-1' : 'mt-1'}>
         <div
           ref={canvasRef}
           className={
             fullScreen
-              ? `relative overflow-hidden ${borderless ? 'h-[calc(100vh-92px)] rounded-none border-0' : 'h-[calc(100vh-142px)] rounded-xl border'}`
-              : 'relative h-[520px] overflow-hidden rounded-xl border'
+              ? `relative overflow-hidden ${borderless ? 'h-[calc(100vh-92px)] rounded-none border-0' : 'h-[calc(100vh-104px)] rounded-[32px] border'}`
+              : 'relative h-[700px] overflow-hidden rounded-[30px] border'
           }
           style={{
-            borderColor: borderless ? 'transparent' : 'var(--org-brand-border)',
-            backgroundColor: 'var(--org-brand-surface)',
-            backgroundImage:
-              'linear-gradient(to right, color-mix(in srgb, var(--org-brand-border) 45%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--org-brand-border) 45%, transparent) 1px, transparent 1px)',
-            backgroundSize: '56px 56px',
+            borderColor: borderless ? 'transparent' : 'rgba(35,31,32,0.08)',
+            background: 'rgba(255,255,255,0.18)',
+            boxShadow: '0 30px 80px rgba(35,31,32,0.08)',
+            backdropFilter: 'blur(8px)',
           }}
         >
+          <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(166,88,67,0.08)_0%,rgba(166,88,67,0.02)_24%,transparent_48%)]" />
+          {!hideHeader ? (
+            <div className="absolute left-6 right-6 top-6 z-10 flex flex-wrap items-start justify-between gap-3">
+              <div className="rounded-[20px] border border-black/10 bg-white/85 px-4 py-3 shadow-[0_12px_30px_rgba(35,31,32,0.08)] backdrop-blur-[14px]">
+                <h2 className="text-[18px] font-semibold leading-tight" style={{ color: 'var(--org-brand-text)' }}>{title}</h2>
+                <p className="mt-1 max-w-[560px] text-[13px]" style={{ color: 'var(--org-brand-muted)' }}>{subtitle}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-black/10 bg-white/85 px-4 py-3 text-[13px] shadow-[0_12px_30px_rgba(35,31,32,0.08)] backdrop-blur-[14px]">
+                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-black" />Available section</span>
+                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: 'var(--org-brand-primary)' }} />Selected section</span>
+                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-black/35" />Connected to profile</span>
+              </div>
+            </div>
+          ) : null}
           <PhysicsGraphCanvas
             width={canvasSize.width}
             height={canvasSize.height}
             nodes={graphNodes}
             selectedId={selectedId}
-            onSelect={(id, point) => {
+            onSelect={(id, _point) => {
               setSelectedId(id);
-              setSelectedPoint(point);
             }}
             onClearSelection={() => {
               setSelectedId(null);
-              setSelectedPoint(null);
             }}
             colors={colors}
           />
-          {selected && selectedPoint ? (
+          {selected ? (
             <div
               ref={floatingPanelRef}
-              className="absolute z-20 overflow-auto rounded-2xl border bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.16)]"
+              className="absolute z-20 overflow-auto rounded-[26px] border bg-white/90 p-0 shadow-[0_24px_60px_rgba(35,31,32,0.10)] backdrop-blur-[20px]"
               style={{
-                borderColor: 'var(--org-brand-border)',
-                background: 'var(--org-brand-surface)',
+                borderColor: 'rgba(35,31,32,0.1)',
                 left: `${panelPos.left}px`,
                 top: `${panelPos.top}px`,
                 width: `${panelPos.width}px`,
@@ -489,55 +466,56 @@ export function GraphExperience({
                 if (customSidebar !== undefined) return customSidebar;
                 return (
                   <>
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#e7e7e9] bg-white text-[14px]">📁</span>
-                        <h3 className="text-[16px] font-semibold" style={{ color: 'var(--org-brand-text)' }}>{selected.label}</h3>
+                    <div className="flex items-start justify-between gap-4 border-b border-black/10 px-5 py-4">
+                      <div>
+                        <div
+                          className="mb-2 inline-flex items-center rounded-full px-3 py-1 text-[12px] font-bold"
+                          style={{ background: 'color-mix(in srgb, var(--org-brand-primary) 16%, white)', color: 'var(--org-brand-primary)' }}
+                        >
+                          Sensitive records
+                        </div>
+                        <h3 className="text-[28px] font-semibold leading-tight" style={{ color: 'var(--org-brand-text)' }}>{selected.label}</h3>
+                        <p className="mt-1 text-[14px] leading-relaxed" style={{ color: 'var(--org-brand-muted)' }}>{selected.description}</p>
                       </div>
                       <button
                         type="button"
                         aria-label="Close node panel"
                         onClick={() => {
                           setSelectedId(null);
-                          setSelectedPoint(null);
                         }}
-                        className="rounded-md px-1.5 py-0.5 text-[16px] leading-none text-[#9aa0ac] hover:bg-[#f3f4f6]"
+                        className="rounded-md px-1.5 py-0.5 text-[20px] leading-none text-[#9a908b] hover:bg-[#f3f4f6]"
                       >
                         ×
                       </button>
                     </div>
-                    <p className="text-[12px] leading-relaxed" style={{ color: 'var(--org-brand-muted)' }}>{selected.description}</p>
-                    <div
-                      className="mt-3 rounded-xl border p-3"
-                      style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-bg)' }}
-                    >
+                    <div className="grid gap-3 px-5 py-4">
                       {(selected.facts ?? []).length > 0 ? (
-                        <dl className="mt-3 grid gap-2 text-[12px]">
+                        <dl className="grid grid-cols-2 gap-3 text-[12px]">
                           {(selected.facts ?? []).map((fact) => (
                             <div
                               key={`${selected.id}-${fact.label}`}
-                              className="rounded-md border bg-white px-2.5 py-2"
-                              style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-surface)' }}
+                              className="rounded-[18px] border px-3 py-3"
+                              style={{ borderColor: 'rgba(35,31,32,0.10)', background: 'rgba(246,243,241,0.92)' }}
                             >
-                              <dt className="text-[10px] font-medium" style={{ color: 'var(--org-brand-muted)' }}>{fact.label}</dt>
-                              <dd className="mt-0.5 text-[12px]" style={{ color: 'var(--org-brand-text)' }}>{fact.value}</dd>
+                              <dt className="text-[11px] font-medium" style={{ color: 'var(--org-brand-muted)' }}>{fact.label}</dt>
+                              <dd className="mt-1 text-[22px] font-semibold leading-none" style={{ color: 'var(--org-brand-text)' }}>{fact.value}</dd>
                             </div>
                           ))}
                         </dl>
                       ) : null}
                       {(selected.bulletPoints ?? []).length > 0 ? (
-                        <ul className="mt-3 list-disc space-y-1 pl-4 text-[12px]" style={{ color: 'var(--org-brand-muted)' }}>
+                        <ul className="list-disc space-y-1.5 pl-5 text-[13px]" style={{ color: 'var(--org-brand-muted)' }}>
                           {(selected.bulletPoints ?? []).map((item) => (
                             <li key={`${selected.id}-${item}`}>{item}</li>
                           ))}
                         </ul>
                       ) : null}
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-1 flex flex-wrap gap-2">
                         {showDefaultNodeHrefAction && selected.href ? (
                           <Link
                             href={selected.href}
-                            className="rounded-lg px-3 py-1.5 text-[11px] font-medium text-white"
-                            style={{ background: 'var(--org-brand-primary)' }}
+                            className="rounded-[14px] px-4 py-2.5 text-[13px] font-semibold text-white"
+                            style={{ background: 'var(--org-brand-primary)', boxShadow: '0 12px 24px rgba(166,88,67,0.22)' }}
                           >
                             Open section
                           </Link>
@@ -546,8 +524,8 @@ export function GraphExperience({
                           <Link
                             key={action.id}
                             href={action.href}
-                            className="rounded-lg border bg-white px-3 py-1.5 text-[11px] font-medium"
-                            style={{ borderColor: 'var(--org-brand-border)', color: 'var(--org-brand-text)' }}
+                            className="rounded-[14px] border bg-white px-4 py-2.5 text-[13px] font-semibold"
+                            style={{ borderColor: 'rgba(35,31,32,0.12)', color: 'var(--org-brand-text)' }}
                           >
                             {action.label}
                           </Link>

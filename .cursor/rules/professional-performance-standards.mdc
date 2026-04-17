@@ -1,0 +1,31 @@
+---
+description: Build new features with performance-first, production-grade standards
+alwaysApply: true
+---
+
+# Professional performance standards
+
+For any new feature, refactor, or integration in this repository:
+
+1. **Treat performance as a default requirement**, not a follow-up.
+   - Keep page interactions responsive and avoid unnecessary client/server work.
+   - Prefer changes that hold up under concurrent users, not only single-user testing.
+2. **Design queries and data access for scale.**
+   - Push filtering/scoping into SQL (do not fetch large sets and filter in memory).
+   - Avoid N+1 query patterns and duplicate RPCs.
+   - Add or update indexes through migrations when query shape changes materially.
+3. **Constrain expensive work by default.**
+   - Add sensible limits/pagination for potentially large result sets.
+   - Keep non-critical UI/data paths fail-open when safe (timeouts/fallbacks) rather than blocking entire pages.
+   - Be careful with eager prefetching, polling, and realtime invalidation loops that can amplify load.
+4. **Protect reliability while optimizing speed.**
+   - Preserve main feature behavior and security constraints (auth/RLS/permissions).
+   - Avoid introducing brittle optimizations that risk regressions in production.
+5. **Instrument and verify impact.**
+   - Add lightweight timing/slow-path instrumentation on hot paths when touching them.
+   - Validate changes with lint/typecheck and targeted performance checks when practical.
+   - Do not claim performance fixes without observable evidence (logs/metrics/profiler/load test).
+6. **Ship in a professional manner.**
+   - Keep changes focused, readable, and maintainable.
+   - Document non-obvious performance trade-offs in code comments or PR notes.
+   - Favor predictable, measurable improvements over speculative complexity.
