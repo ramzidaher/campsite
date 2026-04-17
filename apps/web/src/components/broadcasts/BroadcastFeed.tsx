@@ -41,6 +41,8 @@ type Props = {
   /** When true with `emptyStateCanCompose`, copy refers to drafts for approval instead of sending. */
   emptyStateDraftForApproval?: boolean;
   onUnreadChange?: (n: number) => void;
+  /** Alternate layout: classic cards vs grouped-by-day timeline. */
+  feedLayout?: 'stream' | 'timeline';
 };
 
 const pageSize = 20;
@@ -82,6 +84,132 @@ let broadcastFeedApiMode: 'plan02' | 'legacy' | null = null;
 
 type FeedPage = { rows: FeedRow[]; hasMore: boolean };
 
+function dayHeadingForBroadcast(sentAt: string | null) {
+  if (!sentAt) return 'Unknown date';
+  return new Date(sentAt).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function FeedBroadcastCard({
+  b,
+  bodyPreview,
+}: {
+  b: FeedRow;
+  bodyPreview: (md: string) => string;
+}) {
+  const unread = b.read === false;
+  const deptName = b.departments?.name ?? 'General';
+  const channelName = b.broadcast_channels?.name ?? '';
+  const teamName = b.department_teams?.name ?? '';
+  const collabDepartments = b.collab_departments ?? [];
+  const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
+  const sentLabel = b.sent_at
+    ? new Date(b.sent_at).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : 'Send time unavailable';
+  return (
+    <Link
+      href={`/broadcasts/${b.id}`}
+      aria-label={
+        unread
+          ? `${b.title}. Unread broadcast. Sent ${relTime(b.sent_at)}.`
+          : `${b.title}. Read. Sent ${relTime(b.sent_at)}.`
+      }
+      className={[
+        'relative block min-h-[44px] rounded-xl border px-[18px] py-4 transition-[box-shadow,border-color]',
+        unread
+          ? 'border-sky-200 bg-sky-50/90 hover:border-sky-300 hover:shadow-[0_1px_3px_rgba(14,165,233,0.12),0_4px_12px_rgba(0,0,0,0.04)]'
+          : 'border-[#d8d8d8] bg-white hover:border-[#c8c8c8] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
+        unread
+          ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-sky-600 before:content-['']"
+          : '',
+      ].join(' ')}
+    >
+      <div className="mb-1.5 flex items-start justify-between gap-3">
+        <div
+          className={[
+            'min-w-0 flex-1 text-sm leading-snug text-[#121212]',
+            unread ? 'font-semibold' : 'font-medium',
+          ].join(' ')}
+        >
+          {b.title}
+        </div>
+        <div className="mt-0.5 flex shrink-0 items-center gap-2">
+          {unread ? (
+            <span className="inline-flex items-center rounded-full border border-sky-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900">
+              Unread
+            </span>
+          ) : null}
+          <div className="text-[11.5px] text-[#9b9b9b]">{relTime(b.sent_at)}</div>
+        </div>
+      </div>
+      <p className="mb-2.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">{bodyPreview(b.body)}</p>
+      <p className="mb-2.5 text-[11.5px] text-[#6b6b6b]">
+        Sent by <span className="font-medium text-[#121212]">{senderName}</span>
+        <span className="mx-1.5 text-[#9b9b9b]">·</span>
+        <span>{sentLabel}</span>
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {b.is_pinned ? (
+          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
+            Pinned
+          </span>
+        ) : null}
+        {b.is_mandatory ? (
+          <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-medium text-red-900">
+            Mandatory
+          </span>
+        ) : null}
+        {b.is_org_wide ? (
+          <span className="inline-flex items-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] px-2.5 py-0.5 text-[11px] font-medium text-[#44403c]">
+            Org-wide
+          </span>
+        ) : null}
+        <span
+          className={[
+            'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium',
+            deptTagClass(deptName),
+          ].join(' ')}
+        >
+          {deptName}
+        </span>
+        {b.is_org_wide ? (
+          <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
+            All channels
+          </span>
+        ) : channelName ? (
+          <span
+            className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
+            title={channelPillAccessibleName(channelName)}
+            aria-label={channelPillAccessibleName(channelName)}
+          >
+            {channelName}
+          </span>
+        ) : null}
+        {teamName ? (
+          <span className="inline-flex items-center rounded-full border border-[#e9d5ff] bg-[#faf5ff] px-2.5 py-0.5 text-[11px] font-medium text-[#6b21a8]">
+            {teamName}
+          </span>
+        ) : null}
+        {collabDepartments.map((d) => (
+          <span
+            key={`${b.id}-collab-${d.id}`}
+            className="inline-flex items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2.5 py-0.5 text-[11px] font-medium text-[#1d4ed8]"
+          >
+            {d.name}
+          </span>
+        ))}
+      </div>
+    </Link>
+  );
+}
+
 export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function BroadcastFeed(
   {
     supabase,
@@ -97,6 +225,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     emptyStateCanCompose = false,
     emptyStateDraftForApproval = false,
     onUnreadChange,
+    feedLayout = 'stream',
   },
   ref
 ) {
@@ -246,6 +375,19 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     return sorted;
   }, [rows, unreadOnly, advancedFilter, sortBy, viewerDeptIds]);
 
+  const timelineDayGroups = useMemo(() => {
+    if (feedLayout !== 'timeline') return null;
+    type G = { heading: string; rows: FeedRow[] };
+    const groups: G[] = [];
+    for (const b of displayRows) {
+      const heading = dayHeadingForBroadcast(b.sent_at);
+      const prev = groups[groups.length - 1];
+      if (prev && prev.heading === heading) prev.rows.push(b);
+      else groups.push({ heading, rows: [b] });
+    }
+    return groups;
+  }, [displayRows, feedLayout]);
+
   const loading = searchActive ? searchQueryResult.isLoading : feedInfinite.isLoading;
   const fetching = searchActive ? searchQueryResult.isFetching : feedInfinite.isFetching;
 
@@ -332,121 +474,30 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
           <div className="text-[15px] font-medium text-[#6b6b6b]">No unread in loaded items</div>
           <p className="mt-1.5 text-[13px]">Load more below or switch to All.</p>
         </div>
+      ) : feedLayout === 'timeline' && timelineDayGroups ? (
+        <div className="flex flex-col gap-6">
+          {timelineDayGroups.map((g) => (
+            <section key={g.heading}>
+              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                {g.heading}
+              </h3>
+              <ul className="flex flex-col gap-2.5">
+                {g.rows.map((b) => (
+                  <li key={b.id}>
+                    <FeedBroadcastCard b={b} bodyPreview={preview} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       ) : (
         <ul className="flex flex-col gap-2.5">
-          {displayRows.map((b) => {
-            const unread = b.read === false;
-            const deptName = b.departments?.name ?? 'General';
-            const channelName = b.broadcast_channels?.name ?? '';
-            const teamName = b.department_teams?.name ?? '';
-            const collabDepartments = b.collab_departments ?? [];
-            const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
-            const sentLabel = b.sent_at
-              ? new Date(b.sent_at).toLocaleString(undefined, {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })
-              : 'Send time unavailable';
-            return (
-              <li key={b.id}>
-                <Link
-                  href={`/broadcasts/${b.id}`}
-                  aria-label={
-                    unread
-                      ? `${b.title}. Unread broadcast. Sent ${relTime(b.sent_at)}.`
-                      : `${b.title}. Read. Sent ${relTime(b.sent_at)}.`
-                  }
-                  className={[
-                    'relative block min-h-[44px] rounded-xl border px-[18px] py-4 transition-[box-shadow,border-color]',
-                    unread
-                      ? 'border-sky-200 bg-sky-50/90 hover:border-sky-300 hover:shadow-[0_1px_3px_rgba(14,165,233,0.12),0_4px_12px_rgba(0,0,0,0.04)]'
-                      : 'border-[#d8d8d8] bg-white hover:border-[#c8c8c8] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
-                    unread
-                      ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-sky-600 before:content-['']"
-                      : '',
-                  ].join(' ')}
-                >
-                  <div className="mb-1.5 flex items-start justify-between gap-3">
-                    <div
-                      className={[
-                        'min-w-0 flex-1 text-sm leading-snug text-[#121212]',
-                        unread ? 'font-semibold' : 'font-medium',
-                      ].join(' ')}
-                    >
-                      {b.title}
-                    </div>
-                    <div className="mt-0.5 flex shrink-0 items-center gap-2">
-                      {unread ? (
-                        <span className="inline-flex items-center rounded-full border border-sky-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900">
-                          Unread
-                        </span>
-                      ) : null}
-                      <div className="text-[11.5px] text-[#9b9b9b]">{relTime(b.sent_at)}</div>
-                    </div>
-                  </div>
-                  <p className="mb-2.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">
-                    {preview(b.body)}
-                  </p>
-                  <p className="mb-2.5 text-[11.5px] text-[#6b6b6b]">
-                    Sent by <span className="font-medium text-[#121212]">{senderName}</span>
-                    <span className="mx-1.5 text-[#9b9b9b]">·</span>
-                    <span>{sentLabel}</span>
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {b.is_pinned ? (
-                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
-                        Pinned
-                      </span>
-                    ) : null}
-                    {b.is_mandatory ? (
-                      <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-medium text-red-900">
-                        Mandatory
-                      </span>
-                    ) : null}
-                    {b.is_org_wide ? (
-                      <span className="inline-flex items-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] px-2.5 py-0.5 text-[11px] font-medium text-[#44403c]">
-                        Org-wide
-                      </span>
-                    ) : null}
-                    <span
-                      className={[
-                        'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium',
-                        deptTagClass(deptName),
-                      ].join(' ')}
-                    >
-                      {deptName}
-                    </span>
-                    {b.is_org_wide ? (
-                      <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
-                        All channels
-                      </span>
-                    ) : channelName ? (
-                      <span
-                        className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
-                        title={channelPillAccessibleName(channelName)}
-                        aria-label={channelPillAccessibleName(channelName)}
-                      >
-                        {channelName}
-                      </span>
-                    ) : null}
-                    {teamName ? (
-                      <span className="inline-flex items-center rounded-full border border-[#e9d5ff] bg-[#faf5ff] px-2.5 py-0.5 text-[11px] font-medium text-[#6b21a8]">
-                        {teamName}
-                      </span>
-                    ) : null}
-                    {collabDepartments.map((d) => (
-                      <span
-                        key={`${b.id}-collab-${d.id}`}
-                        className="inline-flex items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2.5 py-0.5 text-[11px] font-medium text-[#1d4ed8]"
-                      >
-                        {d.name}
-                      </span>
-                    ))}
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
+          {displayRows.map((b) => (
+            <li key={b.id}>
+              <FeedBroadcastCard b={b} bodyPreview={preview} />
+            </li>
+          ))}
         </ul>
       )}
 

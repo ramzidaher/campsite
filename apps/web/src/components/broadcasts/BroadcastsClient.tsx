@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ExperienceLensBar } from '@/components/experience/ExperienceLensBar';
 import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { countPendingBroadcastApprovalsForViewer } from '@/lib/broadcasts/countPendingBroadcastApprovalsForViewer';
 import { BroadcastComposer } from './BroadcastComposer';
@@ -36,6 +37,9 @@ const FILTER_KEY_C = 'campsite_broadcast_filter_cats';
 const FILTER_KEY_PILL = 'campsite_broadcast_feed_pill';
 const FILTER_KEY_ADV = 'campsite_broadcast_feed_adv_filter';
 const FILTER_KEY_SORT = 'campsite_broadcast_feed_sort';
+const FEED_LAYOUT_KEY = 'campsite_broadcast_feed_layout';
+
+type FeedLayoutLens = 'stream' | 'timeline';
 
 export function BroadcastsClient({
   profile,
@@ -77,11 +81,23 @@ export function BroadcastsClient({
   const [feedPill, setFeedPill] = useState<FeedPill>('all');
   const [advancedFilter, setAdvancedFilter] = useState<AdvancedFeedFilter>('all');
   const [sortBy, setSortBy] = useState<BroadcastSort>('newest');
+  const [feedLayout, setFeedLayout] = useState<FeedLayoutLens>('stream');
   const [hydrated, setHydrated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [unread, setUnread] = useState(0);
   const [submittedPendingCount, setSubmittedPendingCount] = useState(0);
   const [pendingApprovalQueueCount, setPendingApprovalQueueCount] = useState(0);
+
+  useEffect(() => {
+    try {
+      const layoutRaw = sessionStorage.getItem(FEED_LAYOUT_KEY);
+      if (layoutRaw === 'stream' || layoutRaw === 'timeline') {
+        setFeedLayout(layoutRaw);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -459,6 +475,23 @@ export function BroadcastsClient({
                   ▾
                 </span>
               </div>
+              <ExperienceLensBar
+                ariaLabel="Broadcast feed layout"
+                value={feedLayout}
+                onChange={(next) => {
+                  setFeedLayout(next);
+                  try {
+                    sessionStorage.setItem(FEED_LAYOUT_KEY, next);
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+                choices={[
+                  { value: 'stream', label: 'Cards' },
+                  { value: 'timeline', label: 'Timeline' },
+                ]}
+                className="ml-auto shrink-0"
+              />
             </div>
           </div>
 
@@ -478,6 +511,7 @@ export function BroadcastsClient({
               emptyStateCanCompose={composeAllowed}
               emptyStateDraftForApproval={draftOnlyRole}
               onUnreadChange={setUnread}
+              feedLayout={feedLayout}
             />
           </div>
         </>

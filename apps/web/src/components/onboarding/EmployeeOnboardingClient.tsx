@@ -1,10 +1,13 @@
 'use client';
 
+import { ExperienceLensBar } from '@/components/experience/ExperienceLensBar';
 import { createClient } from '@/lib/supabase/client';
 import { useCampfireAmbientPreferences } from '@/lib/sound/useCampfireAmbientPreferences';
 import { useUiSound } from '@/lib/sound/useUiSound';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+const ONBOARDING_TASK_LENS_KEY = 'campsite_onboarding_tasks_lens';
 
 type Task = {
   id: string;
@@ -55,6 +58,25 @@ export function EmployeeOnboardingClient({
   const { prefs: campfirePrefs, setEnabled: setCampfireEnabled } = useCampfireAmbientPreferences();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [taskLens, setTaskLens] = useState<'category' | 'timeline'>('category');
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(ONBOARDING_TASK_LENS_KEY);
+      if (raw === 'category' || raw === 'timeline') setTaskLens(raw);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const persistTaskLens = (next: 'category' | 'timeline') => {
+    setTaskLens(next);
+    try {
+      window.localStorage.setItem(ONBOARDING_TASK_LENS_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const myTasks = tasks.filter((t) => t.assignee_type === 'employee');
   const otherTasks = tasks.filter((t) => t.assignee_type !== 'employee');
@@ -93,6 +115,26 @@ export function EmployeeOnboardingClient({
     }))
     .filter((g) => g.mine.length + g.others.length > 0);
 
+  const timelineBuckets = useMemo(() => {
+    const all = [...tasks].sort((a, b) => {
+      if (!a.due_date && !b.due_date) return a.sort_order - b.sort_order;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      const c = a.due_date.localeCompare(b.due_date);
+      return c !== 0 ? c : a.sort_order - b.sort_order;
+    });
+    type B = { heading: string; key: string; tasks: Task[] };
+    const buckets: B[] = [];
+    for (const t of all) {
+      const key = t.due_date ?? 'none';
+      const heading = t.due_date ? fmtDate(t.due_date) : 'No due date';
+      const prev = buckets[buckets.length - 1];
+      if (prev && prev.key === key) prev.tasks.push(t);
+      else buckets.push({ key, heading, tasks: [t] });
+    }
+    return buckets;
+  }, [tasks]);
+
   if (runStatus === 'completed') {
     return (
       <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
@@ -127,6 +169,18 @@ export function EmployeeOnboardingClient({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
         <div className="min-w-0 space-y-6 lg:col-span-8">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12px] text-[#6b6b6b]">Choose how you want to scan your tasks.</p>
+            <ExperienceLensBar
+              ariaLabel="Onboarding task layout"
+              value={taskLens}
+              onChange={persistTaskLens}
+              choices={[
+                { value: 'category', label: 'By category' },
+                { value: 'timeline', label: 'By date' },
+              ]}
+            />
+          </div>
           {msg ? (
             <p className="rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#b91c1c]">{msg}</p>
           ) : null}
@@ -143,85 +197,167 @@ export function EmployeeOnboardingClient({
           ) : null}
 
           <div className="space-y-8">
-        {grouped.map((g) => (
-          <section key={g.key}>
-            <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-              {g.label}
-            </h2>
-            <ul className="space-y-2">
-              {/* My tasks */}
-              {g.mine.map((t) => {
-                const overdue = t.due_date && t.due_date < today && t.status === 'pending';
-                const isDone = t.status === 'completed';
-                return (
-                  <li
-                    key={t.id}
-                    className={`rounded-xl border p-4 transition-colors ${isDone ? 'border-[#e8e8e8] bg-[#faf9f6]' : overdue ? 'border-[#fca5a5] bg-white' : 'border-[#e8e8e8] bg-white'}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <button
-                        type="button"
-                        disabled={!canComplete || !!busy || runStatus !== 'active'}
-                        onClick={() => void toggle(t)}
-                        className={[
-                          'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
-                          isDone
-                            ? 'border-[#16a34a] bg-[#16a34a]'
-                            : 'border-[#d8d8d8] hover:border-[#121212]',
-                          (!canComplete || !!busy) ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
-                        ].join(' ')}
-                        aria-label={isDone ? 'Mark as not done' : 'Mark as done'}
-                      >
-                        {isDone ? (
-                          <svg viewBox="0 0 12 10" className="text-white" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                            <polyline points="1,5 4,8 11,1" />
-                          </svg>
-                        ) : null}
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[13px] font-medium ${isDone ? 'line-through text-[#9b9b9b]' : overdue ? 'text-[#b91c1c]' : 'text-[#121212]'}`}>
-                          {t.title}
-                        </p>
-                        {t.description ? (
-                          <p className="mt-0.5 text-[12px] text-[#6b6b6b]">{t.description}</p>
-                        ) : null}
-                        {t.due_date && !isDone ? (
-                          <p className={`mt-1 text-[11.5px] ${overdue ? 'font-medium text-[#b91c1c]' : 'text-[#9b9b9b]'}`}>
-                            {overdue ? `Overdue since ${fmtDate(t.due_date)}` : `Due ${fmtDate(t.due_date)}`}
-                          </p>
-                        ) : null}
-                        {isDone && t.completed_at ? (
-                          <p className="mt-1 text-[11.5px] text-[#9b9b9b]">Done {fmtDate(t.completed_at)}</p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
+            {taskLens === 'timeline'
+              ? timelineBuckets.map((bucket) => (
+                  <section key={bucket.key}>
+                    <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+                      {bucket.heading}
+                    </h2>
+                    <ul className="space-y-2">
+                      {bucket.tasks.map((t) => {
+                        if (t.assignee_type === 'employee') {
+                          const overdue = t.due_date && t.due_date < today && t.status === 'pending';
+                          const isDone = t.status === 'completed';
+                          return (
+                            <li
+                              key={t.id}
+                              className={`rounded-xl border p-4 transition-colors ${isDone ? 'border-[#e8e8e8] bg-[#faf9f6]' : overdue ? 'border-[#fca5a5] bg-white' : 'border-[#e8e8e8] bg-white'}`}
+                            >
+                              <div className="flex min-w-0 flex-1 items-start gap-3">
+                                <button
+                                  type="button"
+                                  disabled={!canComplete || !!busy || runStatus !== 'active'}
+                                  onClick={() => void toggle(t)}
+                                  className={[
+                                    'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
+                                    isDone
+                                      ? 'border-[#16a34a] bg-[#16a34a]'
+                                      : 'border-[#d8d8d8] hover:border-[#121212]',
+                                    !canComplete || !!busy ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
+                                  ].join(' ')}
+                                  aria-label={isDone ? 'Mark as not done' : 'Mark as done'}
+                                >
+                                  {isDone ? (
+                                    <svg viewBox="0 0 12 10" className="text-white" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                                      <polyline points="1,5 4,8 11,1" />
+                                    </svg>
+                                  ) : null}
+                                </button>
+                                <div className="min-w-0 flex-1">
+                                  <p
+                                    className={`text-[13px] font-medium ${isDone ? 'text-[#9b9b9b] line-through' : overdue ? 'text-[#b91c1c]' : 'text-[#121212]'}`}
+                                  >
+                                    {t.title}
+                                  </p>
+                                  {t.description ? (
+                                    <p className="mt-0.5 text-[12px] text-[#6b6b6b]">{t.description}</p>
+                                  ) : null}
+                                  <p className="mt-1 text-[11px] text-[#9b9b9b]">
+                                    {CATEGORY_LABELS[t.category as keyof typeof CATEGORY_LABELS] ?? t.category}
+                                  </p>
+                                  {t.due_date && !isDone ? (
+                                    <p className={`mt-1 text-[11.5px] ${overdue ? 'font-medium text-[#b91c1c]' : 'text-[#9b9b9b]'}`}>
+                                      {overdue ? `Overdue since ${fmtDate(t.due_date)}` : `Due ${fmtDate(t.due_date)}`}
+                                    </p>
+                                  ) : null}
+                                  {isDone && t.completed_at ? (
+                                    <p className="mt-1 text-[11.5px] text-[#9b9b9b]">Done {fmtDate(t.completed_at)}</p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        }
+                        const isDone = t.status === 'completed';
+                        return (
+                          <li
+                            key={t.id}
+                            className="flex items-center gap-3 rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-4 py-3"
+                          >
+                            <span
+                              className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 ${isDone ? 'border-[#16a34a] bg-[#16a34a]' : 'border-[#d8d8d8]'}`}
+                            />
+                            <span className={`min-w-0 flex-1 text-[13px] ${isDone ? 'text-[#9b9b9b] line-through' : 'text-[#4a4a4a]'}`}>
+                              {t.title}
+                            </span>
+                            <span className="ml-auto shrink-0 rounded-full bg-[#ececec] px-2 py-0.5 text-[10.5px] text-[#6b6b6b]">
+                              {ASSIGNEE_LABELS[t.assignee_type] ?? t.assignee_type}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))
+              : grouped.map((g) => (
+                  <section key={g.key}>
+                    <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+                      {g.label}
+                    </h2>
+                    <ul className="space-y-2">
+                      {g.mine.map((t) => {
+                        const overdue = t.due_date && t.due_date < today && t.status === 'pending';
+                        const isDone = t.status === 'completed';
+                        return (
+                          <li
+                            key={t.id}
+                            className={`rounded-xl border p-4 transition-colors ${isDone ? 'border-[#e8e8e8] bg-[#faf9f6]' : overdue ? 'border-[#fca5a5] bg-white' : 'border-[#e8e8e8] bg-white'}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <button
+                                type="button"
+                                disabled={!canComplete || !!busy || runStatus !== 'active'}
+                                onClick={() => void toggle(t)}
+                                className={[
+                                  'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
+                                  isDone
+                                    ? 'border-[#16a34a] bg-[#16a34a]'
+                                    : 'border-[#d8d8d8] hover:border-[#121212]',
+                                  !canComplete || !!busy ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
+                                ].join(' ')}
+                                aria-label={isDone ? 'Mark as not done' : 'Mark as done'}
+                              >
+                                {isDone ? (
+                                  <svg viewBox="0 0 12 10" className="text-white" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                                    <polyline points="1,5 4,8 11,1" />
+                                  </svg>
+                                ) : null}
+                              </button>
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className={`text-[13px] font-medium ${isDone ? 'line-through text-[#9b9b9b]' : overdue ? 'text-[#b91c1c]' : 'text-[#121212]'}`}
+                                >
+                                  {t.title}
+                                </p>
+                                {t.description ? (
+                                  <p className="mt-0.5 text-[12px] text-[#6b6b6b]">{t.description}</p>
+                                ) : null}
+                                {t.due_date && !isDone ? (
+                                  <p className={`mt-1 text-[11.5px] ${overdue ? 'font-medium text-[#b91c1c]' : 'text-[#9b9b9b]'}`}>
+                                    {overdue ? `Overdue since ${fmtDate(t.due_date)}` : `Due ${fmtDate(t.due_date)}`}
+                                  </p>
+                                ) : null}
+                                {isDone && t.completed_at ? (
+                                  <p className="mt-1 text-[11.5px] text-[#9b9b9b]">Done {fmtDate(t.completed_at)}</p>
+                                ) : null}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
 
-              {/* Tasks for others (read-only) */}
-              {g.others.map((t) => {
-                const isDone = t.status === 'completed';
-                return (
-                  <li
-                    key={t.id}
-                    className="flex items-center gap-3 rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-4 py-3"
-                  >
-                    <span
-                      className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 ${isDone ? 'border-[#16a34a] bg-[#16a34a]' : 'border-[#d8d8d8]'}`}
-                    />
-                    <span className={`flex-1 text-[13px] ${isDone ? 'text-[#9b9b9b] line-through' : 'text-[#4a4a4a]'}`}>
-                      {t.title}
-                    </span>
-                    <span className="ml-auto shrink-0 rounded-full bg-[#ececec] px-2 py-0.5 text-[10.5px] text-[#6b6b6b]">
-                      {ASSIGNEE_LABELS[t.assignee_type] ?? t.assignee_type}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
+                      {g.others.map((t) => {
+                        const isDone = t.status === 'completed';
+                        return (
+                          <li
+                            key={t.id}
+                            className="flex items-center gap-3 rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-4 py-3"
+                          >
+                            <span
+                              className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 ${isDone ? 'border-[#16a34a] bg-[#16a34a]' : 'border-[#d8d8d8]'}`}
+                            />
+                            <span className={`min-w-0 flex-1 text-[13px] ${isDone ? 'text-[#9b9b9b] line-through' : 'text-[#4a4a4a]'}`}>
+                              {t.title}
+                            </span>
+                            <span className="ml-auto shrink-0 rounded-full bg-[#ececec] px-2 py-0.5 text-[10.5px] text-[#6b6b6b]">
+                              {ASSIGNEE_LABELS[t.assignee_type] ?? t.assignee_type}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
           </div>
         </div>
 

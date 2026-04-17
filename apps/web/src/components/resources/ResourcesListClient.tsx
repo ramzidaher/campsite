@@ -1,10 +1,13 @@
 'use client';
 
+import { ExperienceLensBar } from '@/components/experience/ExperienceLensBar';
 import { createClient } from '@/lib/supabase/client';
 import { isMissingArchivedAtColumn } from '@/lib/staffResourceArchiveCompat';
 import { parseStaffResourceFolderEmbed } from '@/lib/staffResourceFolderEmbed';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+const RESOURCE_FILE_LENS_KEY = 'campsite_resources_file_lens';
 
 export type StaffResourceFolderRow = {
   id: string;
@@ -54,10 +57,29 @@ export function ResourcesListClient({
   const [folderErr, setFolderErr] = useState<string | null>(null);
   /** Set false when remote DB has no `archived_at` column (migration not applied). */
   const [archiveColumnOk, setArchiveColumnOk] = useState(true);
+  const [fileLens, setFileLens] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     setQ(initialSearch);
   }, [initialSearch]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(RESOURCE_FILE_LENS_KEY);
+      if (raw === 'list' || raw === 'grid') setFileLens(raw);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const persistFileLens = (next: 'list' | 'grid') => {
+    setFileLens(next);
+    try {
+      window.localStorage.setItem(RESOURCE_FILE_LENS_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(q.trim()), q.trim().length >= 2 ? 300 : 0);
@@ -506,16 +528,28 @@ export function ResourcesListClient({
           Active library to search, or browse archived files below.
         </p>
       ) : (
-        <div className="relative mb-5">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9b9b9b]">
-            🔍
-          </span>
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search resources (type at least 2 characters)…"
-            className="h-11 w-full rounded-xl border border-black/10 bg-white py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b] shadow-[0_1px_0_rgba(0,0,0,0.02)] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9b9b9b]">
+              🔍
+            </span>
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search resources (type at least 2 characters)…"
+              className="h-11 w-full rounded-xl border border-black/10 bg-white py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b] shadow-[0_1px_0_rgba(0,0,0,0.02)] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+            />
+          </div>
+          <ExperienceLensBar
+            ariaLabel="Resource files layout"
+            value={fileLens}
+            onChange={persistFileLens}
+            choices={[
+              { value: 'list', label: 'List' },
+              { value: 'grid', label: 'Tiles' },
+            ]}
+            className="shrink-0"
           />
         </div>
       )}
@@ -536,7 +570,13 @@ export function ResourcesListClient({
                 )}
                 {section.title}
               </h2>
-              <ul className="divide-y divide-black/5 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+              <ul
+                className={
+                  fileLens === 'grid'
+                    ? 'grid grid-cols-1 gap-3 sm:grid-cols-2'
+                    : 'divide-y divide-black/5 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_0_rgba(0,0,0,0.02)]'
+                }
+              >
                 {section.items.length === 0 ? (
                   <li className="flex items-start gap-3 border border-dashed border-[#e8dcc8] bg-[#fffbf7] px-4 py-4 text-[13px] text-[#6b6b6b]">
                     <span className="mt-0.5 text-[#d4b896]">
@@ -561,6 +601,12 @@ export function ResourcesListClient({
                       </span>
                     </span>
                   </li>
+                ) : fileLens === 'grid' ? (
+                  section.items.map((r) => (
+                    <li key={r.id}>
+                      <ResourceGridCard r={r} />
+                    </li>
+                  ))
                 ) : (
                   section.items.map((r) => <ResourceRow key={r.id} r={r} />)
                 )}
@@ -585,6 +631,14 @@ export function ResourcesListClient({
             </>
           ) : null}
         </p>
+      ) : fileLens === 'grid' ? (
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map((r) => (
+            <li key={r.id}>
+              <ResourceGridCard r={r} />
+            </li>
+          ))}
+        </ul>
       ) : (
         <ul className="divide-y divide-black/5 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_0_rgba(0,0,0,0.02)]">
           {rows.map((r) => (
@@ -628,6 +682,25 @@ function FolderIconLarge({ className }: { className?: string }) {
     <svg className={`h-8 w-8 ${className ?? ''}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
     </svg>
+  );
+}
+
+function ResourceGridCard({ r }: { r: StaffResourceRow }) {
+  const folderName = r.staff_resource_folders?.name;
+  return (
+    <Link
+      href={`/resources/${r.id}`}
+      className="flex h-full min-h-[120px] flex-col rounded-2xl border border-black/10 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.02)] transition hover:-translate-y-px hover:border-black/20 hover:shadow-[0_10px_24px_rgba(0,0,0,0.06)]"
+    >
+      <p className="text-[14px] font-semibold leading-snug text-[#121212]">{r.title}</p>
+      {r.description ? (
+        <p className="mt-1 line-clamp-3 text-[12.5px] leading-relaxed text-[#6b6b6b]">{r.description}</p>
+      ) : null}
+      <p className="mt-auto pt-3 text-[11.5px] text-[#9b9b9b]">
+        {folderName ? `${folderName} · ` : null}
+        {formatBytes(r.byte_size)}
+      </p>
+    </Link>
   );
 }
 

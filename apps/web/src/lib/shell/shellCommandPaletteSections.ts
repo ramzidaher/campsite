@@ -121,6 +121,56 @@ export function buildShellCommandPaletteSections(opts: {
 
   sections.push({ id: 'navigate', heading: 'Navigate', items: main });
 
+  sections.push({
+    id: 'notifications',
+    heading: 'Notifications',
+    items: [
+      {
+        id: 'notif-leave',
+        label: 'Time off notifications',
+        href: '/notifications/leave',
+        keywords: ['leave', 'pto', 'absence', 'alerts'],
+      },
+      {
+        id: 'notif-calendar',
+        label: 'Calendar notifications',
+        href: '/notifications/calendar',
+        keywords: ['events', 'schedule', 'alerts'],
+      },
+      {
+        id: 'notif-recruitment',
+        label: 'Recruitment notifications',
+        href: '/notifications/recruitment',
+        keywords: ['hiring', 'jobs', 'alerts'],
+      },
+      {
+        id: 'notif-applications',
+        label: 'Application notifications',
+        href: '/notifications/applications',
+        keywords: ['candidates', 'applicants', 'alerts'],
+      },
+      {
+        id: 'notif-hr-metrics',
+        label: 'HR metric alerts',
+        href: '/notifications/hr-metrics',
+        keywords: ['metrics', 'people', 'alerts'],
+      },
+    ],
+  });
+
+  sections.push({
+    id: 'careers',
+    heading: 'Careers',
+    items: [
+      {
+        id: 'careers-open-roles',
+        label: 'Open roles (public careers)',
+        href: '/jobs',
+        keywords: ['careers', 'vacancies', 'external', 'public'],
+      },
+    ],
+  });
+
   if (opts.managerNavItems?.length) {
     sections.push({
       id: 'manager',
