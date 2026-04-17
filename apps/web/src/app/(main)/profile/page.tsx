@@ -59,6 +59,14 @@ function labelLocation(value: string | null) {
   return '—';
 }
 
+function profileTabClass(active: boolean) {
+  const base =
+    'inline-flex items-center rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-brand-primary,#0f6e56)] focus-visible:ring-offset-2';
+  return active
+    ? `${base} border-transparent bg-[var(--org-brand-primary,#0f6e56)] text-white`
+    : `${base} border-transparent text-[#6b6b6b] hover:border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_22%,#e8e8e8)] hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_6%,#faf9f6)]`;
+}
+
 export default async function MyProfilePage({
   searchParams,
 }: {
@@ -785,54 +793,29 @@ export default async function MyProfilePage({
   const personalUpcomingItems = [...upcomingHolidayItems, ...upcomingBookedLeave]
     .sort((a, b) => a.start_date.localeCompare(b.start_date))
     .slice(0, 3);
-  const accentColor = 'var(--org-brand-primary,#a65843)';
-  const accentSoftColor = 'color-mix(in oklab, var(--org-brand-primary,#a65843) 14%, white)';
-  const softBorderStyle = {
-    borderColor: '#e6dfda',
-    boxShadow: '0 10px 30px rgba(35, 31, 32, 0.06)',
-  } as const;
-  const softDividerStyle = {
-    borderColor: '#efe8e4',
-  } as const;
-
   const view = (
-    <div
-      className="min-h-[calc(100vh-60px)]"
-      style={{
-        background:
-          'linear-gradient(180deg, color-mix(in oklab, var(--color-background-tertiary) 92%, var(--org-brand-primary,#a65843) 8%) 0%, color-mix(in oklab, var(--color-background-tertiary) 96%, var(--org-brand-primary,#a65843) 4%) 100%)',
-      }}
-    >
+    <div className="min-h-[calc(100vh-60px)]">
       <ProfileUiModeSync initialMode={uiMode} />
-      <div className="mx-auto max-w-[980px] px-4 py-4">
-        <header className="mb-3 rounded-2xl border bg-white p-3.5" style={softBorderStyle}>
-          <div className="grid gap-3 xl:grid-cols-[1.5fr_1fr]">
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl text-[13px] font-bold"
-                style={{ background: accentSoftColor, color: accentColor, border: `1px solid color-mix(in oklab, ${accentColor} 20%, transparent)` }}
-              >
+      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
+        <header className="mb-7 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_28%,#e8e8e8)] bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,white)] text-[14px] font-semibold text-[var(--org-brand-primary,#0f6e56)]">
                 {initials || '—'}
               </div>
-              <div className="min-w-[220px] flex-1">
-                <h1 className="text-[24px] font-semibold leading-tight text-[var(--color-text-primary)]">{profileDisplayName}</h1>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-[var(--color-text-secondary)]">
-                  <span>{deptNames.length ? deptNames.join(', ') : '—'}</span>
-                  <span>•</span>
-                  <span>{emailDisplay}</span>
-                </div>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                    style={{ background: accentSoftColor, color: accentColor, border: `1px solid color-mix(in oklab, ${accentColor} 22%, transparent)` }}
-                  >
+              <div className="min-w-0 flex-1">
+                <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">{profileDisplayName}</h1>
+                <p className="mt-1 text-[13.5px] text-[#6b6b6b]">
+                  {deptNames.length ? deptNames.join(', ') : '—'} <span className="text-[#d4d4d4]">·</span> {emailDisplay}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="rounded-full border border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_30%,#e8e8e8)] bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_8%,#faf9f6)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
                     {roleLabel}
                   </span>
                   {(ownRoleLabels.length ? ownRoleLabels : ['Manager']).slice(0, 2).map((role) => (
                     <span
                       key={`hero-role-${role}`}
-                      className="rounded-full border px-2 py-0.5 text-[10px] text-[var(--color-text-primary)]"
-                      style={{ borderColor: 'var(--color-border-tertiary)', background: 'color-mix(in oklab, var(--color-background-primary) 88%, var(--color-background-secondary) 12%)' }}
+                      className="rounded-full border border-[#e8e8e8] bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
                     >
                       {role}
                     </span>
@@ -840,40 +823,57 @@ export default async function MyProfilePage({
                 </div>
               </div>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <div className="rounded-xl border bg-[#fcfbfa] p-2.5" style={{ borderColor: '#ddd4cf' }}>
-                <div className="mb-0.5 text-[18px] font-bold leading-none" style={{ color: accentColor }}>{leaveDaysLeft.toFixed(1)}</div>
-                <div className="text-[9px] text-[var(--color-text-secondary)]">Days left</div>
+            <div className="grid shrink-0 grid-cols-3 gap-2 sm:max-w-md sm:gap-3 lg:max-w-none">
+              <div className="rounded-xl border border-[#e8e8e8] bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Days left</p>
+                <p className="mt-1 text-[22px] font-bold leading-none tracking-tight text-[var(--org-brand-primary,#0f6e56)]">{leaveDaysLeft.toFixed(1)}</p>
               </div>
-              <div className="rounded-xl border bg-[#fcfbfa] p-2.5" style={{ borderColor: '#ddd4cf' }}>
-                <div className="mb-0.5 text-[18px] font-bold leading-none text-[var(--color-text-primary)]">{(directReportsRes.data ?? []).length}</div>
-                <div className="text-[9px] text-[var(--color-text-secondary)]">Direct reports</div>
+              <div className="rounded-xl border border-[#e8e8e8] bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Reports</p>
+                <p className="mt-1 text-[22px] font-bold leading-none tracking-tight text-[#121212]">{(directReportsRes.data ?? []).length}</p>
               </div>
-              <div className="rounded-xl border bg-[#fcfbfa] p-2.5" style={{ borderColor: '#ddd4cf' }}>
-                <div className="mb-0.5 text-[18px] font-bold leading-none text-[var(--color-text-primary)]">{tenureLabel}</div>
-                <div className="text-[9px] text-[var(--color-text-secondary)]">Tenure</div>
+              <div className="rounded-xl border border-[#e8e8e8] bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Tenure</p>
+                <p className="mt-1 text-[15px] font-bold leading-tight text-[#121212]">{tenureLabel}</p>
               </div>
             </div>
           </div>
         </header>
 
-        <nav className="mb-3 flex flex-wrap gap-1.5" aria-label="Profile sections">
-          <Link className={tab === 'personal' ? 'rounded-full border px-2 py-1 text-[10px] font-semibold' : 'rounded-full border border-transparent px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:bg-white'} style={tab === 'personal' ? { background: '#ffffff', borderColor: '#eadfd9', color: accentColor, boxShadow: '0 10px 30px rgba(35, 31, 32, 0.06)' } : undefined} href="?tab=personal">Personal</Link>
-          <Link className={tab === 'job' ? 'rounded-full border px-2 py-1 text-[10px] font-semibold' : 'rounded-full border border-transparent px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:bg-white'} style={tab === 'job' ? { background: '#ffffff', borderColor: '#eadfd9', color: accentColor, boxShadow: '0 10px 30px rgba(35, 31, 32, 0.06)' } : undefined} href="?tab=job">Job</Link>
-          <Link className={tab === 'time-off' ? 'rounded-full border px-2 py-1 text-[10px] font-semibold' : 'rounded-full border border-transparent px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:bg-white'} style={tab === 'time-off' ? { background: '#ffffff', borderColor: '#eadfd9', color: accentColor, boxShadow: '0 10px 30px rgba(35, 31, 32, 0.06)' } : undefined} href="?tab=time-off">Time off</Link>
-          <Link className={tab === 'reporting' ? 'rounded-full border px-2 py-1 text-[10px] font-semibold' : 'rounded-full border border-transparent px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:bg-white'} style={tab === 'reporting' ? { background: '#ffffff', borderColor: '#eadfd9', color: accentColor, boxShadow: '0 10px 30px rgba(35, 31, 32, 0.06)' } : undefined} href="?tab=reporting">Reporting line</Link>
-          <Link className={tab === 'performance' ? 'rounded-full border px-2 py-1 text-[10px] font-semibold' : 'rounded-full border border-transparent px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:bg-white'} style={tab === 'performance' ? { background: '#ffffff', borderColor: '#eadfd9', color: accentColor, boxShadow: '0 10px 30px rgba(35, 31, 32, 0.06)' } : undefined} href="?tab=performance">Performance</Link>
-          <Link className={tab === 'onboarding' ? 'rounded-full border px-2 py-1 text-[10px] font-semibold' : 'rounded-full border border-transparent px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:bg-white'} style={tab === 'onboarding' ? { background: '#ffffff', borderColor: '#eadfd9', color: accentColor, boxShadow: '0 10px 30px rgba(35, 31, 32, 0.06)' } : undefined} href="?tab=onboarding">Onboarding</Link>
-          <Link className={tab === 'other' ? 'rounded-full border px-2 py-1 text-[10px] font-semibold' : 'rounded-full border border-transparent px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:bg-white'} style={tab === 'other' ? { background: '#ffffff', borderColor: '#eadfd9', color: accentColor, boxShadow: '0 10px 30px rgba(35, 31, 32, 0.06)' } : undefined} href="?tab=other">Training &amp; other</Link>
+        <nav className="mb-7 flex flex-wrap gap-2" aria-label="Profile sections">
+          <Link className={profileTabClass(tab === 'personal')} href="?tab=personal">
+            Personal
+          </Link>
+          <Link className={profileTabClass(tab === 'job')} href="?tab=job">
+            Job
+          </Link>
+          <Link className={profileTabClass(tab === 'time-off')} href="?tab=time-off">
+            Time off
+          </Link>
+          <Link className={profileTabClass(tab === 'reporting')} href="?tab=reporting">
+            Reporting line
+          </Link>
+          <Link className={profileTabClass(tab === 'performance')} href="?tab=performance">
+            Performance
+          </Link>
+          <Link className={profileTabClass(tab === 'onboarding')} href="?tab=onboarding">
+            Onboarding
+          </Link>
+          <Link className={profileTabClass(tab === 'other')} href="?tab=other">
+            Training &amp; other
+          </Link>
         </nav>
 
-        <div className="space-y-3">
+        <div className="space-y-6">
           {tab === 'personal' && (
-            <section id="personal" className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_360px]">
-              <div className="space-y-4">
-                <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                  <div className="flex items-center justify-between border-b px-4 py-3" style={softDividerStyle}>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Personal details</span>
+            <section
+              id="personal"
+              className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8"
+            >
+              <div className="min-w-0 space-y-4 lg:col-span-8">
+                <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                  <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
+                    <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Personal details</span>
                     <Link href="/settings#profile" className="text-[12px] text-[var(--org-brand-primary,#0f6e56)] hover:underline">
                       Request change
                     </Link>
@@ -881,24 +881,24 @@ export default async function MyProfilePage({
                   <div className="p-4">
                     <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
                       <div>
-                        <dt className="text-[11px] uppercase tracking-[0.04em] text-[var(--color-text-tertiary)]">Full name</dt>
-                        <dd className="text-[var(--color-text-primary)]">{profileDisplayName}</dd>
+                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Full name</dt>
+                        <dd className="text-[#121212]">{profileDisplayName}</dd>
                       </div>
                       <div>
-                        <dt className="text-[11px] uppercase tracking-[0.04em] text-[var(--color-text-tertiary)]">Work email</dt>
-                        <dd className="text-[var(--color-text-primary)]">{emailDisplay}</dd>
+                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Work email</dt>
+                        <dd className="text-[#121212]">{emailDisplay}</dd>
                       </div>
                       <div>
-                        <dt className="text-[11px] uppercase tracking-[0.04em] text-[var(--color-text-tertiary)]">Department</dt>
-                        <dd className="text-[var(--color-text-primary)]">{deptNames.length ? deptNames.join(', ') : '—'}</dd>
+                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Department</dt>
+                        <dd className="text-[#121212]">{deptNames.length ? deptNames.join(', ') : '—'}</dd>
                       </div>
                       <div>
-                        <dt className="text-[11px] uppercase tracking-[0.04em] text-[var(--color-text-tertiary)]">Phone</dt>
-                        <dd className="text-[var(--color-text-tertiary)] italic">Not provided</dd>
+                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Phone</dt>
+                        <dd className="text-[#6b6b6b] italic">Not provided</dd>
                       </div>
                       <div className="sm:col-span-2">
-                        <dt className="text-[11px] uppercase tracking-[0.04em] text-[var(--color-text-tertiary)]">Emergency contact</dt>
-                        <dd className="text-[var(--color-text-tertiary)] italic">
+                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Emergency contact</dt>
+                        <dd className="text-[#6b6b6b] italic">
                           Not stored in CampSite yet. Ask your HR team if they keep this elsewhere.
                         </dd>
                       </div>
@@ -906,9 +906,9 @@ export default async function MyProfilePage({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                  <div className="flex items-center justify-between border-b px-4 py-3" style={softDividerStyle}>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Leave balance</span>
+                <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                  <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
+                    <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Leave balance</span>
                     <Link href="/leave" className="text-[12px] text-[var(--org-brand-primary,#0f6e56)] hover:underline">
                       Book time off
                     </Link>
@@ -916,10 +916,10 @@ export default async function MyProfilePage({
                   <div className="space-y-3 p-4">
                     <div>
                       <div className="mb-1 flex items-center justify-between text-[12px]">
-                        <span className="text-[var(--color-text-secondary)]">Annual leave</span>
-                        <strong className="font-medium text-[var(--color-text-primary)]">{leaveDaysLeft.toFixed(1)} days</strong>
+                        <span className="text-[#6b6b6b]">Annual leave</span>
+                        <strong className="font-medium text-[#121212]">{leaveDaysLeft.toFixed(1)} days</strong>
                       </div>
-                      <div className="h-[5px] rounded bg-[var(--color-background-secondary)]">
+                      <div className="h-[5px] rounded bg-[#f0f0f0]">
                         <div
                           className="h-[5px] rounded bg-[var(--org-brand-primary,#0f6e56)]"
                           style={{
@@ -936,10 +936,10 @@ export default async function MyProfilePage({
                     </div>
                     <div>
                       <div className="mb-1 flex items-center justify-between text-[12px]">
-                        <span className="text-[var(--color-text-secondary)]">Annual used</span>
-                        <strong className="font-medium text-[var(--color-text-primary)]">{annualUsed} days</strong>
+                        <span className="text-[#6b6b6b]">Annual used</span>
+                        <strong className="font-medium text-[#121212]">{annualUsed} days</strong>
                       </div>
-                      <div className="h-[5px] rounded bg-[var(--color-background-secondary)]">
+                      <div className="h-[5px] rounded bg-[#f0f0f0]">
                         <div
                           className="h-[5px] rounded bg-[var(--org-brand-primary,#0f6e56)]"
                           style={{
@@ -956,36 +956,36 @@ export default async function MyProfilePage({
                     </div>
                     <div>
                       <div className="mb-1 flex items-center justify-between text-[12px]">
-                        <span className="text-[var(--color-text-secondary)]">TOIL balance</span>
-                        <strong className="font-medium text-[var(--color-text-primary)]">
+                        <span className="text-[#6b6b6b]">TOIL balance</span>
+                        <strong className="font-medium text-[#121212]">
                           {Number(allowanceRow.data?.toil_balance_days ?? 0)} days
                         </strong>
                       </div>
-                      <div className="h-[5px] rounded bg-[var(--color-background-secondary)]">
+                      <div className="h-[5px] rounded bg-[#f0f0f0]">
                         <div className="h-[5px] rounded bg-[var(--org-brand-primary,#0f6e56)]" style={{ width: '0%' }} />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                  <div className="border-b px-4 py-3" style={softDividerStyle}>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Upcoming</span>
+                <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                  <div className="border-b border-[#f0f0f0] px-4 py-3">
+                    <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Upcoming</span>
                   </div>
                   <div className="p-4">
                     {personalUpcomingItems.length === 0 ? (
-                      <p className="text-[12px] text-[var(--color-text-secondary)]">No upcoming holidays or booked leave.</p>
+                      <p className="text-[12px] text-[#6b6b6b]">No upcoming holidays or booked leave.</p>
                     ) : (
                       <ul className="space-y-2">
                         {personalUpcomingItems.map((item, index) => (
-                          <li key={item.id} className={index > 0 ? 'border-t pt-2' : ''} style={index > 0 ? softDividerStyle : undefined}>
+                          <li key={item.id} className={index > 0 ? 'border-t border-[#f0f0f0] pt-2' : ''}>
                             <div className="flex items-start gap-2">
                               <span className="mt-[5px] inline-block h-[7px] w-[7px] rounded-full bg-[var(--org-brand-primary,#0f6e56)]" />
                               <div className="flex-1">
-                                <p className="text-[13px] font-medium text-[var(--color-text-primary)]">{item.title}</p>
-                                <p className="text-[11px] text-[var(--color-text-secondary)]">{item.subtitle}</p>
+                                <p className="text-[13px] font-medium text-[#121212]">{item.title}</p>
+                                <p className="text-[11px] text-[#6b6b6b]">{item.subtitle}</p>
                               </div>
-                              <p className="whitespace-nowrap text-[11px] text-[var(--color-text-tertiary)]">
+                              <p className="whitespace-nowrap text-[11px] text-[#9b9b9b]">
                                 {toShortDate(item.start_date)}
                                 {item.end_date !== item.start_date ? ` - ${toShortDate(item.end_date)}` : ''}
                               </p>
@@ -997,24 +997,24 @@ export default async function MyProfilePage({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                  <div className="border-b px-4 py-3" style={softDividerStyle}>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Quick actions</span>
+                <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                  <div className="border-b border-[#f0f0f0] px-4 py-3">
+                    <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Quick actions</span>
                   </div>
                   <div className="grid gap-3 p-4 sm:grid-cols-2">
-                    <Link href="/leave" className="flex items-center justify-between rounded-2xl border border-[#e6dfda] bg-white px-4 py-3 text-[12.5px] text-[var(--color-text-primary)] transition hover:bg-[#faf8f7]">
+                    <Link href="/leave" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
                       <span>Book annual leave</span>
                       <span aria-hidden>→</span>
                     </Link>
-                    <Link href="/rota" className="flex items-center justify-between rounded-2xl border border-[#e6dfda] bg-white px-4 py-3 text-[12.5px] text-[var(--color-text-primary)] transition hover:bg-[#faf8f7]">
+                    <Link href="/rota" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
                       <span>View rota</span>
                       <span aria-hidden>→</span>
                     </Link>
-                    <Link href="/performance" className="flex items-center justify-between rounded-2xl border border-[#e6dfda] bg-white px-4 py-3 text-[12.5px] text-[var(--color-text-primary)] transition hover:bg-[#faf8f7]">
+                    <Link href="/performance" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
                       <span>Start performance review</span>
                       <span aria-hidden>→</span>
                     </Link>
-                    <Link href="?tab=other" className="flex items-center justify-between rounded-2xl border border-[#e6dfda] bg-white px-4 py-3 text-[12.5px] text-[var(--color-text-primary)] transition hover:bg-[#faf8f7]">
+                    <Link href="?tab=other" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
                       <span>View payslips</span>
                       <span aria-hidden>→</span>
                     </Link>
@@ -1022,27 +1022,27 @@ export default async function MyProfilePage({
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                  <div className="border-b px-4 py-3" style={softDividerStyle}>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Reporting to</span>
+              <div className="min-w-0 space-y-4 lg:col-span-4">
+                <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                  <div className="border-b border-[#f0f0f0] px-4 py-3">
+                    <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Reporting to</span>
                   </div>
                   <div className="px-4 py-3">
-                    <p className="text-[13px] font-medium text-[var(--color-text-primary)]">{managerName}</p>
-                    <p className="text-[11px] text-[var(--color-text-secondary)]">Current line manager</p>
+                    <p className="text-[13px] font-medium text-[#121212]">{managerName}</p>
+                    <p className="text-[11px] text-[#6b6b6b]">Current line manager</p>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                  <div className="flex items-center justify-between border-b px-4 py-3" style={softDividerStyle}>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Direct reports</span>
+                <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                  <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
+                    <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Direct reports</span>
                     <Link href="?tab=reporting" className="text-[12px] text-[var(--org-brand-primary,#0f6e56)] hover:underline">
                       View all {(directReportsRes.data ?? []).length}
                     </Link>
                   </div>
                   <div className="p-4">
                     {(directReportsRes.data ?? []).length === 0 ? (
-                      <p className="text-[12px] text-[var(--color-text-secondary)]">No direct reports.</p>
+                      <p className="text-[12px] text-[#6b6b6b]">No direct reports.</p>
                     ) : (
                       <ul className="space-y-2">
                         {(directReportsRes.data ?? []).slice(0, 5).map((r) => {
@@ -1055,12 +1055,12 @@ export default async function MyProfilePage({
                             .join('');
                           return (
                             <li key={r.id as string} className="flex items-center gap-2">
-                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-background-secondary)] text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,#f0f0f0)] text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
                                 {personInitials || '—'}
                               </span>
                               <div>
-                                <p className="text-[13px] font-medium text-[var(--color-text-primary)]">{display}</p>
-                                <p className="text-[11px] text-[var(--color-text-secondary)]">{r.email ? String(r.email) : 'No email'}</p>
+                                <p className="text-[13px] font-medium text-[#121212]">{display}</p>
+                                <p className="text-[11px] text-[#6b6b6b]">{r.email ? String(r.email) : 'No email'}</p>
                               </div>
                             </li>
                           );
@@ -1070,25 +1070,21 @@ export default async function MyProfilePage({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                  <div className="border-b px-4 py-3" style={softDividerStyle}>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Access &amp; roles</span>
+                <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                  <div className="border-b border-[#f0f0f0] px-4 py-3">
+                    <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Access &amp; roles</span>
                   </div>
                   <div className="flex flex-wrap gap-2 px-4 py-3">
                     {(ownRoleLabels.length ? ownRoleLabels : [roleLabel]).map((role) => (
                       <span
                         key={role}
-                        className="rounded-full bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,var(--color-background-primary))] px-3 py-1 text-[12px] text-[var(--color-text-secondary)]"
-                        style={softBorderStyle}
+                        className="rounded-full border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1 text-[12px] text-[#6b6b6b]"
                       >
                         {role}
                       </span>
                     ))}
                     {(directReportsRes.data ?? []).length > 0 && !ownRoleLabels.includes('Manager') ? (
-                      <span
-                        className="rounded-full bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,var(--color-background-primary))] px-3 py-1 text-[12px] text-[var(--color-text-secondary)]"
-                        style={softBorderStyle}
-                      >
+                      <span className="rounded-full border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1 text-[12px] text-[#6b6b6b]">
                         Manager
                       </span>
                     ) : null}
@@ -1099,11 +1095,7 @@ export default async function MyProfilePage({
           )}
 
           {tab === 'job' && (
-            <section
-              id="job"
-              className="rounded-2xl border bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-              style={softBorderStyle}
-            >
+            <section id="job" className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white p-6">
               {probationItems.length > 0 ? (
                 <div className="mb-4 space-y-2">
                   {probationItems.map((p) => (
@@ -1132,54 +1124,54 @@ export default async function MyProfilePage({
                 </div>
               ) : null}
               {!fileRow ? (
-                <p className="text-[13px] text-[var(--color-text-secondary)]">
+                <p className="text-[13px] text-[#6b6b6b]">
                   No HR job record yet. Your HR administrator can add this under Employee records.
                 </p>
               ) : (
                 <dl className="grid gap-3 sm:grid-cols-2 text-[13px]">
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Job title</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String(fileRow.job_title ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Job title</dt>
+                    <dd className="text-[#121212]">{String(fileRow.job_title ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Grade</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String(fileRow.grade_level ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Grade</dt>
+                    <dd className="text-[#121212]">{String(fileRow.grade_level ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Pay grade</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String((fileRow as { pay_grade?: string }).pay_grade ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pay grade</dt>
+                    <dd className="text-[#121212]">{String((fileRow as { pay_grade?: string }).pay_grade ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Position type</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String((fileRow as { position_type?: string }).position_type ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Position type</dt>
+                    <dd className="text-[#121212]">{String((fileRow as { position_type?: string }).position_type ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Employment basis</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String((fileRow as { employment_basis?: string }).employment_basis ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Employment basis</dt>
+                    <dd className="text-[#121212]">{String((fileRow as { employment_basis?: string }).employment_basis ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Contract</dt>
-                    <dd className="text-[var(--color-text-primary)]">{labelContract((fileRow.contract_type as string | null) ?? null)}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Contract</dt>
+                    <dd className="text-[#121212]">{labelContract((fileRow.contract_type as string | null) ?? null)}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">FTE</dt>
-                    <dd className="text-[var(--color-text-primary)]">{fileRow.fte ? `${Math.round(Number(fileRow.fte) * 100)}%` : '—'}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">FTE</dt>
+                    <dd className="text-[#121212]">{fileRow.fte ? `${Math.round(Number(fileRow.fte) * 100)}%` : '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Weekly hours</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String((fileRow as { weekly_hours?: number }).weekly_hours ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Weekly hours</dt>
+                    <dd className="text-[#121212]">{String((fileRow as { weekly_hours?: number }).weekly_hours ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Work location</dt>
-                    <dd className="text-[var(--color-text-primary)]">{labelLocation((fileRow.work_location as string | null) ?? null)}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Work location</dt>
+                    <dd className="text-[#121212]">{labelLocation((fileRow.work_location as string | null) ?? null)}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Employment start</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String(fileRow.employment_start_date ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Employment start</dt>
+                    <dd className="text-[#121212]">{String(fileRow.employment_start_date ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Length of service</dt>
-                    <dd className="text-[var(--color-text-primary)]">
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Length of service</dt>
+                    <dd className="text-[#121212]">
                       {typeof (fileRow as { length_of_service_years?: number }).length_of_service_years === 'number' &&
                       typeof (fileRow as { length_of_service_months?: number }).length_of_service_months === 'number'
                         ? `${(fileRow as { length_of_service_years: number }).length_of_service_years}y ${(fileRow as { length_of_service_months: number }).length_of_service_months}m`
@@ -1187,28 +1179,28 @@ export default async function MyProfilePage({
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Dept. start</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String((fileRow as { department_start_date?: string }).department_start_date ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Dept. start</dt>
+                    <dd className="text-[#121212]">{String((fileRow as { department_start_date?: string }).department_start_date ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Continuous employment</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String((fileRow as { continuous_employment_start_date?: string }).continuous_employment_start_date ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Continuous employment</dt>
+                    <dd className="text-[#121212]">{String((fileRow as { continuous_employment_start_date?: string }).continuous_employment_start_date ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Probation end</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String(fileRow.probation_end_date ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Probation end</dt>
+                    <dd className="text-[#121212]">{String(fileRow.probation_end_date ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Notice period (weeks)</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String(fileRow.notice_period_weeks ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Notice period (weeks)</dt>
+                    <dd className="text-[#121212]">{String(fileRow.notice_period_weeks ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Salary band</dt>
-                    <dd className="text-[var(--color-text-primary)]">{String(fileRow.salary_band ?? '—')}</dd>
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Salary band</dt>
+                    <dd className="text-[#121212]">{String(fileRow.salary_band ?? '—')}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--color-text-tertiary)]">Budget</dt>
-                    <dd className="text-[var(--color-text-primary)]">
+                    <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Budget</dt>
+                    <dd className="text-[#121212]">
                       {(fileRow as { budget_amount?: number }).budget_amount != null
                         ? `${(fileRow as { budget_amount: number }).budget_amount} ${String((fileRow as { budget_currency?: string }).budget_currency ?? '').trim()}`.trim()
                         : '—'}
@@ -1220,24 +1212,27 @@ export default async function MyProfilePage({
           )}
 
           {tab === 'time-off' && (
-            <section id="time-off" className="grid gap-4 lg:grid-cols-3">
-              <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                <div className="flex items-center justify-between border-b px-4 py-3" style={softDividerStyle}>
-                  <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Leave balance</span>
+            <section
+              id="time-off"
+              className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8"
+            >
+              <div className="min-w-0 lg:col-span-4 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
+                  <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Leave balance</span>
                   <Link href="/leave" className="text-[12px] text-[var(--org-brand-primary,#0f6e56)] hover:underline">
                     Book time off
                   </Link>
                 </div>
                 <div className="space-y-3 p-4">
-                  <p className="text-[12px] text-[var(--color-text-secondary)]">
+                  <p className="text-[12px] text-[#6b6b6b]">
                     Leave year {profileLeaveYearKey} · {formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}
                   </p>
                   <div>
                     <div className="mb-1 flex items-center justify-between text-[12px]">
-                      <span className="text-[var(--color-text-secondary)]">Annual leave remaining</span>
-                      <strong className="font-medium text-[var(--color-text-primary)]">{leaveDaysLeft.toFixed(1)} days</strong>
+                      <span className="text-[#6b6b6b]">Annual leave remaining</span>
+                      <strong className="font-medium text-[#121212]">{leaveDaysLeft.toFixed(1)} days</strong>
                     </div>
-                    <div className="h-[5px] rounded bg-[var(--color-background-secondary)]">
+                    <div className="h-[5px] rounded bg-[#f0f0f0]">
                       <div
                         className="h-[5px] rounded bg-[var(--org-brand-primary,#0f6e56)]"
                         style={{
@@ -1254,10 +1249,10 @@ export default async function MyProfilePage({
                   </div>
                   <div>
                     <div className="mb-1 flex items-center justify-between text-[12px]">
-                      <span className="text-[var(--color-text-secondary)]">Annual leave used</span>
-                      <strong className="font-medium text-[var(--color-text-primary)]">{annualUsed} days</strong>
+                      <span className="text-[#6b6b6b]">Annual leave used</span>
+                      <strong className="font-medium text-[#121212]">{annualUsed} days</strong>
                     </div>
-                    <div className="h-[5px] rounded bg-[var(--color-background-secondary)]">
+                    <div className="h-[5px] rounded bg-[#f0f0f0]">
                       <div
                         className="h-[5px] rounded bg-[var(--org-brand-primary,#0f6e56)]"
                         style={{
@@ -1274,37 +1269,37 @@ export default async function MyProfilePage({
                   </div>
                   <div>
                     <div className="mb-1 flex items-center justify-between text-[12px]">
-                      <span className="text-[var(--color-text-secondary)]">TOIL balance</span>
-                      <strong className="font-medium text-[var(--color-text-primary)]">
+                      <span className="text-[#6b6b6b]">TOIL balance</span>
+                      <strong className="font-medium text-[#121212]">
                         {Number(allowanceRow.data?.toil_balance_days ?? 0)} days
                       </strong>
                     </div>
-                    <div className="h-[5px] rounded bg-[var(--color-background-secondary)]">
+                    <div className="h-[5px] rounded bg-[#f0f0f0]">
                       <div className="h-[5px] rounded bg-[var(--org-brand-primary,#0f6e56)]" style={{ width: '0%' }} />
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                <div className="flex items-center justify-between border-b px-4 py-3" style={softDividerStyle}>
-                  <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Upcoming holidays</span>
+              <div className="min-w-0 lg:col-span-4 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
+                  <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Upcoming holidays</span>
                 </div>
                 <div className="p-4">
                   {upcomingHolidayPeriods.length === 0 ? (
-                    <p className="text-[12px] text-[var(--color-text-secondary)]">No upcoming holiday periods configured.</p>
+                    <p className="text-[12px] text-[#6b6b6b]">No upcoming holiday periods configured.</p>
                   ) : (
                     <ul className="space-y-2">
                       {upcomingHolidayPeriods.slice(0, 5).map((h, index) => (
-                        <li key={h.id} className={index > 0 ? 'border-t pt-2' : ''} style={index > 0 ? softDividerStyle : undefined}>
+                        <li key={h.id} className={index > 0 ? 'border-t border-[#f0f0f0] pt-2' : ''}>
                           <div className="flex items-start gap-2">
                             <span className="mt-[5px] inline-block h-[7px] w-[7px] rounded-full bg-[var(--org-brand-primary,#0f6e56)]" />
                             <div className="flex-1">
-                              <p className="text-[13px] font-medium text-[var(--color-text-primary)]">{h.name}</p>
-                              <p className="text-[11px] text-[var(--color-text-secondary)]">
+                              <p className="text-[13px] font-medium text-[#121212]">{h.name}</p>
+                              <p className="text-[11px] text-[#6b6b6b]">
                                 {holidayKindLabel[h.holiday_kind]}
                               </p>
                             </div>
-                            <p className="whitespace-nowrap text-[11px] text-[var(--color-text-tertiary)]">
+                            <p className="whitespace-nowrap text-[11px] text-[#9b9b9b]">
                               {toShortDate(h.start_date)}
                               {h.end_date !== h.start_date ? ` - ${toShortDate(h.end_date)}` : ''}
                             </p>
@@ -1315,16 +1310,16 @@ export default async function MyProfilePage({
                   )}
                 </div>
               </div>
-              <div className="rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]" style={softBorderStyle}>
-                <div className="flex items-center justify-between border-b px-4 py-3" style={softDividerStyle}>
-                  <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">Direct reports</span>
+              <div className="min-w-0 lg:col-span-4 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+                <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
+                  <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Direct reports</span>
                   <Link href="?tab=reporting" className="text-[12px] text-[var(--org-brand-primary,#0f6e56)] hover:underline">
                     View all {(directReportsRes.data ?? []).length}
                   </Link>
                 </div>
                 <div className="p-4">
                   {(directReportsRes.data ?? []).length === 0 ? (
-                    <p className="text-[12px] text-[var(--color-text-secondary)]">No direct reports.</p>
+                    <p className="text-[12px] text-[#6b6b6b]">No direct reports.</p>
                   ) : (
                     <ul className="space-y-2">
                       {(directReportsRes.data ?? []).slice(0, 3).map((r) => {
@@ -1337,18 +1332,18 @@ export default async function MyProfilePage({
                           .join('');
                         return (
                           <li key={r.id as string} className="flex items-center gap-2">
-                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-background-secondary)] text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,#f0f0f0)] text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
                               {personInitials || '—'}
                             </span>
                             <div>
-                              <p className="text-[13px] font-medium text-[var(--color-text-primary)]">{display}</p>
-                              <p className="text-[11px] text-[var(--color-text-secondary)]">{r.email ? String(r.email) : 'No email'}</p>
+                              <p className="text-[13px] font-medium text-[#121212]">{display}</p>
+                              <p className="text-[11px] text-[#6b6b6b]">{r.email ? String(r.email) : 'No email'}</p>
                             </div>
                           </li>
                         );
                       })}
                       {(directReportsRes.data ?? []).length > 3 ? (
-                        <li className="pt-1 text-[12px] text-[var(--color-text-tertiary)]">
+                        <li className="pt-1 text-[12px] text-[#9b9b9b]">
                           + {(directReportsRes.data ?? []).length - 3} more
                         </li>
                       ) : null}
@@ -1360,26 +1355,23 @@ export default async function MyProfilePage({
           )}
 
           {tab === 'reporting' && <section id="reporting" className="pt-2">
-            <div
-              className="rounded-2xl border bg-white p-6 text-[13px] shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-              style={softBorderStyle}
-            >
+            <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white p-6 text-[13px]">
               <div>
-                <p className="text-[var(--color-text-tertiary)]">Manager</p>
-                <p className="mt-1 text-[var(--color-text-primary)]">{managerName}</p>
+                <p className="text-[#9b9b9b]">Manager</p>
+                <p className="mt-1 text-[#121212]">{managerName}</p>
               </div>
               <div className="mt-4">
-                <p className="text-[var(--color-text-tertiary)]">Direct reports</p>
+                <p className="text-[#9b9b9b]">Direct reports</p>
                 <div className="mt-2">
                   {(directReportsRes.data ?? []).length === 0 ? (
-                    <span className="text-[var(--color-text-secondary)]">None</span>
+                    <span className="text-[#6b6b6b]">None</span>
                   ) : (
                     <ul className="space-y-1">
                       {(directReportsRes.data ?? []).map((r) => (
-                        <li key={r.id as string} className="text-[var(--color-text-primary)]">
+                        <li key={r.id as string} className="text-[#121212]">
                           {getDisplayName(r.full_name as string, (r.preferred_name as string | null) ?? null)}
                           {r.email ? (
-                            <span className="text-[var(--color-text-tertiary)]"> · {String(r.email)}</span>
+                            <span className="text-[#9b9b9b]"> · {String(r.email)}</span>
                           ) : null}
                         </li>
                       ))}
@@ -1397,10 +1389,7 @@ export default async function MyProfilePage({
           </section>}
 
           {tab === 'performance' && <section id="performance" className="pt-2">
-            <div
-              className="rounded-2xl border bg-white p-6 text-[13px] text-[var(--color-text-primary)] shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-              style={softBorderStyle}
-            >
+            <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white p-6 text-[13px] text-[#121212]">
               {canPerf ? (
                 <p>
                   <Link href="/performance" className="font-medium text-[var(--org-brand-primary,#0f6e56)] underline underline-offset-2">
@@ -1409,16 +1398,13 @@ export default async function MyProfilePage({
                   for your goals and review cycles.
                 </p>
               ) : (
-                <p className="text-[var(--color-text-secondary)]">Performance reviews are not enabled for your account.</p>
+                <p className="text-[#6b6b6b]">Performance reviews are not enabled for your account.</p>
               )}
             </div>
           </section>}
 
           {tab === 'onboarding' && <section id="onboarding" className="pt-2">
-            <div
-              className="rounded-2xl border bg-white p-6 text-[13px] shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-              style={softBorderStyle}
-            >
+            <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white p-6 text-[13px]">
               {onboardingActive ? (
                 <p>
                   You have an active onboarding run.{' '}
@@ -1427,22 +1413,19 @@ export default async function MyProfilePage({
                   </Link>
                 </p>
               ) : (
-                <p className="text-[var(--color-text-secondary)]">No active onboarding checklist.</p>
+                <p className="text-[#6b6b6b]">No active onboarding checklist.</p>
               )}
             </div>
           </section>}
 
           {tab === 'other' && <section id="other" className="pt-2 pb-4">
-            <div
-              className="space-y-3 rounded-2xl border bg-white p-6 text-[13px] shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-              style={softBorderStyle}
-            >
-              <p className="text-[var(--color-text-secondary)]">
-                <strong className="text-[var(--color-text-primary)]">Training &amp; certifications:</strong> use the
+            <div className="space-y-3 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white p-6 text-[13px]">
+              <p className="text-[#6b6b6b]">
+                <strong className="text-[#121212]">Training &amp; certifications:</strong> use the
                 dedicated training records module below to track completions, providers, and expiry dates.
               </p>
-              <p className="text-[var(--color-text-secondary)]">
-                <strong className="text-[var(--color-text-primary)]">Documents:</strong> your employee photo and ID records are available below.
+              <p className="text-[#6b6b6b]">
+                <strong className="text-[#121212]">Documents:</strong> your employee photo and ID records are available below.
                 ID number display is masked for privacy.
               </p>
               {(canRecordExportOwn && (canRecordExportCsv || canRecordExportPdf)) ? (
@@ -1450,8 +1433,7 @@ export default async function MyProfilePage({
                   {canRecordExportCsv ? (
                     <a
                       href="/api/hr/records/export?format=csv"
-                      className="rounded-lg border bg-[var(--color-background-primary)] px-3 py-1.5 text-[12.5px] text-[var(--color-text-primary)] hover:bg-[var(--color-background-secondary)]"
-                      style={softBorderStyle}
+                      className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
                     >
                       Export my record (CSV)
                     </a>
@@ -1459,8 +1441,7 @@ export default async function MyProfilePage({
                   {canRecordExportPdf ? (
                     <a
                       href="/api/hr/records/export?format=pdf"
-                      className="rounded-lg border bg-[var(--color-background-primary)] px-3 py-1.5 text-[12.5px] text-[var(--color-text-primary)] hover:bg-[var(--color-background-secondary)]"
-                      style={softBorderStyle}
+                      className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
                     >
                       Export my record (PDF)
                     </a>
@@ -1730,8 +1711,8 @@ export default async function MyProfilePage({
               ) : null}
               {canPrivacyErasureCreate ? <PrivacySelfRequestClient userId={user.id} /> : null}
               <div>
-                <p className="text-[var(--color-text-tertiary)]">HR notes</p>
-                <p className="mt-1 text-[var(--color-text-primary)]">
+                <p className="text-[#9b9b9b]">HR notes</p>
+                <p className="mt-1 text-[#121212]">
                   {fileRow && fileRow.notes != null && String(fileRow.notes).trim() !== ''
                     ? String(fileRow.notes)
                     : '—'}
