@@ -15,6 +15,7 @@ type PublicJobRow = {
   allow_cv: boolean;
   allow_loom: boolean;
   allow_staffsavvy: boolean;
+  allow_application_questions: boolean;
 };
 
 export default async function ApplyJobPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -61,9 +62,15 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
   const orgName = (orgBrand?.name as string | undefined)?.trim() || job.org_name;
   const orgLogoUrl = (orgBrand as { logo_url?: string | null } | null)?.logo_url ?? null;
 
-  const { data: eqJson } = await supabase.rpc('public_org_eq_monitoring_codes', {
-    p_org_slug: orgSlug,
-  });
+  const [{ data: eqJson }, { data: screeningRows, error: screeningErr }] = await Promise.all([
+    supabase.rpc('public_org_eq_monitoring_codes', {
+      p_org_slug: orgSlug,
+    }),
+    supabase.rpc('public_job_listing_screening_questions', {
+      p_org_slug: orgSlug,
+      p_job_slug: jobSlug,
+    }),
+  ]);
   let eqCategories: { code: string; label: string }[] = [];
   if (Array.isArray(eqJson)) {
     eqCategories = eqJson
@@ -125,6 +132,20 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
           defaultEmail={user?.email ?? null}
           isAuthenticated={Boolean(user)}
           eqCategories={eqCategories}
+          screeningQuestions={
+            screeningErr || !Array.isArray(screeningRows)
+              ? []
+              : (screeningRows as {
+                  id: string;
+                  question_type: string;
+                  prompt: string;
+                  help_text: string | null;
+                  required: boolean;
+                  options: unknown;
+                  max_length: number | null;
+                  sort_order: number;
+                }[])
+          }
         />
       </div>
     </div>

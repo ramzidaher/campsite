@@ -33,6 +33,8 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
   const canNotifyCandidate   = permissionKeys.includes('applications.notify_candidate');
   const canGenerateOffers    = permissionKeys.includes('offers.generate');
   const canSendEsignOffers   = permissionKeys.includes('offers.send_esign');
+  const canScoreScreening =
+    permissionKeys.includes('applications.score_screening') || permissionKeys.includes('applications.manage');
 
   const { data: job, error: jobErr } = await withServerPerf(
     '/admin/jobs/[id]/applications',
@@ -48,34 +50,83 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
 
   if (jobErr || !job) notFound();
 
-  const { data: apps, error: appsErr } = await withServerPerf(
-    '/admin/jobs/[id]/applications',
-    'job_applications_lookup',
-    supabase
-      .from('job_applications')
-      .select(
-        'id, candidate_name, candidate_email, stage, submitted_at, cv_storage_path, loom_url, staffsavvy_score, offer_letter_status'
-      )
-      .eq('job_listing_id', id)
-      .eq('org_id', orgId)
-      .order('submitted_at', { ascending: false })
-      .limit(300),
-    500
-  );
+  const [{ data: apps, error: appsErr }, { data: aggRows }] = await Promise.all([
+    withServerPerf(
+      '/admin/jobs/[id]/applications',
+      'job_applications_lookup',
+      supabase
+        .from('job_applications')
+        .select(
+          'id, candidate_name, candidate_email, stage, submitted_at, cv_storage_path, loom_url, staffsavvy_score, offer_letter_status'
+        )
+        .eq('job_listing_id', id)
+        .eq('org_id', orgId)
+        .order('submitted_at', { ascending: false })
+        .limit(300),
+      500
+    ),
+    withServerPerf(
+      '/admin/jobs/[id]/applications',
+      'job_screening_aggregates',
+      supabase.rpc('get_job_listing_screening_aggregates', { p_job_listing_id: id }),
+      400
+    ),
+  ]);
 
   if (appsErr) notFound();
+
+  const aggMap = new Map<
+    string,
+    { overall_avg: number | null; distinct_scorer_count: number }
+  >();
+  if (Array.isArray(aggRows)) {
+    for (const r of aggRows) {
+      const row = r as {
+        job_application_id: string;
+        overall_avg: number | string | null;
+        distinct_scorer_count: number | string | null;
+      };
+      aggMap.set(String(row.job_application_id), {
+        overall_avg:
+          row.overall_avg == null || row.overall_avg === ''
+            ? null
+            : Number(row.overall_avg),
+        distinct_scorer_count: Number(row.distinct_scorer_count ?? 0),
+      });
+    }
+  }
+
+  const enrichedApps: PipelineApplicationRow[] = (apps ?? []).map((a) => {
+    const row = a as Record<string, unknown>;
+    const aid = String(row.id);
+    const agg = aggMap.get(aid);
+    return {
+      id: aid,
+      candidate_name: String(row.candidate_name ?? ''),
+      candidate_email: String(row.candidate_email ?? ''),
+      stage: String(row.stage ?? ''),
+      submitted_at: String(row.submitted_at ?? ''),
+      cv_storage_path: (row.cv_storage_path as string | null) ?? null,
+      loom_url: (row.loom_url as string | null) ?? null,
+      staffsavvy_score: (row.staffsavvy_score as number | null) ?? null,
+      offer_letter_status: (row.offer_letter_status as string | null) ?? null,
+      screening_overall_avg: agg?.overall_avg ?? null,
+      screening_scorer_count: agg?.distinct_scorer_count ?? 0,
+    };
+  });
 
   const view = (
     <JobPipelineClient
       jobListingId={id}
       jobTitle={(job.title as string)?.trim() || 'Job'}
-      initialApplications={(apps ?? []) as PipelineApplicationRow[]}
+      initialApplications={enrichedApps}
       canMoveStage={canMoveStage}
       canBookInterviewSlot={canBookInterviewSlot}
       canManageInterviews={canManageInterviews}
       canAddInternalNotes={canAddInternalNotes}
       canNotifyCandidate={canNotifyCandidate}
       canManageOffers={canGenerateOffers || canSendEsignOffers}
+      canScoreScreening={canScoreScreening}
     />
   );
   warnIfSlowServerPath('/admin/jobs/[id]/applications', pathStartedAtMs);

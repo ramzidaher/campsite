@@ -19,6 +19,7 @@ type PublicListingRow = {
   allow_cv: boolean;
   allow_loom: boolean;
   allow_staffsavvy: boolean;
+  allow_application_questions?: boolean;
   application_mode: string;
 };
 
@@ -100,6 +101,19 @@ export async function submitPublicJobApplication(
     staffsavvyScore = n;
   }
 
+  const screeningRaw = String(formData.get('screening_answers_json') ?? '').trim();
+  let pScreening: unknown = [];
+  if (screeningRaw) {
+    try {
+      pScreening = JSON.parse(screeningRaw) as unknown;
+    } catch {
+      return { ok: false, error: 'Could not read application question answers.' };
+    }
+  }
+  if (!Array.isArray(pScreening)) {
+    return { ok: false, error: 'Invalid application question answers.' };
+  }
+
   const { data: submitRows, error: submitErr } = await supabase.rpc('submit_job_application', {
     p_org_slug: orgSlug,
     p_job_slug: jobSlug,
@@ -118,6 +132,7 @@ export async function submitPublicJobApplication(
     p_cover_letter: coverLetter || null,
     p_eq_ethnicity_code: pEqEthnicityCode,
     p_equality_monitoring_declined: pEqualityMonitoringDeclined,
+    p_screening_answers: pScreening,
   });
 
   if (submitErr || !submitRows?.length) {

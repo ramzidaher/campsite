@@ -1,0 +1,64 @@
+---
+description: Typography, layout chrome, and routes for People / HR workspace, hiring hub, jobs, and recruitment surfaces
+globs:
+  - apps/web/src/app/(main)/hr/**
+  - apps/web/src/components/hr/**
+  - apps/web/src/components/admin/AdminRecruitment*.tsx
+  - apps/web/src/components/admin/AdminJob*.tsx
+  - apps/web/src/components/manager/ManagerRecruitmentClient.tsx
+  - apps/web/src/app/(main)/hr/hiring/**
+  - packages/ui/src/web/SectionNav.tsx
+alwaysApply: false
+---
+
+# People / HR workspace UI (typography, chrome, routes)
+
+Use these patterns when adding or changing HR, hiring, job listing, or recruitment request screens so they stay aligned with **Time off** (`LeaveHubClient`) and the **People** home snapshot.
+
+## Typography
+
+1. **Primary page title (H1)** — `font-authSerif`, `text-[28px]` (or `text-[26px]` only if space is extremely tight), `leading-tight`, `tracking-[-0.03em]`, `text-[#121212]`. Examples: People, Time off, Hiring workspace, job editor role title.
+2. **Body and forms** — default sans stack; wrap focused surfaces in `font-sans text-[#121212]` when the page mixes serif headings with dense UI.
+3. **Intro / supporting copy** — `text-[13.5px] leading-relaxed text-[#6b6b6b]` (match leave subtitle line).
+4. **Section labels (eyebrows)** — `text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]` (or `text-[11px]` inside tight cards, still uppercase + widened tracking).
+5. **Metric / snapshot values** — `text-[30px]` or `text-[32px]` `font-bold` `tabular-nums` `text-[#121212]`; pair with uppercase muted label above.
+6. **Field labels** — `text-[12px] font-semibold text-[#6b6b6b]`; inputs `rounded-xl`, comfortable `px-4 py-3`, `text-[14px]` where the surface is “workspace” scale (job editor, long forms).
+
+## Surfaces and spacing
+
+1. **Paper canvas** — main app uses cream/off-white (`#faf9f6`); cards **white** `bg-white`, border `border-[#e8e8e8]` or `border-[#d8d8d8]`, subtle `shadow-sm` on promoted cards.
+2. **Wide workspace rails** — hiring hub and job **editor** use shell width `max-w-[90rem]` with `px-5 sm:px-8 lg:px-10` in `HrWorkspaceShell` when `shellWideLayout` applies; avoid nesting a second `max-w-7xl` inside that strips width.
+3. **Breathing room** — prefer `gap-8` / `lg:gap-10`, section `space-y-10` / `lg:space-y-12`, card padding `p-8` on large forms; do not ship new HR pages as tight `p-4` grids unless the pattern is explicitly a compact table.
+
+## `HrWorkspaceShell` chrome (apps/web/src/components/hr/HrWorkspaceShell.tsx)
+
+1. **`/hr` home** — no “People workspace” strip; page carries its own H1 + Snapshot.
+2. **`/hr/hiring/**`** — no People shell header (handled by `HiringHubTabNav` + layout title inside hiring `layout.tsx`).
+3. **`/hr/jobs/:id/edit`** — same as hiring: **suppress** People workspace header, breadcrumbs, and horizontal `SectionNav`; use **wide** shell so the editor matches hiring surfaces.
+4. **All other `/hr/**`** — show People workspace eyebrow, optional breadcrumb (`hrBreadcrumbTrail`), and `SectionNav` **pill** variant for HR section links.
+
+## Hiring hub (`apps/web/src/app/(main)/hr/hiring/`)
+
+1. **Layout** — `HiringHubProvider` wraps children; title row uses serif **Hiring workspace** + optional **+ New request** (hidden on `/hr/hiring/new-request` via pathname).
+2. **Tabs** — `HiringHubTabNav` passes `SectionNav` **`variant="underline"`**: bottom rule, active `border-b-2 border-[#121212]`, inactive `text-[#6b6b6b]`.
+3. **Recruitment queue list** — when `useInHiringHub()` is true in `AdminRecruitmentListClient`, use separate stat cards, pill filters (Open = filled black), card-per-row list, status-based dots; keep typography consistent with leave dashboard tiles.
+
+## `SectionNav` (`packages/ui/src/web/SectionNav.tsx`)
+
+1. **`variant="pill"`** (default) — HR workspace horizontal links (`rounded-xl` chips).
+2. **`variant="underline"`** — hiring hub tabs only unless product explicitly asks elsewhere.
+
+## Routes (canonical HR URLs)
+
+1. **Recruitment request detail** — **`/hr/hiring/requests/[id]`** (not `/hr/recruitment/[id]`). Old path redirects in `apps/web/next.config.ts`.
+2. **Recruitment list / raise** — list: `/hr/hiring/requests` (and re-exports); new request: `/hr/hiring/new-request`.
+3. **Job listings** under hiring — `/hr/hiring/jobs`; breadcrumb “back” from job editor should prefer **`/hr/hiring/jobs`** so users land under hiring tabs.
+4. **Job editor** — remains **`/hr/jobs/[id]/edit`**; pipeline link may stay **`/hr/jobs/[id]/applications`**.
+5. After server mutations, `revalidatePath` targets should use **`/hr/hiring/requests`** and **`/hr/hiring/requests/${id}`** where recruitment rows are shown, not legacy `/hr/recruitment/...`.
+
+## Snapshot / metric cards (People home, similar hubs)
+
+1. Optional **4px colored top border** per category + `rounded-xl` + `p-6` + divider above footer “View details →”.
+2. Keep **serif off the card**; cards are sans.
+
+When in doubt, open **`LeaveHubClient`** and **`apps/web/src/app/(main)/hr/page.tsx`** as reference implementations.

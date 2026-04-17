@@ -14,6 +14,7 @@ import {
   sendCandidateOnlyMessage,
   setInterviewJoiningInstructions,
   updateJobApplicationStage,
+  upsertJobApplicationScreeningScore,
   type JobApplicationDetail,
 } from '@/app/(main)/admin/jobs/[id]/applications/actions';
 import { jobApplicationStageLabel } from '@/lib/jobs/labels';
@@ -45,6 +46,8 @@ export type PipelineApplicationRow = {
   loom_url: string | null;
   staffsavvy_score: number | null;
   offer_letter_status: string | null;
+  screening_overall_avg: number | null;
+  screening_scorer_count: number;
 };
 
 function StageColumn({
@@ -157,6 +160,12 @@ function PipelineCard({
                 })
               : '—'}
           </p>
+          {app.screening_overall_avg != null ? (
+            <p className="mt-1 text-[11px] text-[#0f766e]">
+              Application Q avg {app.screening_overall_avg.toFixed(1)}
+              {app.screening_scorer_count > 0 ? ` · ${app.screening_scorer_count} scorer(s)` : null}
+            </p>
+          ) : null}
           {app.offer_letter_status ? (
             <p
               className={[
@@ -219,6 +228,7 @@ export function JobPipelineClient({
   canAddInternalNotes,
   canNotifyCandidate,
   canManageOffers,
+  canScoreScreening,
 }: {
   jobListingId: string;
   jobTitle: string;
@@ -229,6 +239,7 @@ export function JobPipelineClient({
   canAddInternalNotes: boolean;
   canNotifyCandidate: boolean;
   canManageOffers: boolean;
+  canScoreScreening: boolean;
 }) {
   const router = useRouter();
   const [applications, setApplications] = useState(initialApplications);
@@ -236,15 +247,35 @@ export function JobPipelineClient({
     setApplications(initialApplications);
   }, [initialApplications]);
 
+  const [sortBy, setSortBy] = useState<'submitted_at' | 'screening_avg'>('submitted_at');
+
+  const sortedApplications = useMemo(() => {
+    const list = [...applications];
+    if (sortBy === 'screening_avg') {
+      list.sort((a, b) => {
+        const as = a.screening_overall_avg;
+        const bs = b.screening_overall_avg;
+        if (as == null && bs == null) {
+          return new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime();
+        }
+        if (as == null) return 1;
+        if (bs == null) return -1;
+        if (bs !== as) return bs - as;
+        return new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime();
+      });
+    }
+    return list;
+  }, [applications, sortBy]);
+
   const byStage = useMemo(() => {
     const m = new Map<JobApplicationStage, PipelineApplicationRow[]>();
     for (const s of JOB_APPLICATION_STAGE_ORDER) m.set(s, []);
-    for (const app of applications) {
+    for (const app of sortedApplications) {
       const st = isJobApplicationStage(app.stage) ? app.stage : 'applied';
       m.get(st)?.push(app);
     }
     return m;
-  }, [applications]);
+  }, [sortedApplications]);
   const totalApplications = applications.length;
 
   const [stageDialog, setStageDialog] = useState<StageDialogState | null>(null);
@@ -409,6 +440,17 @@ export function JobPipelineClient({
           <span className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1">
             Total applications: {totalApplications}
           </span>
+          <label className="inline-flex items-center gap-1.5 rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Sort</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'submitted_at' | 'screening_avg')}
+              className="border-0 bg-transparent text-[12px] text-[#121212] outline-none"
+            >
+              <option value="submitted_at">Newest first</option>
+              <option value="screening_avg">Application question average</option>
+            </select>
+          </label>
           <a href="/hr/applications" className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 transition-colors hover:bg-[#f5f4f1]">
             Open full application tracker
           </a>
@@ -675,6 +717,67 @@ export function JobPipelineClient({
                     ) : null}
                   </section>
 
+                  {detail.screening_answers.length > 0 ? (
+                    <section className="rounded-lg border border-[#d1fae5] bg-[#f6fdfb] p-3">
+                      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#0f766e]">
+                        Application question answers
+                      </h3>
+                      <p className="mt-1 text-[12px] text-[#505050]">
+                        Score each answer (1–5). Team average updates as more reviewers score.
+                      </p>
+                      <div className="mt-3 space-y-4">
+                        {detail.screening_answers.map((ans) => (
+                          <div key={ans.id} className="rounded-md border border-[#e5e7eb] bg-white p-3">
+                            <p className="text-[12px] font-medium text-[#121212]">{ans.prompt_snapshot}</p>
+                            <p className="mt-1 whitespace-pre-wrap text-[13px] text-[#303030]">{ans.display_value}</p>
+                            <p className="mt-2 text-[11px] text-[#6b6b6b]">
+                              Team avg:{' '}
+                              {ans.team_avg == null ? '—' : ans.team_avg.toFixed(2)} · Your score:{' '}
+                              {ans.my_score ?? '—'}
+                            </p>
+                            {canScoreScreening ? (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    disabled={detailBusy}
+                                    onClick={() => {
+                                      startDetailTransition(async () => {
+                                        const res = await upsertJobApplicationScreeningScore(
+                                          ans.id,
+                                          n,
+                                          jobListingId
+                                        );
+                                        if (!res.ok) {
+                                          alert(res.error);
+                                          return;
+                                        }
+                                        openDetail(detail.application.id);
+                                      });
+                                    }}
+                                    className={[
+                                      'h-8 min-w-[2rem] rounded-md border px-2 text-[12px] font-medium',
+                                      ans.my_score === n
+                                        ? 'border-[#0f766e] bg-[#0f766e] text-white'
+                                        : 'border-[#d8d8d8] bg-[#fafafa] text-[#121212] hover:border-[#0f766e]',
+                                    ].join(' ')}
+                                  >
+                                    {n}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-2 text-[11px] text-[#9b9b9b]">
+                                You do not have permission to score application question answers.
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+
                   {detail.application.stage === 'offer_sent' ? (
                     <section className="rounded-lg border border-[#e8f0fe] bg-[#f8fbff] p-3">
                       <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#1e40af]">
@@ -730,6 +833,7 @@ export function JobPipelineClient({
                           type="button"
                           className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#121212] px-3 text-[13px] font-medium text-[#faf9f6]"
                           onClick={() => {
+                            const row = applications.find((a) => a.id === detail.application.id);
                             setGenerateOfferFor({
                               id: detail.application.id,
                               candidate_name: detail.application.candidate_name,
@@ -740,6 +844,8 @@ export function JobPipelineClient({
                               loom_url: detail.application.loom_url,
                               staffsavvy_score: detail.application.staffsavvy_score,
                               offer_letter_status: detail.application.offer_letter_status,
+                              screening_overall_avg: row?.screening_overall_avg ?? null,
+                              screening_scorer_count: row?.screening_scorer_count ?? 0,
                             });
                           }}
                         >

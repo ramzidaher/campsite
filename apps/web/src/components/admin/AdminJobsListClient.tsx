@@ -5,8 +5,9 @@ import { campusFormControl, campusText } from '@campsite/ui/web';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
+import { ExternalLink, Share2 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export type AdminJobListRow = {
   id: string;
@@ -44,6 +45,28 @@ export function AdminJobsListClient({
   const [contract, setContract] = useState<string>('');
   const [year, setYear] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
+  const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current);
+    };
+  }, []);
+
+  const copyPublicLink = useCallback(async (jobId: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current);
+      setCopiedJobId(jobId);
+      copyResetTimerRef.current = setTimeout(() => {
+        setCopiedJobId((cur) => (cur === jobId ? null : cur));
+        copyResetTimerRef.current = null;
+      }, 2000);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const gradeOptions = useMemo(() => [...new Set(rows.map((r) => r.grade_level))].sort(), [rows]);
   const salaryOptions = useMemo(() => [...new Set(rows.map((r) => r.salary_band))].sort(), [rows]);
@@ -236,15 +259,32 @@ export function AdminJobsListClient({
                     </td>
                     <td className="px-4 py-3">
                       {showPublic ? (
-                        <button
-                          type="button"
-                          className="text-[12px] font-medium text-[#008B60] hover:underline"
-                          onClick={() => {
-                            void navigator.clipboard.writeText(publicUrl);
-                          }}
-                        >
-                          Copy link
-                        </button>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <a
+                            href={publicUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-[#008B60] shadow-sm transition-colors hover:border-[#008B60]/40 hover:bg-[#f0fdf9]"
+                            aria-label={`Open public page for ${r.title} in a new tab`}
+                            title="Open in new tab"
+                          >
+                            <ExternalLink className="h-4 w-4" strokeWidth={2} aria-hidden />
+                          </a>
+                          <button
+                            type="button"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-[#008B60] shadow-sm transition-colors hover:border-[#008B60]/40 hover:bg-[#f0fdf9]"
+                            aria-label={`Copy public link for ${r.title}`}
+                            title="Copy link"
+                            onClick={() => void copyPublicLink(r.id, publicUrl)}
+                          >
+                            <Share2 className="h-4 w-4" strokeWidth={2} aria-hidden />
+                          </button>
+                          {copiedJobId === r.id ? (
+                            <span className="text-[11px] font-medium text-[#008B60]" role="status">
+                              Copied
+                            </span>
+                          ) : null}
+                        </div>
                       ) : (
                         <span className="text-[12px] text-[#9b9b9b]">Publish to enable</span>
                       )}

@@ -16,6 +16,8 @@ export type JobApplicationBooleans = {
   allowCv: boolean;
   allowLoom: boolean;
   allowStaffsavvy: boolean;
+  /** Combination mode: structured role questions count as an application channel (no CV required). */
+  allowApplicationQuestions?: boolean;
 };
 
 /**
@@ -25,23 +27,58 @@ export type JobApplicationBooleans = {
 export function normaliseJobApplicationFlags(
   mode: JobApplicationMode,
   flags: JobApplicationBooleans
-): { allow_cv: boolean; allow_loom: boolean; allow_staffsavvy: boolean } {
+): {
+  allow_cv: boolean;
+  allow_loom: boolean;
+  allow_staffsavvy: boolean;
+  allow_application_questions: boolean;
+} {
   if (mode === 'combination') {
     return {
       allow_cv: flags.allowCv,
       allow_loom: flags.allowLoom,
       allow_staffsavvy: flags.allowStaffsavvy,
+      allow_application_questions: Boolean(flags.allowApplicationQuestions),
     };
   }
   if (mode === 'cv') {
-    return { allow_cv: true, allow_loom: false, allow_staffsavvy: false };
+    return {
+      allow_cv: true,
+      allow_loom: false,
+      allow_staffsavvy: false,
+      allow_application_questions: false,
+    };
   }
   if (mode === 'loom') {
-    return { allow_cv: false, allow_loom: true, allow_staffsavvy: false };
+    return {
+      allow_cv: false,
+      allow_loom: true,
+      allow_staffsavvy: false,
+      allow_application_questions: false,
+    };
   }
-  return { allow_cv: false, allow_loom: false, allow_staffsavvy: true };
+  return {
+    allow_cv: false,
+    allow_loom: false,
+    allow_staffsavvy: true,
+    allow_application_questions: false,
+  };
 }
 
 export function combinationModeHasChannel(flags: JobApplicationBooleans): boolean {
-  return flags.allowCv || flags.allowLoom || flags.allowStaffsavvy;
+  return (
+    flags.allowCv ||
+    flags.allowLoom ||
+    flags.allowStaffsavvy ||
+    Boolean(flags.allowApplicationQuestions)
+  );
 }
+
+export const SCREENING_QUESTION_TYPES = ['short_text', 'paragraph', 'single_choice', 'yes_no'] as const;
+export type ScreeningQuestionType = (typeof SCREENING_QUESTION_TYPES)[number];
+
+export function isScreeningQuestionType(s: string | null | undefined): s is ScreeningQuestionType {
+  return SCREENING_QUESTION_TYPES.includes(s as ScreeningQuestionType);
+}
+
+export type ScreeningQuestionOption = { id: string; label: string };

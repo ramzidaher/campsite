@@ -1,8 +1,34 @@
+import type { JobScreeningQuestionPersist } from '@/app/(main)/admin/jobs/actions';
 import { AdminJobEditClient } from '@/components/admin/AdminJobEditClient';
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
+import type { ScreeningQuestionOption } from '@campsite/types';
 import { redirect, notFound } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+
+function mapScreeningRow(r: Record<string, unknown>): JobScreeningQuestionPersist {
+  const raw = r.options;
+  let options: ScreeningQuestionOption[] | null = null;
+  if (Array.isArray(raw)) {
+    options = raw
+      .map((o) => {
+        const row = o as { id?: string; label?: string };
+        return { id: String(row.id ?? '').trim(), label: String(row.label ?? '').trim() };
+      })
+      .filter((o) => o.id && o.label);
+    if (options.length === 0) options = null;
+  }
+  return {
+    id: String(r.id),
+    sortOrder: Number(r.sort_order ?? 0),
+    questionType: String(r.question_type),
+    prompt: String(r.prompt ?? ''),
+    helpText: String(r.help_text ?? ''),
+    required: Boolean(r.required),
+    maxLength: r.max_length == null ? null : Number(r.max_length),
+    options,
+  };
+}
 
 export default async function AdminJobEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params;
@@ -24,16 +50,21 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
 
   const orgId = profile.org_id as string;
 
-  const [{ data: orgRow }, { data: job, error }, canHrSettings] = await Promise.all([
+  const [{ data: orgRow }, { data: job, error }, { data: sqRows }, canHrSettings] = await Promise.all([
     supabase.from('organisations').select('slug').eq('id', orgId).single(),
     supabase
       .from('job_listings')
       .select(
-        'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, recruitment_request_id, diversity_target_pct, diversity_included_codes'
+        'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, allow_application_questions, recruitment_request_id, diversity_target_pct, diversity_included_codes, applications_close_at'
       )
       .eq('id', id)
       .eq('org_id', orgId)
       .maybeSingle(),
+    supabase
+      .from('job_listing_screening_questions')
+      .select('id, sort_order, question_type, prompt, help_text, required, options, max_length')
+      .eq('job_listing_id', id)
+      .order('sort_order', { ascending: true }),
     viewerHasPermission('hr.view_records'),
   ]);
 
@@ -78,6 +109,8 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
     }
   }
 
+  const initialScreeningQuestions = (sqRows ?? []).map((r) => mapScreeningRow(r as Record<string, unknown>));
+
   return (
     <AdminJobEditClient
       job={job as Parameters<typeof AdminJobEditClient>[0]['job']}
@@ -85,6 +118,7 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
       requestHref={`/hr/hiring/requests/${reqId}`}
       publicMetrics={publicMetrics}
       eqCategoryOptions={eqCategoryOptions}
+      initialScreeningQuestions={initialScreeningQuestions}
     />
   );
 }

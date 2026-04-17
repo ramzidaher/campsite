@@ -24,6 +24,7 @@ type PublicJobRow = {
   allow_cv: boolean;
   allow_loom: boolean;
   allow_staffsavvy: boolean;
+  allow_application_questions: boolean;
   published_at: string;
 };
 
@@ -105,6 +106,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   if (job.allow_cv) applyBits.push(jobApplicationModeLabel('cv'));
   if (job.allow_loom) applyBits.push(jobApplicationModeLabel('loom'));
   if (job.allow_staffsavvy) applyBits.push(jobApplicationModeLabel('staffsavvy'));
+  if (job.allow_application_questions) applyBits.push('Role application questions');
   const applySummary =
     applyBits.length > 0 ? applyBits.join(', ') : jobApplicationModeLabel(job.application_mode);
 

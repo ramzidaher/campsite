@@ -19,6 +19,33 @@ function relationOne<T>(rel: T | T[] | null | undefined): T | null {
   return Array.isArray(rel) ? (rel[0] ?? null) : rel;
 }
 
+function screeningAnswerDisplay(row: {
+  type_snapshot: string;
+  answer_text: string | null;
+  answer_choice_id: string | null;
+  answer_yes_no: boolean | null;
+  options_snapshot: unknown;
+}): string {
+  if (row.type_snapshot === 'yes_no') {
+    if (row.answer_yes_no === true) return 'Yes';
+    if (row.answer_yes_no === false) return 'No';
+    return '—';
+  }
+  if (row.type_snapshot === 'single_choice' && row.answer_choice_id) {
+    const raw = row.options_snapshot;
+    if (Array.isArray(raw)) {
+      for (const o of raw) {
+        const obj = o as { id?: string; label?: string };
+        if (String(obj.id ?? '').trim() === row.answer_choice_id) {
+          return String(obj.label ?? '').trim() || row.answer_choice_id;
+        }
+      }
+    }
+    return row.answer_choice_id;
+  }
+  return (row.answer_text ?? '').trim() || '—';
+}
+
 async function requireOrgPermission(permissionKey: string) {
   const supabase = await createClient();
   const user = await getAuthUser();
@@ -264,6 +291,20 @@ export async function setInterviewJoiningInstructions(
   return { ok: true };
 }
 
+export type JobApplicationScreeningAnswerDetail = {
+  id: string;
+  prompt_snapshot: string;
+  type_snapshot: string;
+  options_snapshot: unknown;
+  answer_text: string | null;
+  answer_choice_id: string | null;
+  answer_yes_no: boolean | null;
+  display_value: string;
+  scores: Array<{ reviewer_profile_id: string; score: number }>;
+  team_avg: number | null;
+  my_score: number | null;
+};
+
 export type JobApplicationDetail = {
   application: {
     id: string;
@@ -291,6 +332,7 @@ export type JobApplicationDetail = {
   } | null;
   notes: Array<{ id: string; body: string; created_at: string; created_by: string }>;
   messages: Array<{ id: string; body: string; created_at: string; created_by: string }>;
+  screening_answers: JobApplicationScreeningAnswerDetail[];
 };
 
 export async function loadJobApplicationDetail(
@@ -333,7 +375,7 @@ export async function loadJobApplicationDetail(
 
   if (appErr || !application) return { error: 'Application not found.' };
 
-  const [{ data: notes }, { data: messages }] = await Promise.all([
+  const [{ data: notes }, { data: messages }, { data: sAnswers }] = await Promise.all([
     supabase
       .from('job_application_notes')
       .select('id, body, created_at, created_by')
@@ -344,7 +386,64 @@ export async function loadJobApplicationDetail(
       .select('id, body, created_at, created_by')
       .eq('job_application_id', id)
       .order('created_at', { ascending: true }),
+    supabase
+      .from('job_application_screening_answers')
+      .select(
+        'id, prompt_snapshot, type_snapshot, options_snapshot, answer_text, answer_choice_id, answer_yes_no, created_at'
+      )
+      .eq('job_application_id', id)
+      .order('created_at', { ascending: true }),
   ]);
+
+  const answerIds = (sAnswers ?? []).map((r) => r.id as string);
+  let scoreRows: { screening_answer_id: string; reviewer_profile_id: string; score: number }[] = [];
+  if (answerIds.length > 0) {
+    const { data: sc } = await supabase
+      .from('job_application_screening_scores')
+      .select('screening_answer_id, reviewer_profile_id, score')
+      .in('screening_answer_id', answerIds);
+    scoreRows =
+      (sc ?? []).map((r) => ({
+        screening_answer_id: r.screening_answer_id as string,
+        reviewer_profile_id: r.reviewer_profile_id as string,
+        score: Number(r.score),
+      })) ?? [];
+  }
+
+  const scoresByAnswer = new Map<string, { reviewer_profile_id: string; score: number }[]>();
+  for (const s of scoreRows) {
+    const list = scoresByAnswer.get(s.screening_answer_id) ?? [];
+    list.push({ reviewer_profile_id: s.reviewer_profile_id, score: s.score });
+    scoresByAnswer.set(s.screening_answer_id, list);
+  }
+
+  const viewerId = profile.id as string;
+  const screening_answers: JobApplicationScreeningAnswerDetail[] = (sAnswers ?? []).map((raw) => {
+    const aid = raw.id as string;
+    const scores = scoresByAnswer.get(aid) ?? [];
+    const nums = scores.map((s) => s.score);
+    const team_avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+    const mine = scores.find((s) => s.reviewer_profile_id === viewerId);
+    return {
+      id: aid,
+      prompt_snapshot: String(raw.prompt_snapshot ?? ''),
+      type_snapshot: String(raw.type_snapshot ?? ''),
+      options_snapshot: raw.options_snapshot,
+      answer_text: (raw.answer_text as string | null) ?? null,
+      answer_choice_id: (raw.answer_choice_id as string | null) ?? null,
+      answer_yes_no: (raw.answer_yes_no as boolean | null) ?? null,
+      display_value: screeningAnswerDisplay({
+        type_snapshot: String(raw.type_snapshot ?? ''),
+        answer_text: (raw.answer_text as string | null) ?? null,
+        answer_choice_id: (raw.answer_choice_id as string | null) ?? null,
+        answer_yes_no: (raw.answer_yes_no as boolean | null) ?? null,
+        options_snapshot: raw.options_snapshot,
+      }),
+      scores,
+      team_avg,
+      my_score: mine ? mine.score : null,
+    };
+  });
 
   const raw = application as Record<string, unknown>;
   const jl = relationOne(raw.job_listings as { title: string } | { title: string }[] | null);
@@ -392,7 +491,52 @@ export async function loadJobApplicationDetail(
     latest_offer: latestOffer,
     notes: notes ?? [],
     messages: messages ?? [],
+    screening_answers,
   };
+}
+
+export async function upsertJobApplicationScreeningScore(
+  screeningAnswerId: string,
+  score: number,
+  jobListingId: string
+): Promise<ApplicationActionResult> {
+  const sid = screeningAnswerId?.trim();
+  if (!sid) return { ok: false, error: 'Missing answer.' };
+  const n = Math.round(Number(score));
+  if (!Number.isFinite(n) || n < 1 || n > 5) {
+    return { ok: false, error: 'Score must be between 1 and 5.' };
+  }
+
+  const { supabase, profile, orgId, user } = await requireOrgPermission('applications.view');
+  if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
+
+  const [{ data: canScore }, { data: canManage }] = await Promise.all([
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: orgId,
+      p_permission_key: 'applications.score_screening',
+      p_context: {},
+    }),
+    supabase.rpc('has_permission', {
+      p_user_id: user.id,
+      p_org_id: orgId,
+      p_permission_key: 'applications.manage',
+      p_context: {},
+    }),
+  ]);
+  if (!canScore && !canManage) {
+    return { ok: false, error: 'Not allowed.' };
+  }
+
+  const { error } = await supabase.rpc('upsert_job_application_screening_score', {
+    p_screening_answer_id: sid,
+    p_score: n,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/admin/jobs/${jobListingId}/applications`);
+  revalidatePath(`/hr/jobs/${jobListingId}/applications`);
+  return { ok: true };
 }
 
 export async function generateCandidateTrackerLink(

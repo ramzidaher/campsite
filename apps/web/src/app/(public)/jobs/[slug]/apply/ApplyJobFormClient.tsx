@@ -8,6 +8,17 @@ import {
 import { tenantJobApplyRelativePath, tenantJobListingRelativePathClient, tenantJobsSubrouteRelativePath } from '@/lib/tenant/adminUrl';
 import Link from 'next/link';
 import { useActionState, useEffect, useMemo, useState } from 'react';
+
+type PublicScreeningQuestionRow = {
+  id: string;
+  question_type: string;
+  prompt: string;
+  help_text: string | null;
+  required: boolean;
+  options: unknown;
+  max_length: number | null;
+  sort_order: number;
+};
 import { submitPublicJobApplication, type SubmitJobApplicationState } from './actions';
 
 type Listing = {
@@ -17,6 +28,7 @@ type Listing = {
   allow_cv: boolean;
   allow_loom: boolean;
   allow_staffsavvy: boolean;
+  allow_application_questions?: boolean;
 };
 
 export function ApplyJobFormClient({
@@ -27,6 +39,7 @@ export function ApplyJobFormClient({
   defaultEmail,
   isAuthenticated,
   eqCategories = [],
+  screeningQuestions = [],
 }: {
   jobSlug: string;
   listing: Listing;
@@ -36,6 +49,7 @@ export function ApplyJobFormClient({
   isAuthenticated: boolean;
   /** Optional equality monitoring options from org HR settings. */
   eqCategories?: { code: string; label: string }[];
+  screeningQuestions?: PublicScreeningQuestionRow[];
 }) {
   const [state, formAction, pending] = useActionState<
     SubmitJobApplicationState | undefined,
@@ -60,6 +74,26 @@ export function ApplyJobFormClient({
   const [toast, setToast] = useState('');
   const [selectedWorkStyle, setSelectedWorkStyle] = useState('');
   const [cvFileError, setCvFileError] = useState<string | null>(null);
+  const [screeningAnswers, setScreeningAnswers] = useState<
+    Record<string, { text?: string; choice_id?: string; bool?: boolean }>
+  >({});
+
+  const screeningPayloadJson = useMemo(() => {
+    const rows = screeningQuestions ?? [];
+    const arr = rows.map((q) => {
+      const a = screeningAnswers[q.id] ?? {};
+      const base: Record<string, unknown> = { question_id: q.id };
+      if (q.question_type === 'short_text' || q.question_type === 'paragraph') {
+        base.text = a.text ?? '';
+      } else if (q.question_type === 'single_choice') {
+        base.choice_id = a.choice_id ?? '';
+      } else if (q.question_type === 'yes_no') {
+        if (typeof a.bool === 'boolean') base.bool = a.bool;
+      }
+      return base;
+    });
+    return JSON.stringify(arr);
+  }, [screeningQuestions, screeningAnswers]);
 
   useEffect(() => {
     if (defaultEmail?.trim()) {
@@ -73,14 +107,41 @@ export function ApplyJobFormClient({
   if (listing.allow_cv) bits.push(jobApplicationModeLabel('cv'));
   if (listing.allow_loom) bits.push(jobApplicationModeLabel('loom'));
   if (listing.allow_staffsavvy) bits.push(jobApplicationModeLabel('staffsavvy'));
+  if (listing.allow_application_questions) bits.push('Role application questions');
+
+  const screeningFilled = useMemo(() => {
+    const rows = screeningQuestions ?? [];
+    if (rows.length === 0) return true;
+    return rows.every((q) => {
+      const a = screeningAnswers[q.id];
+      if (!q.required) return true;
+      if (q.question_type === 'short_text' || q.question_type === 'paragraph') {
+        return Boolean(a?.text?.trim());
+      }
+      if (q.question_type === 'single_choice') {
+        return Boolean(a?.choice_id?.trim());
+      }
+      if (q.question_type === 'yes_no') {
+        return typeof a?.bool === 'boolean';
+      }
+      return true;
+    });
+  }, [screeningQuestions, screeningAnswers]);
 
   const stepReady = useMemo(() => {
     const step0 = Boolean(firstName.trim() && lastName.trim() && email.includes('@'));
-    const step1 = Boolean(motivationText.trim().length > 10 && (fitScore || selectedWorkStyle));
+    const step1 = Boolean(
+      motivationText.trim().length > 10 && (fitScore || selectedWorkStyle) && screeningFilled,
+    );
+    const hasRoleQuestionChannel =
+      Boolean(listing.allow_application_questions) &&
+      (screeningQuestions ?? []).length > 0 &&
+      screeningFilled;
     const hasAnyChannel =
       (listing.allow_cv && cvName.trim()) ||
       (listing.allow_loom && loomUrl.trim()) ||
-      (listing.allow_staffsavvy && staffsavvyScore.trim());
+      (listing.allow_staffsavvy && staffsavvyScore.trim()) ||
+      hasRoleQuestionChannel;
     const requiresAny = listing.application_mode === 'combination';
     const requiresCvOnly = listing.allow_cv && !listing.allow_loom && !listing.allow_staffsavvy;
     const requiresLoomOnly = listing.allow_loom && !listing.allow_cv && !listing.allow_staffsavvy;
@@ -110,6 +171,8 @@ export function ApplyJobFormClient({
     cvFileError,
     loomUrl,
     consent,
+    screeningFilled,
+    screeningQuestions,
   ]);
 
   const progressLabel = ['barely started', 'making progress', 'halfway hero', 'almost there!', 'submitted!'];
@@ -288,6 +351,7 @@ export function ApplyJobFormClient({
           <input type="hidden" name="cover_letter" value={coverLetter} />
           <input type="hidden" name="loom_url" value={loomUrl} />
           <input type="hidden" name="staffsavvy_score" value={listing.allow_staffsavvy ? staffsavvyScore : ''} />
+          <input type="hidden" name="screening_answers_json" value={screeningPayloadJson} />
 
           {!done ? (
             <div className="mb-4 flex items-start gap-3 rounded-[11px] bg-[#121212] px-4 py-3 text-[13px] text-[#faf9f6]">
@@ -502,6 +566,96 @@ export function ApplyJobFormClient({
                   ))}
                 </div>
               </div>
+
+              {(screeningQuestions ?? []).length > 0 ? (
+                <div className="mt-5 space-y-4 border-t border-[#e8e8e8] pt-5">
+                  <p className="text-[12px] font-semibold uppercase tracking-wide text-[#6b6b6b]">
+                    Role-specific questions
+                  </p>
+                  {(screeningQuestions ?? []).map((q) => {
+                    const opts = Array.isArray(q.options)
+                      ? (q.options as { id?: string; label?: string }[])
+                          .map((o) => ({
+                            id: String(o.id ?? '').trim(),
+                            label: String(o.label ?? '').trim(),
+                          }))
+                          .filter((o) => o.id && o.label)
+                      : [];
+                    return (
+                      <div key={q.id} className="rounded-[9px] border border-[#d8d8d8] bg-white p-4">
+                        <p className="text-[14px] font-medium text-[#121212]">
+                          {q.prompt}
+                          {q.required ? <span className="text-red-600"> *</span> : null}
+                        </p>
+                        {q.help_text ? (
+                          <p className="mt-1 text-[12px] leading-relaxed text-[#6b6b6b]">{q.help_text}</p>
+                        ) : null}
+                        {q.question_type === 'short_text' || q.question_type === 'paragraph' ? (
+                          <textarea
+                            className={`${baseField} mt-2 resize-y`}
+                            style={{ minHeight: q.question_type === 'paragraph' ? 120 : 72 }}
+                            disabled={pending}
+                            value={screeningAnswers[q.id]?.text ?? ''}
+                            onChange={(e) =>
+                              setScreeningAnswers((prev) => ({
+                                ...prev,
+                                [q.id]: { ...prev[q.id], text: e.target.value },
+                              }))
+                            }
+                            maxLength={q.max_length ?? (q.question_type === 'short_text' ? 500 : 8000)}
+                          />
+                        ) : null}
+                        {q.question_type === 'single_choice' ? (
+                          <div className="mt-2 space-y-2">
+                            {opts.map((o) => (
+                              <label key={o.id} className="flex cursor-pointer items-center gap-2 text-[13px]">
+                                <input
+                                  type="radio"
+                                  name={`screening_${q.id}`}
+                                  checked={screeningAnswers[q.id]?.choice_id === o.id}
+                                  onChange={() =>
+                                    setScreeningAnswers((prev) => ({
+                                      ...prev,
+                                      [q.id]: { ...prev[q.id], choice_id: o.id },
+                                    }))
+                                  }
+                                  disabled={pending}
+                                />
+                                <span>{o.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        ) : null}
+                        {q.question_type === 'yes_no' ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {(['Yes', 'No'] as const).map((label, idx) => (
+                              <button
+                                key={label}
+                                type="button"
+                                disabled={pending}
+                                onClick={() =>
+                                  setScreeningAnswers((prev) => ({
+                                    ...prev,
+                                    [q.id]: { ...prev[q.id], bool: idx === 0 },
+                                  }))
+                                }
+                                className={`rounded-lg border px-4 py-2 text-[13px] ${
+                                  (idx === 0 && screeningAnswers[q.id]?.bool === true) ||
+                                  (idx === 1 && screeningAnswers[q.id]?.bool === false)
+                                    ? 'border-[#121212] bg-[#121212] text-white'
+                                    : 'border-[#d8d8d8] bg-[#faf9f6] text-[#121212]'
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
             <div className="mt-3 flex gap-3">
               <button
@@ -525,6 +679,12 @@ export function ApplyJobFormClient({
           <section className={`${currentStep === 2 && !done ? 'block' : 'hidden'}`}>
             <div className="rounded-[11px] border border-[#d8d8d8] bg-white p-6">
               <h2 className="mb-4 border-b border-[#d8d8d8] pb-2 font-authSerif text-[22px]">Your application materials</h2>
+              {!listing.allow_cv && !listing.allow_loom && !listing.allow_staffsavvy ? (
+                <p className="mb-4 text-[13px] leading-relaxed text-[#6b6b6b]">
+                  This role uses your answers from the previous step (and an optional cover letter below). No CV or
+                  video link is required.
+                </p>
+              ) : null}
               {listing.allow_cv ? (
                 <div className="mb-4">
                   <label className={labelClass} htmlFor="cv">

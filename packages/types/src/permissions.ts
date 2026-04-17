@@ -57,6 +57,7 @@ export const PERMISSION_KEYS = [
   'applications.move_stage',
   'applications.notify_candidate',
   'applications.add_internal_notes',
+  'applications.score_screening',
   'applications.manage',
   // Offers
   'offers.view',
