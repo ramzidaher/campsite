@@ -27,9 +27,12 @@ export function useRegisterPushNotifications() {
         }),
       });
 
-      const { status: existing } = await Notifications.getPermissionsAsync();
+      const existing = (await Notifications.getPermissionsAsync()) as {
+        status?: string;
+        granted?: boolean;
+      };
       if (cancelled) return;
-      if (existing === 'granted') return;
+      if (existing.granted === true || existing.status === 'granted') return;
       await Notifications.requestPermissionsAsync();
     })();
 

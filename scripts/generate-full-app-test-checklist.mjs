@@ -141,7 +141,7 @@ const cross = [
   ['CrossCutting', 'shell', 'X-003', 'Top bar: notification dropdown + badge counts', '(layout)', 'varies', 'web'],
   ['CrossCutting', 'shell', 'X-004', 'Top bar: member search (HR)', '(AppTopBar)', 'hr.view_records|hr.view_direct_reports', 'web'],
   ['CrossCutting', 'shell', 'X-005', 'Admin/Manager/HR nav accordions + localStorage', '(AppShell)', 'any', 'web'],
-  ['CrossCutting', 'broadcasts', 'X-006', 'Broadcasts pending tab', '/broadcasts?tab=pending', 'broadcasts.approve', 'web'],
+  ['CrossCutting', 'broadcasts', 'X-006', 'Broadcasts approvals (Sent for approval)', '/broadcasts?tab=submitted', 'broadcasts.approve', 'web'],
   ['CrossCutting', 'static', 'X-007', 'Static HTML: campsite_careers_portal.html', 'repo root', 'n/a', 'static'],
   ['CrossCutting', 'static', 'X-008', 'Static HTML: campsite_careers_register.html', 'repo root', 'n/a', 'static'],
   ['CrossCutting', 'static', 'X-009', 'Static HTML: campsite_job_application_portal.html', 'repo root', 'n/a', 'static'],

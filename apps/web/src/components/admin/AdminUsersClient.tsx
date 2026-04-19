@@ -4,8 +4,9 @@ import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewM
 import { MemberPermissionOverridesPanel } from '@/components/admin/MemberPermissionOverridesPanel';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { Lock } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 
 export type UserRow = {
   id: string;
@@ -129,7 +130,7 @@ export function AdminUsersClient({
   const [editReportsTo, setEditReportsTo] = useState<string>('');
 
   const [qInput, setQInput] = useState(defaultFilters.q ?? '');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isSearchPending, startSearchTransition] = useTransition();
 
   const activeDepts = departments.filter((d) => !d.is_archived);
   const [bulkApproveRole, setBulkApproveRole] = useState<string>('');
@@ -186,15 +187,12 @@ export function AdminUsersClient({
   }, [defaultFilters.q]);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const inUrl = searchParams.get('q') ?? '';
-      if (qInput === inUrl) return;
-      router.replace(filterHref({ q: qInput.trim() || undefined }));
-    }, 400);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    const inUrl = (searchParams.get('q') ?? '').trim();
+    const next = qInput.trim();
+    if (next === inUrl) return;
+    startSearchTransition(() => {
+      router.replace(filterHref({ q: next || undefined }));
+    });
   }, [qInput, router, filterHref, searchParams]);
 
   const slice = rows.slice(page * PAGE, page * PAGE + PAGE);
@@ -515,12 +513,18 @@ export function AdminUsersClient({
             🔍
           </span>
           <input
-            type="search"
+            type="text"
+            inputMode="search"
+            autoComplete="off"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.preventDefault();
+            }}
             placeholder="Search name or email..."
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
             aria-label="Search members"
+            aria-busy={isSearchPending}
           />
         </div>
 
@@ -859,12 +863,12 @@ export function AdminUsersClient({
           onClick={() => setInviteOpen(false)}
         >
           <div
-            className="max-h-[92vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_16px_40px_rgba(0,0,0,0.08)]"
+            className="flex max-h-[92vh] w-full max-w-[min(920px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_16px_40px_rgba(0,0,0,0.08)]"
             role="dialog"
             aria-labelledby="invite-member-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#d8d8d8] px-6 py-5">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#d8d8d8] bg-white px-6 py-5">
               <h2 id="invite-member-title" className="font-authSerif text-xl text-[#121212]">
                 Invite member
               </h2>
@@ -877,7 +881,7 @@ export function AdminUsersClient({
                 ✕
               </button>
             </div>
-            <div className="px-6 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               <p className="mb-4 text-[12.5px] leading-relaxed text-[#6b6b6b]">
                 We email them a link to set a password and sign in. Their account is created in your organisation with
                 the access level below (departments are optional).
@@ -931,7 +935,7 @@ export function AdminUsersClient({
                       <label key={d.id} className="flex cursor-pointer items-center gap-2 text-[13px] text-[#121212]">
                         <input
                           type="checkbox"
-                          className="rounded border-[#d8d8d8]"
+                          className="h-4 w-4 shrink-0 rounded border border-[#b8b8b8] bg-white accent-[#121212] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]"
                           checked={inviteDepts.has(d.id)}
                           onChange={(e) => {
                             setInviteDepts((s) => {
@@ -949,7 +953,7 @@ export function AdminUsersClient({
                 </div>
               </fieldset>
             </div>
-            <div className="flex flex-col gap-2 border-t border-[#d8d8d8] bg-white px-6 py-4 sm:flex-row sm:justify-end">
+            <div className="flex shrink-0 flex-col gap-2 border-t border-[#d8d8d8] bg-white px-6 py-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1] sm:order-1"
@@ -977,104 +981,138 @@ export function AdminUsersClient({
           onClick={() => setEdit(null)}
         >
           <div
-            className="max-h-[92vh] w-full max-w-[560px] overflow-y-auto rounded-2xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_16px_40px_rgba(0,0,0,0.08)]"
+            className="flex max-h-[92vh] w-full max-w-[min(920px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_16px_40px_rgba(0,0,0,0.08)]"
             role="dialog"
             aria-labelledby="edit-member-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#d8d8d8] px-6 py-5">
-              <h2 id="edit-member-title" className="font-authSerif text-xl text-[#121212]">
+            <div className="flex shrink-0 items-start justify-end border-b border-[#e8e8e8] bg-white px-6 pb-4 pt-5">
+              <h2 id="edit-member-title" className="sr-only">
                 Edit member
               </h2>
               <button
                 type="button"
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#d8d8d8] text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] text-[#6b6b6b] hover:bg-[#f5f4f1]"
                 onClick={() => setEdit(null)}
                 aria-label="Close"
               >
                 ✕
               </button>
             </div>
-            <div className="px-6 py-5">
-              <div className="mb-5 flex items-center gap-3 rounded-lg bg-[#f5f4f1] p-3.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#121212] text-[14px] font-semibold text-[#faf9f6]">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              <div className="mb-8 flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6d5a8c] text-[15px] font-semibold text-white">
                   {initials(edit.full_name)}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-medium text-[#121212]">{edit.full_name}</div>
-                  <div className="text-[12px] text-[#9b9b9b]">{edit.email ?? '-'}</div>
+                  <div className="text-[16px] font-semibold text-[#121212]">{edit.full_name}</div>
+                  <div className="text-[13px] text-[#6b6b6b]">{edit.email ?? '-'}</div>
                 </div>
               </div>
-              <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                Role
-                <select
-                  className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value)}
-                  disabled={!canEditRoles}
-                >
-                  {editRoleOptions.map((role) => (
-                    <option key={role.id} value={role.key}>
-                      {role.label}
-                      {!assignableRoles.some((r) => r.key === role.key)
-                        ? ' (current role — not assignable by your access)'
-                        : role.is_system
-                          ? ' (predefined)'
-                          : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="mt-4 block text-[12.5px] font-medium text-[#6b6b6b]">
-                Line manager (leave approval)
-                <select
-                  className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
-                  value={editReportsTo}
-                  onChange={(e) => setEditReportsTo(e.target.value)}
-                  disabled={!canEditRoles}
-                >
-                  <option value="">None (only org admins can approve leave)</option>
-                  {managerChoices
-                    .filter((m) => m.id !== edit.id)
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.full_name}
-                      </option>
+
+              <div className="space-y-8">
+                <section aria-labelledby="edit-role-heading">
+                  <h3 id="edit-role-heading" className="text-[13px] font-semibold text-[#121212]">
+                    Role
+                  </h3>
+                  {canEditRoles ? (
+                    <select
+                      className="mt-2 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                    >
+                      {editRoleOptions.map((role) => (
+                        <option key={role.id} value={role.key}>
+                          {role.label}
+                          {!assignableRoles.some((r) => r.key === role.key)
+                            ? ' (current role — not assignable by your access)'
+                            : role.is_system
+                              ? ' (predefined)'
+                              : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="mt-2 flex gap-3 rounded-lg border border-[#e8e8e8] bg-[#faf9f6] p-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#6b6b6b] shadow-sm ring-1 ring-[#e8e8e8]">
+                        <Lock className="h-4 w-4" aria-hidden />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-semibold text-[#121212]">
+                          {roleLabelByKey.get(editRole) ?? editRole.replace(/_/g, ' ')}
+                        </p>
+                        <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+                          You don&apos;t have permission to change this role.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                <section className="border-t border-[#e8e8e8] pt-8" aria-labelledby="edit-manager-heading">
+                  <h3 id="edit-manager-heading" className="text-[13px] font-semibold text-[#121212]">
+                    Line manager
+                  </h3>
+                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">Approves this person&apos;s leave requests</p>
+                  <select
+                    className="mt-3 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)] disabled:opacity-60"
+                    value={editReportsTo}
+                    onChange={(e) => setEditReportsTo(e.target.value)}
+                    disabled={!canEditRoles}
+                  >
+                    <option value="">None (only org admins can approve leave)</option>
+                    {managerChoices
+                      .filter((m) => m.id !== edit.id)
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.full_name}
+                        </option>
+                      ))}
+                  </select>
+                </section>
+
+                <fieldset className="border-t border-[#e8e8e8] pt-8">
+                  <legend className="text-[13px] font-semibold text-[#121212]">Departments</legend>
+                  <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">Select all that apply</p>
+                  <div className="mt-4 grid max-h-[min(280px,40vh)] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                    {activeDepts.map((d) => (
+                      <label
+                        key={d.id}
+                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-[#e8e8e8] bg-white px-3 py-2.5 text-[13px] text-[#121212] shadow-sm transition-colors hover:border-[#d0d0d0]"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 shrink-0 rounded border border-[#b8b8b8] bg-white accent-[#121212] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212] disabled:opacity-50"
+                          checked={editDepts.has(d.id)}
+                          onChange={(e) => {
+                            setEditDepts((s) => {
+                              const n = new Set(s);
+                              if (e.target.checked) n.add(d.id);
+                              else n.delete(d.id);
+                              return n;
+                            });
+                          }}
+                          disabled={!canEditRoles}
+                        />
+                        <span className="min-w-0">{d.name}</span>
+                      </label>
                     ))}
-                </select>
-              </label>
-              <fieldset className="mt-4">
-                <legend className="text-[12.5px] font-medium text-[#6b6b6b]">Departments</legend>
-                <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3">
-                  {activeDepts.map((d) => (
-                    <label key={d.id} className="flex cursor-pointer items-center gap-2 text-[13px] text-[#121212]">
-                      <input
-                        type="checkbox"
-                        className="rounded border-[#d8d8d8]"
-                        checked={editDepts.has(d.id)}
-                        onChange={(e) => {
-                          setEditDepts((s) => {
-                            const n = new Set(s);
-                            if (e.target.checked) n.add(d.id);
-                            else n.delete(d.id);
-                            return n;
-                          });
-                        }}
-                        disabled={!canEditRoles}
-                      />
-                      {d.name}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              {canEditRoles && edit.id !== currentUserId ? (
-                <MemberPermissionOverridesPanel targetUserId={edit.id} />
-              ) : null}
+                  </div>
+                </fieldset>
+
+                {canEditRoles && edit.id !== currentUserId ? (
+                  <MemberPermissionOverridesPanel
+                    targetUserId={edit.id}
+                    memberFirstName={edit.full_name.trim().split(/\s+/)[0] ?? edit.full_name}
+                    roleLabel={roleLabelByKey.get(editRole) ?? editRole.replace(/_/g, ' ')}
+                  />
+                ) : null}
+              </div>
             </div>
-            <div className="flex justify-end gap-2 border-t border-[#d8d8d8] bg-white px-6 py-4">
+            <div className="flex shrink-0 flex-col gap-3 border-t border-[#e8e8e8] bg-[#faf9f6] px-6 py-4 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
-                className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                className="order-2 rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#6b6b6b] shadow-sm hover:bg-[#f5f4f1] sm:order-1"
                 onClick={() => setEdit(null)}
               >
                 Cancel
@@ -1082,7 +1120,7 @@ export function AdminUsersClient({
               <button
                 type="button"
                 disabled={busy === edit.id || !canEditRoles}
-                className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+                className="order-1 rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-[#faf9f6] shadow-sm disabled:opacity-50 sm:order-2"
                 onClick={() => void saveEdit()}
               >
                 Save changes

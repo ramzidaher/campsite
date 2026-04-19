@@ -20,7 +20,7 @@ import { ProfileUiModeSync } from '@/components/profile/ProfileUiModeSync';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { getDisplayName } from '@/lib/names';
+import { getDisplayName, getProfileInitials } from '@/lib/names';
 import { normalizeUiMode } from '@/lib/uiMode';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { warnIfSlowServerPath } from '@/lib/perf/serverPerf';
@@ -747,12 +747,7 @@ export default async function MyProfilePage({
     return view;
   }
 
-  const initials = profileDisplayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
+  const initials = getProfileInitials(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
   const leaveDaysLeft = Math.max(0, Number(allowanceRow.data?.annual_entitlement_days ?? 0) - annualUsed);
   const tenureLabel =
     typeof (fileRow as { length_of_service_years?: number } | undefined)?.length_of_service_years === 'number' &&

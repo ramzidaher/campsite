@@ -50,7 +50,7 @@ export function DashboardHome({
 }) {
   const now = new Date();
   const isAdmin = variant === 'admin';
-  const composeHref = canCompose ? '/broadcasts?tab=compose' : '/broadcasts';
+  const composeHref = canCompose ? '/broadcasts?tab=feed&compose=1' : '/broadcasts';
   const pendingHref = isAdmin ? '/admin/pending' : '/pending-approvals';
   const showUnreadBroadcastKpi = data.showBroadcastUnreadCount !== false;
   const showBroadcastTotal = data.broadcastTotal !== undefined;

@@ -16,7 +16,8 @@ export async function countPendingBroadcastApprovalsForViewer(
     .from('broadcasts')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending_approval')
-    .eq('org_id', orgId);
+    .eq('org_id', orgId)
+    .neq('created_by', userId);
 
   if (role === 'manager') {
     const { data: dm } = await supabase.from('dept_managers').select('dept_id').eq('user_id', userId);

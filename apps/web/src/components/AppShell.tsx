@@ -262,7 +262,7 @@ export function AppShell({
     return (
       [
         { id: 'broadcast-unread',           label: 'Unread broadcasts',              href: '/broadcasts',                   count: live.broadcast_unread },
-        { id: 'broadcast-pending',          label: 'Broadcast approvals',            href: '/broadcasts?tab=pending',       count: live.broadcast_pending_approvals },
+        { id: 'broadcast-pending',          label: 'Broadcast approvals',            href: '/broadcasts?tab=submitted',       count: live.broadcast_pending_approvals },
         { id: 'profile-pending',            label: 'Pending member approvals',       href: isAdmin ? '/admin/pending' : '/pending-approvals', count: live.pending_approvals },
         { id: 'rota-peer',                  label: 'Rota swaps awaiting your OK',    href: '/rota',                         count: live.rota_pending_peer },
         { id: 'rota-final',                 label: 'Rota requests awaiting approval',href: '/rota',                         count: live.rota_pending_final },

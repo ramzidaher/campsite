@@ -17,13 +17,18 @@ import { createClient } from '@/lib/supabase/client';
 import * as chrono from 'chrono-node';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Pin } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { BroadcastRepliesClient, type BroadcastReplyRow } from '@/components/broadcasts/BroadcastRepliesClient';
+import { broadcastNavigationFromFeedCache } from '@/lib/broadcasts/broadcastNavigationFromFeedCache';
+import {
+  BROADCAST_LAST_VIEWED_ID_KEY,
+  parseBroadcastFeedNavigation,
+} from '@/lib/broadcasts/parseBroadcastFeedNavigation';
 import type { FeedRow } from '@/lib/broadcasts/feedTypes';
 import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { SHELL_BADGE_COUNTS_QUERY_KEY } from '@/hooks/useShellBadgeCounts';
@@ -73,6 +78,41 @@ export function BroadcastDetailView({
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  const detailNavFallback = useQuery({
+    queryKey: ['broadcast-detail-navigation', initial.id],
+    enabled: initial.status === 'sent' && navigation == null,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('broadcast_feed_navigation', {
+        p_broadcast_id: initial.id,
+      });
+      if (error) return null;
+      return parseBroadcastFeedNavigation(data);
+    },
+  });
+
+  const [feedCacheEpoch, setFeedCacheEpoch] = useState(0);
+  useEffect(() => {
+    const unsub = queryClient.getQueryCache().subscribe((event) => {
+      const q = event?.query;
+      const k = q?.queryKey;
+      if (Array.isArray(k) && k[0] === 'broadcast-feed' && k[1] === orgId && k[2] === userId) {
+        setFeedCacheEpoch((n) => n + 1);
+      }
+    });
+    return unsub;
+  }, [queryClient, orgId, userId]);
+
+  const navigationFromFeedCache = useMemo(() => {
+    void feedCacheEpoch;
+    return initial.status === 'sent'
+      ? broadcastNavigationFromFeedCache(queryClient, orgId, userId, initial.id)
+      : null;
+  }, [initial.status, initial.id, orgId, userId, queryClient, feedCacheEpoch]);
+
+  const effectiveNavigation =
+    navigation ?? detailNavFallback.data ?? navigationFromFeedCache ?? null;
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(initial.cover_image_url ?? null);
   const [coverBusy, setCoverBusy] = useState(false);
@@ -83,6 +123,14 @@ export function BroadcastDetailView({
   useEffect(() => {
     setCoverImageUrl(initial.cover_image_url ?? null);
   }, [initial.id, initial.cover_image_url]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(BROADCAST_LAST_VIEWED_ID_KEY, initial.id);
+    } catch {
+      /* private mode / quota */
+    }
+  }, [initial.id]);
 
   const [marked, setMarked] = useState(false);
   const [calendarMsg, setCalendarMsg] = useState<string | null>(null);
@@ -407,47 +455,61 @@ export function BroadcastDetailView({
           }}
         />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <Link
-            href="/broadcasts"
-            className={[
-              'inline-flex w-fit items-center gap-1.5 rounded-lg border-2 border-[#121212] bg-white px-3 py-2 text-[13px] font-semibold text-[#121212]',
-              'shadow-[0_4px_24px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.65)] transition-colors hover:bg-[#f4f4f4]',
-              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]',
-            ].join(' ')}
-          >
-            <span aria-hidden>←</span> Back to broadcasts
-          </Link>
+        <div className="relative z-[100] flex w-full max-w-full flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-3">
+          <div className="flex justify-start">
+            <Link
+              href="/broadcasts"
+              className={[
+                'inline-flex w-fit items-center gap-1.5 rounded-lg border-2 border-[#121212] bg-white px-3 py-2 text-[13px] font-semibold text-[#121212]',
+                'shadow-[0_4px_24px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.65)] transition-colors hover:bg-[#f4f4f4]',
+                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]',
+              ].join(' ')}
+            >
+              <span aria-hidden>←</span> Back to broadcasts
+            </Link>
+          </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            {navigation && navigation.total > 0 ? (
+          <div className="flex min-h-[44px] items-center justify-center">
+            {initial.status === 'sent' && detailNavFallback.isLoading && !effectiveNavigation ? (
               <div
-                className="inline-flex items-center gap-1 rounded-full border border-[#121212]/15 bg-white/95 px-2 py-1 text-[13px] text-[#121212] shadow-[0_2px_12px_rgba(0,0,0,0.08)]"
-                aria-label={`Broadcast ${navigation.index} of ${navigation.total}`}
+                className="inline-flex h-10 min-w-[160px] animate-pulse items-center gap-1 rounded-full border border-[#121212]/10 bg-white/90 px-3 shadow-sm"
+                aria-hidden
+              />
+            ) : effectiveNavigation && effectiveNavigation.total > 0 ? (
+              <div
+                className="inline-flex items-center gap-1 rounded-full border border-[#121212]/20 bg-white px-2 py-1 text-[13px] font-medium text-[#121212] shadow-[0_2px_14px_rgba(0,0,0,0.12)]"
+                aria-label={`Broadcast ${effectiveNavigation.index} of ${effectiveNavigation.total}`}
               >
-                <span className="px-1.5 text-[#6b6b6b]">
-                  {navigation.index} of {navigation.total}
+                <span className="px-1.5 tabular-nums text-[#6b6b6b]">
+                  {effectiveNavigation.index} of {effectiveNavigation.total}
                 </span>
                 <button
                   type="button"
-                  disabled={!navigation.prevId}
-                  onClick={() => navigation.prevId && router.push(`/broadcasts/${navigation.prevId}`)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#121212] transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-35"
+                  disabled={!effectiveNavigation.prevId}
+                  onClick={() =>
+                    effectiveNavigation.prevId && router.push(`/broadcasts/${effectiveNavigation.prevId}`)
+                  }
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#121212] transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-35"
                   aria-label="Previous broadcast"
                 >
-                  <ChevronLeft className="h-5 w-5" aria-hidden />
+                  <ChevronLeft className="h-5 w-5" strokeWidth={2.25} aria-hidden />
                 </button>
                 <button
                   type="button"
-                  disabled={!navigation.nextId}
-                  onClick={() => navigation.nextId && router.push(`/broadcasts/${navigation.nextId}`)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#121212] transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-35"
+                  disabled={!effectiveNavigation.nextId}
+                  onClick={() =>
+                    effectiveNavigation.nextId && router.push(`/broadcasts/${effectiveNavigation.nextId}`)
+                  }
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#121212] transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-35"
                   aria-label="Next broadcast"
                 >
-                  <ChevronRight className="h-5 w-5" aria-hidden />
+                  <ChevronRight className="h-5 w-5" strokeWidth={2.25} aria-hidden />
                 </button>
               </div>
             ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
             {initial.status === 'sent' ? (
               <button
                 type="button"
@@ -539,7 +601,7 @@ export function BroadcastDetailView({
           {initial.sent_at ? (
             <>
               <span className="mx-2 text-[#9b9b9b]">·</span>
-              <time dateTime={initial.sent_at}>
+              <time dateTime={initial.sent_at} suppressHydrationWarning>
                 {new Date(initial.sent_at).toLocaleString(undefined, {
                   dateStyle: 'medium',
                   timeStyle: 'short',
@@ -632,7 +694,7 @@ export function BroadcastDetailView({
         {parsedRange ? (
           <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-4 text-sm text-amber-950">
             <p className="font-medium text-amber-950">Date or time in this message</p>
-            <p className="mt-1 text-amber-950/90">
+            <p className="mt-1 text-amber-950/90" suppressHydrationWarning>
               {parsedRange.start.toLocaleString(undefined, {
                 dateStyle: 'full',
                 timeStyle: 'short',

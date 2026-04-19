@@ -14,6 +14,16 @@ export function isMissingArchivedAtColumn(error: PostgrestError | null | undefin
   return false;
 }
 
+/** True when `staff_resource_folders.parent_id` / `archived_at` are missing (migration not applied). */
+export function isMissingFolderHierarchyColumn(error: PostgrestError | null | undefined): boolean {
+  if (!error) return false;
+  const m = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+  if (m.includes('parent_id') && (m.includes('does not exist') || m.includes('schema cache'))) return true;
+  if (m.includes('staff_resource_folders') && m.includes('archived_at') && m.includes('does not exist')) return true;
+  if (error.code === 'PGRST204' && (m.includes('parent_id') || m.includes('staff_resource_folders'))) return true;
+  return false;
+}
+
 export const STAFF_RESOURCE_DETAIL_SELECT_WITH_ARCHIVE =
   'id, title, description, file_name, mime_type, byte_size, storage_path, updated_at, archived_at, folder_id, staff_resource_folders(id, name)';
 

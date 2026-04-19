@@ -54,7 +54,7 @@ export function buildShellCommandPaletteSections(opts: {
       {
         id: 'action-compose-broadcast',
         label: 'Compose a broadcast',
-        href: '/broadcasts?tab=compose',
+        href: '/broadcasts?tab=feed&compose=1',
         keywords: ['new', 'write', 'message', 'announce', 'post'],
       },
     ],

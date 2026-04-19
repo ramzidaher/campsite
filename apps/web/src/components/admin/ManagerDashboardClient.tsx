@@ -139,7 +139,7 @@ export function ManagerDashboardClient({
 
       <div className="flex flex-wrap gap-3">
         <Link
-          href="/broadcasts?tab=compose"
+          href="/broadcasts?tab=feed&compose=1"
           className="inline-flex h-10 items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white transition hover:bg-[#007a54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008B60]"
         >
           Compose broadcast

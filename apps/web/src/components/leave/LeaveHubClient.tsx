@@ -11,7 +11,9 @@ import { leaveRangeOverlapsExisting } from '@/lib/leaveDateOverlap';
 import { formatToilMinutes, toilInputToMinutes } from '@/lib/toilDuration';
 import { countOrgLeaveDaysInclusive, overlapInclusiveRange, type OrgLeaveDayOptions } from '@/lib/workingDays';
 import { createClient } from '@/lib/supabase/client';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { CampfireLoaderInline } from '@/components/CampfireLoaderInline';
+import { Calendar, ChevronDown, Info } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
 type LeaveRequest = {
@@ -115,6 +117,8 @@ type TeamAbsence = {
   start_date: string;
   end_date: string;
   half_day_portion?: 'am' | 'pm' | null;
+  /** Departments this person belongs to (for manager calendar filter). */
+  dept_ids: string[];
 };
 
 const REQUESTABLE_LEAVE_KINDS = ['annual', 'toil', 'parental', 'bereavement', 'compassionate', 'study', 'unpaid'] as const;
@@ -134,6 +138,42 @@ function leaveKindLabel(kind: string): string {
     default: return kind;
   }
 }
+
+function leaveKindShortLabel(kind: string): string {
+  switch (kind) {
+    case 'annual': return 'Annual';
+    case 'toil': return 'TOIL';
+    case 'parental': return 'Parental';
+    case 'bereavement': return 'Bereavement';
+    case 'compassionate': return 'Compassionate';
+    case 'study': return 'Study';
+    case 'unpaid': return 'Unpaid';
+    default: return kind;
+  }
+}
+
+function leaveKindBookingHint(kind: string): string | null {
+  switch (kind) {
+    case 'annual':
+      return 'Uses your annual leave entitlement for this leave year.';
+    case 'toil':
+      return 'Deducts from your TOIL balance once approved.';
+    case 'parental':
+      return 'Parental leave — manager approval required.';
+    case 'bereavement':
+      return 'Bereavement leave — manager approval required.';
+    case 'compassionate':
+      return 'Compassionate leave — manager approval required.';
+    case 'study':
+      return 'Study leave — manager approval may be required.';
+    case 'unpaid':
+      return 'Unpaid leave — manager approval required.';
+    default:
+      return null;
+  }
+}
+
+const BOOK_LEAVE_KIND_ORDER: RequestableLeaveKind[] = ['annual', 'toil', 'parental', 'bereavement', 'compassionate', 'study', 'unpaid'];
 
 function parentalSubtypeLabel(v: ParentalSubtype | string | null | undefined): string {
   switch (v) {
@@ -171,6 +211,14 @@ function annualCountsTowardUsage(status: string): boolean {
   return status === 'approved' || status === 'pending' || status === 'pending_edit' || status === 'pending_cancel';
 }
 
+function leaveRequestOverlapsLeaveYear(
+  r: Pick<LeaveRequest, 'start_date' | 'end_date'>,
+  leaveYearStartIso: string,
+  leaveYearEndIso: string,
+): boolean {
+  return Boolean(overlapInclusiveRange(r.start_date, r.end_date, leaveYearStartIso, leaveYearEndIso));
+}
+
 function fmtDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString(undefined, {
     day: 'numeric', month: 'short', year: 'numeric',
@@ -183,6 +231,15 @@ function monthKeyToRange(monthKey: string): { start: string; end: string } {
   const endDate = new Date(Date.UTC(y, m, 0, 12, 0, 0));
   const end = endDate.toISOString().slice(0, 10);
   return { start, end };
+}
+
+/** Matches dashboard SVG `viewBox` circles with r=34 (stroke drawn on centerline). */
+const LEAVE_DASHBOARD_RING_C = 2 * Math.PI * 34;
+
+/** 0–100 → reliable stroke-dashoffset for a -90° rotated progress ring. */
+function leaveDashboardRingOffset(pct0to100: number): number {
+  const p = Math.min(100, Math.max(0, pct0to100)) / 100;
+  return LEAVE_DASHBOARD_RING_C * (1 - p);
 }
 
 function shiftMonthKey(monthKey: string, delta: number): string {
@@ -335,6 +392,17 @@ export function LeaveHubClient({
   const [encashmentYear, setEncashmentYear] = useState('');
   const [encashmentDays, setEncashmentDays] = useState('');
   const [encashmentNote, setEncashmentNote] = useState('');
+  const [leaveExempt, setLeaveExempt] = useState(false);
+  const [encashmentAvailable, setEncashmentAvailable] = useState<number | null>(null);
+  /** False until a full `load()` finishes so balances + ring dashboard appear in one paint. */
+  const [leaveHubReady, setLeaveHubReady] = useState(false);
+  const [leaveMoreMenuOpen, setLeaveMoreMenuOpen] = useState(false);
+  const leaveMoreMenuRef = useRef<HTMLDivElement>(null);
+  /** Team calendar: filter by department (managers / admins). */
+  const [teamCalendarDeptFilter, setTeamCalendarDeptFilter] = useState<'all' | string>('all');
+  const [teamCalendarDeptOptions, setTeamCalendarDeptOptions] = useState<{ id: string; name: string }[]>([]);
+  /** When false, long explanatory copy + SSP (etc.) stay hidden for a cleaner page. */
+  const [leaveExplainerOpen, setLeaveExplainerOpen] = useState(false);
 
   const selectedLeavePeriodLabel = useMemo(
     () => formatLeaveYearPeriodRange(year, leaveYearStartMonth, leaveYearStartDay),
@@ -353,226 +421,346 @@ export function LeaveHubClient({
     return base.map(String);
   }, [year, orgTimezone]);
 
+  const requestableKinds = useMemo(
+    () =>
+      leaveExempt
+        ? REQUESTABLE_LEAVE_KINDS.filter((k) => k !== 'annual' && k !== 'toil')
+        : [...REQUESTABLE_LEAVE_KINDS],
+    [leaveExempt],
+  );
+
+  const bookLeaveKindRows = useMemo(() => {
+    const ordered = BOOK_LEAVE_KIND_ORDER.filter((k) => requestableKinds.includes(k));
+    return { row1: ordered.slice(0, 4), row2: ordered.slice(4) };
+  }, [requestableKinds]);
+
+  useEffect(() => {
+    if (!leaveExempt) return;
+    if (formKind === 'annual' || formKind === 'toil') {
+      setFormKind((requestableKinds[0] ?? 'unpaid') as RequestableLeaveKind);
+    }
+  }, [leaveExempt, formKind, requestableKinds]);
+
   const load = useCallback(async () => {
     setMsg(null);
     const toIso = new Date().toISOString().slice(0, 10);
     const fromIso = new Date(Date.now() - 730 * 86400000).toISOString().slice(0, 10);
-  const [{ data: al }, { data: mine }, { data: sick }, { data: bf }, { data: mineToil }, { data: ssp }, { data: myCarry }, { data: myEncash }, { data: holidays }] = await Promise.all([
-      supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
-      supabase.from('leave_requests').select('id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
-      supabase.from('sickness_absences').select('id, start_date, end_date, half_day_portion, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
-      supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: toIso }),
-      supabase
-        .from('toil_credit_requests')
-        .select('id, work_date, minutes_earned, note, status, decision_note, created_at')
-        .eq('org_id', orgId)
-        .eq('requester_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(40),
-      supabase.rpc('ssp_calculation_summary', { p_user_id: userId, p_from: fromIso, p_to: toIso }),
-      supabase
-        .from('leave_carryover_requests')
-        .select('id, from_leave_year, to_leave_year, days_requested, days_approved, note, status, decision_note, created_at')
-        .eq('org_id', orgId)
-        .eq('requester_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(40),
-      supabase
-        .from('leave_encashment_requests')
-        .select('id, leave_year, days_requested, days_approved, note, status, decision_note, created_at')
-        .eq('org_id', orgId)
-        .eq('requester_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(40),
-      supabase
-        .from('org_leave_holiday_periods')
-        .select('id, name, holiday_kind, start_date, end_date, is_active')
-        .eq('org_id', orgId)
-        .eq('is_active', true)
-        .order('start_date', { ascending: true }),
-    ]);
 
-    setAllowance(al ? { leave_year: String(al.leave_year), annual_entitlement_days: Number(al.annual_entitlement_days ?? 0), toil_balance_days: Number(al.toil_balance_days ?? 0) } : { leave_year: year, annual_entitlement_days: 0, toil_balance_days: 0 });
-    setMyRequests((mine ?? []) as LeaveRequest[]);
-    setMyToilCreditRequests((mineToil ?? []) as ToilCreditRequest[]);
-    setMyCarryoverRequests((myCarry ?? []) as CarryoverRequest[]);
-    setMyEncashmentRequests((myEncash ?? []) as EncashmentRequest[]);
-    setSickness((sick ?? []) as SicknessRow[]);
-    setHolidayPeriods((holidays ?? []) as HolidayPeriod[]);
-    setSspSummary(ssp && typeof ssp === 'object' ? (ssp as Record<string, unknown>) : null);
-
-    const b0 = Array.isArray(bf) ? bf[0] : bf;
-    if (b0 && typeof b0 === 'object' && 'spell_count' in b0) {
-      setAbsenceScore({ spell_count: Number((b0 as { spell_count: number }).spell_count), total_days: Number((b0 as { total_days: number }).total_days), bradford_score: Number((b0 as { bradford_score: number }).bradford_score) });
-    } else { setAbsenceScore(null); }
-
-    if (canApprove || canManage) {
-      const calRange = monthKeyToRange(calendarMonth);
-      let pend: LeaveRequest[] = [];
-      let pendToil: ToilCreditRequest[] = [];
-      let pendCarry: CarryoverRequest[] = [];
-      let pendEncash: EncashmentRequest[] = [];
-      let approvalScopeIds: string[] | null = null;
-      if (canManage) {
-        const { data } = await supabase
-          .from('leave_requests')
-          .select('id, requester_id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype')
-          .eq('org_id', orgId)
-          .in('status', ['pending', 'pending_cancel', 'pending_edit'])
-          .order('created_at', { ascending: false });
-        pend = (data ?? []) as LeaveRequest[];
-        const { data: toilData } = await supabase
+    try {
+      const [
+        { data: al },
+        { data: mine },
+        { data: sick },
+        { data: bf },
+        { data: mineToil },
+        { data: ssp },
+        { data: myCarry },
+        { data: myEncash },
+        { data: holidays },
+        { data: ehr },
+        encRes,
+      ] = await Promise.all([
+        supabase.from('leave_allowances').select('leave_year, annual_entitlement_days, toil_balance_days').eq('org_id', orgId).eq('user_id', userId).eq('leave_year', year).maybeSingle(),
+        supabase.from('leave_requests').select('id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, decision_note, created_at, decided_at, requested_action_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype').eq('org_id', orgId).eq('requester_id', userId).order('created_at', { ascending: false }).limit(80),
+        supabase.from('sickness_absences').select('id, start_date, end_date, half_day_portion, notes').eq('org_id', orgId).eq('user_id', userId).order('start_date', { ascending: false }).limit(80),
+        supabase.rpc('bradford_factor_for_user', { p_user_id: userId, p_on: toIso }),
+        supabase
           .from('toil_credit_requests')
-          .select('id, requester_id, work_date, minutes_earned, note, status, created_at')
+          .select('id, work_date, minutes_earned, note, status, decision_note, created_at')
           .eq('org_id', orgId)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-        pendToil = (toilData ?? []) as ToilCreditRequest[];
-        const { data: carryData } = await supabase
+          .eq('requester_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(40),
+        supabase.rpc('ssp_calculation_summary', { p_user_id: userId, p_from: fromIso, p_to: toIso }),
+        supabase
           .from('leave_carryover_requests')
-          .select('id, requester_id, from_leave_year, to_leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+          .select('id, from_leave_year, to_leave_year, days_requested, days_approved, note, status, decision_note, created_at')
           .eq('org_id', orgId)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-        pendCarry = (carryData ?? []) as CarryoverRequest[];
-        const { data: encashData } = await supabase
+          .eq('requester_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(40),
+        supabase
           .from('leave_encashment_requests')
-          .select('id, requester_id, leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+          .select('id, leave_year, days_requested, days_approved, note, status, decision_note, created_at')
           .eq('org_id', orgId)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-        pendEncash = (encashData ?? []) as EncashmentRequest[];
-      } else {
-        const { data: reportIds } = await supabase.from('profiles').select('id').eq('org_id', orgId).eq('reports_to_user_id', userId);
-        const ids = (reportIds ?? []).map((r) => r.id as string).filter(Boolean);
-        approvalScopeIds = ids;
-        if (ids.length) {
-          const { data } = await supabase
-            .from('leave_requests')
-            .select('id, requester_id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype')
-            .eq('org_id', orgId)
-            .in('status', ['pending', 'pending_cancel', 'pending_edit'])
-            .in('requester_id', ids)
-            .order('created_at', { ascending: false });
-          pend = (data ?? []) as LeaveRequest[];
-          const { data: toilData } = await supabase
-            .from('toil_credit_requests')
-            .select('id, requester_id, work_date, minutes_earned, note, status, created_at')
-            .eq('org_id', orgId)
-            .eq('status', 'pending')
-            .in('requester_id', ids)
-            .order('created_at', { ascending: false });
-          pendToil = (toilData ?? []) as ToilCreditRequest[];
-          const { data: carryData } = await supabase
-            .from('leave_carryover_requests')
-            .select('id, requester_id, from_leave_year, to_leave_year, days_requested, days_approved, note, status, decision_note, created_at')
-            .eq('org_id', orgId)
-            .eq('status', 'pending')
-            .in('requester_id', ids)
-            .order('created_at', { ascending: false });
-          pendCarry = (carryData ?? []) as CarryoverRequest[];
-          const { data: encashData } = await supabase
-            .from('leave_encashment_requests')
-            .select('id, requester_id, leave_year, days_requested, days_approved, note, status, decision_note, created_at')
-            .eq('org_id', orgId)
-            .eq('status', 'pending')
-            .in('requester_id', ids)
-            .order('created_at', { ascending: false });
-          pendEncash = (encashData ?? []) as EncashmentRequest[];
-        }
-      }
-      const nameIds = [...new Set([...pend.map((r) => r.requester_id as string), ...pendToil.map((t) => t.requester_id as string), ...pendCarry.map((c) => c.requester_id as string), ...pendEncash.map((e) => e.requester_id as string)])];
-      const names: Record<string, string> = {};
-      if (nameIds.length) {
-        const { data: profs } = await supabase
-          .from('coworker_directory_public')
-          .select('id, full_name')
-          .in('id', nameIds);
-        for (const p of profs ?? []) names[p.id as string] = (p.full_name as string) ?? '';
-      }
-      setPendingForMe(pend.map((r) => ({ ...r, profiles: { full_name: names[r.requester_id as string] ?? '' } })));
-      setPendingToilForMe(pendToil.map((t) => ({ ...t, profiles: { full_name: names[t.requester_id as string] ?? '' } })));
-      setPendingCarryoverForMe(pendCarry.map((c) => ({ ...c, profiles: { full_name: names[c.requester_id as string] ?? '' } })));
-      setPendingEncashmentForMe(pendEncash.map((e) => ({ ...e, profiles: { full_name: names[e.requester_id as string] ?? '' } })));
+          .eq('requester_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(40),
+        supabase
+          .from('org_leave_holiday_periods')
+          .select('id, name, holiday_kind, start_date, end_date, is_active')
+          .eq('org_id', orgId)
+          .eq('is_active', true)
+          .order('start_date', { ascending: true }),
+        supabase.from('employee_hr_records').select('annual_leave_entitlement_exempt').eq('org_id', orgId).eq('user_id', userId).maybeSingle(),
+        supabase.rpc('leave_encashment_available_days', {
+          p_org_id: orgId,
+          p_user_id: userId,
+          p_leave_year: year,
+        }),
+      ]);
 
-      const reportScopeIds = canManage
-        ? null
-        : (approvalScopeIds && approvalScopeIds.length ? approvalScopeIds : ['00000000-0000-0000-0000-000000000000']);
-      const absBase = supabase
-        .from('leave_requests')
-        .select('id, requester_id, kind, start_date, end_date, half_day_portion')
-        .eq('org_id', orgId)
-        .eq('status', 'approved')
-        .lte('start_date', calRange.end)
-        .gte('end_date', calRange.start)
-        .order('start_date', { ascending: true });
-      const { data: absRows } = reportScopeIds ? await absBase.in('requester_id', reportScopeIds) : await absBase;
-      const absRequesterIds = [...new Set((absRows ?? []).map((r) => String(r.requester_id ?? '')).filter(Boolean))];
-      const absNameMap: Record<string, string> = {};
-      if (absRequesterIds.length) {
-        const { data: nrows } = await supabase.from('coworker_directory_public').select('id, full_name').in('id', absRequesterIds);
-        for (const row of nrows ?? []) absNameMap[String(row.id)] = String(row.full_name ?? '');
-      }
-      setTeamAbsences(
-        (absRows ?? []).map((r) => ({
+      const leaveExemptNext = Boolean((ehr as { annual_leave_entitlement_exempt?: boolean } | null)?.annual_leave_entitlement_exempt);
+      const encashmentAvailableNext = encRes.error ? null : Number(encRes.data ?? 0);
+      const allowanceNext = al
+        ? {
+            leave_year: String(al.leave_year),
+            annual_entitlement_days: Number(al.annual_entitlement_days ?? 0),
+            toil_balance_days: Number(al.toil_balance_days ?? 0),
+          }
+        : { leave_year: year, annual_entitlement_days: 0, toil_balance_days: 0 };
+      const mineRows = (mine ?? []) as LeaveRequest[];
+
+      const b0 = Array.isArray(bf) ? bf[0] : bf;
+      const absenceScoreNext =
+        b0 && typeof b0 === 'object' && 'spell_count' in b0
+          ? {
+              spell_count: Number((b0 as { spell_count: number }).spell_count),
+              total_days: Number((b0 as { total_days: number }).total_days),
+              bradford_score: Number((b0 as { bradford_score: number }).bradford_score),
+            }
+          : null;
+
+      let pendingForMeNext: LeaveRequest[] = [];
+      let pendingToilNext: ToilCreditRequest[] = [];
+      let pendingCarryNext: CarryoverRequest[] = [];
+      let pendingEncashNext: EncashmentRequest[] = [];
+      let teamAbsencesNext: TeamAbsence[] = [];
+      let documentsNext: Record<string, LeaveRequestDocument[]> = {};
+      let teamCalendarDeptOptionsNext: { id: string; name: string }[] = [];
+
+      if (canApprove || canManage) {
+        const calRange = monthKeyToRange(calendarMonth);
+
+        const [{ data: reportRows }, { data: dmRows }, unassignedRes] = await Promise.all([
+          supabase.from('profiles').select('id').eq('org_id', orgId).eq('reports_to_user_id', userId),
+          supabase.from('dept_managers').select('dept_id').eq('user_id', userId),
+          canManage
+            ? supabase.from('profiles').select('id').eq('org_id', orgId).is('reports_to_user_id', null)
+            : Promise.resolve({ data: null as { id: string }[] | null }),
+        ]);
+
+        const scopeIdSet = new Set<string>();
+        for (const r of reportRows ?? []) scopeIdSet.add(r.id as string);
+        const deptIds = (dmRows ?? []).map((r) => r.dept_id as string).filter(Boolean);
+        if (deptIds.length) {
+          const { data: udRows } = await supabase.from('user_departments').select('user_id').in('dept_id', deptIds);
+          for (const r of udRows ?? []) scopeIdSet.add(r.user_id as string);
+        }
+        if (canManage && unassignedRes.data) {
+          for (const r of unassignedRes.data ?? []) scopeIdSet.add(r.id as string);
+        }
+
+        const approvalScopeIds = [...scopeIdSet];
+
+        let pend: LeaveRequest[] = [];
+        let pendToil: ToilCreditRequest[] = [];
+        let pendCarry: CarryoverRequest[] = [];
+        let pendEncash: EncashmentRequest[] = [];
+        let absRows: Record<string, unknown>[] = [];
+
+        if (approvalScopeIds.length) {
+          const absBase = supabase
+            .from('leave_requests')
+            .select('id, requester_id, kind, start_date, end_date, half_day_portion')
+            .eq('org_id', orgId)
+            .eq('status', 'approved')
+            .lte('start_date', calRange.end)
+            .gte('end_date', calRange.start)
+            .order('start_date', { ascending: true })
+            .in('requester_id', approvalScopeIds);
+
+          const [
+            { data: lrData },
+            { data: toilData },
+            { data: carryData },
+            { data: encashData },
+            { data: absData },
+          ] = await Promise.all([
+            supabase
+              .from('leave_requests')
+              .select(
+                'id, requester_id, kind, start_date, end_date, half_day_portion, parental_subtype, status, note, created_at, proposed_kind, proposed_start_date, proposed_end_date, proposed_note, proposed_half_day_portion, proposed_parental_subtype',
+              )
+              .eq('org_id', orgId)
+              .in('status', ['pending', 'pending_cancel', 'pending_edit'])
+              .in('requester_id', approvalScopeIds)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('toil_credit_requests')
+              .select('id, requester_id, work_date, minutes_earned, note, status, created_at')
+              .eq('org_id', orgId)
+              .eq('status', 'pending')
+              .in('requester_id', approvalScopeIds)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('leave_carryover_requests')
+              .select('id, requester_id, from_leave_year, to_leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+              .eq('org_id', orgId)
+              .eq('status', 'pending')
+              .in('requester_id', approvalScopeIds)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('leave_encashment_requests')
+              .select('id, requester_id, leave_year, days_requested, days_approved, note, status, decision_note, created_at')
+              .eq('org_id', orgId)
+              .eq('status', 'pending')
+              .in('requester_id', approvalScopeIds)
+              .order('created_at', { ascending: false }),
+            absBase,
+          ]);
+          pend = (lrData ?? []) as LeaveRequest[];
+          pendToil = (toilData ?? []) as ToilCreditRequest[];
+          pendCarry = (carryData ?? []) as CarryoverRequest[];
+          pendEncash = (encashData ?? []) as EncashmentRequest[];
+          absRows = (absData ?? []) as Record<string, unknown>[];
+        }
+
+        const nameIds = [
+          ...new Set([
+            ...pend.map((r) => r.requester_id as string),
+            ...pendToil.map((t) => t.requester_id as string),
+            ...pendCarry.map((c) => c.requester_id as string),
+            ...pendEncash.map((e) => e.requester_id as string),
+          ]),
+        ];
+        const absRequesterIds = [...new Set(absRows.map((r) => String(r.requester_id ?? '')).filter(Boolean))];
+        const allLookupIds = [...new Set([...nameIds, ...absRequesterIds])];
+        const idToName: Record<string, string> = {};
+        if (allLookupIds.length) {
+          const { data: profs } = await supabase.from('coworker_directory_public').select('id, full_name').in('id', allLookupIds);
+          for (const p of profs ?? []) idToName[p.id as string] = (p.full_name as string) ?? '';
+        }
+
+        const userDeptMap: Record<string, string[]> = {};
+        if (absRequesterIds.length) {
+          const { data: udAbs } = await supabase.from('user_departments').select('user_id, dept_id').in('user_id', absRequesterIds);
+          for (const row of udAbs ?? []) {
+            const uid = String(row.user_id);
+            if (!userDeptMap[uid]) userDeptMap[uid] = [];
+            userDeptMap[uid].push(String(row.dept_id));
+          }
+        }
+
+        pendingForMeNext = pend.map((r) => ({ ...r, profiles: { full_name: idToName[r.requester_id as string] ?? '' } }));
+        pendingToilNext = pendToil.map((t) => ({ ...t, profiles: { full_name: idToName[t.requester_id as string] ?? '' } }));
+        pendingCarryNext = pendCarry.map((c) => ({ ...c, profiles: { full_name: idToName[c.requester_id as string] ?? '' } }));
+        pendingEncashNext = pendEncash.map((e) => ({ ...e, profiles: { full_name: idToName[e.requester_id as string] ?? '' } }));
+
+        teamAbsencesNext = absRows.map((r) => ({
           id: String(r.id),
           requester_id: String(r.requester_id),
-          requester_name: absNameMap[String(r.requester_id)] || 'Team member',
+          requester_name: idToName[String(r.requester_id)] || 'Team member',
           kind: String(r.kind),
           start_date: String(r.start_date),
           end_date: String(r.end_date),
           half_day_portion: (r.half_day_portion as 'am' | 'pm' | null | undefined) ?? null,
-        })),
-      );
+          dept_ids: userDeptMap[String(r.requester_id)] ?? [],
+        }));
 
-      const docRequestIds = [...new Set([
-        ...((mine ?? []) as LeaveRequest[]).map((r) => r.id),
-        ...pend.map((r) => r.id),
-      ])].filter(Boolean);
-      if (docRequestIds.length) {
-        const { data: docs } = await supabase
-          .from('leave_request_documents')
-          .select('id, request_id, document_kind, file_name, storage_path')
-          .eq('org_id', orgId)
-          .in('request_id', docRequestIds)
-          .order('created_at', { ascending: false });
-        const next: Record<string, LeaveRequestDocument[]> = {};
-        for (const d of (docs ?? []) as LeaveRequestDocument[]) {
-          if (!next[d.request_id]) next[d.request_id] = [];
-          next[d.request_id].push(d);
+        const deptIdSetForFilter = new Set<string>(deptIds);
+        for (const ids of Object.values(userDeptMap)) {
+          for (const id of ids) deptIdSetForFilter.add(id);
         }
-        setDocumentsByRequestId(next);
-      } else {
-        setDocumentsByRequestId({});
-      }
-    } else {
-      setPendingForMe([]);
-      setPendingToilForMe([]);
-      setPendingCarryoverForMe([]);
-      setPendingEncashmentForMe([]);
-      setTeamAbsences([]);
-      const ownIds = ((mine ?? []) as LeaveRequest[]).map((r) => r.id).filter(Boolean);
-      if (ownIds.length) {
-        const { data: docs } = await supabase
-          .from('leave_request_documents')
-          .select('id, request_id, document_kind, file_name, storage_path')
-          .eq('org_id', orgId)
-          .in('request_id', ownIds)
-          .order('created_at', { ascending: false });
-        const next: Record<string, LeaveRequestDocument[]> = {};
-        for (const d of (docs ?? []) as LeaveRequestDocument[]) {
-          if (!next[d.request_id]) next[d.request_id] = [];
-          next[d.request_id].push(d);
+        if (deptIdSetForFilter.size > 0) {
+          const { data: deptRows } = await supabase
+            .from('departments')
+            .select('id, name')
+            .eq('org_id', orgId)
+            .in('id', [...deptIdSetForFilter])
+            .order('name');
+          teamCalendarDeptOptionsNext = (deptRows ?? []).map((d) => ({
+            id: String(d.id),
+            name: String(d.name ?? 'Department'),
+          }));
         }
-        setDocumentsByRequestId(next);
+
+        const docRequestIds = [...new Set([...mineRows.map((r) => r.id), ...pend.map((r) => r.id)])].filter(Boolean);
+        if (docRequestIds.length) {
+          const { data: docs } = await supabase
+            .from('leave_request_documents')
+            .select('id, request_id, document_kind, file_name, storage_path')
+            .eq('org_id', orgId)
+            .in('request_id', docRequestIds)
+            .order('created_at', { ascending: false });
+          const next: Record<string, LeaveRequestDocument[]> = {};
+          for (const d of (docs ?? []) as LeaveRequestDocument[]) {
+            if (!next[d.request_id]) next[d.request_id] = [];
+            next[d.request_id].push(d);
+          }
+          documentsNext = next;
+        }
       } else {
-        setDocumentsByRequestId({});
+        const ownIds = mineRows.map((r) => r.id).filter(Boolean);
+        if (ownIds.length) {
+          const { data: docs } = await supabase
+            .from('leave_request_documents')
+            .select('id, request_id, document_kind, file_name, storage_path')
+            .eq('org_id', orgId)
+            .in('request_id', ownIds)
+            .order('created_at', { ascending: false });
+          const next: Record<string, LeaveRequestDocument[]> = {};
+          for (const d of (docs ?? []) as LeaveRequestDocument[]) {
+            if (!next[d.request_id]) next[d.request_id] = [];
+            next[d.request_id].push(d);
+          }
+          documentsNext = next;
+        }
       }
+
+      setLeaveExempt(leaveExemptNext);
+      setEncashmentAvailable(encashmentAvailableNext);
+      setAllowance(allowanceNext);
+      setMyRequests(mineRows);
+      setMyToilCreditRequests((mineToil ?? []) as ToilCreditRequest[]);
+      setMyCarryoverRequests((myCarry ?? []) as CarryoverRequest[]);
+      setMyEncashmentRequests((myEncash ?? []) as EncashmentRequest[]);
+      setSickness((sick ?? []) as SicknessRow[]);
+      setHolidayPeriods((holidays ?? []) as HolidayPeriod[]);
+      setSspSummary(ssp && typeof ssp === 'object' ? (ssp as Record<string, unknown>) : null);
+      setAbsenceScore(absenceScoreNext);
+      setPendingForMe(pendingForMeNext);
+      setPendingToilForMe(pendingToilNext);
+      setPendingCarryoverForMe(pendingCarryNext);
+      setPendingEncashmentForMe(pendingEncashNext);
+      setTeamAbsences(teamAbsencesNext);
+      setTeamCalendarDeptOptions(teamCalendarDeptOptionsNext);
+      setTeamCalendarDeptFilter((prev) => {
+        if (prev === 'all') return 'all';
+        return teamCalendarDeptOptionsNext.some((o) => o.id === prev) ? prev : 'all';
+      });
+      setDocumentsByRequestId(documentsNext);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Failed to load leave data.');
+    } finally {
+      setLeaveHubReady(true);
     }
   }, [supabase, orgId, userId, year, canApprove, canManage, calendarMonth]);
 
+  useEffect(() => {
+    setLeaveHubReady(false);
+  }, [year]);
+
   useEffect(() => { void load(); }, [load]);
   useShellRefresh(() => void load());
+
+  useEffect(() => {
+    if (!leaveMoreMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (leaveMoreMenuRef.current && !leaveMoreMenuRef.current.contains(e.target as Node)) {
+        setLeaveMoreMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLeaveMoreMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [leaveMoreMenuOpen]);
 
   async function submitLeave(e: React.FormEvent) {
     e.preventDefault();
@@ -656,6 +844,27 @@ export function LeaveHubClient({
   async function cancelRequest(id: string) {
     setBusy(true);
     const { error } = await supabase.rpc('leave_request_cancel', { p_request_id: id });
+    setBusy(false);
+    if (error) setMsg(error.message); else await load();
+  }
+
+  async function cancelToilCreditRequest(id: string) {
+    setBusy(true);
+    const { error } = await supabase.rpc('toil_credit_request_cancel', { p_request_id: id });
+    setBusy(false);
+    if (error) setMsg(error.message); else await load();
+  }
+
+  async function cancelCarryoverRequest(id: string) {
+    setBusy(true);
+    const { error } = await supabase.rpc('leave_carryover_request_cancel', { p_request_id: id });
+    setBusy(false);
+    if (error) setMsg(error.message); else await load();
+  }
+
+  async function cancelEncashmentRequest(id: string) {
+    setBusy(true);
+    const { error } = await supabase.rpc('leave_encashment_request_cancel', { p_request_id: id });
     setBusy(false);
     if (error) setMsg(error.message); else await load();
   }
@@ -976,17 +1185,30 @@ export function LeaveHubClient({
   const remaining = Math.max(0, entitlement - usedAnnual);
   const toilBalance = allowance?.toil_balance_days ?? 0;
   const usedPct = entitlement > 0 ? Math.min(100, Math.round((usedAnnual / entitlement) * 100)) : 0;
+  const toilPoolDays = toilBalance + usedToil;
+  /** Ring matches the headline (days left): share of annual allowance still available. */
+  const annualRemainingPct = entitlement > 0 ? Math.min(100, Math.max(0, Math.round((remaining / entitlement) * 100))) : 0;
+  /** Ring matches TOIL balance headline: share of earned+booked pool still unused. */
+  const toilRemainingPct =
+    toilPoolDays > 0 ? Math.min(100, Math.max(0, Math.round((toilBalance / toilPoolDays) * 100))) : toilBalance > 0 ? 100 : 0;
   const pendingRequestsCount = useMemo(
-    () => myRequests.filter((r) => ['pending', 'pending_edit', 'pending_cancel'].includes(r.status)).length,
-    [myRequests],
+    () =>
+      myRequests.filter(
+        (r) =>
+          ['pending', 'pending_edit', 'pending_cancel'].includes(r.status) &&
+          leaveRequestOverlapsLeaveYear(r, leaveYearStartIso, leaveYearEndIso),
+      ).length,
+    [myRequests, leaveYearStartIso, leaveYearEndIso],
   );
-  const approvedUpcomingCount = useMemo(
-    () => {
-      const today = new Date().toISOString().slice(0, 10);
-      return myRequests.filter((r) => r.status === 'approved' && r.end_date >= today).length;
-    },
-    [myRequests],
-  );
+  const approvedUpcomingCount = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return myRequests.filter(
+      (r) =>
+        r.status === 'approved' &&
+        r.end_date >= today &&
+        leaveRequestOverlapsLeaveYear(r, leaveYearStartIso, leaveYearEndIso),
+    ).length;
+  }, [myRequests, leaveYearStartIso, leaveYearEndIso]);
 
   /** Calendar trip length (inclusive). */
   const formTripDays =
@@ -1037,6 +1259,11 @@ export function LeaveHubClient({
     [myRequests, editTarget, editStart, editEnd],
   );
 
+  const teamAbsencesFiltered = useMemo(() => {
+    if (teamCalendarDeptFilter === 'all') return teamAbsences;
+    return teamAbsences.filter((a) => (a.dept_ids ?? []).includes(teamCalendarDeptFilter));
+  }, [teamAbsences, teamCalendarDeptFilter]);
+
   const monthGrid = useMemo(() => {
     const { start, end } = monthKeyToRange(calendarMonth);
     const [sy, sm] = start.split('-').map(Number);
@@ -1046,19 +1273,37 @@ export function LeaveHubClient({
     const days = Array.from({ length: ed }, (_, i) => {
       const day = i + 1;
       const iso = `${String(ey).padStart(4, '0')}-${String(em).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const rows = teamAbsences.filter((a) => a.start_date <= iso && a.end_date >= iso);
+      const rows = teamAbsencesFiltered.filter((a) => a.start_date <= iso && a.end_date >= iso);
       return { iso, day, rows };
     });
     return { start, end, leadingBlanks, days, monthLabel: new Date(`${start}T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
-  }, [calendarMonth, teamAbsences]);
+  }, [calendarMonth, teamAbsencesFiltered]);
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       {/* Page header */}
       <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Time off</h1>
-          <p className="mt-1 text-[13.5px] text-[#6b6b6b]">Book leave, log sick days, and see your balances.</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Time off</h1>
+            <button
+              type="button"
+              onClick={() => setLeaveExplainerOpen((v) => !v)}
+              className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors ${
+                leaveExplainerOpen
+                  ? 'border-[#121212] bg-[#121212] text-white'
+                  : 'border-[#d8d8d8] bg-white text-[#6b6b6b] hover:bg-[#faf9f6]'
+              }`}
+              aria-expanded={leaveExplainerOpen}
+              title={leaveExplainerOpen ? 'Hide extra explanations' : 'Show explanations and SSP details'}
+            >
+              <Info className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">{leaveExplainerOpen ? 'Hide details' : 'Details'}</span>
+            </button>
+          </div>
+          {leaveExplainerOpen ? (
+            <p className="mt-1 text-[13.5px] text-[#6b6b6b]">Book leave, log sick days, and see your balances.</p>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1082,9 +1327,17 @@ export function LeaveHubClient({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
         <div className="min-w-0 space-y-6 lg:col-span-8">
+      {!leaveHubReady ? (
+        <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+          <CampfireLoaderInline label="Loading balances" className="min-h-[280px] py-12" />
+        </div>
+      ) : (
+        <>
       <section>
         <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Balances</h2>
-        <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
+        <div className="rounded-2xl border border-[#e8e8e8] bg-white">
+          {/* overflow-hidden only on the grid so “More actions” dropdown isn’t clipped */}
+          <div className={`overflow-hidden ${canSubmit ? 'rounded-t-2xl' : 'rounded-2xl'}`}>
           <div className="grid divide-y divide-[#f0f0f0] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <div className="flex flex-col gap-1 p-4 sm:p-5">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Remaining</p>
@@ -1092,13 +1345,13 @@ export function LeaveHubClient({
                 {remaining}
                 <span className="ml-1.5 text-[16px] font-normal text-[#9b9b9b]">days</span>
               </p>
-              {leaveUseWorkingDays ? (
+              {leaveExplainerOpen && leaveUseWorkingDays ? (
                 <p className="mt-1 text-[11px] text-[#9b9b9b]">Annual leave is counted in working days (weekends and other non-working weekdays excluded).</p>
               ) : null}
               {entitlement > 0 ? (
                 <>
                   <div className="mt-3 h-1.5 w-full rounded-full bg-[#f0f0f0]">
-                    <div className={`h-1.5 rounded-full transition-all ${usedPct >= 90 ? 'bg-amber-400' : 'bg-[#121212]'}`} style={{ width: `${usedPct}%` }} />
+                    <div className={`h-1.5 rounded-full ${usedPct >= 90 ? 'bg-amber-400' : 'bg-[#121212]'}`} style={{ width: `${usedPct}%` }} />
                   </div>
                   <p className="mt-1.5 text-[11.5px] text-[#9b9b9b]">
                     {usedAnnual} of {entitlement} {leaveUseWorkingDays ? 'working ' : ''}days used
@@ -1112,9 +1365,11 @@ export function LeaveHubClient({
                 {toilBalance}
                 <span className="ml-1.5 text-[16px] font-normal text-[#9b9b9b]">days</span>
               </p>
-              <p className="mt-3 text-[11.5px] text-[#9b9b9b]">
-                Overtime earned back as paid time off. Credits use {toilMinutesPerDay} min ({toilMinutesPerDay >= 60 ? `${Math.round((toilMinutesPerDay / 60) * 10) / 10}h` : `${toilMinutesPerDay} min`}) = 1 day at your organisation.
-              </p>
+              {leaveExplainerOpen ? (
+                <p className="mt-3 text-[11.5px] text-[#9b9b9b]">
+                  Overtime earned back as paid time off. Credits use {toilMinutesPerDay} min ({toilMinutesPerDay >= 60 ? `${Math.round((toilMinutesPerDay / 60) * 10) / 10}h` : `${toilMinutesPerDay} min`}) = 1 day at your organisation.
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col gap-1 p-4 sm:p-5">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Entitlement</p>
@@ -1124,11 +1379,13 @@ export function LeaveHubClient({
               </p>
             </div>
           </div>
+          </div>
           {canSubmit ? (
-            <div className="flex flex-wrap gap-2 border-t border-[#f0f0f0] px-4 py-4 sm:px-5">
+            <div className="flex flex-wrap items-center gap-2 rounded-b-2xl border-t border-[#f0f0f0] px-4 py-4 sm:px-5">
               <button
                 type="button"
                 onClick={() => {
+                  setLeaveMoreMenuOpen(false);
                   setShowLeaveForm((v) => !v);
                   setShowSickForm(false);
                   setShowToilEarnForm(false);
@@ -1139,90 +1396,232 @@ export function LeaveHubClient({
               >
                 {showLeaveForm ? 'Close' : '+ Book time off'}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSickForm((v) => !v);
-                  setShowLeaveForm(false);
-                  setShowToilEarnForm(false);
-                  setShowCarryoverForm(false);
-                  setShowEncashmentForm(false);
-                }}
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
-              >
-                {showSickForm ? 'Close' : '+ Log sick day'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCarryoverForm((v) => !v);
-                  setShowLeaveForm(false);
-                  setShowSickForm(false);
-                  setShowToilEarnForm(false);
-                  setShowEncashmentForm(false);
-                }}
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
-              >
-                {showCarryoverForm ? 'Close' : '+ Request carry-over'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEncashmentForm((v) => !v);
-                  setShowLeaveForm(false);
-                  setShowSickForm(false);
-                  setShowToilEarnForm(false);
-                  setShowCarryoverForm(false);
-                }}
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
-              >
-                {showEncashmentForm ? 'Close' : '+ Request encashment'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowToilEarnForm((v) => !v);
-                  setShowLeaveForm(false);
-                  setShowSickForm(false);
-                  setShowCarryoverForm(false);
-                  setShowEncashmentForm(false);
-                  setMsg(null);
-                }}
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#008B60] bg-[#f0fdf9] px-4 text-[12.5px] font-semibold text-[#065f46] hover:bg-[#d1fae5]"
-              >
-                {showToilEarnForm ? 'Close' : '+ Add TOIL (overtime)'}
-              </button>
+              <div ref={leaveMoreMenuRef} className="relative">
+                <button
+                  type="button"
+                  id="leave-more-actions-trigger"
+                  aria-expanded={leaveMoreMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setLeaveMoreMenuOpen((o) => !o)}
+                  className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-xl border border-[#d8d8d8] bg-white px-3.5 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+                >
+                  More actions
+                  <ChevronDown className={`h-4 w-4 shrink-0 opacity-70 transition-transform ${leaveMoreMenuOpen ? 'rotate-180' : ''}`} aria-hidden />
+                </button>
+                {leaveMoreMenuOpen ? (
+                  <div
+                    role="menu"
+                    aria-labelledby="leave-more-actions-trigger"
+                    className="absolute left-0 top-full z-[200] mt-1.5 min-w-[15rem] rounded-xl border border-[#e8e8e8] bg-white py-1 shadow-lg"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full items-center px-3 py-2.5 text-left text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                      onClick={() => {
+                        setLeaveMoreMenuOpen(false);
+                        setShowSickForm((v) => !v);
+                        setShowLeaveForm(false);
+                        setShowToilEarnForm(false);
+                        setShowCarryoverForm(false);
+                        setShowEncashmentForm(false);
+                      }}
+                    >
+                      {showSickForm ? 'Close sick day' : 'Log sick day'}
+                    </button>
+                    {!leaveExempt ? (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center px-3 py-2.5 text-left text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                          onClick={() => {
+                            setLeaveMoreMenuOpen(false);
+                            setShowCarryoverForm((v) => !v);
+                            setShowLeaveForm(false);
+                            setShowSickForm(false);
+                            setShowToilEarnForm(false);
+                            setShowEncashmentForm(false);
+                          }}
+                        >
+                          {showCarryoverForm ? 'Close carry-over' : 'Request carry-over'}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center px-3 py-2.5 text-left text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                          onClick={() => {
+                            setLeaveMoreMenuOpen(false);
+                            setShowEncashmentForm((v) => !v);
+                            setShowLeaveForm(false);
+                            setShowSickForm(false);
+                            setShowToilEarnForm(false);
+                            setShowCarryoverForm(false);
+                          }}
+                        >
+                          {showEncashmentForm ? 'Close encashment' : 'Request encashment'}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center px-3 py-2.5 text-left text-[13px] font-semibold text-[#065f46] hover:bg-[#ecfdf5]"
+                          onClick={() => {
+                            setLeaveMoreMenuOpen(false);
+                            setShowToilEarnForm((v) => !v);
+                            setShowLeaveForm(false);
+                            setShowSickForm(false);
+                            setShowCarryoverForm(false);
+                            setShowEncashmentForm(false);
+                            setMsg(null);
+                          }}
+                        >
+                          {showToilEarnForm ? 'Close TOIL (overtime)' : 'Add TOIL (overtime)'}
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
           ) : null}
         </div>
       </section>
 
-      {/* Employee leave balance dashboard */}
+      {/* Employee leave balance dashboard — ring + palette aligned to payroll-style cards */}
       <section>
-        <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Leave balance dashboard</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Annual leave left</p>
-            <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{remaining}<span className="ml-1 text-[14px] font-normal text-[#9b9b9b]">days</span></p>
-            <p className="mt-1 text-[12px] text-[#6b6b6b]">{usedAnnual} used of {entitlement} total for {year}.</p>
+        <h2 className="mb-4 text-[12px] font-semibold uppercase tracking-widest text-[#6b6b6b]">Leave balance dashboard</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {/* Annual leave — green (ring = % of annual allowance still unused; matches headline days) */}
+          <div className="flex flex-col items-center rounded-2xl border border-[#e8e8e8] bg-white px-4 pb-5 pt-6 text-center shadow-sm">
+            <div
+              className="relative mb-4 flex h-[88px] w-[88px] items-center justify-center"
+              role="img"
+              aria-label={`Annual leave: ${annualRemainingPct}% of allowance remaining, ${remaining} days left`}
+            >
+              <div
+                className="pointer-events-none absolute left-1/2 top-0 z-10 h-2 w-2 -translate-x-1/2 rounded-full"
+                style={{ backgroundColor: '#1E8E3E' }}
+                aria-hidden
+              />
+              <svg className="absolute inset-0 h-[88px] w-[88px] -rotate-90" viewBox="0 0 80 80" aria-hidden>
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#E6F4EA" strokeWidth="8" />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  fill="none"
+                  stroke="#1E8E3E"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={`${LEAVE_DASHBOARD_RING_C} ${LEAVE_DASHBOARD_RING_C}`}
+                  strokeDashoffset={leaveDashboardRingOffset(annualRemainingPct)}
+                  className="transition-[stroke-dashoffset] duration-300 ease-out"
+                />
+              </svg>
+              <span className="relative z-[1] text-[14px] font-bold tabular-nums leading-none text-[#121212]">{annualRemainingPct}%</span>
+            </div>
+            <p className="text-[32px] font-bold leading-none tracking-tight text-[#121212]">
+              {remaining}
+              <span className="ml-1 text-[15px] font-semibold text-[#6b6b6b]">days</span>
+            </p>
+            <p className="mt-2 text-[13px] font-medium text-[#121212]">Annual leave</p>
+            <p className="mt-2 max-w-[200px] text-[12px] leading-snug text-[#6b6b6b]">
+              {entitlement > 0 ? (
+                <>
+                  {usedAnnual} of {entitlement} {leaveUseWorkingDays ? 'working ' : ''}days used ({selectedLeavePeriodLabel}).
+                </>
+              ) : usedAnnual > 0 ? (
+                <>
+                  {usedAnnual} {leaveUseWorkingDays ? 'working ' : ''}days booked in this period — no annual entitlement on record, so balances may show 0.
+                </>
+              ) : (
+                <>No annual days counted for {selectedLeavePeriodLabel}.</>
+              )}
+            </p>
           </div>
-          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">TOIL leave left</p>
-            <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{toilBalance}<span className="ml-1 text-[14px] font-normal text-[#9b9b9b]">days</span></p>
-            <p className="mt-1 text-[12px] text-[#6b6b6b]">{usedToil} TOIL day{usedToil === 1 ? '' : 's'} booked or pending this leave year.</p>
+
+          {/* TOIL — purple (ring = share of TOIL pool still unused; matches balance headline) */}
+          <div className="flex flex-col items-center rounded-2xl border border-[#e8e8e8] bg-white px-4 pb-5 pt-6 text-center shadow-sm">
+            <div
+              className="relative mb-4 flex h-[88px] w-[88px] items-center justify-center"
+              role="img"
+              aria-label={`TOIL: ${toilRemainingPct}% of earned and booked pool still unused, ${toilBalance} days balance`}
+            >
+              <div
+                className="pointer-events-none absolute left-1/2 top-0 z-10 h-2 w-2 -translate-x-1/2 rounded-full"
+                style={{ backgroundColor: '#7C3AED' }}
+                aria-hidden
+              />
+              <svg className="absolute inset-0 h-[88px] w-[88px] -rotate-90" viewBox="0 0 80 80" aria-hidden>
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#F3E8FF" strokeWidth="8" />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  fill="none"
+                  stroke="#7C3AED"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={`${LEAVE_DASHBOARD_RING_C} ${LEAVE_DASHBOARD_RING_C}`}
+                  strokeDashoffset={leaveDashboardRingOffset(toilRemainingPct)}
+                  className="transition-[stroke-dashoffset] duration-300 ease-out"
+                />
+              </svg>
+              <span className="relative z-[1] text-[14px] font-bold tabular-nums leading-none text-[#121212]">{toilRemainingPct}%</span>
+            </div>
+            <p className="text-[32px] font-bold leading-none tracking-tight text-[#121212]">
+              {toilBalance}
+              <span className="ml-1 text-[15px] font-semibold text-[#6b6b6b]">days</span>
+            </p>
+            <p className="mt-2 text-[13px] font-medium text-[#121212]">TOIL leave</p>
+            <p className="mt-2 max-w-[200px] text-[12px] leading-snug text-[#6b6b6b]">
+              {usedToil} day{usedToil === 1 ? '' : 's'} booked or pending.
+            </p>
           </div>
-          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Pending requests</p>
-            <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{pendingRequestsCount}</p>
-            <p className="mt-1 text-[12px] text-[#6b6b6b]">Awaiting approval, edits, or cancellation decisions.</p>
+
+          {/* Pending — amber / cream (count in ring, no % ) */}
+          <div className="flex flex-col items-center rounded-2xl border border-[#e8e8e8] bg-white px-4 pb-5 pt-6 text-center shadow-sm">
+            <div className="relative mb-4 flex h-[88px] w-[88px] items-center justify-center">
+              <div
+                className="pointer-events-none absolute left-1/2 top-0 z-10 h-2 w-2 -translate-x-1/2 rounded-full"
+                style={{ backgroundColor: '#B45309' }}
+                aria-hidden
+              />
+              <svg className="absolute inset-0 h-[88px] w-[88px]" viewBox="0 0 80 80" aria-hidden>
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#FFF7ED" strokeWidth="8" />
+              </svg>
+              <span className="relative z-[1] text-[17px] font-bold tabular-nums leading-none text-[#121212]">{pendingRequestsCount}</span>
+            </div>
+            <p className="text-[32px] font-bold leading-none tracking-tight text-[#121212]">{pendingRequestsCount}</p>
+            <p className="mt-2 text-[13px] font-medium text-[#121212]">Pending requests</p>
+            <p className="mt-2 max-w-[200px] text-[12px] leading-snug text-[#6b6b6b]">
+              Awaiting approval for dates overlapping this leave year.
+            </p>
           </div>
-          <div className="rounded-2xl border border-[#e8e8e8] bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Upcoming approved leave</p>
-            <p className="mt-1 text-[30px] font-bold tracking-tight text-[#121212]">{approvedUpcomingCount}</p>
-            <p className="mt-1 text-[12px] text-[#6b6b6b]">Approved bookings from today onward.</p>
+
+          {/* Upcoming approved — red / rose (count in ring, no % ) */}
+          <div className="flex flex-col items-center rounded-2xl border border-[#e8e8e8] bg-white px-4 pb-5 pt-6 text-center shadow-sm">
+            <div className="relative mb-4 flex h-[88px] w-[88px] items-center justify-center">
+              <div
+                className="pointer-events-none absolute left-1/2 top-0 z-10 h-2 w-2 -translate-x-1/2 rounded-full"
+                style={{ backgroundColor: '#DC2626' }}
+                aria-hidden
+              />
+              <svg className="absolute inset-0 h-[88px] w-[88px]" viewBox="0 0 80 80" aria-hidden>
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#FEF2F2" strokeWidth="8" />
+              </svg>
+              <span className="relative z-[1] text-[17px] font-bold tabular-nums leading-none text-[#121212]">{approvedUpcomingCount}</span>
+            </div>
+            <p className="text-[32px] font-bold leading-none tracking-tight text-[#121212]">{approvedUpcomingCount}</p>
+            <p className="mt-2 text-[13px] font-medium text-[#121212]">Upcoming approved</p>
+            <p className="mt-2 max-w-[200px] text-[12px] leading-snug text-[#6b6b6b]">
+              Approved leave still to come, for dates overlapping this leave year.
+            </p>
           </div>
         </div>
       </section>
+        </>
+      )}
 
       {/* Request TOIL credit (overtime) — manager approval */}
       {showToilEarnForm && canSubmit ? (
@@ -1366,6 +1765,12 @@ export function LeaveHubClient({
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
           <h2 className="mb-1 text-[15px] font-semibold text-[#121212]">Request leave encashment</h2>
           <p className="mb-4 text-[12px] text-[#9b9b9b]">Request payout of unused annual leave from a leave year. Reviewed case by case.</p>
+          {encashmentAvailable != null ? (
+            <p className="mb-4 rounded-lg border border-[#d1fae5] bg-[#ecfdf5] px-3 py-2 text-[12px] text-[#065f46]">
+              Encashable days remaining for this leave year (after bookings, carry-over reservations, and pending encashments):{' '}
+              <strong className="tabular-nums">{encashmentAvailable}</strong>
+            </p>
+          ) : null}
           <form className="space-y-4" onSubmit={(e) => void submitEncashmentRequest(e)}>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
@@ -1413,117 +1818,193 @@ export function LeaveHubClient({
         </div>
       ) : null}
 
-      {/* Leave request form (slide-in) */}
+      {/* Leave request form — compact grid layout aligned to payroll-style booking */}
       {showLeaveForm && canSubmit ? (
-        <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-            <h2 className="text-[15px] font-semibold text-[#121212]">Book time off</h2>
-            <button
-              type="button"
-              className="shrink-0 text-[12px] font-medium text-[#065f46] underline underline-offset-2 hover:no-underline"
-              onClick={() => {
-                setShowLeaveForm(false);
-                setShowToilEarnForm(true);
-                setShowCarryoverForm(false);
-                setShowEncashmentForm(false);
-                setMsg(null);
-              }}
-            >
-              Add TOIL (overtime)
-            </button>
+        <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-3 border-b border-[#f0f0f0] pb-5">
+            <h2 className="font-authSerif text-[22px] font-semibold tracking-[-0.02em] text-[#121212]">Book time off</h2>
+            {!leaveExempt ? (
+              <button
+                type="button"
+                className="shrink-0 text-[13px] font-medium text-[#065f46] underline decoration-[#065f46]/40 underline-offset-4 hover:text-[#047857] hover:decoration-[#047857]"
+                onClick={() => {
+                  setShowLeaveForm(false);
+                  setShowToilEarnForm(true);
+                  setShowCarryoverForm(false);
+                  setShowEncashmentForm(false);
+                  setMsg(null);
+                }}
+              >
+                + Add TOIL (overtime)
+              </button>
+            ) : null}
           </div>
-          <form className="space-y-4" onSubmit={(e) => void submitLeave(e)}>
-            {/* Kind */}
-            <div className="flex gap-2">
-              {REQUESTABLE_LEAVE_KINDS.map((k) => (
-                <button key={k} type="button" onClick={() => { setFormKind(k); if (k !== 'parental') setFormParentalSubtype('maternity'); }}
-                  className={`flex-1 rounded-xl border py-2.5 text-[13px] font-medium transition-colors ${formKind === k ? 'border-[#121212] bg-[#121212] text-white' : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#121212]'}`}>
-                  {leaveKindLabel(k)}
-                </button>
-              ))}
+          <form className="space-y-6" onSubmit={(e) => void submitLeave(e)}>
+            {leaveExempt ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-950">
+                Your HR record is marked without paid annual leave entitlement — book unpaid or other leave types, or log sick days (with a rota shift on those dates).
+              </p>
+            ) : null}
+            <div>
+              <p className="mb-2.5 text-[12px] text-[#6b6b6b]">Leave type</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {bookLeaveKindRows.row1.map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => {
+                      setFormKind(k);
+                      if (k !== 'parental') setFormParentalSubtype('maternity');
+                    }}
+                    className={`rounded-lg border py-2.5 text-[13px] font-medium transition-colors ${
+                      formKind === k
+                        ? 'border-[#121212] bg-[#121212] text-white'
+                        : 'border-[#e0e0e0] bg-white text-[#121212] hover:border-[#bdbdbd]'
+                    }`}
+                  >
+                    {leaveKindShortLabel(k)}
+                  </button>
+                ))}
+              </div>
+              {bookLeaveKindRows.row2.length > 0 ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {bookLeaveKindRows.row2.map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => {
+                        setFormKind(k);
+                        if (k !== 'parental') setFormParentalSubtype('maternity');
+                      }}
+                      className={`rounded-lg border py-2.5 text-[13px] font-medium transition-colors ${
+                        formKind === k
+                          ? 'border-[#121212] bg-[#121212] text-white'
+                          : 'border-[#e0e0e0] bg-white text-[#121212] hover:border-[#bdbdbd]'
+                      }`}
+                    >
+                      {leaveKindShortLabel(k)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {(() => {
+                const hint = leaveKindBookingHint(formKind);
+                return hint ? <p className="mt-2.5 text-[12px] leading-snug text-[#6b6b6b]">{hint}</p> : null;
+              })()}
             </div>
             {formKind === 'parental' ? (
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Parental leave type</span>
-                <select
-                  value={formParentalSubtype}
-                  onChange={(e) => setFormParentalSubtype(e.target.value as ParentalSubtype)}
-                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                >
-                  <option value="maternity">Maternity</option>
-                  <option value="paternity">Paternity</option>
-                  <option value="adoption">Adoption</option>
-                  <option value="shared_parental">Shared parental</option>
-                </select>
+                <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Parental leave type</span>
+                <div className="relative">
+                  <select
+                    value={formParentalSubtype}
+                    onChange={(e) => setFormParentalSubtype(e.target.value as ParentalSubtype)}
+                    className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  >
+                    <option value="maternity">Maternity</option>
+                    <option value="paternity">Paternity</option>
+                    <option value="adoption">Adoption</option>
+                    <option value="shared_parental">Shared parental</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
+                </div>
               </label>
             ) : null}
             {SUPPORTING_DOC_LEAVE_KINDS.includes(formKind) ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Supporting document type</span>
-                  <select
-                    value={formSupportingDocKind}
-                    onChange={(e) => setFormSupportingDocKind(e.target.value as LeaveRequestDocument['document_kind'])}
-                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                  >
-                    <option value="fit_note">Fit note</option>
-                    <option value="medical_letter">Medical letter</option>
-                    <option value="adoption_document">Adoption document</option>
-                    <option value="bereavement_evidence">Bereavement evidence</option>
-                    <option value="other">Other</option>
-                  </select>
+                  <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Supporting document type</span>
+                  <div className="relative">
+                    <select
+                      value={formSupportingDocKind}
+                      onChange={(e) => setFormSupportingDocKind(e.target.value as LeaveRequestDocument['document_kind'])}
+                      className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                    >
+                      <option value="fit_note">Fit note</option>
+                      <option value="medical_letter">Medical letter</option>
+                      <option value="adoption_document">Adoption document</option>
+                      <option value="bereavement_evidence">Bereavement evidence</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
+                  </div>
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Supporting file (optional)</span>
+                  <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Supporting file (optional)</span>
                   <input
                     type="file"
                     onChange={(e) => setFormSupportingDoc(e.target.files?.[0] ?? null)}
-                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[12px] focus:border-[#121212] focus:outline-none"
+                    className="w-full rounded-lg border border-[#e0e0e0] bg-white px-3 py-2 text-[12px] file:mr-3 file:rounded-md file:border-0 file:bg-[#f5f5f5] file:px-2 file:py-1 file:text-[12px] focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
                   />
                 </label>
               </div>
             ) : null}
-            {/* Dates */}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">First day off</span>
-                <input type="date" required value={formStart} onChange={(e) => setFormStart(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+                <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">First day off</span>
+                <div className="relative">
+                  <input
+                    type="date"
+                    required
+                    value={formStart}
+                    onChange={(e) => setFormStart(e.target.value)}
+                    className="w-full rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm [color-scheme:light] focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  />
+                  <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9b9b9b]" aria-hidden />
+                </div>
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Last day off</span>
-                <input type="date" required min={formStart} value={formDayMode === 'half' ? formStart : formEnd} disabled={formDayMode === 'half'} onChange={(e) => setFormEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none disabled:opacity-60" />
+                <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Last day off</span>
+                <div className="relative">
+                  <input
+                    type="date"
+                    required
+                    min={formStart}
+                    value={formDayMode === 'half' ? formStart : formEnd}
+                    disabled={formDayMode === 'half'}
+                    onChange={(e) => setFormEnd(e.target.value)}
+                    className="w-full rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm [color-scheme:light] focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10 disabled:cursor-not-allowed disabled:bg-[#fafafa] disabled:opacity-70"
+                  />
+                  <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9b9b9b]" aria-hidden />
+                </div>
               </label>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-4">
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Duration</span>
-                <select
-                  value={formDayMode}
-                  onChange={(e) => setFormDayMode(e.target.value as 'full' | 'half')}
-                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                >
-                  <option value="full">Full day(s)</option>
-                  <option value="half">Half day</option>
-                </select>
+                <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Duration</span>
+                <div className="relative">
+                  <select
+                    value={formDayMode}
+                    onChange={(e) => setFormDayMode(e.target.value as 'full' | 'half')}
+                    className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  >
+                    <option value="full">Full day(s)</option>
+                    <option value="half">Half day</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
+                </div>
               </label>
               {formDayMode === 'half' ? (
-                <label className="block">
-                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Half-day slot</span>
-                  <select
-                    value={formHalfDayPortion}
-                    onChange={(e) => setFormHalfDayPortion(e.target.value as 'am' | 'pm')}
-                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                  >
-                    <option value="am">Morning (AM)</option>
-                    <option value="pm">Afternoon (PM)</option>
-                  </select>
+                <label className="block sm:max-w-md">
+                  <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Half-day slot</span>
+                  <div className="relative">
+                    <select
+                      value={formHalfDayPortion}
+                      onChange={(e) => setFormHalfDayPortion(e.target.value as 'am' | 'pm')}
+                      className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                    >
+                      <option value="am">Morning (AM)</option>
+                      <option value="pm">Afternoon (PM)</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
+                  </div>
                 </label>
-              ) : <div />}
+              ) : null}
             </div>
             {formStart && formEnd && formEnd >= formStart ? (
               <p
                 className={[
-                  'rounded-lg px-3 py-2 text-[12.5px] font-medium',
+                  'rounded-lg px-3 py-2.5 text-[12.5px] font-medium leading-relaxed',
                   newLeaveOverlaps || exceedsAnnualAllowance ? 'bg-[#fef2f2] text-[#b91c1c]' : 'bg-[#f0fdf9] text-[#166534]',
                 ].join(' ')}
               >
@@ -1557,16 +2038,24 @@ export function LeaveHubClient({
               </p>
             ) : null}
             <label className="block">
-              <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Note (optional)</span>
-              <input type="text" placeholder="e.g. family holiday" value={formNote} onChange={(e) => setFormNote(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+              <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Note (optional)</span>
+              <input
+                type="text"
+                placeholder="e.g. family holiday"
+                value={formNote}
+                onChange={(e) => setFormNote(e.target.value)}
+                className="w-full rounded-lg border border-[#e0e0e0] bg-white px-3 py-2.5 text-[13px] text-[#121212] placeholder:text-[#a3a3a3] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+              />
             </label>
-            <button
-              type="submit"
-              disabled={busy || !formStart || !formEnd || exceedsAnnualAllowance || newLeaveOverlaps}
-              className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50"
-            >
-              {busy ? 'Sending…' : 'Send request'}
-            </button>
+            <div className="pt-1">
+              <button
+                type="submit"
+                disabled={busy || !formStart || !formEnd || exceedsAnnualAllowance || newLeaveOverlaps}
+                className="inline-flex h-11 min-w-[8rem] items-center justify-center rounded-lg bg-[#121212] px-6 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-[#2a2a2a] disabled:opacity-50"
+              >
+                {busy ? 'Sending…' : 'Send request'}
+              </button>
+            </div>
           </form>
         </div>
       ) : null}
@@ -1576,6 +2065,11 @@ export function LeaveHubClient({
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
           <h2 className="mb-1 text-[15px] font-semibold text-[#121212]">Log sick days</h2>
           <p className="mb-4 text-[12px] text-[#9b9b9b]">Sick days don&apos;t use your annual leave — no approval needed.</p>
+          {leaveExempt ? (
+            <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-950">
+              For your contract, you can only log sick or absence on dates where you have a scheduled rota shift covering that day.
+            </p>
+          ) : null}
           <form className="space-y-4" onSubmit={(e) => void submitSickness(e)}>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
@@ -1929,12 +2423,31 @@ export function LeaveHubClient({
 
       {(canApprove || canManage) ? (
         <section>
-          <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Team absence calendar</h2>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setCalendarMonth((v) => shiftMonthKey(v, -1))} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1]">Prev</button>
-              <span className="text-[12px] font-medium text-[#6b6b6b]">{monthGrid.monthLabel}</span>
-              <button type="button" onClick={() => setCalendarMonth((v) => shiftMonthKey(v, 1))} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1]">Next</button>
+            <div className="flex flex-wrap items-center gap-2">
+              {teamCalendarDeptOptions.length > 0 ? (
+                <label className="flex items-center gap-1.5 text-[12px] text-[#6b6b6b]">
+                  <span className="whitespace-nowrap">Department</span>
+                  <select
+                    value={teamCalendarDeptFilter}
+                    onChange={(e) => setTeamCalendarDeptFilter(e.target.value as 'all' | string)}
+                    className="max-w-[min(100vw-2rem,220px)] rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] focus:border-[#121212] focus:outline-none"
+                  >
+                    <option value="all">All departments</option>
+                    {teamCalendarDeptOptions.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setCalendarMonth((v) => shiftMonthKey(v, -1))} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1]">Prev</button>
+                <span className="min-w-[9rem] text-center text-[12px] font-medium text-[#6b6b6b]">{monthGrid.monthLabel}</span>
+                <button type="button" onClick={() => setCalendarMonth((v) => shiftMonthKey(v, 1))} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] text-[#6b6b6b] hover:bg-[#f5f4f1]">Next</button>
+              </div>
             </div>
           </div>
           <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white p-3">
@@ -1966,7 +2479,12 @@ export function LeaveHubClient({
 
       {/* My requests */}
       <section>
-        <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My requests</h2>
+        <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My requests</h2>
+        <p className="mb-3 text-[11px] leading-snug text-[#9b9b9b]">
+          All requests, newest first. Balances and the dashboard above count only bookings that overlap{' '}
+          <span className="font-medium text-[#6b6b6b]">{selectedLeavePeriodLabel}</span>
+          (the dropdown label is the year the leave year <span className="italic">starts</span>, not the calendar year of every date below).
+        </p>
         {myRequests.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#d8d8d8] px-6 py-10 text-center">
             <p className="text-[13px] text-[#9b9b9b]">No leave requests yet. Use &ldquo;Book time off&rdquo; above to get started.</p>
@@ -2054,6 +2572,16 @@ export function LeaveHubClient({
                     </p>
                   ) : null}
                 </div>
+                {t.status === 'pending' ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void cancelToilCreditRequest(t.id)}
+                    className="shrink-0 text-[12px] text-[#b91c1c] underline underline-offset-2 disabled:opacity-50 hover:no-underline"
+                  >
+                    Cancel
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>
@@ -2083,6 +2611,16 @@ export function LeaveHubClient({
                     </p>
                   ) : null}
                 </div>
+                {c.status === 'pending' ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void cancelCarryoverRequest(c.id)}
+                    className="shrink-0 text-[12px] text-[#b91c1c] underline underline-offset-2 disabled:opacity-50 hover:no-underline"
+                  >
+                    Cancel
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>
@@ -2112,14 +2650,24 @@ export function LeaveHubClient({
                     </p>
                   ) : null}
                 </div>
+                {e.status === 'pending' ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void cancelEncashmentRequest(e.id)}
+                    className="shrink-0 text-[12px] text-[#b91c1c] underline underline-offset-2 disabled:opacity-50 hover:no-underline"
+                  >
+                    Cancel
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>
         </section>
       ) : null}
 
-      {/* SSP estimate (UK) */}
-      {canSubmit && sspSummary ? (
+      {/* SSP estimate (UK) — shown when “Details” is on */}
+      {leaveExplainerOpen && canSubmit && sspSummary ? (
         <section>
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">
             Statutory Sick Pay (estimate)
@@ -2184,8 +2732,8 @@ export function LeaveHubClient({
         </section>
       ) : null}
 
-      {/* Absence score */}
-      {absenceScore ? (
+      {/* Absence score — full card hidden unless “Details” is on */}
+      {leaveExplainerOpen && absenceScore ? (
         <section>
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Absence score</h2>
           <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">

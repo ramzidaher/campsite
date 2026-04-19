@@ -3,20 +3,12 @@
 import type { Editor } from '@tiptap/core';
 import { Markdown } from '@tiptap/markdown';
 import Placeholder from '@tiptap/extension-placeholder';
-import { BubbleMenu } from '@tiptap/react/menus';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 
 import { BroadcastCraftImage } from '@/components/broadcasts/broadcastCraftImageExtension';
 import '@/components/broadcasts/broadcastCraftImage.css';
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  type ComponentType,
-  type ReactNode,
-} from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, type ComponentType } from 'react';
 
 import styles from './BroadcastBodyEditor.module.css';
 
@@ -25,14 +17,6 @@ const TiptapEditorContent = EditorContent as ComponentType<{
   editor: NonNullable<ReturnType<typeof useEditor>>;
   className?: string;
 }>;
-const TiptapBubbleMenu = BubbleMenu as ComponentType<{
-  editor: NonNullable<ReturnType<typeof useEditor>>;
-  shouldShow?: (p: { editor: NonNullable<ReturnType<typeof useEditor>>; state: unknown }) => boolean;
-  options?: { placement?: string; offset?: number; flip?: boolean };
-  className?: string;
-  children?: ReactNode;
-}>;
-
 export type BroadcastBodyEditorHandle = {
   focus: () => void;
   bold: () => void;
@@ -166,41 +150,6 @@ export const BroadcastBodyEditor = forwardRef<BroadcastBodyEditorHandle, Props>(
     return (
       <div className={`${styles.root} relative`}>
         <TiptapEditorContent editor={editor} className="px-5 py-5 sm:px-6 sm:py-6" />
-        <TiptapBubbleMenu
-          editor={editor}
-          shouldShow={({ editor: ed, state }) => {
-            const s = state as { selection: { empty: boolean } };
-            return ed.isEditable && !s.selection.empty;
-          }}
-          options={{ placement: 'top', offset: 8, flip: true }}
-          className="flex items-center gap-0.5 rounded-lg border border-[#e8e4df] bg-white p-1 shadow-[0_4px_24px_rgba(15,15,15,0.12)]"
-        >
-          <button
-            type="button"
-            className={styles.bubbleBtn}
-            data-active={editor.isActive('bold')}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-          >
-            Bold
-          </button>
-          <button
-            type="button"
-            className={styles.bubbleBtn}
-            data-active={editor.isActive('italic')}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-          >
-            Italic
-          </button>
-          <span className="mx-0.5 h-4 w-px shrink-0 bg-[#ddd9d4]" aria-hidden />
-          <button
-            type="button"
-            className={styles.bubbleBtn}
-            data-active={editor.isActive('code')}
-            onClick={() => editor.chain().focus().toggleCode().run()}
-          >
-            Code
-          </button>
-        </TiptapBubbleMenu>
       </div>
     );
   },

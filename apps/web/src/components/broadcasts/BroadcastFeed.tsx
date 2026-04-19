@@ -6,7 +6,8 @@ import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import { relTime } from '@/lib/format/relTime';
 import Link from 'next/link';
-import { Pin } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft, ChevronRight, Pin } from 'lucide-react';
 import {
   useQuery,
   useInfiniteQuery,
@@ -17,6 +18,10 @@ import { useCallback, useEffect, useImperativeHandle, useMemo, useState, forward
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  BROADCAST_LAST_VIEWED_ID_KEY,
+  parseBroadcastFeedNavigation,
+} from '@/lib/broadcasts/parseBroadcastFeedNavigation';
 import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { SHELL_BADGE_COUNTS_QUERY_KEY } from '@/hooks/useShellBadgeCounts';
 
@@ -35,7 +40,13 @@ type Props = {
   catFilter: Set<string>;
   searchQuery: string;
   unreadOnly?: boolean;
-  advancedFilter?: 'all' | 'my_departments' | 'pinned' | 'mandatory' | 'org_wide';
+  advancedFilter?:
+    | 'all'
+    | 'unread_only'
+    | 'my_departments'
+    | 'pinned'
+    | 'mandatory'
+    | 'org_wide';
   sortBy?: 'newest' | 'oldest' | 'title_asc' | 'title_desc';
   /** Shown in empty-state subline when filters yield no rows */
   emptyStateCanCompose?: boolean;
@@ -85,22 +96,84 @@ let broadcastFeedApiMode: 'plan02' | 'legacy' | null = null;
 
 type FeedPage = { rows: FeedRow[]; hasMore: boolean };
 
-function dayHeadingForBroadcast(sentAt: string | null) {
-  if (!sentAt) return 'Unknown date';
-  return new Date(sentAt).toLocaleDateString(undefined, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+function FeedNavigationStrip({
+  supabase,
+  anchorBroadcastId,
+  searchActive,
+}: {
+  supabase: SupabaseClient;
+  anchorBroadcastId: string | null;
+  searchActive: boolean;
+}) {
+  const router = useRouter();
+  const navQuery = useQuery({
+    queryKey: ['broadcast-feed-navigation', anchorBroadcastId],
+    enabled: Boolean(anchorBroadcastId) && !searchActive,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('broadcast_feed_navigation', {
+        p_broadcast_id: anchorBroadcastId!,
+      });
+      if (error) throw error;
+      return parseBroadcastFeedNavigation(data);
+    },
   });
+  const nav = navQuery.data;
+  if (searchActive || !anchorBroadcastId) return null;
+  if (navQuery.isLoading) {
+    return (
+      <div
+        className="mb-3 h-11 w-full max-w-md animate-pulse rounded-full bg-[#ebe8e3]/80 sm:ml-auto sm:max-w-none"
+        aria-hidden
+      />
+    );
+  }
+  if (!nav) return null;
+  return (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[#e4e4e4] pb-3">
+      <p className="text-[12px] text-[#6b6b6b]">Open any card below, or step through with arrows.</p>
+      <div
+        className="inline-flex items-center gap-1 rounded-full border border-[#121212]/15 bg-white px-2 py-1 text-[13px] text-[#121212] shadow-sm"
+        aria-label={`Broadcast ${nav.index} of ${nav.total}`}
+      >
+        <span className="px-1.5 text-[#6b6b6b]">
+          {nav.index} of {nav.total}
+        </span>
+        <button
+          type="button"
+          disabled={!nav.prevId}
+          onClick={() => nav.prevId && router.push(`/broadcasts/${nav.prevId}`)}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[#121212] transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Previous broadcast"
+        >
+          <ChevronLeft className="h-5 w-5" aria-hidden />
+        </button>
+        <button
+          type="button"
+          disabled={!nav.nextId}
+          onClick={() => nav.nextId && router.push(`/broadcasts/${nav.nextId}`)}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[#121212] transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Next broadcast"
+        >
+          <ChevronRight className="h-5 w-5" aria-hidden />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function FeedBroadcastCard({
   b,
   bodyPreview,
+  variant = 'default',
+  timelineHighlight = false,
 }: {
   b: FeedRow;
   bodyPreview: (md: string) => string;
+  /** Timeline layout: relative time sits under the card; connector is outside. */
+  variant?: 'default' | 'timeline';
+  /** Newest item in horizontal timeline (left column): soft accent border. */
+  timelineHighlight?: boolean;
 }) {
   const unread = b.read === false;
   const deptName = b.departments?.name ?? 'General';
@@ -126,7 +199,9 @@ function FeedBroadcastCard({
         'relative block min-h-[44px] rounded-xl border px-[18px] py-4 transition-[box-shadow,border-color]',
         unread
           ? 'border-sky-200 bg-sky-50/90 hover:border-sky-300 hover:shadow-[0_1px_3px_rgba(14,165,233,0.12),0_4px_12px_rgba(0,0,0,0.04)]'
-          : 'border-[#d8d8d8] bg-white hover:border-[#c8c8c8] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
+          : variant === 'timeline' && timelineHighlight
+            ? 'border-violet-400 bg-[#faf8ff] hover:border-violet-500 hover:shadow-[0_1px_3px_rgba(91,33,182,0.08),0_4px_12px_rgba(0,0,0,0.04)]'
+            : 'border-[#e8e8e8] bg-white hover:border-[#d4d4d4] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
         unread
           ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-sky-600 before:content-['']"
           : '',
@@ -147,7 +222,9 @@ function FeedBroadcastCard({
               Unread
             </span>
           ) : null}
-          <div className="text-[11.5px] text-[#9b9b9b]">{relTime(b.sent_at)}</div>
+          {variant === 'default' ? (
+            <div className="text-[11.5px] text-[#9b9b9b]">{relTime(b.sent_at)}</div>
+          ) : null}
         </div>
       </div>
       <p className="mb-2.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">{bodyPreview(b.body)}</p>
@@ -182,12 +259,12 @@ function FeedBroadcastCard({
           {deptName}
         </span>
         {b.is_org_wide ? (
-          <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
+          <span className="inline-flex items-center rounded-full border border-[#e8e8e8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
             All channels
           </span>
         ) : channelName ? (
           <span
-            className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
+            className="inline-flex items-center rounded-full border border-[#e8e8e8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
             title={channelPillAccessibleName(channelName)}
             aria-label={channelPillAccessibleName(channelName)}
           >
@@ -209,6 +286,63 @@ function FeedBroadcastCard({
         ))}
       </div>
     </Link>
+  );
+}
+
+/** Horizontal scroll: each broadcast is its own column so same-day items stay side-by-side with clear gaps. */
+function BroadcastTimelineStrip({
+  rows,
+  bodyPreview,
+}: {
+  rows: FeedRow[];
+  bodyPreview: (md: string) => string;
+}) {
+  const n = rows.length;
+  if (n === 0) return null;
+  return (
+    <div className="snap-x snap-mandatory overflow-x-auto scroll-pl-3 scroll-pr-3 [-webkit-overflow-scrolling:touch] sm:snap-none">
+      <ul
+        role="list"
+        className="flex w-max max-w-none gap-6 px-1 py-1 sm:gap-8"
+      >
+        {rows.map((b, i) => (
+          <li
+            key={b.id}
+            className="flex w-[min(300px,calc(100vw-2.5rem))] shrink-0 snap-center flex-col items-stretch sm:w-[300px]"
+          >
+            <div className="flex h-5 w-full items-center">
+              {i > 0 ? (
+                <div className="h-px min-w-[8px] flex-1 bg-[#dcdcdc]" aria-hidden />
+              ) : (
+                <div className="w-3 shrink-0" aria-hidden />
+              )}
+              <span
+                className={[
+                  'z-[1] h-2.5 w-2.5 shrink-0 rounded-full',
+                  i === 0
+                    ? 'bg-violet-600 shadow-[0_0_0_3px_rgba(124,58,237,0.18)]'
+                    : 'border-2 border-[#b0b0b0] bg-white',
+                ].join(' ')}
+                aria-hidden
+              />
+              {i < n - 1 ? (
+                <div className="h-px min-w-[8px] flex-1 bg-[#dcdcdc]" aria-hidden />
+              ) : (
+                <div className="w-3 shrink-0" aria-hidden />
+              )}
+            </div>
+            <div className="mx-auto h-4 w-px shrink-0 bg-[#dcdcdc]" aria-hidden />
+            <FeedBroadcastCard
+              b={b}
+              bodyPreview={bodyPreview}
+              variant="timeline"
+              timelineHighlight={i === 0}
+            />
+            <p className="mt-2.5 text-center text-[12px] tabular-nums text-[#9b9b9b]">{relTime(b.sent_at)}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -336,8 +470,15 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     ? (searchQueryResult.data ?? [])
     : (feedInfinite.data?.pages.flatMap((p) => p.rows) ?? []);
 
+  /** Search RPC is org-wide; narrow to selected department client-side when needed. */
+  const rowsAfterDept = useMemo(() => {
+    if (!searchActive || !deptFilter.size) return rows;
+    return rows.filter((r) => deptFilter.has(r.dept_id));
+  }, [rows, searchActive, deptFilter]);
+
   const displayRows = useMemo(() => {
-    let next = unreadOnly ? rows.filter((r) => !r.read) : rows;
+    const unreadActive = unreadOnly || advancedFilter === 'unread_only';
+    let next = unreadActive ? rowsAfterDept.filter((r) => !r.read) : rowsAfterDept;
 
     if (advancedFilter === 'my_departments') {
       next = next.filter((r) => {
@@ -378,27 +519,29 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
       return bt - at;
     });
     return sorted;
-  }, [rows, unreadOnly, advancedFilter, sortBy, viewerDeptIds]);
+  }, [rowsAfterDept, unreadOnly, advancedFilter, sortBy, viewerDeptIds]);
 
-  const timelineDayGroups = useMemo(() => {
-    if (feedLayout !== 'timeline') return null;
-    type G = { heading: string; rows: FeedRow[] };
-    const groups: G[] = [];
-    for (const b of displayRows) {
-      const heading = dayHeadingForBroadcast(b.sent_at);
-      const prev = groups[groups.length - 1];
-      if (prev && prev.heading === heading) prev.rows.push(b);
-      else groups.push({ heading, rows: [b] });
+  const [sessionAnchor, setSessionAnchor] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const s = sessionStorage.getItem(BROADCAST_LAST_VIEWED_ID_KEY);
+      setSessionAnchor(s && s.length > 0 ? s : null);
+    } catch {
+      setSessionAnchor(null);
     }
-    return groups;
-  }, [displayRows, feedLayout]);
+  }, []);
+
+  const anchorBroadcastId = useMemo(
+    () => sessionAnchor ?? displayRows[0]?.id ?? null,
+    [sessionAnchor, displayRows],
+  );
 
   const loading = searchActive ? searchQueryResult.isLoading : feedInfinite.isLoading;
   const fetching = searchActive ? searchQueryResult.isFetching : feedInfinite.isFetching;
 
   useEffect(() => {
     void refreshUnread();
-  }, [refreshUnread, rows.length]);
+  }, [refreshUnread, rowsAfterDept.length]);
 
   const markAllRead = useCallback(async () => {
     await supabase.rpc('broadcast_mark_all_read');
@@ -435,20 +578,35 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
   const preview = (md: string) =>
     md.replace(/\n+/g, ' ').replace(/[#*_`]/g, '').slice(0, 140);
 
+  const unreadFilterActive = unreadOnly || advancedFilter === 'unread_only';
   const filteredOutByUnread =
-    unreadOnly && !loading && rows.length > 0 && displayRows.length === 0;
+    unreadFilterActive && !loading && rowsAfterDept.length > 0 && displayRows.length === 0;
 
-  const trulyEmpty = !loading && rows.length === 0;
+  const trulyEmpty = !loading && rowsAfterDept.length === 0;
+
+  const showFeedNavStrip =
+    anchorBroadcastId != null &&
+    !searchActive &&
+    !loading &&
+    (!trulyEmpty || sessionAnchor != null) &&
+    (!filteredOutByUnread || sessionAnchor != null);
 
   return (
     <div className="flex flex-col gap-2.5">
+      {showFeedNavStrip ? (
+        <FeedNavigationStrip
+          supabase={supabase}
+          anchorBroadcastId={anchorBroadcastId}
+          searchActive={searchActive}
+        />
+      ) : null}
       {fetching && rows.length > 0 ? (
         <p className="text-xs text-[#9b9b9b]" aria-live="polite">
           Updating...
         </p>
       ) : null}
 
-      {unreadOnly && !searchActive ? (
+      {unreadFilterActive && !searchActive ? (
         <p className="text-xs text-[#9b9b9b]">
           Unread view filters loaded items. Use &ldquo;Load more&rdquo; to fetch additional broadcasts, then
           unread items from those pages will appear.
@@ -479,23 +637,8 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
           <div className="text-[15px] font-medium text-[#6b6b6b]">No unread in loaded items</div>
           <p className="mt-1.5 text-[13px]">Load more below or switch to All.</p>
         </div>
-      ) : feedLayout === 'timeline' && timelineDayGroups ? (
-        <div className="flex flex-col gap-6">
-          {timelineDayGroups.map((g) => (
-            <section key={g.heading}>
-              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
-                {g.heading}
-              </h3>
-              <ul className="flex flex-col gap-2.5">
-                {g.rows.map((b) => (
-                  <li key={b.id}>
-                    <FeedBroadcastCard b={b} bodyPreview={preview} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+      ) : feedLayout === 'timeline' ? (
+        <BroadcastTimelineStrip rows={displayRows} bodyPreview={preview} />
       ) : (
         <ul className="flex flex-col gap-2.5">
           {displayRows.map((b) => (

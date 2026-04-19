@@ -1,5 +1,6 @@
 import { BroadcastDetailView } from '@/components/broadcasts/BroadcastDetailView';
 import type { BroadcastReplyRow } from '@/components/broadcasts/BroadcastRepliesClient';
+import { parseBroadcastFeedNavigation } from '@/lib/broadcasts/parseBroadcastFeedNavigation';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
@@ -68,22 +69,8 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
   const team = teamRes.data;
   const sender = senderRes.data;
 
-  const navRaw = navRes.data as
-    | { index?: number | null; total?: number | null; prev_id?: string | null; next_id?: string | null }
-    | null
-    | undefined;
   const navigation =
-    navRaw &&
-    typeof navRaw.index === 'number' &&
-    typeof navRaw.total === 'number' &&
-    navRaw.total > 0
-      ? {
-          index: navRaw.index,
-          total: navRaw.total,
-          prevId: typeof navRaw.prev_id === 'string' ? navRaw.prev_id : null,
-          nextId: typeof navRaw.next_id === 'string' ? navRaw.next_id : null,
-        }
-      : null;
+    status === 'sent' ? parseBroadcastFeedNavigation(navRes.data) : null;
 
   let initialReplies: BroadcastReplyRow[] | null = null;
   if (status === 'sent') {

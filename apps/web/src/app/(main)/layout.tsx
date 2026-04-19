@@ -15,7 +15,6 @@ import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { normalizeUiMode } from '@/lib/uiMode';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { createClient } from '@/lib/supabase/server';
 import {
   type PermissionKey,
 } from '@campsite/types';
@@ -83,24 +82,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const initialUiMode = normalizeUiMode(str('ui_mode'));
   const initialCelebrationAutoEnabled =
     typeof b['celebration_auto_enabled'] === 'boolean' ? Boolean(b['celebration_auto_enabled']) : true;
-  let orgCelebrationOverrides: OrgCelebrationModeOverride[] = [];
-  if (currentOrgId) {
-    const supabase = await createClient();
-    const { data } = await withServerPerf(
-      '/(main)/layout',
-      'org_celebration_modes',
-      supabase
-        .from('org_celebration_modes')
-        .select(
-          'mode_key,label,is_enabled,display_order,auto_start_month,auto_start_day,auto_end_month,auto_end_day,gradient_override,emoji_primary,emoji_secondary'
-        )
-        .eq('org_id', currentOrgId)
-        .order('display_order', { ascending: true })
-        .order('label', { ascending: true }),
-      350
-    );
-    orgCelebrationOverrides = (data ?? []) as OrgCelebrationModeOverride[];
-  }
+  const rawCelebration = b['org_celebration_mode_overrides'];
+  const orgCelebrationOverrides: OrgCelebrationModeOverride[] = Array.isArray(rawCelebration)
+    ? (rawCelebration as OrgCelebrationModeOverride[])
+    : [];
 
   const hasTenantProfile = hasProfile;
   const orgName          = str('org_name') ?? 'Organisation';
@@ -199,7 +184,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     {
       id: 'broadcast-pending',
       label: 'Broadcast approvals',
-      href: '/broadcasts?tab=pending',
+      href: '/broadcasts?tab=submitted',
       count: pendingBroadcastApprovals,
     },
     {

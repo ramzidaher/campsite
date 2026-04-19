@@ -116,21 +116,3 @@
 .root :global(.ProseMirror strong) {
   font-weight: 600;
 }
-
-.bubbleBtn {
-  border-radius: 0.375rem;
-  padding: 0.35rem 0.55rem;
-  font-size: 13px;
-  font-weight: 500;
-  color: #504e49;
-  transition: background-color 0.12s ease;
-}
-
-.bubbleBtn:hover {
-  background: #ebe8e3;
-}
-
-.bubbleBtn[data-active='true'] {
-  background: #e3dfd9;
-  color: #121212;
-}

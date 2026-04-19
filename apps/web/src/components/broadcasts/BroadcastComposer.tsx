@@ -69,6 +69,21 @@ function categoriesForDepartment(map: Map<string, CatRow[]>, deptId: string): Ca
   return map.get(deptId.trim().toLowerCase()) ?? [];
 }
 
+function pickPreferredOrgWideAuthorityDept(
+  allowedDeptIds: string[],
+  departments: DeptRow[],
+  viewerDeptIds: Set<string>
+): string {
+  if (!allowedDeptIds.length) return '';
+  if (allowedDeptIds.length === 1) return allowedDeptIds[0]!;
+  for (const d of departments) {
+    if (allowedDeptIds.includes(d.id) && viewerDeptIds.has(d.id)) {
+      return d.id;
+    }
+  }
+  return allowedDeptIds[0]!;
+}
+
 export type BroadcastComposeOutcome =
   | 'draft_saved'
   | 'submitted_for_approval'
@@ -84,6 +99,8 @@ type Props = {
   canPublishWithoutApproval: boolean;
   departments: DeptRow[];
   categoriesByDept: Map<string, CatRow[]>;
+  /** Departments the viewer belongs to or manages — used to auto-pick org-wide “permission” department. */
+  viewerDeptIds: Set<string>;
   /** Called after a successful save/send; use to switch tabs or refresh lists. */
   onCreated?: (outcome: BroadcastComposeOutcome) => void;
 };
@@ -155,11 +172,14 @@ export function BroadcastComposer({
   canPublishWithoutApproval,
   departments,
   categoriesByDept,
+  viewerDeptIds,
   onCreated,
 }: Props) {
   const playUiSound = useUiSound();
   const [deptId, setDeptId] = useState<string>('');
   const [catId, setCatId] = useState<string>('');
+  /** For published compose (not draft-only): one or more recipient departments; order follows the list below. */
+  const [specificDeptIds, setSpecificDeptIds] = useState<string[]>([]);
   const [authorityDeptId, setAuthorityDeptId] = useState<string>('');
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('specific');
   const [orgWideDeptIds, setOrgWideDeptIds] = useState<string[]>([]);
@@ -176,33 +196,46 @@ export function BroadcastComposer({
   const [isMandatory, setIsMandatory] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [teamId, setTeamId] = useState<string>('');
-  const [collabDeptIds, setCollabDeptIds] = useState<string[]>([]);
   const [teamsForDept, setTeamsForDept] = useState<TeamRow[]>([]);
   const dirty = useRef(false);
   const bodyEditorRef = useRef<BroadcastBodyEditorHandle>(null);
   const bodyImageInputRef = useRef<HTMLInputElement>(null);
 
-  const displayDeptId = useMemo(() => {
-    if (departments.some((d) => d.id === deptId)) return deptId;
-    return departments[0]?.id ?? '';
-  }, [departments, deptId]);
+  const isOrgWideActive = !draftOnly && deliveryMode === 'org_wide';
 
-  const cats = useMemo(
-    () => categoriesForDepartment(categoriesByDept, displayDeptId),
-    [categoriesByDept, displayDeptId]
-  );
-
-  const displayCatId = useMemo(() => {
-    if (cats.some((c) => c.id === catId)) return catId;
-    return cats[0]?.id ?? '';
-  }, [cats, catId]);
+  const orderedSpecificDeptIds = useMemo(() => {
+    if (draftOnly || isOrgWideActive) return [];
+    const set = new Set(specificDeptIds);
+    return departments.map((d) => d.id).filter((id) => set.has(id));
+  }, [draftOnly, isOrgWideActive, departments, specificDeptIds]);
 
   const displayAuthorityDeptId = useMemo(() => {
     if (orgWideDeptIds.includes(authorityDeptId)) return authorityDeptId;
     return orgWideDeptIds[0] ?? '';
   }, [authorityDeptId, orgWideDeptIds]);
 
-  const isOrgWideActive = !draftOnly && deliveryMode === 'org_wide';
+  const displayDeptId = useMemo(() => {
+    if (draftOnly) {
+      if (departments.some((d) => d.id === deptId)) return deptId;
+      return departments[0]?.id ?? '';
+    }
+    if (isOrgWideActive) return displayAuthorityDeptId;
+    return orderedSpecificDeptIds[0] ?? '';
+  }, [draftOnly, departments, deptId, isOrgWideActive, displayAuthorityDeptId, orderedSpecificDeptIds]);
+
+  const cats = useMemo(
+    () => categoriesForDepartment(categoriesByDept, displayDeptId),
+    [categoriesByDept, displayDeptId]
+  );
+
+  /** Drafts: explicit channel pick. Published specific: first channel for the lead department (DB requires a channel). */
+  const displayCatId = useMemo(() => {
+    if (!draftOnly) return '';
+    if (cats.some((c) => c.id === catId)) return catId;
+    return cats[0]?.id ?? '';
+  }, [cats, catId, draftOnly]);
+
+  const autoChannelId = useMemo(() => cats[0]?.id ?? '', [cats]);
 
   /** Stable across parent re-fetches: `BroadcastsClient` replaces `departments` with a new array on each periodic shell refresh even when rows are unchanged. */
   const departmentIdsSignature = useMemo(
@@ -231,7 +264,7 @@ export function BroadcastComposer({
     isMandatory,
     isPinned,
     teamId,
-    collabDeptIds,
+    specificDeptIds,
   ]);
 
   useEffect(() => {
@@ -267,9 +300,23 @@ export function BroadcastComposer({
   useEffect(() => {
     if (!orgWideDeptIds.length || !isOrgWideActive) return;
     if (!orgWideDeptIds.includes(authorityDeptId)) {
-      setAuthorityDeptId(orgWideDeptIds[0]!);
+      setAuthorityDeptId(
+        pickPreferredOrgWideAuthorityDept(orgWideDeptIds, departments, viewerDeptIds)
+      );
     }
-  }, [orgWideDeptIds, authorityDeptId, isOrgWideActive]);
+  }, [orgWideDeptIds, authorityDeptId, isOrgWideActive, departments, viewerDeptIds]);
+
+  useEffect(() => {
+    if (draftOnly || isOrgWideActive) return;
+    const depts = departmentsRef.current;
+    if (!depts.length) return;
+    setSpecificDeptIds((prev) => {
+      const allowed = new Set(depts.map((d) => d.id));
+      const next = prev.filter((id) => allowed.has(id));
+      if (next.length) return next;
+      return [depts[0]!.id];
+    });
+  }, [draftOnly, isOrgWideActive, departmentIdsSignature]);
 
   const capsDeptId = isOrgWideActive ? displayAuthorityDeptId : displayDeptId;
 
@@ -317,20 +364,13 @@ export function BroadcastComposer({
     };
   }, [draftOnly, deliveryMode, displayDeptId, supabase]);
 
-  useEffect(() => {
-    if (isOrgWideActive) {
-      setIsMandatory(false);
-      setCollabDeptIds([]);
-    }
-  }, [isOrgWideActive]);
-
   const syncCollaborationDepartments = useCallback(
     async (broadcastId: string) => {
       if (collabDepartmentsTableMissing) return;
       const desired =
         draftOnly || isOrgWideActive || !displayDeptId
           ? []
-          : [...new Set(collabDeptIds)].filter((id) => id !== displayDeptId);
+          : [...new Set(orderedSpecificDeptIds.slice(1))];
       const { error: delErr } = await supabase
         .from('broadcast_collab_departments')
         .delete()
@@ -347,7 +387,7 @@ export function BroadcastComposer({
       if (insErr && !isMissingCollabDepartmentsTableError(insErr)) throw insErr;
       if (insErr) collabDepartmentsTableMissing = true;
     },
-    [supabase, collabDeptIds, displayDeptId, draftOnly, isOrgWideActive]
+    [supabase, orderedSpecificDeptIds, displayDeptId, draftOnly, isOrgWideActive]
   );
 
   const minScheduleLocal = useMemo(() => {
@@ -369,15 +409,7 @@ export function BroadcastComposer({
     } else if (isOrgWideActive) {
       if (!displayAuthorityDeptId) return { status: 'skipped' };
     } else {
-      if (!displayDeptId || !displayCatId) return { status: 'skipped' };
-    }
-
-    if (!draftOnly && !isOrgWideActive) {
-      const catRow = cats.find((c) => c.id === displayCatId);
-      if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
-        setError('This channel does not belong to the selected department. Refresh the page or pick the channel again.');
-        return { status: 'failed' };
-      }
+      if (!displayDeptId || !autoChannelId) return { status: 'skipped' };
     }
 
     setSaving(true);
@@ -386,14 +418,14 @@ export function BroadcastComposer({
       const row = {
         org_id: orgId,
         dept_id: draftOnly || !isOrgWideActive ? displayDeptId : displayAuthorityDeptId,
-        channel_id: isOrgWideActive ? null : displayCatId,
+        channel_id: isOrgWideActive ? null : draftOnly ? displayCatId : autoChannelId,
         team_id: draftOnly || isOrgWideActive || !teamId ? null : teamId,
         title: title.trim().slice(0, TITLE_MAX),
         body: body ?? '',
         status: 'draft' as const,
         created_by: userId,
         is_org_wide: isOrgWideActive,
-        is_mandatory: isOrgWideActive ? false : isMandatory,
+        is_mandatory: draftOnly ? false : isMandatory,
         is_pinned: isPinned,
       };
       let broadcastId: string | undefined = draftId ?? undefined;
@@ -425,6 +457,7 @@ export function BroadcastComposer({
     isOrgWideActive,
     displayDeptId,
     displayCatId,
+    autoChannelId,
     displayAuthorityDeptId,
     title,
     body,
@@ -432,7 +465,6 @@ export function BroadcastComposer({
     userId,
     supabase,
     draftId,
-    cats,
     isMandatory,
     isPinned,
     teamId,
@@ -461,7 +493,9 @@ export function BroadcastComposer({
         if (r.status === 'failed') {
           playUiSound('error_soft');
         } else {
-          setError('Choose department, channel, and other required fields so we can save a draft, then add images.');
+          setError(
+            'Choose department(s) and other required fields so we can save a draft, then add images. If this department has no broadcast channel yet, add one under Settings.'
+          );
           playUiSound('error_soft');
         }
         return;
@@ -511,20 +545,33 @@ export function BroadcastComposer({
         return;
       }
     } else if (isOrgWideActive) {
-      if (!displayAuthorityDeptId || !title.trim()) {
-        setError('Title and permission department are required for an org-wide broadcast.');
+      if (!title.trim()) {
+        setError('Title is required.');
+        playUiSound('error_soft');
+        return;
+      }
+      if (!displayAuthorityDeptId) {
+        setError(
+          'No department authorises org-wide sends for your account. Ask an org admin to enable “Send org-wide” under Admin → Departments, or use Specific.'
+        );
         playUiSound('error_soft');
         return;
       }
     } else {
-      if (!displayDeptId || !displayCatId || !title.trim()) {
-        setError('Title, department, and channel are required.');
+      if (!title.trim()) {
+        setError('Title is required.');
         playUiSound('error_soft');
         return;
       }
-      const catRow = cats.find((c) => c.id === displayCatId);
-      if (!catRow || String(catRow.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
-        setError('This channel does not belong to the selected department. Refresh the page or pick the channel again.');
+      if (!orderedSpecificDeptIds.length || !displayDeptId) {
+        setError('Choose at least one department.');
+        playUiSound('error_soft');
+        return;
+      }
+      if (!autoChannelId) {
+        setError(
+          `Add a broadcast channel for ${departments.find((d) => d.id === displayDeptId)?.name ?? 'the lead department'} under Settings (first channel is used automatically).`
+        );
         playUiSound('error_soft');
         return;
       }
@@ -567,11 +614,11 @@ export function BroadcastComposer({
       }
 
       const baseDept = isOrgWideActive ? displayAuthorityDeptId : displayDeptId;
-      const baseCat = isOrgWideActive ? null : displayCatId;
+      const baseCat = isOrgWideActive ? null : autoChannelId;
       const baseTeam = isOrgWideActive || !teamId ? null : teamId;
       const baseFlags = {
         is_org_wide: isOrgWideActive,
-        is_mandatory: isOrgWideActive ? false : isMandatory,
+        is_mandatory: isMandatory,
         is_pinned: isPinned,
         team_id: baseTeam,
       };
@@ -610,7 +657,10 @@ export function BroadcastComposer({
         setIsMandatory(false);
         setIsPinned(false);
         setTeamId('');
-        setCollabDeptIds([]);
+        {
+          const first = departmentsRef.current[0]?.id;
+          if (first) setSpecificDeptIds([first]);
+        }
         playUiSound('broadcast_scheduled');
         onCreated?.('scheduled');
         return;
@@ -636,7 +686,10 @@ export function BroadcastComposer({
       setIsMandatory(false);
       setIsPinned(false);
       setTeamId('');
-      setCollabDeptIds([]);
+      {
+        const first = departmentsRef.current[0]?.id;
+        if (first) setSpecificDeptIds([first]);
+      }
       playUiSound('broadcast_sent');
       onCreated?.('sent');
     } catch (e: unknown) {
@@ -653,10 +706,7 @@ export function BroadcastComposer({
   );
 
   const showExtraDelivery =
-    !draftOnly &&
-    caps &&
-    ((isOrgWideActive && caps.pin_broadcasts) ||
-      (!isOrgWideActive && (caps.mandatory_broadcast || caps.pin_broadcasts)));
+    !draftOnly && caps && (caps.mandatory_broadcast || caps.pin_broadcasts);
 
   if (!canCompose) {
     return <p className="text-sm text-[#6b6b6b]">Your role cannot compose broadcasts.</p>;
@@ -688,9 +738,9 @@ export function BroadcastComposer({
         <div className="rounded-lg border border-[#d8d8d8] bg-white p-3">
           <p className="text-sm font-medium text-[#121212]">Audience</p>
           <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
-            <span className="font-medium text-[#121212]">Org-wide</span> goes to everyone (no department, channel, or
-            team). <span className="font-medium text-[#121212]">Specific</span> picks a department and channel; if
-            that department has teams, you can narrow to one team or leave &ldquo;all members&rdquo;.
+            <span className="font-medium text-[#121212]">Org-wide</span> goes to everyone (no team filter).{' '}
+            <span className="font-medium text-[#121212]">Specific</span> targets one or more departments; if the lead
+            department has teams, you can narrow to one team or leave &ldquo;all members&rdquo;.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3 text-sm text-[#121212] sm:flex-1">
@@ -704,7 +754,7 @@ export function BroadcastComposer({
               <span>
                 <span className="font-medium">Specific</span>
                 <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
-                  Choose department, then channel; team filter appears only when teams exist for that department.
+                  Choose one or more departments; team filter uses the lead department only when teams exist.
                 </span>
               </span>
             </label>
@@ -742,11 +792,12 @@ export function BroadcastComposer({
         </div>
       ) : null}
 
-      {!draftOnly && isOrgWideActive ? (
+      {!draftOnly && isOrgWideActive && authorityDeptOptions.length > 1 ? (
         <div>
           <label className="mb-1 block text-sm font-medium text-[#121212]">Permission department</label>
           <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
             Which department authorises this org-wide send (for approvals and audit). This is not the audience filter.
+            When only one department grants org-wide send, we pick it for you automatically.
           </p>
           <SelectWithChevron
             value={displayAuthorityDeptId}
@@ -761,7 +812,9 @@ export function BroadcastComposer({
             ))}
           </SelectWithChevron>
         </div>
-      ) : (
+      ) : null}
+
+      {draftOnly ? (
         <div className="flex flex-col gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-[#121212]">Department</label>
@@ -818,7 +871,56 @@ export function BroadcastComposer({
             ) : null}
           </div>
         </div>
-      )}
+      ) : !isOrgWideActive ? (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[#121212]">Departments</label>
+          <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
+            Select one or more. Order in this list determines the <span className="font-medium text-[#121212]">lead</span>{' '}
+            department (shown on the post, used for teams, and for the broadcast channel below the hood).
+          </p>
+          <div className="max-h-52 space-y-1.5 overflow-y-auto rounded-lg border border-[#d8d8d8] bg-white p-2">
+            {departments.map((d) => (
+              <label
+                key={d.id}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[#121212] hover:bg-[#faf9f6]"
+              >
+                <input
+                  type="checkbox"
+                  className="rounded border-[#d8d8d8]"
+                  checked={specificDeptIds.includes(d.id)}
+                  onChange={(e) => {
+                    setSpecificDeptIds((prev) => {
+                      if (e.target.checked) return [...new Set([...prev, d.id])];
+                      const next = prev.filter((id) => id !== d.id);
+                      if (next.length) return next;
+                      return [d.id];
+                    });
+                  }}
+                />
+                <span>{d.name}</span>
+              </label>
+            ))}
+          </div>
+          {autoChannelId ? (
+            <p className="mt-2 text-[12px] leading-snug text-[#6b6b6b]">
+              Delivery uses the first broadcast channel for the lead department. Manage channels under{' '}
+              <Link
+                href="/settings"
+                className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              >
+                Settings
+              </Link>
+              .
+            </p>
+          ) : (
+            <p className="mt-2 text-[12px] leading-snug text-amber-900">
+              {composeNoChannelsHint(
+                departments.find((d) => d.id === displayDeptId)?.name ?? 'the lead department'
+              )}
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {!draftOnly && deliveryMode === 'specific' && teamsForDept.length > 0 ? (
         <div>
@@ -831,7 +933,7 @@ export function BroadcastComposer({
             department member or manager, you must pick one of your teams. Manage teams under{' '}
             <span className="font-medium text-[#121212]">Admin → Teams</span> or{' '}
             <span className="font-medium text-[#121212]">Departments</span>. Leave &ldquo;All members in this
-            department&rdquo; for channel-wide delivery (no team filter).
+            department&rdquo; for whole-department delivery (no team filter).
           </p>
           <SelectWithChevron value={teamId} onChange={(e) => setTeamId(e.target.value)}>
             <option value="">All members in this department</option>
@@ -844,52 +946,19 @@ export function BroadcastComposer({
         </div>
       ) : null}
 
-      {!draftOnly && deliveryMode === 'specific' ? (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[#121212]">
-            Collaboration departments (optional)
-          </label>
-          <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
-            Add extra departments to make this a cross-department broadcast. Members subscribed to channels
-            in any selected collaboration department can also see this post.
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {departments
-              .filter((d) => d.id !== displayDeptId)
-              .map((d) => (
-                <label
-                  key={d.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-sm text-[#121212]"
-                >
-                  <input
-                    type="checkbox"
-                    checked={collabDeptIds.includes(d.id)}
-                    onChange={(e) =>
-                      setCollabDeptIds((prev) =>
-                        e.target.checked ? [...new Set([...prev, d.id])] : prev.filter((id) => id !== d.id)
-                      )
-                    }
-                  />
-                  <span>{d.name}</span>
-                </label>
-              ))}
-          </div>
-        </div>
-      ) : null}
-
       {!draftOnly && capsDeptId ? (
         <div className="rounded-lg border border-[#d8d8d8] bg-white p-3">
           <p className="text-sm font-medium text-[#121212]">Delivery options</p>
           <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
             {isOrgWideActive
-              ? 'Org-wide posts reach all active members. You can still pin when allowed.'
-              : 'Optional reach and ordering for this channel.'}
+              ? 'Org-wide posts reach all active members. Mandatory and pin follow your permissions on the department above.'
+              : 'Optional reach and ordering for this broadcast.'}
           </p>
           {capsLoading ? (
             <p className="mt-2 text-xs text-[#6b6b6b]">Loading options...</p>
           ) : showExtraDelivery ? (
             <div className="mt-3 space-y-2.5">
-              {!isOrgWideActive && caps.mandatory_broadcast ? (
+              {caps.mandatory_broadcast ? (
                 <label className="flex cursor-pointer items-start gap-2 text-sm text-[#121212]">
                   <input
                     type="checkbox"
@@ -936,7 +1005,7 @@ export function BroadcastComposer({
             <p className="text-sm font-medium text-[#121212]">Write</p>
             <p className="mt-0.5 text-[12px] leading-snug text-[#6b6b6b]">
               Edit visually like Notion — content is stored as markdown for the feed. Add images as framed blocks; uploads need a
-              title and saved draft. Select text for a quick format bar.
+              title and saved draft.
             </p>
           </div>
         </div>

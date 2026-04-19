@@ -554,7 +554,10 @@ export function CalendarScreen({ profile }: { profile: ProfileRow & { org_timezo
                   setGridStart(startOfDayLocal(dayStart));
                   openComposeFromSlot(start, end);
                 }}
-                onOpenItem={setDetail}
+                onOpenItem={(g) => {
+                  const full = items.find((x) => x.key === g.key);
+                  if (full) setDetail(full);
+                }}
                 tokens={tokens}
               />
             ) : (
@@ -798,17 +801,22 @@ function DetailModalMobile({
         .select('profile_id, status, profiles(full_name)')
         .eq('event_id', item.id);
       if (error) return;
-      const rows = (data ?? []) as {
-        profile_id: string;
-        status: string;
-        profiles: { full_name: string | null } | null;
-      }[];
+      const raw = (data ?? []) as unknown[];
       setAttendees(
-        rows.map((r) => ({
-          profile_id: r.profile_id,
-          status: r.status,
-          full_name: r.profiles?.full_name ?? null,
-        })),
+        raw.map((row) => {
+          const r = row as {
+            profile_id: string;
+            status: string;
+            profiles: { full_name: string | null } | { full_name: string | null }[] | null;
+          };
+          const prof = r.profiles;
+          const fullName = Array.isArray(prof) ? prof[0]?.full_name ?? null : prof?.full_name ?? null;
+          return {
+            profile_id: r.profile_id,
+            status: r.status,
+            full_name: fullName,
+          };
+        }),
       );
     })();
   }, [visible, item, isManualEvent]);

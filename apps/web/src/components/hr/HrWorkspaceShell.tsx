@@ -39,7 +39,10 @@ export function HrWorkspaceShell({
   const hiringHub = pathname.startsWith('/hr/hiring');
   /** Job editor only — same focused chrome as hiring (no People workspace mega-nav on top of page chrome). */
   const jobListingEditor = /^\/hr\/jobs\/[^/]+\/edit$/.test(pathname);
-  const suppressMainHrHeader = hiringHub || jobListingEditor;
+  /** Directory + employee file bring their own chrome; hide duplicate People workspace header + crumbs + pill nav. */
+  const hrEmployeeRecords =
+    pathname === '/hr/records' || pathname.startsWith('/hr/records/');
+  const suppressMainHrHeader = hiringHub || jobListingEditor || hrEmployeeRecords;
   const shellWideLayout = hiringHub || jobListingEditor;
 
   const shellNavItems = useMemo((): SectionNavItem[] => {
