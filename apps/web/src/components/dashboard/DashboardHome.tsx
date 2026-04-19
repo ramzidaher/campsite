@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Pin } from 'lucide-react';
 
 import { DashboardCampfireAmbient } from '@/components/dashboard/DashboardCampfireAmbient';
 import { DashboardCalendarWidget } from '@/components/dashboard/DashboardCalendarWidget';
@@ -315,7 +316,8 @@ export function DashboardHome({
                     </p>
                     <div className="mt-2.5 flex flex-wrap gap-2">
                       {b.is_pinned ? (
-                        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
+                          <Pin className="h-3 w-3 shrink-0 text-amber-800" strokeWidth={2.25} aria-hidden />
                           Pinned
                         </span>
                       ) : null}

@@ -6,6 +6,7 @@ import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import { relTime } from '@/lib/format/relTime';
 import Link from 'next/link';
+import { Pin } from 'lucide-react';
 import {
   useQuery,
   useInfiniteQuery,
@@ -157,7 +158,8 @@ function FeedBroadcastCard({
       </p>
       <div className="flex flex-wrap gap-2">
         {b.is_pinned ? (
-          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-900">
+            <Pin className="h-3 w-3 shrink-0 text-amber-800" strokeWidth={2.25} aria-hidden />
             Pinned
           </span>
         ) : null}
@@ -368,6 +370,9 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
       return sorted;
     }
     sorted.sort((a, b) => {
+      const ap = a.is_pinned ? 1 : 0;
+      const bp = b.is_pinned ? 1 : 0;
+      if (ap !== bp) return bp - ap;
       const at = a.sent_at ? new Date(a.sent_at).getTime() : 0;
       const bt = b.sent_at ? new Date(b.sent_at).getTime() : 0;
       return bt - at;

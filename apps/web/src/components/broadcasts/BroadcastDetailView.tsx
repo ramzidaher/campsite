@@ -16,9 +16,17 @@ import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
 import { createClient } from '@/lib/supabase/client';
 import * as chrono from 'chrono-node';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, Pin } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+import { BroadcastRepliesClient, type BroadcastReplyRow } from '@/components/broadcasts/BroadcastRepliesClient';
+import type { FeedRow } from '@/lib/broadcasts/feedTypes';
+import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
+import { SHELL_BADGE_COUNTS_QUERY_KEY } from '@/hooks/useShellBadgeCounts';
 
 import '@/components/broadcasts/broadcastCraftImage.css';
 
@@ -46,15 +54,25 @@ type Row = {
 export function BroadcastDetailView({
   initial,
   userId,
+  orgId,
   showAdminChannelNote,
   canSetCover,
+  navigation,
+  mayEdit,
+  initialReplies,
 }: {
   initial: Row;
   userId: string;
+  orgId: string;
   showAdminChannelNote?: boolean;
   canSetCover: boolean;
+  navigation: { index: number; total: number; prevId: string | null; nextId: string | null } | null;
+  mayEdit: boolean;
+  initialReplies: BroadcastReplyRow[] | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(initial.cover_image_url ?? null);
   const [coverBusy, setCoverBusy] = useState(false);
@@ -72,6 +90,7 @@ export function BroadcastDetailView({
   const [channelFollowSubscribed, setChannelFollowSubscribed] = useState<boolean | null>(null);
   const [channelFollowBusy, setChannelFollowBusy] = useState(false);
   const [channelFollowErr, setChannelFollowErr] = useState<string | null>(null);
+  const [markUnreadBusy, setMarkUnreadBusy] = useState(false);
 
   const showChannelFollow =
     initial.status === 'sent' &&
@@ -271,6 +290,57 @@ export function BroadcastDetailView({
     setCoverBusy(false);
   }
 
+  async function markAsUnread() {
+    if (initial.status !== 'sent' || markUnreadBusy) return;
+    const prevBadges = queryClient.getQueryData<ShellBadgeCounts>(SHELL_BADGE_COUNTS_QUERY_KEY);
+    setMarkUnreadBusy(true);
+    queryClient.setQueryData<ShellBadgeCounts>(SHELL_BADGE_COUNTS_QUERY_KEY, (old) => {
+      if (!old) return old;
+      return { ...old, broadcast_unread: old.broadcast_unread + 1 };
+    });
+    queryClient.setQueriesData(
+      {
+        predicate: (q) => Array.isArray(q.queryKey) && q.queryKey[0] === 'broadcast-feed',
+      },
+      (old: unknown) => {
+        if (!old || typeof old !== 'object' || !('pages' in old)) return old;
+        const o = old as { pages: { rows: FeedRow[]; hasMore: boolean }[] };
+        return {
+          ...o,
+          pages: o.pages.map((p) => ({
+            ...p,
+            rows: p.rows.map((r) => (r.id === initial.id ? { ...r, read: false } : r)),
+          })),
+        };
+      },
+    );
+    queryClient.setQueriesData(
+      {
+        predicate: (q) => Array.isArray(q.queryKey) && q.queryKey[0] === 'broadcast-feed-search',
+      },
+      (old: unknown) => {
+        if (!Array.isArray(old)) return old;
+        return (old as FeedRow[]).map((r) => (r.id === initial.id ? { ...r, read: false } : r));
+      },
+    );
+    const { error } = await supabase.rpc('broadcast_mark_unread', { p_broadcast_id: initial.id });
+    if (error) {
+      if (prevBadges) {
+        queryClient.setQueryData(SHELL_BADGE_COUNTS_QUERY_KEY, prevBadges);
+      } else {
+        void queryClient.invalidateQueries({ queryKey: SHELL_BADGE_COUNTS_QUERY_KEY });
+      }
+      void queryClient.invalidateQueries({
+        predicate: (q) =>
+          Array.isArray(q.queryKey) &&
+          (q.queryKey[0] === 'broadcast-feed' || q.queryKey[0] === 'broadcast-feed-search'),
+      });
+    } else {
+      void queryClient.invalidateQueries({ queryKey: SHELL_BADGE_COUNTS_QUERY_KEY });
+    }
+    setMarkUnreadBusy(false);
+  }
+
   async function removeCover() {
     setCoverBusy(true);
     setCoverErr(null);
@@ -337,17 +407,67 @@ export function BroadcastDetailView({
           }}
         />
 
-        <Link
-          href="/broadcasts"
-          className={[
-            // Opaque chip + dark rim: readable on any cover (translucent fills pick up backdrop hue).
-            'inline-flex items-center gap-1.5 rounded-lg border-2 border-[#121212] bg-white px-3 py-2 text-[13px] font-semibold text-[#121212]',
-            'shadow-[0_4px_24px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.65)] transition-colors hover:bg-[#f4f4f4]',
-            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]',
-          ].join(' ')}
-        >
-          <span aria-hidden>←</span> Back to broadcasts
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <Link
+            href="/broadcasts"
+            className={[
+              'inline-flex w-fit items-center gap-1.5 rounded-lg border-2 border-[#121212] bg-white px-3 py-2 text-[13px] font-semibold text-[#121212]',
+              'shadow-[0_4px_24px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.65)] transition-colors hover:bg-[#f4f4f4]',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]',
+            ].join(' ')}
+          >
+            <span aria-hidden>←</span> Back to broadcasts
+          </Link>
+
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {navigation && navigation.total > 0 ? (
+              <div
+                className="inline-flex items-center gap-1 rounded-full border border-[#121212]/15 bg-white/95 px-2 py-1 text-[13px] text-[#121212] shadow-[0_2px_12px_rgba(0,0,0,0.08)]"
+                aria-label={`Broadcast ${navigation.index} of ${navigation.total}`}
+              >
+                <span className="px-1.5 text-[#6b6b6b]">
+                  {navigation.index} of {navigation.total}
+                </span>
+                <button
+                  type="button"
+                  disabled={!navigation.prevId}
+                  onClick={() => navigation.prevId && router.push(`/broadcasts/${navigation.prevId}`)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#121212] transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-35"
+                  aria-label="Previous broadcast"
+                >
+                  <ChevronLeft className="h-5 w-5" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  disabled={!navigation.nextId}
+                  onClick={() => navigation.nextId && router.push(`/broadcasts/${navigation.nextId}`)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#121212] transition-colors hover:bg-black/10 disabled:cursor-not-allowed disabled:opacity-35"
+                  aria-label="Next broadcast"
+                >
+                  <ChevronRight className="h-5 w-5" aria-hidden />
+                </button>
+              </div>
+            ) : null}
+            {initial.status === 'sent' ? (
+              <button
+                type="button"
+                disabled={markUnreadBusy}
+                onClick={() => void markAsUnread()}
+                className="rounded-full border border-[#121212]/15 bg-white/95 px-3 py-2 text-[13px] font-medium text-[#121212] shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition-colors hover:bg-[#f4f4f4] disabled:opacity-60"
+              >
+                {markUnreadBusy ? 'Updating…' : 'Mark unread'}
+              </button>
+            ) : null}
+            {mayEdit ? (
+              <Link
+                href={`/broadcasts/${initial.id}/edit`}
+                className="rounded-full border border-[#121212]/15 bg-white/95 px-3 py-2 text-[13px] font-semibold text-[#121212] shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition-colors hover:bg-[#f4f4f4]"
+              >
+                Edit
+              </Link>
+            ) : null}
+          </div>
+        </div>
 
         <div className="group relative mt-6 overflow-hidden rounded-2xl border border-[#d8d8d8] bg-white shadow-[0_8px_40px_rgba(18,18,18,0.08)]">
           <div className="p-6 sm:p-8">
@@ -366,7 +486,8 @@ export function BroadcastDetailView({
         ) : null}
         <div className="flex flex-wrap gap-2">
           {initial.is_pinned ? (
-            <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-950">
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-950">
+              <Pin className="h-3 w-3 text-amber-900" strokeWidth={2.25} aria-hidden />
               Pinned
             </span>
           ) : null}
@@ -528,6 +649,16 @@ export function BroadcastDetailView({
             </button>
             {calendarMsg ? <p className="mt-2 text-xs text-amber-900/80">{calendarMsg}</p> : null}
           </div>
+        ) : null}
+
+        {initialReplies !== null ? (
+          <BroadcastRepliesClient
+            orgId={orgId}
+            broadcastId={initial.id}
+            currentUserId={userId}
+            broadcastAuthorId={initial.created_by}
+            initialRows={initialReplies}
+          />
         ) : null}
 
           {coverErr ? (

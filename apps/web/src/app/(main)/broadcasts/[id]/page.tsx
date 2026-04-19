@@ -1,4 +1,5 @@
 import { BroadcastDetailView } from '@/components/broadcasts/BroadcastDetailView';
+import type { BroadcastReplyRow } from '@/components/broadcasts/BroadcastRepliesClient';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { notFound, redirect } from 'next/navigation';
@@ -27,8 +28,19 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
   const teamId = b.team_id as string | null;
   const createdBy = b.created_by as string;
   const broadcastOrgId = b.org_id as string;
+  const status = b.status as string;
 
-  const [permissionKeys, deptRes, channelRes, teamRes, senderRes, maySetCoverRes] = await Promise.all([
+  const [
+    permissionKeys,
+    deptRes,
+    channelRes,
+    teamRes,
+    senderRes,
+    maySetCoverRes,
+    navRes,
+    mayEditRes,
+    repliesRes,
+  ] = await Promise.all([
     getMyPermissions(broadcastOrgId),
     supabase.from('departments').select('name').eq('id', deptId).maybeSingle(),
     channelId
@@ -39,6 +51,15 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
       : Promise.resolve({ data: null as { name: string } | null }),
     supabase.from('profiles').select('full_name').eq('id', createdBy).maybeSingle(),
     supabase.rpc('broadcast_may_set_cover', { p_broadcast_id: id }),
+    status === 'sent' ? supabase.rpc('broadcast_feed_navigation', { p_broadcast_id: id }) : Promise.resolve({ data: null }),
+    supabase.rpc('broadcast_may_edit_content', { p_broadcast_id: id }),
+    status === 'sent'
+      ? supabase
+          .from('broadcast_replies')
+          .select('id, body, visibility, created_at, author_id')
+          .eq('broadcast_id', id)
+          .order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] as { id: string; body: string; visibility: string; created_at: string; author_id: string }[] }),
   ]);
 
   const maySetCover = maySetCoverRes.data;
@@ -47,11 +68,52 @@ export default async function BroadcastDetailPage({ params }: { params: Promise<
   const team = teamRes.data;
   const sender = senderRes.data;
 
+  const navRaw = navRes.data as
+    | { index?: number | null; total?: number | null; prev_id?: string | null; next_id?: string | null }
+    | null
+    | undefined;
+  const navigation =
+    navRaw &&
+    typeof navRaw.index === 'number' &&
+    typeof navRaw.total === 'number' &&
+    navRaw.total > 0
+      ? {
+          index: navRaw.index,
+          total: navRaw.total,
+          prevId: typeof navRaw.prev_id === 'string' ? navRaw.prev_id : null,
+          nextId: typeof navRaw.next_id === 'string' ? navRaw.next_id : null,
+        }
+      : null;
+
+  let initialReplies: BroadcastReplyRow[] | null = null;
+  if (status === 'sent') {
+    const raw = repliesRes.data ?? [];
+    if (raw.length > 0) {
+      const authorIds = [...new Set(raw.map((r) => r.author_id as string))];
+      const { data: names } = await supabase.from('profiles').select('id, full_name').in('id', authorIds);
+      const nm = new Map((names ?? []).map((p) => [p.id as string, (p.full_name as string) ?? null]));
+      initialReplies = raw.map((r) => ({
+        id: r.id as string,
+        body: r.body as string,
+        visibility: r.visibility as 'private_to_author' | 'org_thread',
+        created_at: r.created_at as string,
+        author_id: r.author_id as string,
+        author_name: nm.get(r.author_id as string) ?? null,
+      }));
+    } else {
+      initialReplies = [];
+    }
+  }
+
   return (
     <BroadcastDetailView
       userId={user.id}
+      orgId={broadcastOrgId}
       showAdminChannelNote={permissionKeys.includes('broadcasts.publish_without_approval')}
       canSetCover={maySetCover === true}
+      navigation={navigation}
+      mayEdit={mayEditRes.data === true}
+      initialReplies={initialReplies}
       initial={{
         id: b.id as string,
         org_id: b.org_id as string,
