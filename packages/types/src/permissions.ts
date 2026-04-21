@@ -155,6 +155,7 @@ export const PERMISSION_KEYS = [
   'performance.view_own',
   // 1:1 check-ins
   'one_on_one.view_own',
+  'one_on_one.view_all_checkins',
   'one_on_one.manage_direct_reports',
   'one_on_one.manage_templates',
 ] as const;

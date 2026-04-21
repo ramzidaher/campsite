@@ -139,6 +139,8 @@ const btnDanger =
 const SHELL_MODE_STORAGE_KEY = 'campsite_shell_mode';
 const SHELL_MODE_AUTO_STORAGE_KEY = 'campsite_shell_mode_auto_enabled';
 const LEGACY_PRIDE_MODE_STORAGE_KEY = 'campsite_pride_mode';
+const SHELL_ICON_STYLE_STORAGE_KEY = 'campsite_shell_icon_style';
+type ShellIconStyle = 'classic' | 'white';
 
 export type BroadcastChannelPref = {
   channel_id: string;
@@ -223,6 +225,7 @@ export function ProfileSettings({
   const [channelPrefs, setChannelPrefs] = useState<BroadcastChannelPref[]>(initialBroadcastChannels);
   const [channelBusyId, setChannelBusyId] = useState<string | null>(null);
   const [a11yPrefs, setA11yPrefs] = useState<AccessibilityPreferences>(DEFAULT_ACCESSIBILITY_PREFERENCES);
+  const [shellIconStyle, setShellIconStyle] = useState<ShellIconStyle>('classic');
   const { prefs: uiSoundPrefs, setEnabled: setUiSoundEnabled, setVolume: setUiSoundVolume } =
     useUiSoundPreferences();
   const {
@@ -266,6 +269,15 @@ export function ProfileSettings({
       setShellModeAutoEnabled(initial?.celebration_auto_enabled ?? true);
     }
   }, [initial?.celebration_mode, initial?.celebration_auto_enabled]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(SHELL_ICON_STYLE_STORAGE_KEY);
+      setShellIconStyle(saved === 'white' ? 'white' : 'classic');
+    } catch {
+      setShellIconStyle('classic');
+    }
+  }, []);
 
   useEffect(() => {
     setMsg(googleFlash ?? null);
@@ -315,6 +327,16 @@ export function ProfileSettings({
 
   function setUiModePref(mode: UiMode) {
     updateUiMode(mode);
+  }
+
+  function setShellIconStylePref(next: ShellIconStyle) {
+    setShellIconStyle(next);
+    try {
+      window.localStorage.setItem(SHELL_ICON_STYLE_STORAGE_KEY, next);
+    } catch {
+      // ignore storage errors
+    }
+    window.dispatchEvent(new CustomEvent('campsite:shell-icon-style-change'));
   }
 
   const channelsByDept = useMemo(() => {
@@ -600,6 +622,20 @@ export function ProfileSettings({
                 </select>
                 <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
                   Interactive mode enables graph-based and modern workflow experiences with quicker navigation.
+                </span>
+              </label>
+              <label className={fieldLabel}>
+                Sidebar icon style
+                <select
+                  className={selectClass}
+                  value={shellIconStyle}
+                  onChange={(e) => setShellIconStylePref(e.target.value as ShellIconStyle)}
+                >
+                  <option value="classic">Classic (multi-color)</option>
+                  <option value="white">White</option>
+                </select>
+                <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  Choose whether sidebar icons use the original color palette or a unified white style.
                 </span>
               </label>
               <label className={fieldLabel}>

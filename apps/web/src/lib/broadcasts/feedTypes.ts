@@ -2,6 +2,7 @@ export type FeedRow = {
   id: string;
   title: string;
   body: string;
+  cover_image_url?: string | null;
   sent_at: string | null;
   dept_id: string;
   channel_id: string | null;
@@ -22,6 +23,7 @@ export type RawBroadcast = {
   id: string;
   title: string;
   body: string;
+  cover_image_url?: string | null;
   sent_at: string | null;
   dept_id: string;
   channel_id: string | null;

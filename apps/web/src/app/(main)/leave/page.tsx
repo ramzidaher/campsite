@@ -57,9 +57,11 @@ export default async function LeavePage() {
     ? currentLeaveYearKeyForOrgCalendar(new Date(), orgTimezone, leaveYearStartMonth, leaveYearStartDay)
     : currentLeaveYearKeyUtc(new Date(), leaveYearStartMonth, leaveYearStartDay);
   const leaveUseWorkingDays = Boolean(leaveSettings?.leave_use_working_days);
-  const nonWorkingIsoDows = Array.isArray(leaveSettings?.non_working_iso_dows)
+  const nonWorkingIsoDowsRaw = Array.isArray(leaveSettings?.non_working_iso_dows)
     ? (leaveSettings.non_working_iso_dows as number[]).map((n) => Number(n))
     : [6, 7];
+  // Normalize legacy JS weekday values (Sun=0) to ISO weekday values (Sun=7).
+  const nonWorkingIsoDows = [...new Set(nonWorkingIsoDowsRaw.map((n) => (n === 0 ? 7 : n)).filter((n) => n >= 1 && n <= 7))];
   const toilMinutesPerDay = Math.max(1, Number(leaveSettings?.toil_minutes_per_day ?? 480));
 
   return (

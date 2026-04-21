@@ -85,6 +85,7 @@ export async function enrichBroadcastRows(
     id: r.id,
     title: r.title,
     body: r.body,
+    cover_image_url: r.cover_image_url ?? null,
     sent_at: r.sent_at,
     dept_id: r.dept_id,
     channel_id: r.channel_id,

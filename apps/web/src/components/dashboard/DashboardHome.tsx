@@ -5,13 +5,9 @@ import { DashboardCampfireAmbient } from '@/components/dashboard/DashboardCampfi
 import { DashboardCalendarWidget } from '@/components/dashboard/DashboardCalendarWidget';
 import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
+import { broadcastFirstImage, broadcastMarkdownPreview } from '@/lib/broadcasts/markdownPreview';
 import type { DashboardHomeModel } from '@/lib/dashboard/loadDashboardHome';
 import { relTime } from '@/lib/format/relTime';
-
-function stripPreview(raw: string, max = 140) {
-  const t = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  return t.length > max ? `${t.slice(0, max)}...` : t;
-}
 
 function statFillPct(value: number, cap: number) {
   if (value <= 0) return 6;
@@ -263,6 +259,7 @@ export function DashboardHome({
                 const collabDepartments = b.collab_departments ?? [];
                 const unread = b.read === false;
                 const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
+                const previewImage = broadcastFirstImage(b.body);
                 const sentLabel = b.sent_at
                   ? new Date(b.sent_at).toLocaleString(undefined, {
                       dateStyle: 'medium',
@@ -306,8 +303,19 @@ export function DashboardHome({
                         <div className="text-[11.5px] text-[#9b9b9b]">{relTime(b.sent_at)}</div>
                       </div>
                     </div>
+                    {previewImage ? (
+                      <div className="mt-1.5 overflow-hidden rounded-lg border border-[#e8e8e8] bg-[#f5f4f1]">
+                        <img
+                          src={previewImage.url}
+                          alt={previewImage.alt || 'Broadcast image preview'}
+                          className="h-24 w-full object-cover"
+                          loading="lazy"
+                          draggable={false}
+                        />
+                      </div>
+                    ) : null}
                     <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">
-                      {stripPreview(b.body)}
+                      {broadcastMarkdownPreview(b.body, 140)}
                     </p>
                     <p className="mt-2 text-[11.5px] text-[#6b6b6b]">
                       Sent by <span className="font-medium text-[#121212]">{senderName}</span>

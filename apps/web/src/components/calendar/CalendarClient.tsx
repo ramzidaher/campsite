@@ -139,12 +139,18 @@ function googleCalendarUrl(item: CalItem): string {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${fmt(start)}/${fmt(end)}&details=${details}`;
 }
 
-type ViewMode = 'month' | 'time1' | 'time4' | 'time7' | 'list';
+type ViewMode = 'month' | 'time1' | 'time7' | 'list';
 
 const NAV_BTN =
   'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white text-sm text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]';
 
-export function CalendarClient({ profile }: { profile: Profile }) {
+export function CalendarClient({
+  profile,
+  canViewAllOneOnOneCheckins,
+}: {
+  profile: Profile;
+  canViewAllOneOnOneCheckins: boolean;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const formSectionRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<ViewMode>('month');
@@ -188,11 +194,6 @@ export function CalendarClient({ profile }: { profile: Profile }) {
       const start = startOfWeekMonday(gridStart);
       return { from: start, to: endOfWeekExclusive(start) };
     }
-    if (view === 'time4') {
-      const start = startOfDayLocal(gridStart);
-      const end = addDays(start, 4);
-      return { from: start, to: end };
-    }
     if (view === 'time1') {
       const start = startOfDayLocal(gridStart);
       const end = addDays(start, 1);
@@ -228,7 +229,9 @@ export function CalendarClient({ profile }: { profile: Profile }) {
           .gte('start_time', from)
           .lt('start_time', to)
           .order('start_time'),
-        supabase.rpc('one_on_one_meetings_for_calendar', { p_from: from, p_to: to }),
+        canViewAllOneOnOneCheckins
+          ? supabase.rpc('one_on_one_meetings_for_calendar', { p_from: from, p_to: to })
+          : Promise.resolve({ data: [] as unknown[], error: null }),
       ]);
 
       if (shRes.error) console.error(shRes.error);
@@ -292,7 +295,7 @@ export function CalendarClient({ profile }: { profile: Profile }) {
       setItems(merged);
       setLoading(false);
     },
-    [supabase, profile.org_id, profile.id, range.from, range.to, departments],
+    [supabase, profile.org_id, profile.id, range.from, range.to, departments, canViewAllOneOnOneCheckins],
   );
 
   useEffect(() => {
@@ -312,10 +315,6 @@ export function CalendarClient({ profile }: { profile: Profile }) {
     if (view === 'time7') {
       const s = startOfWeekMonday(gridStart);
       return Array.from({ length: 7 }, (_, i) => addDays(s, i));
-    }
-    if (view === 'time4') {
-      const s = startOfDayLocal(gridStart);
-      return Array.from({ length: 4 }, (_, i) => addDays(s, i));
     }
     return [startOfDayLocal(gridStart)];
   }, [view, gridStart]);
@@ -372,11 +371,6 @@ export function CalendarClient({ profile }: { profile: Profile }) {
     if (view === 'time7') {
       return `Week of ${formatDayLabel(startOfWeekMonday(gridStart))}`;
     }
-    if (view === 'time4') {
-      const a = startOfDayLocal(gridStart);
-      const b = addDays(a, 3);
-      return `${formatDayLabel(a)} – ${formatDayLabel(b)}`;
-    }
     if (view === 'time1') {
       return gridStart.toLocaleDateString(undefined, {
         weekday: 'long',
@@ -396,7 +390,6 @@ export function CalendarClient({ profile }: { profile: Profile }) {
   function goPrev() {
     if (view === 'month') setAnchor((a) => addMonths(a, -1));
     else if (view === 'time7') setGridStart((g) => addWeeks(g, -1));
-    else if (view === 'time4') setGridStart((g) => addDays(g, -4));
     else if (view === 'time1') setGridStart((g) => addDays(g, -1));
     else
       setSelectedDay((d) => {
@@ -409,7 +402,6 @@ export function CalendarClient({ profile }: { profile: Profile }) {
   function goNext() {
     if (view === 'month') setAnchor((a) => addMonths(a, 1));
     else if (view === 'time7') setGridStart((g) => addWeeks(g, 1));
-    else if (view === 'time4') setGridStart((g) => addDays(g, 4));
     else if (view === 'time1') setGridStart((g) => addDays(g, 1));
     else
       setSelectedDay((d) => {
@@ -430,7 +422,6 @@ export function CalendarClient({ profile }: { profile: Profile }) {
   const viewSegments: { mode: ViewMode; label: string }[] = [
     { mode: 'month', label: 'Month' },
     { mode: 'time7', label: 'Week' },
-    { mode: 'time4', label: '4 days' },
     { mode: 'time1', label: 'Day' },
     { mode: 'list', label: 'List' },
   ];
@@ -474,16 +465,16 @@ export function CalendarClient({ profile }: { profile: Profile }) {
             </button>
             <div className="flex min-w-0 flex-wrap items-center gap-2 px-1">
               <span className="font-authSerif text-lg text-[#121212]">{cardTitleLabel}</span>
-              <button
-                type="button"
-                className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-                onClick={goToday}
-              >
-                Today
-              </button>
             </div>
             <button type="button" className={NAV_BTN} aria-label="Next" onClick={goNext}>
               ›
+            </button>
+            <button
+              type="button"
+              className="ml-1 text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              onClick={goToday}
+            >
+              Today
             </button>
           </div>
           <div className="flex flex-wrap rounded-lg border border-[#d8d8d8] overflow-hidden">
@@ -495,7 +486,6 @@ export function CalendarClient({ profile }: { profile: Profile }) {
                   const day = startOfDayLocal(selectedDay);
                   if (mode === 'month') setAnchor(startOfMonth(selectedDay));
                   if (mode === 'time7') setGridStart(startOfWeekMonday(selectedDay));
-                  if (mode === 'time4') setGridStart(day);
                   if (mode === 'time1') setGridStart(day);
                   setView(mode);
                 }}
@@ -561,18 +551,24 @@ export function CalendarClient({ profile }: { profile: Profile }) {
                   const showRing = isSelected && !isToday;
 
                   return (
-                    <button
+                    <div
                       key={day.toISOString()}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         const d0 = startOfDayLocal(day);
                         setSelectedDay(d0);
                         setGridStart(d0);
-                        const s = new Date(d0);
-                        s.setHours(9, 0, 0, 0);
-                        const e = new Date(s.getTime() + 3600000);
-                        setView('time1');
-                        openComposeFromSlot(s, e);
+                        setView('list');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          const d0 = startOfDayLocal(day);
+                          setSelectedDay(d0);
+                          setGridStart(d0);
+                          setView('list');
+                        }
                       }}
                       className={[
                         'min-h-[72px] rounded-lg p-1.5 text-left transition-opacity hover:opacity-90',
@@ -591,16 +587,21 @@ export function CalendarClient({ profile }: { profile: Profile }) {
                       </div>
                       <div className="mt-1 flex flex-col gap-0.5">
                         {list.slice(0, 3).map((it) => (
-                          <span
+                          <button
                             key={it.key}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDetail(it);
+                            }}
                             className={[
-                              'truncate rounded px-1.5 py-0.5 text-left text-[10.5px] leading-tight',
+                              'block w-full truncate rounded px-1.5 py-0.5 text-left text-[10.5px] leading-tight',
                               sourceChipClass(it.source, isToday),
                             ].join(' ')}
                             title={it.title}
                           >
                             {it.title}
-                          </span>
+                          </button>
                         ))}
                         {list.length > 3 ? (
                           <span
@@ -613,12 +614,12 @@ export function CalendarClient({ profile }: { profile: Profile }) {
                           </span>
                         ) : null}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             </div>
-          ) : view === 'time7' || view === 'time4' || view === 'time1' ? (
+          ) : view === 'time7' || view === 'time1' ? (
             <TimeGridCalendar
               days={timeGridDays}
               items={timeGridItems}
@@ -671,6 +672,7 @@ export function CalendarClient({ profile }: { profile: Profile }) {
             departments={departments}
             defaultDay={view === 'list' ? selectedDay : gridStart}
             open={eventFormOpen}
+            showToggle={false}
             onOpenChange={(o) => {
               setEventFormOpen(o);
               if (!o) setDraftRange(null);

@@ -1,5 +1,6 @@
 import { CalendarClient } from '@/components/calendar/CalendarClient';
 import { createClient } from '@/lib/supabase/server';
+import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -22,6 +23,7 @@ export default async function CalendarPage() {
     .select('timezone')
     .eq('id', profile.org_id)
     .single();
+  const permissionKeys = await getMyPermissions(profile.org_id as string);
 
   return (
     <CalendarClient
@@ -32,6 +34,7 @@ export default async function CalendarPage() {
         full_name: profile.full_name,
         org_timezone: (orgRow?.timezone as string | null) ?? null,
       }}
+      canViewAllOneOnOneCheckins={permissionKeys.includes('one_on_one.view_all_checkins')}
     />
   );
 }

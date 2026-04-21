@@ -29,6 +29,7 @@ export function ManualEventForm({
   initialEnd,
   initialAllDay,
   onDraftTimesChange,
+  showToggle = true,
 }: {
   profile: Profile;
   departments: { id: string; name: string }[];
@@ -42,6 +43,7 @@ export function ManualEventForm({
   initialEnd: Date;
   initialAllDay: boolean;
   onDraftTimesChange: (start: Date, end: Date, allDay: boolean) => void;
+  showToggle?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [title, setTitle] = useState('');
@@ -182,15 +184,17 @@ export function ManualEventForm({
 
   return (
     <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
-      <button
-        type="button"
-        className="text-[13px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-        onClick={() => onOpenChange(!open)}
-      >
-        {open ? 'Hide new event' : '+ New event'}
-      </button>
+      {showToggle ? (
+        <button
+          type="button"
+          className="text-[13px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+          onClick={() => onOpenChange(!open)}
+        >
+          {open ? 'Hide new event' : '+ New event'}
+        </button>
+      ) : null}
       {open ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className={`${showToggle ? 'mt-4' : ''} grid gap-3 sm:grid-cols-2`}>
           <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">
             Title
             <input className={fieldClass} value={title} onChange={(e) => setTitle(e.target.value)} />

@@ -4,6 +4,7 @@ import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
 import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
+import { broadcastFirstImage, broadcastMarkdownPreview } from '@/lib/broadcasts/markdownPreview';
 import { relTime } from '@/lib/format/relTime';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -14,7 +15,7 @@ import {
   useQueryClient,
   type InfiniteData,
 } from '@tanstack/react-query';
-import { useCallback, useEffect, useImperativeHandle, useMemo, useState, forwardRef } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -100,10 +101,12 @@ function FeedNavigationStrip({
   supabase,
   anchorBroadcastId,
   searchActive,
+  timelineMode = false,
 }: {
   supabase: SupabaseClient;
   anchorBroadcastId: string | null;
   searchActive: boolean;
+  timelineMode?: boolean;
 }) {
   const router = useRouter();
   const navQuery = useQuery({
@@ -130,7 +133,12 @@ function FeedNavigationStrip({
   }
   if (!nav) return null;
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[#e4e4e4] pb-3">
+    <div
+      className={[
+        'mb-3 flex flex-wrap items-center justify-between gap-2',
+        timelineMode ? '' : 'border-b border-[#e4e4e4] pb-3',
+      ].join(' ')}
+    >
       <p className="text-[12px] text-[#6b6b6b]">Open any card below, or step through with arrows.</p>
       <div
         className="inline-flex items-center gap-1 rounded-full border border-[#121212]/15 bg-white px-2 py-1 text-[13px] text-[#121212] shadow-sm"
@@ -176,37 +184,77 @@ function FeedBroadcastCard({
   timelineHighlight?: boolean;
 }) {
   const unread = b.read === false;
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const [showQuickPreview, setShowQuickPreview] = useState(false);
   const deptName = b.departments?.name ?? 'General';
   const channelName = b.broadcast_channels?.name ?? '';
   const teamName = b.department_teams?.name ?? '';
   const collabDepartments = b.collab_departments ?? [];
   const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
+  const previewImage = broadcastFirstImage(b.body);
+  const previewText = bodyPreview(b.body);
   const sentLabel = b.sent_at
     ? new Date(b.sent_at).toLocaleString(undefined, {
         dateStyle: 'medium',
         timeStyle: 'short',
       })
     : 'Send time unavailable';
+
+  const clearLongPressTimer = () => {
+    if (!longPressTimerRef.current) return;
+    window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  };
+
+  const startLongPressPreview = () => {
+    if (variant !== 'timeline') return;
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      setShowQuickPreview(true);
+    }, 260);
+  };
+
+  const endLongPressPreview = () => {
+    clearLongPressTimer();
+    if (!longPressTriggeredRef.current) return;
+    setShowQuickPreview(false);
+    window.setTimeout(() => {
+      longPressTriggeredRef.current = false;
+    }, 0);
+  };
   return (
-    <Link
-      href={`/broadcasts/${b.id}`}
-      aria-label={
-        unread
-          ? `${b.title}. Unread broadcast. Sent ${relTime(b.sent_at)}.`
-          : `${b.title}. Read. Sent ${relTime(b.sent_at)}.`
-      }
-      className={[
-        'relative block min-h-[44px] rounded-xl border px-[18px] py-4 transition-[box-shadow,border-color]',
-        unread
-          ? 'border-sky-200 bg-sky-50/90 hover:border-sky-300 hover:shadow-[0_1px_3px_rgba(14,165,233,0.12),0_4px_12px_rgba(0,0,0,0.04)]'
-          : variant === 'timeline' && timelineHighlight
-            ? 'border-violet-400 bg-[#faf8ff] hover:border-violet-500 hover:shadow-[0_1px_3px_rgba(91,33,182,0.08),0_4px_12px_rgba(0,0,0,0.04)]'
-            : 'border-[#e8e8e8] bg-white hover:border-[#d4d4d4] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
-        unread
-          ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-sky-600 before:content-['']"
-          : '',
-      ].join(' ')}
-    >
+    <>
+      <Link
+        href={`/broadcasts/${b.id}`}
+        aria-label={
+          unread
+            ? `${b.title}. Unread broadcast. Sent ${relTime(b.sent_at)}.`
+            : `${b.title}. Read. Sent ${relTime(b.sent_at)}.`
+        }
+        onPointerDown={startLongPressPreview}
+        onPointerUp={endLongPressPreview}
+        onPointerCancel={endLongPressPreview}
+        onPointerLeave={endLongPressPreview}
+        onClick={(e) => {
+          if (!longPressTriggeredRef.current) return;
+          e.preventDefault();
+          e.stopPropagation();
+          longPressTriggeredRef.current = false;
+        }}
+        className={[
+          'relative block min-h-[44px] rounded-xl border px-[18px] py-4 transition-[box-shadow,border-color]',
+          unread
+            ? 'border-sky-200 bg-sky-50/90 hover:border-sky-300 hover:shadow-[0_1px_3px_rgba(14,165,233,0.12),0_4px_12px_rgba(0,0,0,0.04)]'
+            : variant === 'timeline' && timelineHighlight
+              ? 'border-violet-400 bg-[#faf8ff] hover:border-violet-500 hover:shadow-[0_1px_3px_rgba(91,33,182,0.08),0_4px_12px_rgba(0,0,0,0.04)]'
+              : 'border-[#e8e8e8] bg-white hover:border-[#d4d4d4] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
+          unread
+            ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-sky-600 before:content-['']"
+            : '',
+        ].join(' ')}
+      >
       <div className="mb-1.5 flex items-start justify-between gap-3">
         <div
           className={[
@@ -227,7 +275,18 @@ function FeedBroadcastCard({
           ) : null}
         </div>
       </div>
-      <p className="mb-2.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">{bodyPreview(b.body)}</p>
+      {previewImage ? (
+        <div className="mb-2.5 overflow-hidden rounded-lg border border-[#e8e8e8] bg-[#f5f4f1]">
+          <img
+            src={previewImage.url}
+            alt={previewImage.alt || 'Broadcast image preview'}
+            className="h-28 w-full object-cover"
+            loading="lazy"
+            draggable={false}
+          />
+        </div>
+      ) : null}
+      <p className="mb-2.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6b6b6b]">{previewText}</p>
       <p className="mb-2.5 text-[11.5px] text-[#6b6b6b]">
         Sent by <span className="font-medium text-[#121212]">{senderName}</span>
         <span className="mx-1.5 text-[#9b9b9b]">·</span>
@@ -285,7 +344,33 @@ function FeedBroadcastCard({
           </span>
         ))}
       </div>
-    </Link>
+      </Link>
+      {showQuickPreview ? (
+        <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center bg-black/15 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white shadow-[0_24px_60px_rgba(18,18,18,0.22)]">
+            <div className="relative h-36 w-full bg-[#f5f4f1]">
+              {b.cover_image_url ? (
+                <img
+                  src={b.cover_image_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-r from-[#f5f4f1] via-[#efece7] to-[#f5f4f1]" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+              <p className="absolute bottom-3 left-3 right-3 line-clamp-2 text-sm font-semibold text-white">
+                {b.title}
+              </p>
+            </div>
+            <div className="px-4 py-3">
+              <p className="line-clamp-2 text-[13px] leading-relaxed text-[#6b6b6b]">{bodyPreview(b.body)}</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -301,47 +386,40 @@ function BroadcastTimelineStrip({
   if (n === 0) return null;
   return (
     <div className="snap-x snap-mandatory overflow-x-auto scroll-pl-3 scroll-pr-3 [-webkit-overflow-scrolling:touch] sm:snap-none">
-      <ul
-        role="list"
-        className="flex w-max max-w-none gap-6 px-1 py-1 sm:gap-8"
-      >
-        {rows.map((b, i) => (
-          <li
-            key={b.id}
-            className="flex w-[min(300px,calc(100vw-2.5rem))] shrink-0 snap-center flex-col items-stretch sm:w-[300px]"
-          >
-            <div className="flex h-5 w-full items-center">
-              {i > 0 ? (
-                <div className="h-px min-w-[8px] flex-1 bg-[#dcdcdc]" aria-hidden />
-              ) : (
-                <div className="w-3 shrink-0" aria-hidden />
-              )}
-              <span
-                className={[
-                  'z-[1] h-2.5 w-2.5 shrink-0 rounded-full',
-                  i === 0
-                    ? 'bg-violet-600 shadow-[0_0_0_3px_rgba(124,58,237,0.18)]'
-                    : 'border-2 border-[#b0b0b0] bg-white',
-                ].join(' ')}
-                aria-hidden
+      <div className="relative w-max max-w-none">
+        <div className="pointer-events-none absolute left-1 right-1 top-[11px] h-px bg-[#dcdcdc]" aria-hidden />
+        <ul
+          role="list"
+          className="relative flex w-max max-w-none gap-6 px-1 py-1 sm:gap-8"
+        >
+          {rows.map((b, i) => (
+            <li
+              key={b.id}
+              className="flex w-[min(300px,calc(100vw-2.5rem))] shrink-0 snap-center flex-col items-stretch sm:w-[300px]"
+            >
+              <div className="flex h-5 w-full items-center justify-center">
+                <span
+                  className={[
+                    'z-[1] h-2.5 w-2.5 shrink-0 rounded-full',
+                    i === 0
+                      ? 'bg-violet-600 shadow-[0_0_0_3px_rgba(124,58,237,0.18)]'
+                      : 'border-2 border-[#b0b0b0] bg-white',
+                  ].join(' ')}
+                  aria-hidden
+                />
+              </div>
+              <div className="mx-auto h-4 w-px shrink-0 bg-[#dcdcdc]" aria-hidden />
+              <FeedBroadcastCard
+                b={b}
+                bodyPreview={bodyPreview}
+                variant="timeline"
+                timelineHighlight={i === 0}
               />
-              {i < n - 1 ? (
-                <div className="h-px min-w-[8px] flex-1 bg-[#dcdcdc]" aria-hidden />
-              ) : (
-                <div className="w-3 shrink-0" aria-hidden />
-              )}
-            </div>
-            <div className="mx-auto h-4 w-px shrink-0 bg-[#dcdcdc]" aria-hidden />
-            <FeedBroadcastCard
-              b={b}
-              bodyPreview={bodyPreview}
-              variant="timeline"
-              timelineHighlight={i === 0}
-            />
-            <p className="mt-2.5 text-center text-[12px] tabular-nums text-[#9b9b9b]">{relTime(b.sent_at)}</p>
-          </li>
-        ))}
-      </ul>
+              <p className="mt-2.5 text-center text-[12px] tabular-nums text-[#9b9b9b]">{relTime(b.sent_at)}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -420,8 +498,8 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
       const run = async (mode: 'plan02' | 'legacy') => {
         const select =
           mode === 'plan02'
-            ? 'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
-            : 'id,title,body,sent_at,dept_id,channel_id,team_id,created_by';
+            ? 'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide,cover_image_url'
+            : 'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,cover_image_url';
         let q = supabase
           .from('broadcasts')
           .select(select)
@@ -575,8 +653,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
 
   useImperativeHandle(ref, () => ({ markAllRead }), [markAllRead]);
 
-  const preview = (md: string) =>
-    md.replace(/\n+/g, ' ').replace(/[#*_`]/g, '').slice(0, 140);
+  const preview = (md: string) => broadcastMarkdownPreview(md, 140);
 
   const unreadFilterActive = unreadOnly || advancedFilter === 'unread_only';
   const filteredOutByUnread =
@@ -598,6 +675,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
           supabase={supabase}
           anchorBroadcastId={anchorBroadcastId}
           searchActive={searchActive}
+          timelineMode={feedLayout === 'timeline'}
         />
       ) : null}
       {fetching && rows.length > 0 ? (

@@ -206,9 +206,9 @@ function daysLabel(start: string, end: string): string {
   return `${n} day${n === 1 ? '' : 's'}`;
 }
 
-/** Annual leave that still reserves entitlement until rejected/cancelled/declined. */
+/** Count only approved (or still-approved pending-change) leave against usage. */
 function annualCountsTowardUsage(status: string): boolean {
-  return status === 'approved' || status === 'pending' || status === 'pending_edit' || status === 'pending_cancel';
+  return status === 'approved' || status === 'pending_edit' || status === 'pending_cancel';
 }
 
 function leaveRequestOverlapsLeaveYear(
@@ -1291,7 +1291,7 @@ export function LeaveHubClient({
               onClick={() => setLeaveExplainerOpen((v) => !v)}
               className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors ${
                 leaveExplainerOpen
-                  ? 'border-[#121212] bg-[#121212] text-white'
+                  ? 'border-[var(--org-brand-primary,#121212)] bg-[var(--org-brand-primary,#121212)] text-white'
                   : 'border-[#d8d8d8] bg-white text-[#6b6b6b] hover:bg-[#faf9f6]'
               }`}
               aria-expanded={leaveExplainerOpen}
@@ -1351,7 +1351,7 @@ export function LeaveHubClient({
               {entitlement > 0 ? (
                 <>
                   <div className="mt-3 h-1.5 w-full rounded-full bg-[#f0f0f0]">
-                    <div className={`h-1.5 rounded-full ${usedPct >= 90 ? 'bg-amber-400' : 'bg-[#121212]'}`} style={{ width: `${usedPct}%` }} />
+                    <div className={`h-1.5 rounded-full ${usedPct >= 90 ? 'bg-amber-400' : 'bg-[var(--org-brand-primary,#121212)]'}`} style={{ width: `${usedPct}%` }} />
                   </div>
                   <p className="mt-1.5 text-[11.5px] text-[#9b9b9b]">
                     {usedAnnual} of {entitlement} {leaveUseWorkingDays ? 'working ' : ''}days used
@@ -1392,7 +1392,7 @@ export function LeaveHubClient({
                   setShowCarryoverForm(false);
                   setShowEncashmentForm(false);
                 }}
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-[#121212] px-4 text-[13px] font-medium text-white hover:bg-[#2a2a2a]"
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-[var(--org-brand-primary,#121212)] px-4 text-[13px] font-medium text-white hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)]"
               >
                 {showLeaveForm ? 'Close' : '+ Book time off'}
               </button>
@@ -1525,19 +1525,6 @@ export function LeaveHubClient({
               <span className="ml-1 text-[15px] font-semibold text-[#6b6b6b]">days</span>
             </p>
             <p className="mt-2 text-[13px] font-medium text-[#121212]">Annual leave</p>
-            <p className="mt-2 max-w-[200px] text-[12px] leading-snug text-[#6b6b6b]">
-              {entitlement > 0 ? (
-                <>
-                  {usedAnnual} of {entitlement} {leaveUseWorkingDays ? 'working ' : ''}days used ({selectedLeavePeriodLabel}).
-                </>
-              ) : usedAnnual > 0 ? (
-                <>
-                  {usedAnnual} {leaveUseWorkingDays ? 'working ' : ''}days booked in this period — no annual entitlement on record, so balances may show 0.
-                </>
-              ) : (
-                <>No annual days counted for {selectedLeavePeriodLabel}.</>
-              )}
-            </p>
           </div>
 
           {/* TOIL — purple (ring = share of TOIL pool still unused; matches balance headline) */}
@@ -1753,7 +1740,7 @@ export function LeaveHubClient({
             <button
               type="submit"
               disabled={busy || !carryoverFromYear || !carryoverDays}
-              className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50"
+              className="inline-flex h-10 items-center rounded-xl bg-[var(--org-brand-primary,#121212)] px-5 text-[13px] font-medium text-white disabled:opacity-50"
             >
               {busy ? 'Sending…' : 'Send request'}
             </button>
@@ -1810,7 +1797,7 @@ export function LeaveHubClient({
             <button
               type="submit"
               disabled={busy || !encashmentYear || !encashmentDays}
-              className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50"
+              className="inline-flex h-10 items-center rounded-xl bg-[var(--org-brand-primary,#121212)] px-5 text-[13px] font-medium text-white disabled:opacity-50"
             >
               {busy ? 'Sending…' : 'Send request'}
             </button>
@@ -1858,7 +1845,7 @@ export function LeaveHubClient({
                     }}
                     className={`rounded-lg border py-2.5 text-[13px] font-medium transition-colors ${
                       formKind === k
-                        ? 'border-[#121212] bg-[#121212] text-white'
+                        ? 'border-[var(--org-brand-primary,#121212)] bg-[var(--org-brand-primary,#121212)] text-white'
                         : 'border-[#e0e0e0] bg-white text-[#121212] hover:border-[#bdbdbd]'
                     }`}
                   >
@@ -1878,7 +1865,7 @@ export function LeaveHubClient({
                       }}
                       className={`rounded-lg border py-2.5 text-[13px] font-medium transition-colors ${
                         formKind === k
-                          ? 'border-[#121212] bg-[#121212] text-white'
+                          ? 'border-[var(--org-brand-primary,#121212)] bg-[var(--org-brand-primary,#121212)] text-white'
                           : 'border-[#e0e0e0] bg-white text-[#121212] hover:border-[#bdbdbd]'
                       }`}
                     >
@@ -2051,7 +2038,7 @@ export function LeaveHubClient({
               <button
                 type="submit"
                 disabled={busy || !formStart || !formEnd || exceedsAnnualAllowance || newLeaveOverlaps}
-                className="inline-flex h-11 min-w-[8rem] items-center justify-center rounded-lg bg-[#121212] px-6 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-[#2a2a2a] disabled:opacity-50"
+                className="inline-flex h-11 min-w-[8rem] items-center justify-center rounded-lg bg-[var(--org-brand-primary,#121212)] px-6 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)] disabled:opacity-50"
               >
                 {busy ? 'Sending…' : 'Send request'}
               </button>
@@ -2114,7 +2101,7 @@ export function LeaveHubClient({
               <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Notes (optional)</span>
               <input type="text" placeholder="e.g. flu, GP appointment" value={sickNotes} onChange={(e) => setSickNotes(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
             </label>
-            <button type="submit" disabled={busy || !sickStart || !sickEnd} className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50">
+            <button type="submit" disabled={busy || !sickStart || !sickEnd} className="inline-flex h-10 items-center rounded-xl bg-[var(--org-brand-primary,#121212)] px-5 text-[13px] font-medium text-white disabled:opacity-50">
               {busy ? 'Saving…' : 'Save'}
             </button>
           </form>
@@ -2128,73 +2115,154 @@ export function LeaveHubClient({
             This sends an edit request for manager approval.
           </p>
           <form className="space-y-4" onSubmit={(e) => void requestEditApproval(e)}>
-            <div className="flex gap-2">
-              {REQUESTABLE_LEAVE_KINDS.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => { setEditKind(k); if (k !== 'parental') setEditParentalSubtype('maternity'); }}
-                  className={`flex-1 rounded-xl border py-2.5 text-[13px] font-medium transition-colors ${editKind === k ? 'border-[#121212] bg-[#121212] text-white' : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#121212]'}`}
-                >
-                  {leaveKindLabel(k)}
-                </button>
-              ))}
+            <div>
+              <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Leave type</span>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {bookLeaveKindRows.row1.map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => {
+                      setEditKind(k);
+                      if (k !== 'parental') setEditParentalSubtype('maternity');
+                    }}
+                    className={`rounded-lg border py-2.5 text-[13px] font-medium transition-colors ${
+                      editKind === k
+                        ? 'border-[var(--org-brand-primary,#121212)] bg-[var(--org-brand-primary,#121212)] text-white'
+                        : 'border-[#e0e0e0] bg-white text-[#121212] hover:border-[#bdbdbd]'
+                    }`}
+                  >
+                    {leaveKindShortLabel(k)}
+                  </button>
+                ))}
+              </div>
+              {bookLeaveKindRows.row2.length > 0 ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {bookLeaveKindRows.row2.map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => {
+                        setEditKind(k);
+                        if (k !== 'parental') setEditParentalSubtype('maternity');
+                      }}
+                      className={`rounded-lg border py-2.5 text-[13px] font-medium transition-colors ${
+                        editKind === k
+                          ? 'border-[var(--org-brand-primary,#121212)] bg-[var(--org-brand-primary,#121212)] text-white'
+                          : 'border-[#e0e0e0] bg-white text-[#121212] hover:border-[#bdbdbd]'
+                      }`}
+                    >
+                      {leaveKindShortLabel(k)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {(() => {
+                const hint = leaveKindBookingHint(editKind);
+                return hint ? <p className="mt-2.5 text-[12px] leading-snug text-[#6b6b6b]">{hint}</p> : null;
+              })()}
             </div>
             {editKind === 'parental' ? (
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Parental leave type</span>
-                <select
-                  value={editParentalSubtype}
-                  onChange={(e) => setEditParentalSubtype(e.target.value as ParentalSubtype)}
-                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                >
-                  <option value="maternity">Maternity</option>
-                  <option value="paternity">Paternity</option>
-                  <option value="adoption">Adoption</option>
-                  <option value="shared_parental">Shared parental</option>
-                </select>
+                <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Parental leave type</span>
+                <div className="relative">
+                  <select
+                    value={editParentalSubtype}
+                    onChange={(e) => setEditParentalSubtype(e.target.value as ParentalSubtype)}
+                    className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  >
+                    <option value="maternity">Maternity</option>
+                    <option value="paternity">Paternity</option>
+                    <option value="adoption">Adoption</option>
+                    <option value="shared_parental">Shared parental</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
+                </div>
               </label>
             ) : null}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">First day off</span>
-                <input type="date" required value={editStart} onChange={(e) => setEditStart(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+                <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">First day off</span>
+                <div className="relative">
+                  <input
+                    type="date"
+                    required
+                    value={editStart}
+                    onChange={(e) => setEditStart(e.target.value)}
+                    className="w-full rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm [color-scheme:light] focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  />
+                  <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9b9b9b]" aria-hidden />
+                </div>
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Last day off</span>
-                <input type="date" required min={editStart} value={editDayMode === 'half' ? editStart : editEnd} disabled={editDayMode === 'half'} onChange={(e) => setEditEnd(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none disabled:opacity-60" />
+                <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Last day off</span>
+                <div className="relative">
+                  <input
+                    type="date"
+                    required
+                    min={editStart}
+                    value={editDayMode === 'half' ? editStart : editEnd}
+                    disabled={editDayMode === 'half'}
+                    onChange={(e) => setEditEnd(e.target.value)}
+                    className="w-full rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm [color-scheme:light] focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10 disabled:cursor-not-allowed disabled:bg-[#fafafa] disabled:opacity-70"
+                  />
+                  <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9b9b9b]" aria-hidden />
+                </div>
               </label>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-4">
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Duration</span>
-                <select
-                  value={editDayMode}
-                  onChange={(e) => setEditDayMode(e.target.value as 'full' | 'half')}
-                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                >
-                  <option value="full">Full day(s)</option>
-                  <option value="half">Half day</option>
-                </select>
+                <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Duration</span>
+                <div className="relative">
+                  <select
+                    value={editDayMode}
+                    onChange={(e) => setEditDayMode(e.target.value as 'full' | 'half')}
+                    className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  >
+                    <option value="full">Full day(s)</option>
+                    <option value="half">Half day</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
+                </div>
               </label>
               {editDayMode === 'half' ? (
-                <label className="block">
-                  <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Half-day slot</span>
-                  <select
-                    value={editHalfDayPortion}
-                    onChange={(e) => setEditHalfDayPortion(e.target.value as 'am' | 'pm')}
-                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                  >
-                    <option value="am">Morning (AM)</option>
-                    <option value="pm">Afternoon (PM)</option>
-                  </select>
+                <label className="block sm:max-w-md">
+                  <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Half-day slot</span>
+                  <div className="relative">
+                    <select
+                      value={editHalfDayPortion}
+                      onChange={(e) => setEditHalfDayPortion(e.target.value as 'am' | 'pm')}
+                      className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                    >
+                      <option value="am">Morning (AM)</option>
+                      <option value="pm">Afternoon (PM)</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
+                  </div>
                 </label>
-              ) : <div />}
+              ) : null}
             </div>
             <label className="block">
-              <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Note (optional)</span>
-              <input type="text" value={editNote} onChange={(e) => setEditNote(e.target.value)} className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none" />
+              <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Note (optional)</span>
+              <input
+                type="text"
+                placeholder="e.g. family holiday"
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                className="w-full rounded-lg border border-[#e0e0e0] bg-white px-3 py-2.5 text-[13px] text-[#121212] placeholder:text-[#a3a3a3] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+              />
             </label>
+            {editStart && editEnd && editEnd >= editStart ? (
+              <p
+                className={[
+                  'rounded-lg px-3 py-2.5 text-[12.5px] font-medium leading-relaxed',
+                  editLeaveOverlaps ? 'bg-[#fef2f2] text-[#b91c1c]' : 'bg-[#f0fdf9] text-[#166534]',
+                ].join(' ')}
+              >
+                {daysLabel(editStart, editEnd)}
+                {editLeaveOverlaps ? ' · Overlaps another leave booking' : ' · Submitted for manager approval'}
+              </p>
+            ) : null}
             {editStart && editEnd && editEnd >= editStart && editLeaveOverlaps ? (
               <p className="rounded-lg bg-[#fef2f2] px-3 py-2 text-[12.5px] font-medium text-[#b91c1c]">
                 These dates overlap another leave booking. Adjust the range or resolve the other request first.
@@ -2204,11 +2272,15 @@ export function LeaveHubClient({
               <button
                 type="submit"
                 disabled={busy || !editStart || !editEnd || editLeaveOverlaps}
-                className="inline-flex h-10 items-center rounded-xl bg-[#121212] px-5 text-[13px] font-medium text-white disabled:opacity-50"
+                className="inline-flex h-11 min-w-[8rem] items-center justify-center rounded-lg bg-[var(--org-brand-primary,#121212)] px-6 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)] disabled:opacity-50"
               >
                 {busy ? 'Sending…' : 'Send edit request'}
               </button>
-              <button type="button" onClick={() => setEditTarget(null)} className="inline-flex h-10 items-center rounded-xl border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#6b6b6b]">
+              <button
+                type="button"
+                onClick={() => setEditTarget(null)}
+                className="inline-flex h-11 items-center justify-center rounded-lg border border-[#e0e0e0] bg-white px-6 text-[13px] font-medium text-[#121212] shadow-sm transition-colors hover:bg-[#fafafa]"
+              >
                 Close
               </button>
             </div>
@@ -2221,7 +2293,7 @@ export function LeaveHubClient({
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pending approval</h2>
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">{mergedApprovalQueue.length}</span>
+            <span className="rounded-full border border-[#e8e8e8] bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#6b6b6b]">{mergedApprovalQueue.length}</span>
           </div>
           <div className="mb-3 rounded-xl border border-[#e8e8e8] bg-white p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -2256,7 +2328,7 @@ export function LeaveHubClient({
                 type="button"
                 disabled={busy || selectedApprovalKeys.length === 0}
                 onClick={() => void submitBulkApprovalDecision(true)}
-                className="rounded-lg bg-[#14532d] px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
+                className="rounded-lg bg-[var(--org-brand-primary,#121212)] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)] disabled:opacity-50"
               >
                 Approve selected
               </button>
@@ -2264,7 +2336,7 @@ export function LeaveHubClient({
                 type="button"
                 disabled={busy || selectedApprovalKeys.length === 0}
                 onClick={() => void submitBulkApprovalDecision(false)}
-                className="rounded-lg border border-[#fca5a5] bg-white px-3 py-2 text-[12px] font-semibold text-[#b91c1c] disabled:opacity-50"
+                className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12px] font-semibold text-[#6b6b6b] transition-colors hover:bg-[#fafafa] disabled:opacity-50"
               >
                 Reject selected
               </button>
@@ -2273,7 +2345,7 @@ export function LeaveHubClient({
           <div className="space-y-2">
             {mergedApprovalQueue.map((row) =>
               row.kind === 'leave' ? (
-                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#e8e8e8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <label className="mb-1 inline-flex items-center gap-2 text-[11px] text-[#6b6b6b]">
                       <input
@@ -2292,13 +2364,15 @@ export function LeaveHubClient({
                       {leaveKindLabel(row.leave.kind)}{row.leave.kind === 'parental' && row.leave.parental_subtype ? ` (${parentalSubtypeLabel(row.leave.parental_subtype)})` : ''} &middot; {fmtDate(row.leave.start_date)} – {fmtDate(row.leave.end_date)} &middot; {daysLabel(row.leave.start_date, row.leave.end_date)}
                     </p>
                     {row.leave.status === 'pending_edit' && row.leave.proposed_start_date && row.leave.proposed_end_date ? (
-                      <p className="mt-1 text-[12px] text-[#92400e]">
+                      <p className="mt-1 text-[12px] text-[#6b6b6b]">
                         Requested edit to {leaveKindLabel(row.leave.proposed_kind ?? row.leave.kind)}{(row.leave.proposed_kind ?? row.leave.kind) === 'parental' && row.leave.proposed_parental_subtype ? ` (${parentalSubtypeLabel(row.leave.proposed_parental_subtype)})` : ''} &middot; {fmtDate(row.leave.proposed_start_date)} – {fmtDate(row.leave.proposed_end_date)}
                         {row.leave.proposed_note ? ` · "${row.leave.proposed_note}"` : ''}
                       </p>
                     ) : null}
                     {row.leave.status === 'pending_cancel' ? (
-                      <p className="mt-1 text-[12px] text-[#92400e]">Requested cancellation of this approved leave.</p>
+                      <p className="mt-1.5 text-[12px] leading-relaxed text-[#6b6b6b]">
+                        Cancellation requested for this approved leave.
+                      </p>
                     ) : null}
                     {row.leave.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.leave.note}&rdquo;</p> : null}
                     {documentsByRequestId[row.leave.id]?.length ? (
@@ -2317,7 +2391,7 @@ export function LeaveHubClient({
                     ) : null}
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('leave', row.leave.id, true)} className="rounded-xl bg-[#14532d] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[#166534]">
+                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('leave', row.leave.id, true)} className="rounded-xl bg-[var(--org-brand-primary,#121212)] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)]">
                       Approve
                     </button>
                     <button type="button" disabled={busy} onClick={() => openApprovalDialog('leave', row.leave.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
@@ -2326,7 +2400,7 @@ export function LeaveHubClient({
                   </div>
                 </div>
               ) : row.kind === 'toil' ? (
-                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#a7f3d0] bg-[#ecfdf5] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#e8e8e8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <label className="mb-1 inline-flex items-center gap-2 text-[11px] text-[#6b6b6b]">
                       <input
@@ -2347,7 +2421,7 @@ export function LeaveHubClient({
                     {row.toil.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.toil.note}&rdquo;</p> : null}
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('toil_credit', row.toil.id, true)} className="rounded-xl bg-[#14532d] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[#166534]">
+                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('toil_credit', row.toil.id, true)} className="rounded-xl bg-[var(--org-brand-primary,#121212)] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)]">
                       Approve
                     </button>
                     <button type="button" disabled={busy} onClick={() => openApprovalDialog('toil_credit', row.toil.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
@@ -2356,7 +2430,7 @@ export function LeaveHubClient({
                   </div>
                 </div>
               ) : row.kind === 'carryover' ? (
-                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#e8e8e8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <label className="mb-1 inline-flex items-center gap-2 text-[11px] text-[#6b6b6b]">
                       <input
@@ -2377,7 +2451,7 @@ export function LeaveHubClient({
                     {row.carryover.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.carryover.note}&rdquo;</p> : null}
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('carryover', row.carryover.id, true)} className="rounded-xl bg-[#14532d] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[#166534]">
+                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('carryover', row.carryover.id, true)} className="rounded-xl bg-[var(--org-brand-primary,#121212)] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)]">
                       Approve
                     </button>
                     <button type="button" disabled={busy} onClick={() => openApprovalDialog('carryover', row.carryover.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
@@ -2386,7 +2460,7 @@ export function LeaveHubClient({
                   </div>
                 </div>
               ) : (
-                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#fde68a] bg-[#fffbeb] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div key={row.key} className="flex flex-col gap-3 rounded-2xl border border-[#e8e8e8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <label className="mb-1 inline-flex items-center gap-2 text-[11px] text-[#6b6b6b]">
                       <input
@@ -2407,7 +2481,7 @@ export function LeaveHubClient({
                     {row.encashment.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.encashment.note}&rdquo;</p> : null}
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('encashment', row.encashment.id, true)} className="rounded-xl bg-[#14532d] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[#166534]">
+                    <button type="button" disabled={busy} onClick={() => openApprovalDialog('encashment', row.encashment.id, true)} className="rounded-xl bg-[var(--org-brand-primary,#121212)] px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50 hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)]">
                       Approve
                     </button>
                     <button type="button" disabled={busy} onClick={() => openApprovalDialog('encashment', row.encashment.id, false)} className="rounded-xl border border-[#d8d8d8] bg-white px-4 py-2 text-[12.5px] font-medium text-[#6b6b6b] disabled:opacity-50 hover:bg-[#fafafa]">
@@ -2482,7 +2556,7 @@ export function LeaveHubClient({
         <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">My requests</h2>
         <p className="mb-3 text-[11px] leading-snug text-[#9b9b9b]">
           All requests, newest first. Balances and the dashboard above count only bookings that overlap{' '}
-          <span className="font-medium text-[#6b6b6b]">{selectedLeavePeriodLabel}</span>
+          <span className="font-medium text-[#6b6b6b]">{selectedLeavePeriodLabel}</span>{' '}
           (the dropdown label is the year the leave year <span className="italic">starts</span>, not the calendar year of every date below).
         </p>
         {myRequests.length === 0 ? (
@@ -2492,7 +2566,7 @@ export function LeaveHubClient({
         ) : (
           <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
             {myRequests.map((r, i) => (
-              <div key={r.id} className={`flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
+              <div key={r.id} className={`flex flex-col gap-1.5 px-5 py-4 ${i > 0 ? 'border-t border-[#f0f0f0]' : ''}`}>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[13.5px] font-medium text-[#121212]">{leaveKindLabel(r.kind)}</span>
@@ -2526,8 +2600,13 @@ export function LeaveHubClient({
                       {r.proposed_half_day_portion ? ` · Half day (${r.proposed_half_day_portion.toUpperCase()})` : ''}
                     </p>
                   ) : null}
+                  {r.status === 'pending_cancel' ? (
+                    <p className="mt-1.5 text-[12px] leading-relaxed text-[#6b6b6b]">
+                      Cancellation requested for this approved leave.
+                    </p>
+                  ) : null}
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
+                <div className="mt-1 flex flex-wrap items-center gap-3">
                   {r.status === 'pending' ? (
                     <button type="button" disabled={busy} onClick={() => void cancelRequest(r.id)} className="text-[12px] text-[#b91c1c] underline underline-offset-2 disabled:opacity-50 hover:no-underline">
                       Cancel
@@ -2812,7 +2891,7 @@ export function LeaveHubClient({
                 type="button"
                 disabled={busy}
                 onClick={() => void submitApprovalDecision()}
-                className={`inline-flex h-10 items-center rounded-xl px-5 text-[13px] font-medium text-white disabled:opacity-50 ${approvalModal.approve ? 'bg-[#14532d] hover:bg-[#166534]' : 'bg-[#b91c1c] hover:bg-[#991b1b]'}`}
+                className={`inline-flex h-10 items-center rounded-xl px-5 text-[13px] font-medium text-white disabled:opacity-50 ${approvalModal.approve ? 'bg-[var(--org-brand-primary,#121212)] hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#121212)_88%,black)]' : 'bg-[#b91c1c] hover:bg-[#991b1b]'}`}
               >
                 {busy ? 'Saving…' : approvalModal.approve ? 'Approve' : 'Decline'}
               </button>

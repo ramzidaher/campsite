@@ -59,6 +59,15 @@ export default async function AdminUsersPage({
       .order('label'),
     350
   );
+  const { data: orgMemberRolesRows } = await withServerPerf(
+    '/admin/users',
+    'org_member_roles_for_filter',
+    supabase
+      .from('profiles')
+      .select('role')
+      .eq('org_id', profile.org_id),
+    300
+  );
 
   const [{ data: orgRow }, { count: totalMemberCount }] = await Promise.all([
     supabase.from('organisations').select('name, slug').eq('id', profile.org_id).single(),
@@ -151,11 +160,29 @@ export default async function AdminUsersPage({
   );
 
   const view = (
+    // Keep the role filter focused on roles that actually exist on current org members.
+    // This avoids showing unused template/system roles in the dropdown.
     <AdminUsersClient
       currentUserId={user.id}
       canEditRoles={Boolean(canEditRoles)}
       assignableRoles={assignableRoles}
-      roleFilterOptions={(orgRolesForFilter ?? []) as { key: string; label: string }[]}
+      roleFilterOptions={(() => {
+        const memberRoleSet = new Set(
+          (orgMemberRolesRows ?? [])
+            .map((r) => String(r.role ?? '').trim())
+            .filter((r) => r.length > 0 && r !== 'unassigned')
+        );
+        const fromOrgRoles = ((orgRolesForFilter ?? []) as { key: string; label: string }[]).filter((r) =>
+          memberRoleSet.has(r.key)
+        );
+        const missingFromCatalog = [...memberRoleSet]
+          .filter((roleKey) => !fromOrgRoles.some((r) => r.key === roleKey))
+          .map((roleKey) => ({
+            key: roleKey,
+            label: roleKey.replace(/_/g, ' '),
+          }));
+        return [...fromOrgRoles, ...missingFromCatalog].sort((a, b) => a.label.localeCompare(b.label));
+      })()}
       managerChoices={(managerChoicesRows ?? []) as { id: string; full_name: string }[]}
       initialRows={filtered.map((p) => ({
         id: p.id as string,

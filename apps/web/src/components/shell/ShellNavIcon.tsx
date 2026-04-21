@@ -39,6 +39,7 @@ import {
   SquarePlus,
   SunMedium,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const cls = 'h-[18px] w-[18px] shrink-0';
 const stroke = 1.9;
@@ -58,12 +59,15 @@ const ICON_TONE: Record<string, string> = {
   lilac: '#a89af7',
   slate: '#d4d4d8',
 };
+const SHELL_ICON_STYLE_STORAGE_KEY = 'campsite_shell_icon_style';
+type ShellIconStyle = 'classic' | 'white';
 
 function cn(...parts: (string | false | undefined)[]) {
   return parts.filter(Boolean).join(' ');
 }
 
-function tone(name: ShellNavIconId) {
+function tone(name: ShellNavIconId, style: ShellIconStyle) {
+  if (style === 'white') return ICON_TONE.white;
   switch (name) {
     case 'dashboard':
       return ICON_TONE.white;
@@ -143,9 +147,31 @@ function tone(name: ShellNavIconId) {
 }
 
 export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: boolean }) {
+  const [iconStyle, setIconStyle] = useState<ShellIconStyle>('classic');
+  useEffect(() => {
+    const applyFromStorage = () => {
+      try {
+        const raw = window.localStorage.getItem(SHELL_ICON_STYLE_STORAGE_KEY);
+        setIconStyle(raw === 'white' ? 'white' : 'classic');
+      } catch {
+        setIconStyle('classic');
+      }
+    };
+    applyFromStorage();
+    const onCustom = () => applyFromStorage();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === SHELL_ICON_STYLE_STORAGE_KEY) applyFromStorage();
+    };
+    window.addEventListener('campsite:shell-icon-style-change', onCustom);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('campsite:shell-icon-style-change', onCustom);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
   const p = {
     className: cls,
-    style: { color: tone(name) },
+    style: { color: tone(name, iconStyle) },
     strokeWidth: stroke,
     absoluteStrokeWidth: true,
     strokeLinecap: 'round' as const,
@@ -256,7 +282,7 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
             {open ? (
               <FolderOpen
                 className={iconCls}
-                style={{ color: tone(name) }}
+                style={{ color: tone(name, iconStyle) }}
                 strokeWidth={stroke}
                 absoluteStrokeWidth
                 strokeLinecap="round"
@@ -266,7 +292,7 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
             ) : (
               <Folder
                 className={iconCls}
-                style={{ color: tone(name) }}
+                style={{ color: tone(name, iconStyle) }}
                 strokeWidth={stroke}
                 absoluteStrokeWidth
                 strokeLinecap="round"

@@ -143,6 +143,7 @@ export const DEFAULT_PERMISSION_SEED: DefaultPermissionSeed[] = [
   { key: 'performance.review_direct_reports', label: 'Review direct reports', description: 'Submit manager assessments for employees who report to you.', is_founder_only: false },
   { key: 'performance.view_own', label: 'View own reviews', description: 'Employee can view and complete their own performance review self-assessment.', is_founder_only: false },
   { key: 'one_on_one.view_own', label: 'View own 1:1 meetings', description: 'View 1:1 check-ins you participate in as manager or direct report.', is_founder_only: false },
+  { key: 'one_on_one.view_all_checkins', label: 'View all 1:1 check-ins', description: 'View all scheduled and in-progress 1:1 check-ins across the organisation calendar.', is_founder_only: false },
   { key: 'one_on_one.manage_direct_reports', label: 'Manage 1:1s with direct reports', description: 'Schedule and complete 1:1 meetings with people who report to you.', is_founder_only: false },
   { key: 'one_on_one.manage_templates', label: 'Manage 1:1 templates and org settings', description: 'Edit org 1:1 cadence defaults and meeting templates.', is_founder_only: false },
   { key: 'founder.platform.manage', label: 'Founder platform access', description: 'Platform-global founder controls.', is_founder_only: true },

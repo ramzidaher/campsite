@@ -174,6 +174,15 @@ function shiftsTimeOverlap(a: ShiftRow, b: ShiftRow): boolean {
   return as < be && bs < ae;
 }
 
+function timeRangesOverlap(aStartIso: string, aEndIso: string, bStartIso: string, bEndIso: string): boolean {
+  const as = new Date(aStartIso).getTime();
+  const ae = new Date(aEndIso).getTime();
+  const bs = new Date(bStartIso).getTime();
+  const be = new Date(bEndIso).getTime();
+  if (!Number.isFinite(as) || !Number.isFinite(ae) || !Number.isFinite(bs) || !Number.isFinite(be)) return false;
+  return as < be && bs < ae;
+}
+
 export function RotaClient({ profile }: { profile: Profile }) {
   const supabase = useMemo(() => createClient(), []);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -489,6 +498,50 @@ export function RotaClient({ profile }: { profile: Profile }) {
     }
     return s;
   }, [shifts]);
+
+  const overlapCalendarBusyIds = useMemo(() => {
+    if (view !== 'my' || calendarBusy.length === 0) return new Set<string>();
+    const overlap = new Set<string>();
+    for (const c of calendarBusy) {
+      for (const s of shifts) {
+        if (timeRangesOverlap(c.start_time, c.end_time, s.start_time, s.end_time)) {
+          overlap.add(c.id);
+          break;
+        }
+      }
+    }
+    return overlap;
+  }, [view, calendarBusy, shifts]);
+
+  const listRowsByDay = useMemo(() => {
+    type ListRow =
+      | { kind: 'shift'; id: string; startTimeMs: number; shift: ShiftRow }
+      | { kind: 'calendar'; id: string; startTimeMs: number; calendar: RotaCalendarBusyBlock };
+    const rows: ListRow[] = [];
+    for (const s of shifts) {
+      rows.push({ kind: 'shift', id: s.id, startTimeMs: new Date(s.start_time).getTime(), shift: s });
+    }
+    if (view === 'my') {
+      for (const c of calendarBusy) {
+        rows.push({ kind: 'calendar', id: c.id, startTimeMs: new Date(c.start_time).getTime(), calendar: c });
+      }
+    }
+    rows.sort((a, b) => a.startTimeMs - b.startTimeMs);
+    const groups = new Map<string, { label: string; rows: ListRow[] }>();
+    for (const row of rows) {
+      const start = row.kind === 'shift' ? row.shift.start_time : row.calendar.start_time;
+      const d = new Date(start);
+      const ymd = localYmd(d);
+      if (!groups.has(ymd)) {
+        groups.set(ymd, {
+          label: d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'long' }),
+          rows: [],
+        });
+      }
+      groups.get(ymd)?.rows.push(row);
+    }
+    return [...groups.entries()].map(([ymd, data]) => ({ ymd, label: data.label, rows: data.rows }));
+  }, [shifts, calendarBusy, view]);
 
   const draftSlotHighlight = useMemo(() => {
     if (!quickAdd) return null;
@@ -840,75 +893,91 @@ export function RotaClient({ profile }: { profile: Profile }) {
                 ) : null}
               </li>
             ) : (
-              shifts.map((s) => {
-                const v = shiftVariant(s.dept_id ?? s.id);
-                const { time, primary, secondary } = shiftTitleLines(s);
-                return (
-                  <li
-                    key={s.id}
-                    className="flex items-start gap-3 rounded-xl border border-[#d8d8d8] bg-white px-[18px] py-3"
-                  >
-                    <span className={`mt-1 h-8 w-1 shrink-0 rounded-full ${v.bg} ring-1 ${v.border}`} aria-hidden />
-                    <div className="min-w-0 flex-1">
-                      <div className={`text-[11.5px] font-semibold ${v.text}`}>{time}</div>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 font-medium text-[#121212]">
-                        {primary}
-                        {overlapShiftIds.has(s.id) ? (
-                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
-                            Overlap
-                          </span>
-                        ) : null}
-                      </div>
-                      {secondary ? (
-                        <div className="mt-0.5 truncate text-[12.5px] text-[#6b6b6b]" title={secondary}>
-                          {secondary}
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="flex shrink-0 flex-col gap-1">
-                      {canEdit ? (
-                        <button
-                          type="button"
-                          className="rounded-lg border border-[#d8d8d8] px-2.5 py-1 text-[11.5px] text-[#121212] hover:bg-[#f5f4f1]"
-                          onClick={() => openEditShift(s)}
-                        >
-                          Edit
-                        </button>
-                      ) : null}
-                      {s.user_id === null ? (
-                        <button
-                          type="button"
-                          className="rounded-lg border border-[#d8d8d8] px-2.5 py-1 text-[11.5px] text-[#121212] hover:bg-[#f5f4f1]"
-                          onClick={() => void claimOpenShift(s.id)}
-                        >
-                          Claim
-                        </button>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })
+              listRowsByDay.map((group) => (
+                <li key={group.ymd} className="space-y-2.5">
+                  <div className="flex items-center gap-2 px-1">
+                    <span className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-[#8c8c8c]">
+                      {group.label}
+                    </span>
+                    <span className="h-px flex-1 bg-[#e8e8e8]" />
+                  </div>
+                  <ul className="space-y-2">
+                    {group.rows.map((row) => {
+                      if (row.kind === 'shift') {
+                        const s = row.shift;
+                        const v = shiftVariant(s.dept_id ?? s.id);
+                        const { time, primary, secondary } = shiftTitleLines(s);
+                        const hasConflict = overlapShiftIds.has(s.id);
+                        return (
+                          <li key={s.id} className="flex items-start gap-3 rounded-xl border border-[#d8d8d8] bg-white px-[18px] py-3">
+                            <span className={`mt-1 h-8 w-1 shrink-0 rounded-full ${v.bg} ring-1 ${v.border}`} aria-hidden />
+                            <div className="min-w-0 flex-1">
+                              <div className={`text-[11.5px] font-semibold ${v.text}`}>{time}</div>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-2 font-medium text-[#121212]">
+                                {primary}
+                                {hasConflict ? (
+                                  <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                                    <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-amber-300 text-[9px] leading-none">!</span>
+                                    Conflict
+                                  </span>
+                                ) : null}
+                              </div>
+                              {secondary ? (
+                                <div className="mt-0.5 truncate text-[12.5px] text-[#6b6b6b]" title={secondary}>
+                                  {secondary}
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="flex shrink-0 flex-col gap-1">
+                              {canEdit ? (
+                                <button
+                                  type="button"
+                                  className="rounded-lg border border-[#d8d8d8] px-2.5 py-1 text-[11.5px] text-[#121212] hover:bg-[#f5f4f1]"
+                                  onClick={() => openEditShift(s)}
+                                >
+                                  Edit
+                                </button>
+                              ) : null}
+                              {s.user_id === null ? (
+                                <button
+                                  type="button"
+                                  className="rounded-lg border border-[#d8d8d8] px-2.5 py-1 text-[11.5px] text-[#121212] hover:bg-[#f5f4f1]"
+                                  onClick={() => void claimOpenShift(s.id)}
+                                >
+                                  Claim
+                                </button>
+                              ) : null}
+                            </div>
+                          </li>
+                        );
+                      }
+                      const c = row.calendar;
+                      const hasConflict = overlapCalendarBusyIds.has(c.id);
+                      return (
+                        <li key={`cal-${c.id}`} className="flex items-start gap-3 rounded-xl border border-[#ddd6fe] bg-[#f5f3ff] px-[18px] py-3">
+                          <span className="mt-1 h-8 w-1 shrink-0 rounded-full bg-[#a78bfa] ring-1 ring-[#c4b5fd]" aria-hidden />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[11.5px] font-semibold text-[#5b21b6]">
+                              {formatShiftTimeRange(c.start_time, c.end_time, profile.org_timezone)}
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[14px] font-medium text-[#121212]">
+                              {c.title}
+                              {hasConflict ? (
+                                <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                                  <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-amber-300 text-[9px] leading-none">!</span>
+                                  Conflict
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="mt-0.5 text-[12.5px] text-[#6b6b6b]">From org calendar (not a shift)</div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              ))
             )}
-            {view === 'my' && calendarBusy.length > 0
-              ? calendarBusy.map((c) => (
-                  <li
-                    key={`cal-${c.id}`}
-                    className="flex items-start gap-3 rounded-xl border border-[#ddd6fe] bg-[#f5f3ff] px-[18px] py-3"
-                  >
-                    <span
-                      className="mt-1 h-8 w-1 shrink-0 rounded-full bg-[#a78bfa] ring-1 ring-[#c4b5fd]"
-                      aria-hidden
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[11.5px] font-semibold text-[#5b21b6]">
-                        {formatShiftTimeRange(c.start_time, c.end_time, profile.org_timezone)}
-                      </div>
-                      <div className="mt-0.5 text-[14px] font-medium text-[#121212]">{c.title}</div>
-                      <div className="mt-0.5 text-[12.5px] text-[#6b6b6b]">From org calendar (not a shift)</div>
-                    </div>
-                  </li>
-                ))
-              : null}
           </ul>
         ) : (
           <div className="space-y-3">

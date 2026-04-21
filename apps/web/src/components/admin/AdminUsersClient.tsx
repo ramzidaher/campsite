@@ -130,6 +130,10 @@ export function AdminUsersClient({
   const [editReportsTo, setEditReportsTo] = useState<string>('');
 
   const [qInput, setQInput] = useState(defaultFilters.q ?? '');
+  const [statusFilter, setStatusFilter] = useState(defaultFilters.status ?? 'all');
+  const [roleFilter, setRoleFilter] = useState(defaultFilters.role ?? 'all');
+  const [deptFilter, setDeptFilter] = useState(defaultFilters.dept ?? 'all');
+  const [showInfo, setShowInfo] = useState(false);
   const [isSearchPending, startSearchTransition] = useTransition();
 
   const activeDepts = departments.filter((d) => !d.is_archived);
@@ -184,7 +188,10 @@ export function AdminUsersClient({
 
   useEffect(() => {
     setQInput(defaultFilters.q ?? '');
-  }, [defaultFilters.q]);
+    setStatusFilter(defaultFilters.status ?? 'all');
+    setRoleFilter(defaultFilters.role ?? 'all');
+    setDeptFilter(defaultFilters.dept ?? 'all');
+  }, [defaultFilters.q, defaultFilters.status, defaultFilters.role, defaultFilters.dept]);
 
   useEffect(() => {
     const inUrl = (searchParams.get('q') ?? '').trim();
@@ -195,12 +202,21 @@ export function AdminUsersClient({
     });
   }, [qInput, router, filterHref, searchParams]);
 
-  const slice = rows.slice(page * PAGE, page * PAGE + PAGE);
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  const filteredRows = useMemo(() => {
+    return rows.filter((r) => {
+      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (roleFilter !== 'all' && r.role !== roleFilter) return false;
+      if (deptFilter !== 'all') {
+        const dept = activeDepts.find((d) => d.id === deptFilter)?.name;
+        if (!dept || !r.departments.includes(dept)) return false;
+      }
+      return true;
+    });
+  }, [rows, statusFilter, roleFilter, deptFilter, activeDepts]);
 
-  const statusFilter = defaultFilters.status ?? 'all';
-  const roleFilter = defaultFilters.role ?? 'all';
-  const deptFilter = defaultFilters.dept ?? 'all';
+  const slice = filteredRows.slice(page * PAGE, page * PAGE + PAGE);
+  const pages = Math.max(1, Math.ceil(filteredRows.length / PAGE));
+
   const inviteHref = `/register?org=${encodeURIComponent(orgSlug)}`;
 
   function toggleAll() {
@@ -478,19 +494,32 @@ export function AdminUsersClient({
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">All Members</h1>
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
             {totalMemberCount} member{totalMemberCount === 1 ? '' : 's'} across {orgName}
-            {rows.length < totalMemberCount ? (
-              <span className="text-[#9b9b9b]"> · {rows.length} shown (filters / max 500 loaded)</span>
+            {filteredRows.length < totalMemberCount ? (
+              <span className="text-[#9b9b9b]"> · {filteredRows.length} shown (filters / max 500 loaded)</span>
             ) : null}
-          </p>
-          <p className="mt-2 max-w-2xl text-[12px] leading-relaxed text-[#9b9b9b]">
-            <strong className="font-medium text-[#6b6b6b]">Email invite</strong> sends a link to accept the invite,
-            choose a password, then enter the app with the role and teams you choose.{' '}
-            <strong className="font-medium text-[#6b6b6b]">Invite link</strong> still
-            opens self-registration: new joiners are <strong className="font-medium text-[#6b6b6b]">Unassigned</strong>{' '}
-            and <strong className="font-medium text-[#6b6b6b]">Pending</strong> until an approver sets their role.
           </p>
         </div>
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowInfo((v) => !v)}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d8d8d8] bg-white text-[12px] font-semibold leading-none text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              aria-label="Members page info"
+              aria-expanded={showInfo}
+            >
+              i
+            </button>
+            {showInfo ? (
+              <div className="absolute right-0 top-12 z-20 w-[320px] rounded-xl border border-[#d8d8d8] bg-white p-3 text-[12px] leading-relaxed text-[#6b6b6b] shadow-lg">
+                <strong className="font-medium text-[#121212]">Email invite</strong> sends a link to accept the invite,
+                choose a password, then enter the app with the role and teams you choose.{' '}
+                <strong className="font-medium text-[#121212]">Invite link</strong> opens self-registration: new joiners are{' '}
+                <strong className="font-medium text-[#121212]">Unassigned</strong> and{' '}
+                <strong className="font-medium text-[#121212]">Pending</strong> until an approver sets their role.
+              </div>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={() => openInviteModal()}
@@ -530,7 +559,10 @@ export function AdminUsersClient({
 
         <select
           value={roleFilter}
-          onChange={(e) => router.push(filterHref({ role: e.target.value }))}
+          onChange={(e) => {
+            setRoleFilter(e.target.value);
+            setPage(0);
+          }}
           className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
           aria-label="Filter by role"
         >
@@ -545,7 +577,10 @@ export function AdminUsersClient({
 
         <select
           value={deptFilter}
-          onChange={(e) => router.push(filterHref({ dept: e.target.value }))}
+          onChange={(e) => {
+            setDeptFilter(e.target.value);
+            setPage(0);
+          }}
           className="h-9 min-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
           aria-label="Filter by department"
         >
@@ -558,18 +593,18 @@ export function AdminUsersClient({
         </select>
 
         <div className="flex flex-wrap gap-2">
-          <Link href={filterHref({ status: 'all' })} className={pillClass(statusFilter === 'all')}>
+          <button type="button" onClick={() => { setStatusFilter('all'); setPage(0); }} className={pillClass(statusFilter === 'all')}>
             All
-          </Link>
-          <Link href={filterHref({ status: 'active' })} className={pillClass(statusFilter === 'active')}>
+          </button>
+          <button type="button" onClick={() => { setStatusFilter('active'); setPage(0); }} className={pillClass(statusFilter === 'active')}>
             Active
-          </Link>
-          <Link href={filterHref({ status: 'pending' })} className={pillClass(statusFilter === 'pending')}>
+          </button>
+          <button type="button" onClick={() => { setStatusFilter('pending'); setPage(0); }} className={pillClass(statusFilter === 'pending')}>
             Pending
-          </Link>
-          <Link href={filterHref({ status: 'inactive' })} className={pillClass(statusFilter === 'inactive')}>
+          </button>
+          <button type="button" onClick={() => { setStatusFilter('inactive'); setPage(0); }} className={pillClass(statusFilter === 'inactive')}>
             Inactive
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -612,12 +647,19 @@ export function AdminUsersClient({
         >
           Export CSV
         </button>
-        <Link
-          href={filterHref({ q: undefined, status: 'all', role: 'all', dept: 'all' })}
+        <button
+          type="button"
+          onClick={() => {
+            setQInput('');
+            setStatusFilter('all');
+            setRoleFilter('all');
+            setDeptFilter('all');
+            setPage(0);
+          }}
           className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
         >
           Clear filters
-        </Link>
+        </button>
       </div>
 
       {successMsg ? (

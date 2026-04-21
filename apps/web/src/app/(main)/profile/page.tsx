@@ -837,25 +837,25 @@ export default async function MyProfilePage({
 
         <nav className="mb-7 flex flex-wrap gap-2" aria-label="Profile sections">
           <Link className={profileTabClass(tab === 'personal')} href="?tab=personal">
-            Personal
-          </Link>
-          <Link className={profileTabClass(tab === 'job')} href="?tab=job">
-            Job
-          </Link>
-          <Link className={profileTabClass(tab === 'time-off')} href="?tab=time-off">
-            Time off
-          </Link>
-          <Link className={profileTabClass(tab === 'reporting')} href="?tab=reporting">
-            Reporting line
-          </Link>
-          <Link className={profileTabClass(tab === 'performance')} href="?tab=performance">
-            Performance
-          </Link>
-          <Link className={profileTabClass(tab === 'onboarding')} href="?tab=onboarding">
-            Onboarding
+            Profile
           </Link>
           <Link className={profileTabClass(tab === 'other')} href="?tab=other">
-            Training &amp; other
+            Payroll &amp; records
+          </Link>
+          <Link className={profileTabClass(tab === 'job')} href="?tab=job">
+            Employment
+          </Link>
+          <Link className={profileTabClass(tab === 'time-off')} href="?tab=time-off">
+            Leave
+          </Link>
+          <Link className={profileTabClass(tab === 'reporting')} href="?tab=reporting">
+            Manager &amp; team
+          </Link>
+          <Link className={profileTabClass(tab === 'performance')} href="?tab=performance">
+            Reviews
+          </Link>
+          <Link className={profileTabClass(tab === 'onboarding')} href="?tab=onboarding">
+            Setup
           </Link>
         </nav>
 
@@ -1416,84 +1416,9 @@ export default async function MyProfilePage({
           {tab === 'other' && <section id="other" className="pt-2 pb-4">
             <div className="space-y-3 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white p-6 text-[13px]">
               <p className="text-[#6b6b6b]">
-                <strong className="text-[#121212]">Training &amp; certifications:</strong> use the
-                dedicated training records module below to track completions, providers, and expiry dates.
+                <strong className="text-[#121212]">Priority details:</strong> payroll and tax information is shown first so
+                key records (bank details, NI/tax, and tax docs) are easy to access.
               </p>
-              <p className="text-[#6b6b6b]">
-                <strong className="text-[#121212]">Documents:</strong> your employee photo and ID records are available below.
-                ID number display is masked for privacy.
-              </p>
-              {(canRecordExportOwn && (canRecordExportCsv || canRecordExportPdf)) ? (
-                <div className="flex flex-wrap gap-2">
-                  {canRecordExportCsv ? (
-                    <a
-                      href="/api/hr/records/export?format=csv"
-                      className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
-                    >
-                      Export my record (CSV)
-                    </a>
-                  ) : null}
-                  {canRecordExportPdf ? (
-                    <a
-                      href="/api/hr/records/export?format=pdf"
-                      className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
-                    >
-                      Export my record (PDF)
-                    </a>
-                  ) : null}
-                </div>
-              ) : null}
-              <EmployeeSelfDocumentsClient
-                orgId={orgId}
-                userId={user.id}
-                docs={(ownDocsRes.data ?? []).map((d) => ({
-                  id: d.id as string,
-                  category: d.category as string,
-                  document_kind: (d.document_kind as string) ?? 'id_document',
-                  bucket_id: (d.bucket_id as string) ?? '',
-                  label: (d.label as string) ?? '',
-                  storage_path: d.storage_path as string,
-                  file_name: d.file_name as string,
-                  byte_size: Number(d.byte_size ?? 0),
-                  created_at: d.created_at as string,
-                  id_document_type: (d.id_document_type as string | null) ?? null,
-                  id_number_last4: (d.id_number_last4 as string | null) ?? null,
-                  expires_on: (d.expires_on as string | null) ?? null,
-                  is_current: Boolean(d.is_current),
-                }))}
-                canViewPhoto={!!canViewPhotoOwn}
-                canUploadPhoto={!!canUploadPhotoOwn}
-                canDeletePhoto={!!canDeletePhotoOwn}
-                canViewId={!!canViewIdOwn}
-                canUploadId={!!canUploadIdOwn}
-                canDeleteId={!!canDeleteIdOwn}
-              />
-              <DependantsEditorClient
-                title="Dependants & beneficiaries"
-                description="Manage your dependant and beneficiary information."
-                subjectUserId={user.id}
-                canEdit={true}
-                initialDependants={(ownDependantsRes.data ?? []).map((d) => ({
-                  full_name: (d.full_name as string) ?? '',
-                  relationship: (d.relationship as string) ?? 'other',
-                  date_of_birth: (d.date_of_birth as string | null) ?? null,
-                  is_student: Boolean(d.is_student),
-                  is_disabled: Boolean(d.is_disabled),
-                  is_beneficiary: Boolean(d.is_beneficiary),
-                  beneficiary_percentage:
-                    d.beneficiary_percentage != null ? Number(d.beneficiary_percentage) : null,
-                  phone: (d.phone as string | null) ?? null,
-                  email: (d.email as string | null) ?? null,
-                  address: (d.address as string | null) ?? null,
-                  notes: (d.notes as string | null) ?? null,
-                  is_emergency_contact: Boolean(d.is_emergency_contact),
-                }))}
-              />
-              <TrainingRecordsClient
-                subjectUserId={user.id}
-                canEdit={true}
-                initialRows={ownTrainingRows}
-              />
               {(canBankViewOwn || canBankManageOwn) ? (
                 <BankDetailsClient
                   title="Bank details (payroll)"
@@ -1580,6 +1505,85 @@ export default async function MyProfilePage({
                   }}
                 />
               ) : null}
+              <p className="text-[#6b6b6b]">
+                <strong className="text-[#121212]">Training &amp; certifications:</strong> use the
+                dedicated training records module below to track completions, providers, and expiry dates.
+              </p>
+              <p className="text-[#6b6b6b]">
+                <strong className="text-[#121212]">Documents:</strong> your employee photo and ID records are available below.
+                ID number display is masked for privacy.
+              </p>
+              {(canRecordExportOwn && (canRecordExportCsv || canRecordExportPdf)) ? (
+                <div className="flex flex-wrap gap-2">
+                  {canRecordExportCsv ? (
+                    <a
+                      href="/api/hr/records/export?format=csv"
+                      className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+                    >
+                      Export my record (CSV)
+                    </a>
+                  ) : null}
+                  {canRecordExportPdf ? (
+                    <a
+                      href="/api/hr/records/export?format=pdf"
+                      className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+                    >
+                      Export my record (PDF)
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+              <EmployeeSelfDocumentsClient
+                orgId={orgId}
+                userId={user.id}
+                docs={(ownDocsRes.data ?? []).map((d) => ({
+                  id: d.id as string,
+                  category: d.category as string,
+                  document_kind: (d.document_kind as string) ?? 'id_document',
+                  bucket_id: (d.bucket_id as string) ?? '',
+                  label: (d.label as string) ?? '',
+                  storage_path: d.storage_path as string,
+                  file_name: d.file_name as string,
+                  byte_size: Number(d.byte_size ?? 0),
+                  created_at: d.created_at as string,
+                  id_document_type: (d.id_document_type as string | null) ?? null,
+                  id_number_last4: (d.id_number_last4 as string | null) ?? null,
+                  expires_on: (d.expires_on as string | null) ?? null,
+                  is_current: Boolean(d.is_current),
+                }))}
+                canViewPhoto={!!canViewPhotoOwn}
+                canUploadPhoto={!!canUploadPhotoOwn}
+                canDeletePhoto={!!canDeletePhotoOwn}
+                canViewId={!!canViewIdOwn}
+                canUploadId={!!canUploadIdOwn}
+                canDeleteId={!!canDeleteIdOwn}
+              />
+              <DependantsEditorClient
+                title="Dependants & beneficiaries"
+                description="Manage your dependant and beneficiary information."
+                subjectUserId={user.id}
+                canEdit={true}
+                initialDependants={(ownDependantsRes.data ?? []).map((d) => ({
+                  full_name: (d.full_name as string) ?? '',
+                  relationship: (d.relationship as string) ?? 'other',
+                  date_of_birth: (d.date_of_birth as string | null) ?? null,
+                  is_student: Boolean(d.is_student),
+                  is_disabled: Boolean(d.is_disabled),
+                  is_beneficiary: Boolean(d.is_beneficiary),
+                  beneficiary_percentage:
+                    d.beneficiary_percentage != null ? Number(d.beneficiary_percentage) : null,
+                  phone: (d.phone as string | null) ?? null,
+                  email: (d.email as string | null) ?? null,
+                  address: (d.address as string | null) ?? null,
+                  notes: (d.notes as string | null) ?? null,
+                  is_emergency_contact: Boolean(d.is_emergency_contact),
+                }))}
+              />
+              <TrainingRecordsClient
+                subjectUserId={user.id}
+                canEdit={true}
+                initialRows={ownTrainingRows}
+              />
               {(canEmploymentHistoryViewOwn || canEmploymentHistoryManageOwn) ? (
                 <EmploymentHistoryClient
                   subjectUserId={user.id}
