@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { tenantHostMatchesOrg } from '@/lib/tenant/adminUrl';
+import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
 
 export type LoginOrgOption = {
   org_id: string;
@@ -24,6 +26,21 @@ export function LoginOrgChoiceModal({ open, orgs, nextPath, onClose }: Props) {
 
   if (!open) return null;
 
+  function safeNextPath(path: string): string {
+    if (!path || !path.startsWith('/') || path.startsWith('//')) return '/';
+    return path;
+  }
+
+  function navigateToSelectedOrg(slug: string) {
+    const safeNext = safeNextPath(nextPath || '/');
+    if (slug && !tenantHostMatchesOrg(slug, window.location.host)) {
+      window.location.assign(`https://${slug}.${getTenantRootDomain()}${safeNext}`);
+      return;
+    }
+    router.replace(safeNext);
+    router.refresh();
+  }
+
   async function choose(orgId: string) {
     setError(null);
     setLoadingId(orgId);
@@ -36,8 +53,8 @@ export function LoginOrgChoiceModal({ open, orgs, nextPath, onClose }: Props) {
     }
     setLoadingId(null);
     onClose();
-    router.replace(nextPath || '/');
-    router.refresh();
+    const selected = orgs.find((o) => o.org_id === orgId);
+    navigateToSelectedOrg(selected?.slug || '');
   }
 
   return (

@@ -7,6 +7,8 @@ import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { LoginOrgChoiceModal } from '@/components/auth/LoginOrgChoiceModal';
 import { AppLoaderOverlay } from '@/components/AppLoaderOverlay';
 import { createClient } from '@/lib/supabase/client';
+import { tenantHostMatchesOrg } from '@/lib/tenant/adminUrl';
+import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
 
 type Props = {
   /** From server `searchParams` - avoids `useSearchParams` + Suspense on the login page. */
@@ -17,6 +19,22 @@ type Props = {
 export function LoginForm({ nextPath = '/', errorParam }: Props) {
   const router = useRouter();
   const next = nextPath || '/';
+
+  function safeNextPath(path: string): string {
+    if (!path || !path.startsWith('/') || path.startsWith('//')) return '/';
+    return path;
+  }
+
+  function redirectToMemberApp(orgSlug?: string) {
+    const safeNext = safeNextPath(next);
+    if (orgSlug && !tenantHostMatchesOrg(orgSlug, window.location.host)) {
+      const target = `https://${orgSlug}.${getTenantRootDomain()}${safeNext}`;
+      window.location.assign(target);
+      return;
+    }
+    router.replace(safeNext);
+    router.refresh();
+  }
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,8 +73,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
     if (!uid) {
       setLoading(false);
       setSigningIn(true);
-      router.replace(next);
-      router.refresh();
+      redirectToMemberApp();
       return;
     }
 
@@ -67,8 +84,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
     if (memErr || !memRows?.length) {
       setLoading(false);
       setSigningIn(true);
-      router.replace(next);
-      router.refresh();
+      redirectToMemberApp();
       return;
     }
 
@@ -90,18 +106,17 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       }
       setLoading(false);
       setSigningIn(true);
-      router.replace(next);
-      router.refresh();
+      redirectToMemberApp(orgs[0]!.slug || undefined);
       return;
     }
 
     const { data: prof } = await supabase.from('profiles').select('org_id').eq('id', uid).maybeSingle();
     const activeOk = Boolean(prof?.org_id && orgs.some((o) => o.org_id === prof.org_id));
     if (activeOk) {
+      const activeOrg = orgs.find((o) => o.org_id === prof?.org_id);
       setLoading(false);
       setSigningIn(true);
-      router.replace(next);
-      router.refresh();
+      redirectToMemberApp(activeOrg?.slug || undefined);
       return;
     }
 
