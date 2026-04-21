@@ -13,12 +13,40 @@ const dmSerif = DM_Serif_Display({
   weight: '400',
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.SITE_URL?.trim() || 'https://camp-site.co.uk';
+
 export const metadata: Metadata = {
   title: 'Campsite',
   description: 'Internal communications and staff management - Common Ground Studios Ltd',
+  metadataBase: new URL(siteUrl),
   icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
     apple: [{ url: '/apple-icon.svg', type: 'image/svg+xml' }],
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Campsite',
+    title: 'Campsite',
+    description: 'Internal communications and staff management - Common Ground Studios Ltd',
+    images: [
+      {
+        url: '/og-image.svg',
+        width: 1200,
+        height: 630,
+        alt: 'Campsite',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Campsite',
+    description: 'Internal communications and staff management - Common Ground Studios Ltd',
+    images: ['/og-image.svg'],
   },
 };
 

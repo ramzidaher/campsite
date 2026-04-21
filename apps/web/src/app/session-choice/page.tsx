@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { redirect } from 'next/navigation';
 import { syncRegistrationAvatarToProfileIfEmpty } from '@/lib/auth/completeRegistrationProfile';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { tenantHostMatchesOrg } from '@/lib/tenant/adminUrl';
+import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
 
 export default async function SessionChoicePage() {
   const supabase = await createClient();
@@ -42,6 +45,11 @@ export default async function SessionChoicePage() {
     .maybeSingle();
   const orgName = (org?.name as string | undefined)?.trim() || 'Your organisation';
   const orgSlug = (org?.slug as string | undefined)?.trim() || '';
+  const host = (await headers()).get('host');
+  const memberDashboardHref =
+    orgSlug && !tenantHostMatchesOrg(orgSlug, host)
+      ? `https://${orgSlug}.${getTenantRootDomain()}/dashboard`
+      : '/dashboard';
 
   return (
     <div className="auth-shell-main flex min-h-screen flex-col items-center justify-center px-6 py-12">
@@ -59,7 +67,7 @@ export default async function SessionChoicePage() {
 
         <div className="mt-10 flex flex-col gap-3">
           <Link
-            href="/dashboard"
+            href={memberDashboardHref}
             className="flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 rounded-[10px] bg-[#121212] px-4 py-3 text-center text-sm font-medium text-[#faf9f6] no-underline transition-opacity hover:opacity-[0.88]"
           >
             <span>{orgName}</span>
