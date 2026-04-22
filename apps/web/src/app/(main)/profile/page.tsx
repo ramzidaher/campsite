@@ -30,15 +30,15 @@ const PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS = 1400;
 /** Cap slow HR RPCs so a stuck Supabase query does not block the whole profile response. */
 const PROFILE_HEAVY_RPC_TIMEOUT_MS = 1200;
 
-async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: any): Promise<T> {
+async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: unknown): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
   try {
-    return (await Promise.race([
+    return await Promise.race<T>([
       Promise.resolve(promise),
-      new Promise((resolve) => {
-        timer = setTimeout(() => resolve(fallback), timeoutMs);
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback as T), timeoutMs);
       }),
-    ])) as T;
+    ]);
   } finally {
     if (timer) clearTimeout(timer);
   }

@@ -26,6 +26,7 @@ export function hrBreadcrumbTrail(pathname: string): { href: string; label: stri
       'hr-metric-alerts': 'HR metric alerts',
       'org-chart': 'Org chart',
       timesheets: 'Timesheet review',
+      finance: 'Finance',
       wagesheets: 'Wagesheets',
       leave: 'Leave (HR)',
       'attendance-settings': 'Attendance sites',

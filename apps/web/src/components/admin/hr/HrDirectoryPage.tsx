@@ -8,15 +8,15 @@ import { normalizeUiMode } from '@/lib/uiMode';
 
 const HR_DASH_STATS_TIMEOUT_MS = 1200;
 
-async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: any): Promise<T> {
+async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: unknown): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
   try {
-    return (await Promise.race([
+    return await Promise.race<T>([
       Promise.resolve(promise),
-      new Promise((resolve) => {
-        timer = setTimeout(() => resolve(fallback), timeoutMs);
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback as T), timeoutMs);
       }),
-    ])) as T;
+    ]);
   } finally {
     if (timer) clearTimeout(timer);
   }

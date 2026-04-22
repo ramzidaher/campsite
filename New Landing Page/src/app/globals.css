@@ -1,0 +1,177 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #faf9f6;
+  --surface: #f5f4f1;
+  --foreground: #121212;
+  --text-secondary: #6b6b6b;
+  --text-muted: #9b9b9b;
+  --border: #d8d8d8;
+  --warning: #b91c1c;
+  --success: #15803d;
+  --accent-midnight: #121212;
+  --accent-ocean: #44403c;
+  --accent-emerald: #059669;
+  --accent-sunset: #f97316;
+  --accent-orchid: #7c3aed;
+  --accent-rose: #e11d48;
+  --accent: var(--accent-midnight);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Selection */
+::selection {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+/* Headings */
+.font-grot {
+  font-family: var(--font-dm-serif), Georgia, ui-serif, serif;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.font-mono {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Marquee animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
+
+/* Underline animation */
+.underline-hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 3px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+/* Link hover */
+a {
+  transition: opacity 0.2s ease;
+}
+
+a:hover {
+  opacity: 0.7;
+}
+
+/* Project card hover */
+.project-card {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.project-card:hover {
+  transform: scale(1.02);
+}
+
+/* Hero image rotation */
+.hero-image {
+  transform: rotate(-5deg);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-image:hover {
+  transform: rotate(0deg);
+}
+
+/* Cookie banner */
+.cookie-banner {
+  backdrop-filter: blur(10px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+/* Service item hover */
+.service-item {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.service-item:hover {
+  color: var(--accent);
+}
+
+/* Dark mode */
+.dark {
+  --background: #121212;
+  --surface: #1a1a1a;
+  --foreground: #faf9f6;
+  --text-secondary: #808080;
+  --text-muted: #b0b0b0;
+  --border: #2a2a2a;
+  --warning: #f87171;
+  --success: #4ade80;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.8s ease forwards;
+}
+
+/* Staggered animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }

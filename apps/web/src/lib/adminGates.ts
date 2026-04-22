@@ -347,6 +347,8 @@ export function getMainShellHrNavItemsByPermissions(
   if (p.includes('leave.approve_direct_reports') || p.includes('leave.manage_org'))
     items.push({ href: '/hr/timesheets', label: 'Timesheet review', icon: 'calendar', section: 'Payroll & time' });
   if (p.includes('payroll.view') || p.includes('payroll.manage'))
+    items.push({ href: '/hr/finance', label: 'Finance', icon: 'dashboard', section: 'Payroll & time' });
+  if (p.includes('payroll.view') || p.includes('payroll.manage'))
     items.push({ href: '/hr/wagesheets', label: 'Wagesheets', icon: 'payroll', section: 'Payroll & time' });
   if (
     p.includes('privacy.retention_policy.view') ||

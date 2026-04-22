@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
+import 'jest-axe/extend-expect';
 import type { AnchorHTMLAttributes } from 'react';
 import { AppTopBar } from '@/components/shell/AppTopBar';
 import { buildShellCommandPaletteSections } from '@/lib/shell/shellCommandPaletteSections';

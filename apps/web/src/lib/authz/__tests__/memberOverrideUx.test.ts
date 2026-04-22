@@ -20,7 +20,11 @@ describe('memberOverrideUx', () => {
   });
 
   it('permissionPickerMatchesQuery tolerates null label/description', () => {
-    const malformed = { key: 'rota.view', label: null, description: 'View rota schedules.' };
+    const malformed = {
+      key: 'rota.view',
+      label: null,
+      description: 'View rota schedules.',
+    } as unknown as { key: string; label: string; description: string };
     expect(permissionPickerMatchesQuery(malformed, 'rota')).toBe(true);
   });
 

@@ -29,6 +29,7 @@ import { prefetchBroadcastCover } from '@/lib/broadcastCoverPrefetch';
 import { findBroadcastRowInQueryCache } from '@/lib/broadcastDetailFromCache';
 import { parseRawBroadcastRecord } from '@/lib/broadcastFeedQuery';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import defaultBackdropImage from '@/assets/images/camp-site-main-backdrop.png';
 
 const AI_SUMMARY_MIN_CHARS = 480;
 
@@ -322,7 +323,7 @@ export default function BroadcastDetailScreen() {
 
   const backdropImageSource = coverUrl
     ? { uri: coverUrl }
-    : (require('@/assets/images/camp-site-main-backdrop.png') as number);
+    : defaultBackdropImage;
   const backdropRecyclingKey = coverUrl ?? 'camp-site-default-backdrop';
 
   return (

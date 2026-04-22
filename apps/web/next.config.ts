@@ -37,6 +37,14 @@ for (const name of rootEnvFiles) {
 }
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ext.same-assets.com',
+      },
+    ],
+  },
   async redirects() {
     return [
       { source: '/admin/hr/onboarding/:runId', destination: '/hr/onboarding/:runId', permanent: true },

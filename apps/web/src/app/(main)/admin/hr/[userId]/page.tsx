@@ -22,16 +22,16 @@ const ADMIN_HR_NON_CRITICAL_QUERY_TIMEOUT_MS = 1500;
 async function resolveWithTimeout<T>(
   promise: PromiseLike<T>,
   timeoutMs: number,
-  fallback: T
+  fallback: unknown
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
   try {
-    return (await Promise.race([
+    return await Promise.race<T>([
       Promise.resolve(promise),
-      new Promise((resolve) => {
-        timer = setTimeout(() => resolve(fallback), timeoutMs);
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback as T), timeoutMs);
       }),
-    ])) as T;
+    ]);
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -257,7 +257,7 @@ export default async function EmployeeHRFilePage({
         .order('created_at', { ascending: false })
         .limit(100),
       ADMIN_HR_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null } as any
+      { data: [], error: null }
     ),
   ]);
 
@@ -348,7 +348,7 @@ export default async function EmployeeHRFilePage({
     const { data: changers } = await resolveWithTimeout(
       supabase.from('profiles').select('id, full_name, preferred_name').in('id', changerIds),
       ADMIN_HR_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null } as any
+      { data: [], error: null }
     );
     for (const c of changers ?? []) {
       changerNames[c.id as string] = getDisplayName(
