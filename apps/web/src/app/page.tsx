@@ -1,13 +1,17 @@
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { RootAuthHashGuard } from '@/components/auth/RootAuthHashGuard';
 import { LandingPage } from '@/components/marketing/LandingPage';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { tenantHostMatchesOrg } from '@/lib/tenant/adminUrl';
+import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
 
 export default async function HomePage() {
   const supabase = await createClient();
   const user = await getAuthUser();
+  const host = (await headers()).get('host');
 
   if (user) {
     const [founder, { data: profile }] = await Promise.all([
@@ -40,6 +44,18 @@ export default async function HomePage() {
     }
     if (profile.status === 'inactive') {
       redirect('/login?error=inactive');
+    }
+
+    if (profile.org_id) {
+      const { data: org } = await supabase
+        .from('organisations')
+        .select('slug')
+        .eq('id', profile.org_id)
+        .maybeSingle();
+      const orgSlug = (org?.slug as string | undefined)?.trim();
+      if (orgSlug && !tenantHostMatchesOrg(orgSlug, host)) {
+        redirect(`https://${orgSlug}.${getTenantRootDomain()}/dashboard`);
+      }
     }
 
     redirect('/dashboard');

@@ -24,6 +24,11 @@ type Adjustment = {
   week_start_date: string;
   amount_gbp: number;
   note: string | null;
+  source_type?: string | null;
+  request_status?: 'pending_finance' | 'approved' | 'rejected' | null;
+  requested_by?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
 };
 
 type Rate = {
@@ -46,6 +51,39 @@ type Person = {
 type HrPayProfile = {
   user_id: string;
   pay_frequency: 'weekly' | 'monthly' | 'four_weekly' | null;
+  contract_type: 'zero_hours' | 'part_time' | 'full_time' | null;
+};
+
+type Review = {
+  user_id: string;
+  week_start_date: string;
+  review_status: 'pending_manager' | 'pending_finance' | 'manager_approved' | 'finance_approved' | 'paid';
+  manager_approved_at: string | null;
+  finance_approved_at: string | null;
+  paid_at: string | null;
+  manager_approved_by: string | null;
+  finance_approved_by: string | null;
+  paid_by: string | null;
+};
+
+type Policy = {
+  hourly_holiday_pay_percent: number;
+  allow_bi_weekly: boolean;
+  realtime_enabled: boolean;
+  ssp_override_enabled: boolean;
+  ssp_override_weekly_rate_gbp: number | null;
+};
+
+type PayElement = {
+  id: string;
+  code: string;
+  name: string;
+  emoji: string | null;
+  element_type: 'hourly' | 'fixed' | 'multiplier';
+  applies_to_role: 'csa' | 'dm' | 'all' | 'custom' | null;
+  hourly_rate_gbp: number | null;
+  fixed_amount_gbp: number | null;
+  effective_from: string;
 };
 
 type FinanceRow = {
@@ -63,6 +101,13 @@ type FinanceRow = {
   adjustments: number;
   projectedGross: number;
   varianceVsSchedule: number;
+  reviewStatus: 'pending_manager' | 'pending_finance' | 'manager_approved' | 'finance_approved' | 'paid';
+  reviewMeta: {
+    managerApprovedBy: string | null;
+    financeApprovedBy: string | null;
+    paidBy: string | null;
+  };
+  contractType: 'zero_hours' | 'part_time' | 'full_time';
 };
 
 function weekBounds(weekStart: string): { startIso: string; endIso: string } {
@@ -72,7 +117,19 @@ function weekBounds(weekStart: string): { startIso: string; endIso: string } {
   return { startIso: start.toISOString(), endIso: end.toISOString() };
 }
 
-export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManage: boolean }) {
+export function FinanceHubClient({
+  orgId,
+  canManage,
+  canFinanceApprove,
+  canManagePolicy,
+  canManagePayElements,
+}: {
+  orgId: string;
+  canManage: boolean;
+  canFinanceApprove: boolean;
+  canManagePolicy: boolean;
+  canManagePayElements: boolean;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const [weekFilter, setWeekFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
@@ -89,7 +146,26 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
     dm: '',
     effectiveFrom: '',
   });
+  const [policy, setPolicy] = useState<Policy | null>(null);
+  const [policyInputs, setPolicyInputs] = useState<{ holidayPct: string; allowBiWeekly: boolean; realtimeEnabled: boolean; sspOverrideEnabled: boolean; sspOverrideRate: string }>({
+    holidayPct: '0',
+    allowBiWeekly: true,
+    realtimeEnabled: true,
+    sspOverrideEnabled: false,
+    sspOverrideRate: '',
+  });
+  const [payElements, setPayElements] = useState<PayElement[]>([]);
+  const [payElementInput, setPayElementInput] = useState<{ code: string; name: string; emoji: string; type: 'hourly' | 'fixed'; rate: string; appliesToRole: 'all' | 'csa' | 'dm' | 'custom'; effectiveFrom: string }>({
+    code: '',
+    name: '',
+    emoji: '',
+    type: 'hourly',
+    rate: '',
+    appliesToRole: 'all',
+    effectiveFrom: '',
+  });
   const [err, setErr] = useState<string | null>(null);
+  const [actionNote, setActionNote] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setErr(null);
@@ -132,15 +208,18 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
       .limit(600);
     if (weekFilter) adjustmentsQuery = adjustmentsQuery.eq('week_start_date', weekFilter);
 
-    const [wagesRes, adjustmentsRes, ratesRes, payProfilesRes] = await Promise.all([
+    const [wagesRes, adjustmentsRes, ratesRes, payProfilesRes, reviewsRes, policyRes, payElementsRes] = await Promise.all([
       wagesQuery,
       adjustmentsQuery,
       supabase.from('payroll_role_hourly_rates').select('role_code, effective_from, hourly_rate_gbp').eq('org_id', orgId).order('effective_from', { ascending: false }),
       supabase.from('payroll_employee_pay_profiles').select('user_id, pay_role').eq('org_id', orgId),
+      supabase.from('payroll_wagesheet_reviews').select('user_id, week_start_date, review_status, manager_approved_by, finance_approved_by, paid_by, manager_approved_at, finance_approved_at, paid_at').eq('org_id', orgId),
+      supabase.from('payroll_policy_settings').select('hourly_holiday_pay_percent, allow_bi_weekly, realtime_enabled, ssp_override_enabled, ssp_override_weekly_rate_gbp').eq('org_id', orgId).maybeSingle(),
+      supabase.from('payroll_pay_elements').select('id, code, name, emoji, element_type, applies_to_role, hourly_rate_gbp, fixed_amount_gbp, effective_from').eq('org_id', orgId).eq('is_active', true).order('effective_from', { ascending: false }),
     ]);
     const { data: hrPayProfiles } = await supabase
       .from('employee_hr_records')
-      .select('user_id, pay_frequency')
+      .select('user_id, pay_frequency, contract_type')
       .eq('org_id', orgId)
       .in('user_id', allPeople.map((p) => p.id));
 
@@ -149,14 +228,35 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
     const adjustments = (adjustmentsRes.data as Adjustment[] | null) ?? [];
     const payProfiles = (payProfilesRes.data as PayProfile[] | null) ?? [];
     const ratesData = (ratesRes.data as Rate[] | null) ?? [];
+    const reviews = (reviewsRes.data as Review[] | null) ?? [];
+    const activePayElements = (payElementsRes.data as PayElement[] | null) ?? [];
+    setPayElements(activePayElements);
+    const activePolicy = (policyRes.data as Policy | null) ?? null;
+    if (activePolicy) {
+      const p = activePolicy;
+      setPolicy(p);
+      setPolicyInputs({
+        holidayPct: String(p.hourly_holiday_pay_percent ?? 0),
+        allowBiWeekly: Boolean(p.allow_bi_weekly),
+        realtimeEnabled: Boolean(p.realtime_enabled),
+        sspOverrideEnabled: Boolean(p.ssp_override_enabled),
+        sspOverrideRate: p.ssp_override_weekly_rate_gbp != null ? String(p.ssp_override_weekly_rate_gbp) : '',
+      });
+    } else {
+      setPolicy(null);
+    }
 
     const profileMap: Record<string, 'csa' | 'dm'> = {};
     for (const pp of payProfiles) profileMap[pp.user_id] = pp.pay_role;
     setProfiles(profileMap);
     const payFrequencyMap: Record<string, 'weekly' | 'monthly' | 'four_weekly'> = {};
+    const contractTypeMap: Record<string, 'zero_hours' | 'part_time' | 'full_time'> = {};
     for (const h of (hrPayProfiles as HrPayProfile[] | null) ?? []) {
       if (h.pay_frequency === 'monthly' || h.pay_frequency === 'four_weekly' || h.pay_frequency === 'weekly') {
         payFrequencyMap[h.user_id] = h.pay_frequency;
+      }
+      if (h.contract_type === 'full_time' || h.contract_type === 'part_time' || h.contract_type === 'zero_hours') {
+        contractTypeMap[h.user_id] = h.contract_type;
       }
     }
 
@@ -238,18 +338,40 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
       const ts = timesheets.find((t) => t.user_id === userId && t.week_start_date === weekStart);
       const lineItems = wages.filter((w) => w.user_id === userId && w.week_start_date === weekStart);
       const basePay = lineItems.filter((w) => w.line_type === 'basic_pay').reduce((sum, w) => sum + Number(w.amount_gbp ?? 0), 0);
-      const ssp = lineItems.filter((w) => w.line_type === 'ssp').reduce((sum, w) => sum + Number(w.amount_gbp ?? 0), 0);
-      const adjustment = adjustments
+      let ssp = lineItems.filter((w) => w.line_type === 'ssp').reduce((sum, w) => sum + Number(w.amount_gbp ?? 0), 0);
+      const review = reviews.find((rv) => rv.user_id === userId && rv.week_start_date === weekStart);
+      const approvedAdjustments = adjustments
         .filter((a) => a.user_id === userId && a.week_start_date === weekStart)
-        .reduce((sum, a) => sum + Number(a.amount_gbp ?? 0), 0);
+        .filter((a) => (a.request_status ?? 'pending_finance') === 'approved');
+      const manualOverride = approvedAdjustments.find((a) => a.source_type === 'manual_override');
+      const adjustment = approvedAdjustments.reduce((sum, a) => sum + Number(a.amount_gbp ?? 0), 0);
       const actualMinutes = Number(ts?.approved_total_minutes ?? ts?.reported_total_minutes ?? 0);
       const actualHours = actualMinutes / 60;
       const scheduledHours = Number((scheduledMap.get(key) ?? 0).toFixed(2));
       const overtimeHours = Math.max(0, actualHours - 40);
       const varianceVsSchedule = actualHours - scheduledHours;
       const payRole = profileMap[userId] ?? (nameById.get(userId)?.toLowerCase().includes('manager') ? 'dm' : 'csa');
-      const projectedGross = basePay > 0 ? basePay + ssp + adjustment : actualHours * (latestRate[payRole] ?? 0) + ssp + adjustment;
-      const payFrequency = payFrequencyMap[userId] ?? 'weekly';
+      const contractType = contractTypeMap[userId] ?? 'part_time';
+      const baseHoursForFallback = actualHours > 0 ? actualHours : scheduledHours;
+      let computedBasePay = basePay > 0 ? basePay : baseHoursForFallback * (latestRate[payRole] ?? 0);
+      if (activePolicy?.hourly_holiday_pay_percent && contractType !== 'full_time') {
+        computedBasePay += computedBasePay * (activePolicy.hourly_holiday_pay_percent / 100);
+      }
+      for (const el of activePayElements) {
+        if (el.element_type === 'fixed' && el.fixed_amount_gbp && (el.applies_to_role === 'all' || el.applies_to_role === payRole)) {
+          computedBasePay += Number(el.fixed_amount_gbp);
+        } else if (el.element_type === 'hourly' && el.hourly_rate_gbp && (el.applies_to_role === 'all' || el.applies_to_role === payRole)) {
+          computedBasePay += baseHoursForFallback * Number(el.hourly_rate_gbp);
+        }
+      }
+      if (activePolicy?.ssp_override_enabled && activePolicy.ssp_override_weekly_rate_gbp != null) {
+        ssp = Number(activePolicy.ssp_override_weekly_rate_gbp);
+      }
+      const projectedGross = manualOverride ? Number(manualOverride.amount_gbp ?? 0) : computedBasePay + ssp + adjustment;
+      let payFrequency = payFrequencyMap[userId] ?? 'weekly';
+      if (contractType === 'full_time') payFrequency = 'monthly';
+      if (contractType === 'part_time' && payFrequency === 'monthly') payFrequency = 'weekly';
+      if (payFrequency === 'four_weekly' && activePolicy && !activePolicy.allow_bi_weekly) payFrequency = 'weekly';
       return {
         userId,
         name: nameById.get(userId) ?? userId,
@@ -260,11 +382,18 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
         holidayDays: holidayDaysMap.get(key) ?? 0,
         sicknessDays: sicknessDaysMap.get(key) ?? 0,
         overtimeHours,
-        basePay,
+        basePay: computedBasePay,
         ssp,
         adjustments: adjustment,
         projectedGross,
         varianceVsSchedule,
+        reviewStatus: review?.review_status ?? 'pending_manager',
+        reviewMeta: {
+          managerApprovedBy: review?.manager_approved_by ?? null,
+          financeApprovedBy: review?.finance_approved_by ?? null,
+          paidBy: review?.paid_by ?? null,
+        },
+        contractType,
       };
     });
 
@@ -325,6 +454,8 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
         user_id: adjustUserId,
         week_start_date: adjustWeek,
         adjustment_code: 'manual_override',
+        source_type: 'manual_override',
+        request_status: 'pending_finance',
         amount_gbp: amount,
         note: adjustNote.trim() || null,
         is_override: true,
@@ -356,9 +487,114 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
     await load();
   }
 
+  async function savePolicy() {
+    const holidayPct = Number(policyInputs.holidayPct);
+    const sspRate = policyInputs.sspOverrideRate.trim() ? Number(policyInputs.sspOverrideRate) : null;
+    if (!Number.isFinite(holidayPct) || holidayPct < 0) {
+      setErr('Holiday uplift must be a non-negative number.');
+      return;
+    }
+    if (sspRate != null && (!Number.isFinite(sspRate) || sspRate < 0)) {
+      setErr('SSP override rate must be a non-negative number.');
+      return;
+    }
+    const { error } = await supabase.rpc('payroll_policy_settings_upsert', {
+      p_hourly_holiday_pay_percent: holidayPct,
+      p_allow_bi_weekly: policyInputs.allowBiWeekly,
+      p_realtime_enabled: policyInputs.realtimeEnabled,
+      p_require_manager_approval: true,
+      p_require_finance_approval: true,
+      p_ssp_override_enabled: policyInputs.sspOverrideEnabled,
+      p_ssp_override_weekly_rate_gbp: sspRate,
+    });
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    await load();
+  }
+
+  async function savePayElement() {
+    if (!payElementInput.code.trim() || !payElementInput.name.trim() || !payElementInput.effectiveFrom) {
+      setErr('Pay element code, name and effective date are required.');
+      return;
+    }
+    const rate = Number(payElementInput.rate);
+    if (!Number.isFinite(rate) || rate < 0) {
+      setErr('Pay element rate must be a non-negative number.');
+      return;
+    }
+    const payload =
+      payElementInput.type === 'hourly'
+        ? {
+            org_id: orgId,
+            code: payElementInput.code.trim().toLowerCase(),
+            name: payElementInput.name.trim(),
+            emoji: payElementInput.emoji.trim() || null,
+            element_type: 'hourly',
+            applies_to_role: payElementInput.appliesToRole,
+            hourly_rate_gbp: rate,
+            effective_from: payElementInput.effectiveFrom,
+          }
+        : {
+            org_id: orgId,
+            code: payElementInput.code.trim().toLowerCase(),
+            name: payElementInput.name.trim(),
+            emoji: payElementInput.emoji.trim() || null,
+            element_type: 'fixed',
+            applies_to_role: payElementInput.appliesToRole,
+            fixed_amount_gbp: rate,
+            effective_from: payElementInput.effectiveFrom,
+          };
+    const { error } = await supabase.from('payroll_pay_elements').insert(payload);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    setPayElementInput((prev) => ({ ...prev, code: '', name: '', emoji: '', rate: '' }));
+    await load();
+  }
+
+  async function decideReview(row: FinanceRow, decision: 'manager_approve' | 'finance_approve' | 'mark_paid' | 'reject') {
+    const note = actionNote[`${row.userId}:${row.weekStart}`] ?? null;
+    const { error } = await supabase.rpc('payroll_wagesheet_review_decide', {
+      p_user_id: row.userId,
+      p_week_start: row.weekStart,
+      p_decision: decision,
+      p_note: note,
+    });
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    await load();
+  }
+
+  async function decideAdjustment(userId: string, weekStart: string, decision: 'approved' | 'rejected') {
+    const { error } = await supabase
+      .from('payroll_manual_adjustments')
+      .update({
+        request_status: decision,
+        approved_at: new Date().toISOString(),
+        approval_note: actionNote[`${userId}:${weekStart}`] ?? null,
+      })
+      .eq('org_id', orgId)
+      .eq('user_id', userId)
+      .eq('week_start_date', weekStart)
+      .eq('adjustment_code', 'manual_override');
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    await load();
+  }
+
   function exportCsv() {
     const header = [
       'employee',
+      'pay_frequency',
+      'contract_type',
+      'review_status',
       'week_start',
       'actual_hours',
       'scheduled_hours',
@@ -375,6 +611,9 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
     const body = rows.map((r) =>
       [
         r.name,
+        r.payFrequency,
+        r.contractType,
+        r.reviewStatus,
         r.weekStart,
         r.actualHours.toFixed(2),
         r.scheduledHours.toFixed(2),
@@ -569,7 +808,66 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
         </section>
       ) : null}
 
-      {canManage ? (
+      {canManagePolicy ? (
+        <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-6">
+          <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Payroll policy</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <label className="text-[12px] font-semibold text-[#6b6b6b]">
+              Hourly holiday uplift %
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={policyInputs.holidayPct}
+                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, holidayPct: e.target.value }))}
+                className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]"
+              />
+            </label>
+            <label className="text-[12px] font-semibold text-[#6b6b6b]">
+              SSP override weekly rate
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={policyInputs.sspOverrideRate}
+                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, sspOverrideRate: e.target.value }))}
+                placeholder="Optional"
+                className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
+              <input
+                type="checkbox"
+                checked={policyInputs.allowBiWeekly}
+                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, allowBiWeekly: e.target.checked }))}
+              />
+              Allow bi-weekly pay cycle
+            </label>
+            <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
+              <input
+                type="checkbox"
+                checked={policyInputs.realtimeEnabled}
+                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, realtimeEnabled: e.target.checked }))}
+              />
+              Auto realtime refresh
+            </label>
+            <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
+              <input
+                type="checkbox"
+                checked={policyInputs.sspOverrideEnabled}
+                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, sspOverrideEnabled: e.target.checked }))}
+              />
+              Enable SSP override policy
+            </label>
+          </div>
+          <button type="button" onClick={() => void savePolicy()} className="mt-3 w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
+            Save policy
+          </button>
+          {policy ? <p className="mt-2 text-[12px] text-[#6b6b6b]">Current policy is active for calculation and exports.</p> : null}
+        </section>
+      ) : null}
+
+      {canManagePayElements ? (
         <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-6">
           <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pay elements</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -616,6 +914,88 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
             </button>
           </div>
           <p className="mt-2 text-[12px] text-[#6b6b6b]">Rate versions are timestamped by effective date, so historical periods remain intact.</p>
+
+          <div className="mt-5 grid gap-3 rounded-xl border border-[#eee] p-4 sm:grid-cols-2 lg:grid-cols-6">
+            <input
+              placeholder="Code (e.g. bike_repair)"
+              value={payElementInput.code}
+              onChange={(e) => setPayElementInput((prev) => ({ ...prev, code: e.target.value }))}
+              className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+            />
+            <input
+              placeholder="Name"
+              value={payElementInput.name}
+              onChange={(e) => setPayElementInput((prev) => ({ ...prev, name: e.target.value }))}
+              className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+            />
+            <input
+              placeholder="Emoji (optional)"
+              value={payElementInput.emoji}
+              onChange={(e) => setPayElementInput((prev) => ({ ...prev, emoji: e.target.value }))}
+              className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+            />
+            <select
+              value={payElementInput.type}
+              onChange={(e) => setPayElementInput((prev) => ({ ...prev, type: e.target.value as 'hourly' | 'fixed' }))}
+              className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            >
+              <option value="hourly">Hourly</option>
+              <option value="fixed">Fixed</option>
+            </select>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Rate/amount"
+              value={payElementInput.rate}
+              onChange={(e) => setPayElementInput((prev) => ({ ...prev, rate: e.target.value }))}
+              className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+            />
+            <input
+              type="date"
+              value={payElementInput.effectiveFrom}
+              onChange={(e) => setPayElementInput((prev) => ({ ...prev, effectiveFrom: e.target.value }))}
+              className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
+            />
+            <select
+              value={payElementInput.appliesToRole}
+              onChange={(e) => setPayElementInput((prev) => ({ ...prev, appliesToRole: e.target.value as 'all' | 'csa' | 'dm' | 'custom' }))}
+              className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+            >
+              <option value="all">All roles</option>
+              <option value="csa">CSA</option>
+              <option value="dm">DM</option>
+              <option value="custom">Custom skill</option>
+            </select>
+            <button type="button" onClick={() => void savePayElement()} className="rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white">
+              Add pay element
+            </button>
+          </div>
+          <div className="mt-3 overflow-x-auto rounded-xl border border-[#eee]">
+            <table className="w-full min-w-[680px] text-left text-[12px]">
+              <thead className="bg-[#faf9f6] text-[11px] uppercase tracking-wide text-[#9b9b9b]">
+                <tr>
+                  <th className="px-3 py-2">Element</th>
+                  <th className="px-3 py-2">Code</th>
+                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2">Role scope</th>
+                  <th className="px-3 py-2">Rate</th>
+                  <th className="px-3 py-2">Effective</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payElements.slice(0, 20).map((el) => (
+                  <tr key={el.id} className="border-t border-[#f0f0f0]">
+                    <td className="px-3 py-2">{el.emoji ? `${el.emoji} ` : ''}{el.name}</td>
+                    <td className="px-3 py-2 font-mono">{el.code}</td>
+                    <td className="px-3 py-2">{el.element_type}</td>
+                    <td className="px-3 py-2">{el.applies_to_role ?? 'all'}</td>
+                    <td className="px-3 py-2">£{Number(el.hourly_rate_gbp ?? el.fixed_amount_gbp ?? 0).toFixed(2)}</td>
+                    <td className="px-3 py-2">{el.effective_from}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ) : null}
 
@@ -668,6 +1048,7 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
                     <div>
                       <p className="text-[14px] font-semibold text-[#121212]">{r.name}</p>
                       <p className="mt-1 text-[12px] text-[#6b6b6b]">{r.weekStart}</p>
+                      <p className="mt-1 text-[11px] uppercase tracking-wide text-[#9b9b9b]">{r.reviewStatus.replace('_', ' ')}</p>
                     </div>
                     {canManage ? (
                       <select
@@ -719,6 +1100,30 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
                   <p className="mt-3 border-t border-[#f0f0f0] pt-2 text-[13px] font-semibold tabular-nums text-[#121212]">
                     Projected gross: £{r.projectedGross.toFixed(2)}
                   </p>
+                  {canFinanceApprove ? (
+                    <div className="mt-3 space-y-2">
+                      <input
+                        placeholder="Approval note / payment reference"
+                        value={actionNote[`${r.userId}:${r.weekStart}`] ?? ''}
+                        onChange={(e) => setActionNote((prev) => ({ ...prev, [`${r.userId}:${r.weekStart}`]: e.target.value }))}
+                        className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px]"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => void decideReview(r, 'manager_approve')} className="rounded-lg border border-[#d8d8d8] px-2 py-1 text-[11px]">
+                          Manager approve
+                        </button>
+                        <button type="button" onClick={() => void decideReview(r, 'finance_approve')} className="rounded-lg border border-[#d8d8d8] px-2 py-1 text-[11px]">
+                          Finance approve
+                        </button>
+                        <button type="button" onClick={() => void decideReview(r, 'mark_paid')} className="rounded-lg bg-[#121212] px-2 py-1 text-[11px] text-white">
+                          Mark paid
+                        </button>
+                        <button type="button" onClick={() => void decideReview(r, 'reject')} className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-900">
+                          Send back
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </article>
               );
             })
@@ -732,6 +1137,7 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
                 <th className="px-3 py-2">Employee</th>
                 <th className="px-3 py-2">Pay freq</th>
                 <th className="px-3 py-2">Pay role</th>
+                <th className="px-3 py-2">Review</th>
                 <th className="px-3 py-2">Week</th>
                 <th className="px-3 py-2">Actual hrs</th>
                 <th className="px-3 py-2">Scheduled hrs</th>
@@ -742,12 +1148,13 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
                 <th className="px-3 py-2">SSP</th>
                 <th className="px-3 py-2">Manual adj</th>
                 <th className="px-3 py-2">Projected gross</th>
+                {canFinanceApprove ? <th className="px-3 py-2">Actions</th> : null}
               </tr>
             </thead>
             <tbody>
               {visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-3 py-6 text-center text-[#6b6b6b]">
+                  <td colSpan={canFinanceApprove ? 15 : 14} className="px-3 py-6 text-center text-[#6b6b6b]">
                     No finance rows yet. Approve timesheets or clear week filter.
                   </td>
                 </tr>
@@ -772,6 +1179,7 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
                           <span className="uppercase">{role}</span>
                         )}
                       </td>
+                      <td className="px-3 py-2 capitalize">{r.reviewStatus.replace('_', ' ')}</td>
                       <td className="px-3 py-2">{r.weekStart}</td>
                       <td className="px-3 py-2 tabular-nums">{r.actualHours.toFixed(2)}</td>
                       <td className="px-3 py-2 tabular-nums">{r.scheduledHours.toFixed(2)}</td>
@@ -782,6 +1190,38 @@ export function FinanceHubClient({ orgId, canManage }: { orgId: string; canManag
                       <td className="px-3 py-2 tabular-nums">£{r.ssp.toFixed(2)}</td>
                       <td className="px-3 py-2 tabular-nums">£{r.adjustments.toFixed(2)}</td>
                       <td className="px-3 py-2 font-medium tabular-nums">£{r.projectedGross.toFixed(2)}</td>
+                      {canFinanceApprove ? (
+                        <td className="px-3 py-2">
+                          <div className="flex min-w-[220px] flex-col gap-1">
+                            <input
+                              placeholder="Note / payment ref"
+                              value={actionNote[`${r.userId}:${r.weekStart}`] ?? ''}
+                              onChange={(e) => setActionNote((prev) => ({ ...prev, [`${r.userId}:${r.weekStart}`]: e.target.value }))}
+                              className="rounded border border-[#d8d8d8] px-2 py-1 text-[11px]"
+                            />
+                            <div className="flex flex-wrap gap-1">
+                              <button type="button" onClick={() => void decideReview(r, 'manager_approve')} className="rounded border border-[#d8d8d8] px-2 py-1 text-[11px]">
+                                Manager
+                              </button>
+                              <button type="button" onClick={() => void decideReview(r, 'finance_approve')} className="rounded border border-[#d8d8d8] px-2 py-1 text-[11px]">
+                                Finance
+                              </button>
+                              <button type="button" onClick={() => void decideReview(r, 'mark_paid')} className="rounded bg-[#121212] px-2 py-1 text-[11px] text-white">
+                                Paid
+                              </button>
+                              <button type="button" onClick={() => void decideReview(r, 'reject')} className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-900">
+                                Reject
+                              </button>
+                              <button type="button" onClick={() => void decideAdjustment(r.userId, r.weekStart, 'approved')} className="rounded border border-[#d8d8d8] px-2 py-1 text-[11px]">
+                                Approve adj
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-[#9b9b9b]">
+                              Mgr: {r.reviewMeta.managerApprovedBy ? r.reviewMeta.managerApprovedBy.slice(0, 8) : '—'} · Fin: {r.reviewMeta.financeApprovedBy ? r.reviewMeta.financeApprovedBy.slice(0, 8) : '—'} · Pay: {r.reviewMeta.paidBy ? r.reviewMeta.paidBy.slice(0, 8) : '—'}
+                            </p>
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })

@@ -14,8 +14,13 @@ export default async function HrFinancePage() {
 
   const orgId = profile.org_id as string;
   const permissionKeys = await getMyPermissions(orgId);
+  const permissionKeyStrings = permissionKeys as unknown as string[];
   const canView = permissionKeys.includes('payroll.view') || permissionKeys.includes('payroll.manage');
   if (!canView) redirect('/hr/records');
+  const canManage = permissionKeys.includes('payroll.manage');
+  const canFinanceApprove = permissionKeyStrings.includes('payroll.finance_approve') || canManage;
+  const canManagePolicy = permissionKeyStrings.includes('payroll.policy.manage') || canManage;
+  const canManagePayElements = permissionKeyStrings.includes('payroll.pay_elements.manage') || canManage;
 
   return (
     <div className="mx-auto max-w-[90rem] px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
@@ -24,7 +29,13 @@ export default async function HrFinancePage() {
         Wage sheets with rota, attendance, leave, SSP and manual override controls for payroll review.
       </p>
       <div className="mt-8">
-        <FinanceHubClient orgId={orgId} canManage={permissionKeys.includes('payroll.manage')} />
+        <FinanceHubClient
+          orgId={orgId}
+          canManage={canManage}
+          canFinanceApprove={canFinanceApprove}
+          canManagePolicy={canManagePolicy}
+          canManagePayElements={canManagePayElements}
+        />
       </div>
     </div>
   );

@@ -81,10 +81,24 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       .from('user_org_memberships')
       .select('org_id, organisations(name, slug)');
 
+    const { data: prof } = await supabase.from('profiles').select('org_id').eq('id', uid).maybeSingle();
+
+    async function resolveProfileOrgSlug(orgId: string | null | undefined): Promise<string | undefined> {
+      if (!orgId) return undefined;
+      const { data: org } = await supabase
+        .from('organisations')
+        .select('slug')
+        .eq('id', orgId)
+        .maybeSingle();
+      const slug = (org?.slug as string | undefined)?.trim();
+      return slug || undefined;
+    }
+
     if (memErr || !memRows?.length) {
+      const fallbackSlug = await resolveProfileOrgSlug(prof?.org_id);
       setLoading(false);
       setSigningIn(true);
-      redirectToMemberApp();
+      redirectToMemberApp(fallbackSlug);
       return;
     }
 
@@ -100,7 +114,6 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       .sort((a, b) => a.name.localeCompare(b.name));
 
     if (orgs.length === 1) {
-      const { data: prof } = await supabase.from('profiles').select('org_id').eq('id', uid).maybeSingle();
       if (!prof?.org_id || prof.org_id !== orgs[0]!.org_id) {
         await supabase.rpc('set_my_active_org', { p_org_id: orgs[0]!.org_id });
       }
@@ -110,7 +123,6 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       return;
     }
 
-    const { data: prof } = await supabase.from('profiles').select('org_id').eq('id', uid).maybeSingle();
     const activeOk = Boolean(prof?.org_id && orgs.some((o) => o.org_id === prof.org_id));
     if (activeOk) {
       const activeOrg = orgs.find((o) => o.org_id === prof?.org_id);
