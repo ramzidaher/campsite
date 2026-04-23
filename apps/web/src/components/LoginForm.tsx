@@ -25,10 +25,24 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
     return path;
   }
 
-  function redirectToMemberApp(orgSlug?: string) {
+  async function redirectToMemberApp(orgSlug?: string) {
     const safeNext = safeNextPath(next);
     if (orgSlug && !tenantHostMatchesOrg(orgSlug, window.location.host)) {
-      const target = `https://${orgSlug}.${getTenantRootDomain()}${safeNext}`;
+      const supabase = createClient();
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      const refreshToken = data.session?.refresh_token;
+      let target = `https://${orgSlug}.${getTenantRootDomain()}${safeNext}`;
+      if (accessToken && refreshToken) {
+        const callbackUrl = new URL('/auth/callback', `https://${orgSlug}.${getTenantRootDomain()}`);
+        callbackUrl.searchParams.set('next', safeNext);
+        callbackUrl.hash = new URLSearchParams({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          type: 'magiclink',
+        }).toString();
+        target = callbackUrl.toString();
+      }
       window.location.assign(target);
       return;
     }
@@ -73,7 +87,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
     if (!uid) {
       setLoading(false);
       setSigningIn(true);
-      redirectToMemberApp();
+      void redirectToMemberApp();
       return;
     }
 
@@ -98,7 +112,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       const fallbackSlug = await resolveProfileOrgSlug(prof?.org_id);
       setLoading(false);
       setSigningIn(true);
-      redirectToMemberApp(fallbackSlug);
+      void redirectToMemberApp(fallbackSlug);
       return;
     }
 
@@ -119,7 +133,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       }
       setLoading(false);
       setSigningIn(true);
-      redirectToMemberApp(orgs[0]!.slug || undefined);
+      void redirectToMemberApp(orgs[0]!.slug || undefined);
       return;
     }
 
@@ -128,7 +142,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       const activeOrg = orgs.find((o) => o.org_id === prof?.org_id);
       setLoading(false);
       setSigningIn(true);
-      redirectToMemberApp(activeOrg?.slug || undefined);
+      void redirectToMemberApp(activeOrg?.slug || undefined);
       return;
     }
 

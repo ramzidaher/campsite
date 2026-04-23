@@ -31,10 +31,25 @@ export function LoginOrgChoiceModal({ open, orgs, nextPath, onClose }: Props) {
     return path;
   }
 
-  function navigateToSelectedOrg(slug: string) {
+  async function navigateToSelectedOrg(slug: string) {
     const safeNext = safeNextPath(nextPath || '/');
     if (slug && !tenantHostMatchesOrg(slug, window.location.host)) {
-      window.location.assign(`https://${slug}.${getTenantRootDomain()}${safeNext}`);
+      const supabase = createClient();
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      const refreshToken = data.session?.refresh_token;
+      let target = `https://${slug}.${getTenantRootDomain()}${safeNext}`;
+      if (accessToken && refreshToken) {
+        const callbackUrl = new URL('/auth/callback', `https://${slug}.${getTenantRootDomain()}`);
+        callbackUrl.searchParams.set('next', safeNext);
+        callbackUrl.hash = new URLSearchParams({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          type: 'magiclink',
+        }).toString();
+        target = callbackUrl.toString();
+      }
+      window.location.assign(target);
       return;
     }
     router.replace(safeNext);
@@ -54,7 +69,7 @@ export function LoginOrgChoiceModal({ open, orgs, nextPath, onClose }: Props) {
     setLoadingId(null);
     onClose();
     const selected = orgs.find((o) => o.org_id === orgId);
-    navigateToSelectedOrg(selected?.slug || '');
+    void navigateToSelectedOrg(selected?.slug || '');
   }
 
   return (
