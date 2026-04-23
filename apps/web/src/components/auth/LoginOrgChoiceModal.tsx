@@ -3,8 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { tenantHostMatchesOrg } from '@/lib/tenant/adminUrl';
-import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
+import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
 
 export type LoginOrgOption = {
   org_id: string;
@@ -38,9 +37,10 @@ export function LoginOrgChoiceModal({ open, orgs, nextPath, onClose }: Props) {
       const { data } = await supabase.auth.getSession();
       const accessToken = data.session?.access_token;
       const refreshToken = data.session?.refresh_token;
-      let target = `https://${slug}.${getTenantRootDomain()}${safeNext}`;
+      const orgOrigin = tenantSubdomainOriginForHost(slug, window.location.host);
+      let target = `${orgOrigin}${safeNext}`;
       if (accessToken && refreshToken) {
-        const callbackUrl = new URL('/auth/callback', `https://${slug}.${getTenantRootDomain()}`);
+        const callbackUrl = new URL('/auth/callback', orgOrigin);
         callbackUrl.searchParams.set('next', safeNext);
         callbackUrl.hash = new URLSearchParams({
           access_token: accessToken,

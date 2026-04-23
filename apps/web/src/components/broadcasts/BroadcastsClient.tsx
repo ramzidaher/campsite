@@ -342,7 +342,7 @@ export function BroadcastsClient({
 
   const workspaceToolbar =
     composeAllowed ? (
-      <div className="border-b border-[#e8e8e8] bg-[#faf9f6] py-3">
+      <div className="border-b border-[#e8e8e8] py-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative shrink-0">
             <select
@@ -389,7 +389,7 @@ export function BroadcastsClient({
     ) : null;
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
+    <div className="w-full px-5 py-8 sm:px-7">
       {/* Page header — match Time off / main workspace pages */}
       <div className="mb-7">
         <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
@@ -410,7 +410,7 @@ export function BroadcastsClient({
 
       {!composeOpen && workspaceView === 'feed' ? (
         <>
-          <div className="flex flex-wrap items-center justify-end gap-3 border-b border-[#e8e8e8] bg-[#faf9f6] py-3">
+          <div className="flex flex-wrap items-center justify-end gap-3 border-b border-[#e8e8e8] py-3">
             <button
               type="button"
               className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
@@ -437,10 +437,10 @@ export function BroadcastsClient({
             ) : null}
           </div>
 
-          <div className="border-b border-[#e8e8e8] bg-[#faf9f6] py-3">
+          <div className="border-b border-[#e8e8e8] py-3">
             <div className="flex flex-wrap items-center gap-2.5">
               {composeAllowed ? (
-                <div className="relative shrink-0">
+                <div className="relative min-w-[220px] flex-[1_1_220px] sm:flex-[0_0_auto]">
                   <select
                     value={workspaceView}
                     onChange={(e) => goWorkspace(e.target.value as WorkspaceView)}
@@ -464,7 +464,7 @@ export function BroadcastsClient({
                   </span>
                 </div>
               ) : null}
-              <div className="relative min-w-[240px] flex-1 max-w-md">
+              <div className="relative min-w-[240px] flex-[2_1_360px]">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9b9b9b]">
                   🔍
                 </span>
@@ -473,70 +473,72 @@ export function BroadcastsClient({
                   placeholder="Search broadcasts..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+                  className="h-9 w-full rounded-xl border border-[#e8e8e8] bg-white py-2 pl-9 pr-3 text-[13px] text-[#121212] outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
                 />
               </div>
-              <div className="relative shrink-0">
-                <select
-                  value={feedDepartmentId}
-                  onChange={(e) => setFeedDepartmentId(e.target.value)}
-                  disabled={feedDeptsSorted.length === 0}
-                  className="h-9 min-w-[168px] max-w-[min(100%,240px)] appearance-none truncate rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10 disabled:cursor-not-allowed disabled:opacity-60"
-                  aria-label="Department"
-                >
-                  <option value="">All departments</option>
-                  {feedDeptsSorted.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
-                >
-                  ▾
-                </span>
-              </div>
-              <div className="relative">
-                <select
-                  value={advancedFilter}
-                  onChange={(e) => setAdvancedFilter(e.target.value as AdvancedFeedFilter)}
-                  className="h-9 appearance-none rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
-                  aria-label="Filter broadcasts"
-                >
-                  <option value="all">All broadcasts</option>
-                  <option value="unread_only">Unread only</option>
-                  <option value="my_departments">My departments</option>
-                  <option value="pinned">Pinned only</option>
-                  <option value="mandatory">Mandatory only</option>
-                  <option value="org_wide">Org-wide only</option>
-                </select>
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
-                >
-                  ▾
-                </span>
-              </div>
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as BroadcastSort)}
-                  className="h-9 appearance-none rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
-                  aria-label="Sort broadcasts"
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                  <option value="title_asc">Title A-Z</option>
-                  <option value="title_desc">Title Z-A</option>
-                </select>
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
-                >
-                  ▾
-                </span>
+              <div className="flex min-w-[220px] flex-[1_1_520px] flex-wrap items-center gap-2.5">
+                <div className="relative min-w-[170px] flex-[1_1_180px]">
+                  <select
+                    value={feedDepartmentId}
+                    onChange={(e) => setFeedDepartmentId(e.target.value)}
+                    disabled={feedDeptsSorted.length === 0}
+                    className="h-9 w-full appearance-none truncate rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label="Department"
+                  >
+                    <option value="">All departments</option>
+                    {feedDeptsSorted.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
+                  >
+                    ▾
+                  </span>
+                </div>
+                <div className="relative min-w-[170px] flex-[1_1_180px]">
+                  <select
+                    value={advancedFilter}
+                    onChange={(e) => setAdvancedFilter(e.target.value as AdvancedFeedFilter)}
+                    className="h-9 w-full appearance-none rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+                    aria-label="Filter broadcasts"
+                  >
+                    <option value="all">All broadcasts</option>
+                    <option value="unread_only">Unread only</option>
+                    <option value="my_departments">My departments</option>
+                    <option value="pinned">Pinned only</option>
+                    <option value="mandatory">Mandatory only</option>
+                    <option value="org_wide">Org-wide only</option>
+                  </select>
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
+                  >
+                    ▾
+                  </span>
+                </div>
+                <div className="relative min-w-[170px] flex-[1_1_180px]">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as BroadcastSort)}
+                    className="h-9 w-full appearance-none rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+                    aria-label="Sort broadcasts"
+                  >
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="title_asc">Title A-Z</option>
+                    <option value="title_desc">Title Z-A</option>
+                  </select>
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
+                  >
+                    ▾
+                  </span>
+                </div>
               </div>
               <ExperienceLensBar
                 ariaLabel="Broadcast feed layout"
@@ -662,7 +664,7 @@ export function BroadcastsClient({
       {!composeOpen && workspaceView === 'scheduled' && showScheduledTab ? (
         <>
           {workspaceToolbar}
-          <div className="space-y-4 px-5 py-6 sm:px-[28px]">
+          <div className="space-y-4 py-6">
             <DraftsScheduledList supabase={supabase} userId={profile.id} mode="scheduled" />
           </div>
         </>

@@ -7,8 +7,7 @@ import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { LoginOrgChoiceModal } from '@/components/auth/LoginOrgChoiceModal';
 import { AppLoaderOverlay } from '@/components/AppLoaderOverlay';
 import { createClient } from '@/lib/supabase/client';
-import { tenantHostMatchesOrg } from '@/lib/tenant/adminUrl';
-import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
+import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
 
 type Props = {
   /** From server `searchParams` - avoids `useSearchParams` + Suspense on the login page. */
@@ -32,9 +31,10 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       const { data } = await supabase.auth.getSession();
       const accessToken = data.session?.access_token;
       const refreshToken = data.session?.refresh_token;
-      let target = `https://${orgSlug}.${getTenantRootDomain()}${safeNext}`;
+      const orgOrigin = tenantSubdomainOriginForHost(orgSlug, window.location.host);
+      let target = `${orgOrigin}${safeNext}`;
       if (accessToken && refreshToken) {
-        const callbackUrl = new URL('/auth/callback', `https://${orgSlug}.${getTenantRootDomain()}`);
+        const callbackUrl = new URL('/auth/callback', orgOrigin);
         callbackUrl.searchParams.set('next', safeNext);
         callbackUrl.hash = new URLSearchParams({
           access_token: accessToken,

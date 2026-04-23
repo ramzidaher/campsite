@@ -4,6 +4,7 @@ import { MainProviders } from '@/components/providers/MainProviders';
 import { ThemeRoot } from '@/components/ThemeRoot';
 import {
   getMainShellAdminNavItemsByPermissions,
+  getMainShellFinanceNavItemsByPermissions,
   getMainShellHrNavItemsByPermissions,
   getMainShellManagerNavItemsByPermissions,
   getMainShellManagerNavSectionLabel,
@@ -132,6 +133,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     permissionKeys.includes('leave.view_own') ||
     permissionKeys.includes('leave.approve_direct_reports') ||
     permissionKeys.includes('leave.manage_org');
+  const showAttendanceNav = hasTenantProfile;
   const showMyHrRecordNav = permissionKeys.includes('hr.view_own');
   const showOneOnOneNav =
     permissionKeys.includes('one_on_one.view_own') || permissionKeys.includes('hr.view_records');
@@ -156,6 +158,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const adminNavItemsRaw = getMainShellAdminNavItemsByPermissions(permissionKeys);
   const hrNavItemsRaw    = getMainShellHrNavItemsByPermissions(permissionKeys);
+  const financeNavItemsRaw = getMainShellFinanceNavItemsByPermissions(permissionKeys);
 
   const mapHrBadges = <T extends { href: string }>(items: T[] | null) =>
     items?.map((item) => {
@@ -170,6 +173,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const adminNavItems = mapHrBadges(adminNavItemsRaw);
   const hrNavItems    = mapHrBadges(hrNavItemsRaw);
+  const financeNavItems = mapHrBadges(financeNavItemsRaw);
 
   const showStandaloneApprovals =
     permissionKeys.includes('approvals.members.review') && !hasAdminAreaAccess && !managerNavItems;
@@ -282,9 +286,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             managerNavItems && profileRole ? getMainShellManagerNavSectionLabel(profileRole) : 'Manager'
           }
           hrNavItems={hrNavItems}
+          financeNavItems={financeNavItems}
           adminNavItems={adminNavItems}
           showStandaloneApprovals={showStandaloneApprovals}
           showLeaveNav={showLeaveNav}
+          showAttendanceNav={showAttendanceNav}
           leaveNavBadge={leaveNavBadge}
           showPerformanceNav={showPerformanceNav}
           performanceNavBadge={performanceNavBadge}

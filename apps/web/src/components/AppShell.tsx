@@ -31,6 +31,7 @@ import { isApproverRole } from '@campsite/types';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
 const MANAGER_NAV_EXPANDED_KEY = 'campsite_nav_manager_expanded';
+const FINANCE_NAV_EXPANDED_KEY = 'campsite_nav_finance_expanded';
 const HR_NAV_EXPANDED_KEY = 'campsite_nav_hr_expanded';
 const SHELL_MODE_STORAGE_KEY = 'campsite_shell_mode';
 const SHELL_MODE_AUTO_STORAGE_KEY = 'campsite_shell_mode_auto_enabled';
@@ -140,6 +141,7 @@ export function AppShell({
   recruitmentPendingReviewCount = 0,
   topBarNotifications,
   showLeaveNav = false,
+  showAttendanceNav = false,
   leaveNavBadge = 0,
   showPerformanceNav = false,
   performanceNavBadge = 0,
@@ -150,6 +152,7 @@ export function AppShell({
   orgId = null,
   managerNavItems = null,
   managerNavSectionLabel = 'Manager',
+  financeNavItems = null,
   hrNavItems = null,
   adminNavItems = null,
   showStandaloneApprovals = true,
@@ -183,6 +186,7 @@ export function AppShell({
   recruitmentPendingReviewCount?: number;
   topBarNotifications: TopBarNotificationItem[];
   showLeaveNav?: boolean;
+  showAttendanceNav?: boolean;
   leaveNavBadge?: number;
   showPerformanceNav?: boolean;
   /** Pending manager assessments count badge on the performance nav link. */
@@ -197,6 +201,8 @@ export function AppShell({
   managerNavItems?: MainShellAdminNavItem[] | null;
   /** Sidebar group title (e.g. “Department” for coordinators). */
   managerNavSectionLabel?: string;
+  /** Collapsible Finance links (separate from HR and Admin). */
+  financeNavItems?: MainShellAdminNavItem[] | null;
   /** Collapsible HR links (separate from Admin and Manager). */
   hrNavItems?: MainShellAdminNavItem[] | null;
   adminNavItems?: MainShellAdminNavItem[] | null;
@@ -212,6 +218,7 @@ export function AppShell({
   const [mobileNav, setMobileNav] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
   const [managerNavExpanded, setManagerNavExpanded] = useState(true);
+  const [financeNavExpanded, setFinanceNavExpanded] = useState(true);
   const [hrNavExpanded, setHrNavExpanded] = useState(true);
   const [shellMode, setShellMode] = useState<CelebrationMode>(initialCelebrationMode);
   const [shellModeAutoEnabled, setShellModeAutoEnabled] = useState<boolean>(initialCelebrationAutoEnabled);
@@ -288,6 +295,9 @@ export function AppShell({
       const hr = localStorage.getItem(HR_NAV_EXPANDED_KEY);
       if (hr === '0') setHrNavExpanded(false);
       else if (hr === '1') setHrNavExpanded(true);
+      const fin = localStorage.getItem(FINANCE_NAV_EXPANDED_KEY);
+      if (fin === '0') setFinanceNavExpanded(false);
+      else if (fin === '1') setFinanceNavExpanded(true);
       const savedMode = localStorage.getItem(SHELL_MODE_STORAGE_KEY);
       const legacyPride = localStorage.getItem(LEGACY_PRIDE_MODE_STORAGE_KEY) === '1';
       if (savedMode) setShellMode(normalizeCelebrationMode(savedMode));
@@ -388,12 +398,14 @@ export function AppShell({
         orgName,
         showMyHrRecordNav,
         showLeaveNav,
+        showAttendanceNav,
         showPerformanceNav,
         showOneOnOneNav,
         showOnboardingNav: liveShowOnboardingNav,
         showApprovalsStandalone: showApprovals && showStandaloneApprovals,
         managerNavSectionLabel,
         managerNavItems,
+        financeNavItems,
         hrNavItems,
         adminNavItems,
       }),
@@ -401,6 +413,7 @@ export function AppShell({
       orgName,
       showMyHrRecordNav,
       showLeaveNav,
+      showAttendanceNav,
       showPerformanceNav,
       showOneOnOneNav,
       liveShowOnboardingNav,
@@ -408,6 +421,7 @@ export function AppShell({
       showStandaloneApprovals,
       managerNavSectionLabel,
       managerNavItems,
+      financeNavItems,
       hrNavItems,
       adminNavItems,
     ],
@@ -528,6 +542,9 @@ export function AppShell({
                 onNavigate={closeMobile}
               />
             ) : null}
+            {showAttendanceNav ? (
+              <NavLink href="/attendance" icon="attendance" label="Attendance" onNavigate={closeMobile} />
+            ) : null}
             {showPerformanceNav ? (
               <NavLink
                 href="/performance"
@@ -552,6 +569,7 @@ export function AppShell({
           </div>
 
           {(managerNavItems && managerNavItems.length > 0) ||
+            (financeNavItems && financeNavItems.length > 0) ||
             (hrNavItems && hrNavItems.length > 0) ||
             (adminNavItems && adminNavItems.length > 0) ? (
             <div className="mt-3 mb-1 px-2">
@@ -592,6 +610,7 @@ export function AppShell({
                     return next;
                   });
                   setManagerNavExpanded(false);
+                  setFinanceNavExpanded(false);
                   setHrNavExpanded(false);
                 }}
               >
@@ -695,6 +714,7 @@ export function AppShell({
                       if (next) {
                         localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, '0');
                         localStorage.setItem(HR_NAV_EXPANDED_KEY, '0');
+                        localStorage.setItem(FINANCE_NAV_EXPANDED_KEY, '0');
                       }
                     } catch {
                       /* ignore */
@@ -702,6 +722,7 @@ export function AppShell({
                     return next;
                   });
                   setAdminNavExpanded(false);
+                  setFinanceNavExpanded(false);
                   setHrNavExpanded(false);
                 }}
               >
@@ -782,6 +803,118 @@ export function AppShell({
             </div>
           ) : null}
 
+          {financeNavItems && financeNavItems.length > 0 ? (
+            <div
+              className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
+              style={{ order: 15 }}
+            >
+              <button
+                type="button"
+                className={[
+                  'flex w-full items-center gap-2 rounded-[14px] border px-3 py-3 text-left text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-colors',
+                  'border-[#2d5b44] bg-[#173426] text-[#9ae8c2] hover:bg-[#1d422f]',
+                ].join(' ')}
+                aria-expanded={financeNavExpanded}
+                aria-controls="finance-shell-nav-items"
+                id="finance-shell-nav-trigger"
+                onClick={() => {
+                  setFinanceNavExpanded((open) => {
+                    const next = !open;
+                    playUiSound(next ? 'folder_open' : 'folder_close');
+                    try {
+                      localStorage.setItem(FINANCE_NAV_EXPANDED_KEY, next ? '1' : '0');
+                      if (next) {
+                        localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, '0');
+                        localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, '0');
+                        localStorage.setItem(HR_NAV_EXPANDED_KEY, '0');
+                      }
+                    } catch {
+                      /* ignore */
+                    }
+                    return next;
+                  });
+                  setAdminNavExpanded(false);
+                  setManagerNavExpanded(false);
+                  setHrNavExpanded(false);
+                }}
+              >
+                <span className="flex w-5 shrink-0 items-center justify-center text-current">
+                  <ShellNavIcon name="financeSection" open={financeNavExpanded} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
+                  Finance
+                </span>
+                <ChevronDown
+                  className={[
+                    'shrink-0 text-[#6dc69b] transition-transform duration-200',
+                    financeNavExpanded ? 'rotate-0' : '-rotate-90',
+                  ].join(' ')}
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </button>
+              <div
+                id="finance-shell-nav-items"
+                role="region"
+                aria-labelledby="finance-shell-nav-trigger"
+                className={[
+                  'grid transition-[grid-template-rows] duration-200 ease-out',
+                  financeNavExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+                ].join(' ')}
+              >
+                <div className="min-h-0 overflow-hidden" inert={!financeNavExpanded ? true : undefined}>
+                  <div className="relative mt-1 space-y-0.5 px-1 pb-1">
+                    {financeNavItems.map((item, idx) => {
+                      const item_ = withLiveBadge(item);
+                      const prev = idx > 0 ? financeNavItems[idx - 1] : undefined;
+                      const showSection =
+                        Boolean(item.section) && (!prev || prev.section !== item.section);
+                      const active = item_.exact
+                        ? pathname === item_.href
+                        : pathname === item_.href || (item_.href !== '/' && pathname.startsWith(`${item_.href}/`));
+                      const isOverview = !item_.section;
+                      return (
+                        <Fragment key={`${item_.href}-${item_.label}`}>
+                          {showSection ? (
+                            <div className="border-t border-white/[0.09] pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#4a8966]">
+                              {item_.section}
+                            </div>
+                          ) : null}
+                          <Link
+                            href={item_.href}
+                            prefetch={false}
+                            onClick={closeMobile}
+                            className={
+                              isOverview
+                                ? [
+                                    'flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[13px] transition-colors',
+                                    active ? 'bg-white/[0.1] text-[#c8f7de]' : 'text-[#a8bbb0] hover:bg-white/[0.06] hover:text-[#c8f7de]',
+                                  ].join(' ')
+                                : [
+                                    'flex items-center gap-2 rounded-[7px] pl-[22px] pr-2.5 py-[5.5px] text-[12.5px] transition-colors',
+                                    active ? 'bg-white/[0.1] text-[#c8f7de]' : 'text-[#a8bbb0] hover:bg-white/[0.05] hover:text-[#c8f7de]',
+                                  ].join(' ')
+                            }
+                          >
+                            {isOverview ? (
+                              <span className="flex w-4 shrink-0 items-center justify-center text-current">
+                                <ShellNavIcon name={item_.icon} />
+                              </span>
+                            ) : (
+                              <span className={['h-[6px] w-[6px] shrink-0 rounded-full bg-[#9ae8c2]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                            )}
+                            <span className="min-w-0 flex-1 truncate">{item_.label}</span>
+                          </Link>
+                        </Fragment>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {hrNavItems && hrNavItems.length > 0 ? (
             <div
               className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
@@ -805,6 +938,7 @@ export function AppShell({
                       if (next) {
                         localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, '0');
                         localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, '0');
+                        localStorage.setItem(FINANCE_NAV_EXPANDED_KEY, '0');
                       }
                     } catch {
                       /* ignore */
@@ -813,6 +947,7 @@ export function AppShell({
                   });
                   setAdminNavExpanded(false);
                   setManagerNavExpanded(false);
+                  setFinanceNavExpanded(false);
                 }}
               >
                 <span className="flex w-5 shrink-0 items-center justify-center text-current">
@@ -994,7 +1129,7 @@ export function AppShell({
           uiMode={uiMode}
           onToggleUiMode={toggleUiMode}
         />
-        <main id="main-content" tabIndex={-1} className="flex-1 overflow-x-hidden overflow-y-auto">
+        <main id="main-content" tabIndex={-1} className="workspace-fluid flex-1 overflow-x-hidden overflow-y-auto">
           {children}
         </main>
       </div>

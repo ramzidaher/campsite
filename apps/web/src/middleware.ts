@@ -6,6 +6,7 @@ import type { NextRequest } from 'next/server';
 import { isAuthPath, isPublicPath } from './lib/middleware/authPaths';
 import { resolveHostRequestContext } from './lib/middleware/resolveHostRequestContext';
 import { getSupabasePublicKey, getSupabaseUrl } from './lib/supabase/env';
+import { getPlatformAdminHost } from './lib/tenant/hostConfig';
 
 export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
@@ -53,6 +54,14 @@ export async function middleware(request: NextRequest) {
   const accountType = (user?.user_metadata?.account_type as string | undefined) ?? '';
   const isAuthEmailReturn =
     pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm');
+
+  if (pathname === '/founders' || pathname.startsWith('/founders/')) {
+    if (!isPlatformAdmin) {
+      const dest = request.nextUrl.clone();
+      dest.host = getPlatformAdminHost();
+      return NextResponse.redirect(dest);
+    }
+  }
 
   if (pathname.startsWith('/platform')) {
     const dest = request.nextUrl.clone();

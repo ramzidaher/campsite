@@ -6,8 +6,8 @@ import { syncRegistrationAvatarToProfileIfEmpty } from '@/lib/auth/completeRegis
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { tenantHostMatchesOrg } from '@/lib/tenant/adminUrl';
-import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
+import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
+import { getPlatformAdminHost, getTenantRootDomain } from '@/lib/tenant/hostConfig';
 
 export default async function SessionChoicePage() {
   const supabase = await createClient();
@@ -46,9 +46,13 @@ export default async function SessionChoicePage() {
   const orgName = (org?.name as string | undefined)?.trim() || 'Your organisation';
   const orgSlug = (org?.slug as string | undefined)?.trim() || '';
   const host = (await headers()).get('host');
+  const founderHqHref =
+    host?.toLowerCase().split(':')[0] === getPlatformAdminHost().toLowerCase()
+      ? '/founders'
+      : `https://${getPlatformAdminHost()}/founders`;
   const memberDashboardHref =
     orgSlug && !tenantHostMatchesOrg(orgSlug, host)
-      ? `https://${orgSlug}.${getTenantRootDomain()}/dashboard`
+      ? `${tenantSubdomainOriginForHost(orgSlug, host)}/dashboard`
       : '/dashboard';
 
   return (
@@ -74,7 +78,7 @@ export default async function SessionChoicePage() {
             <span className="text-[11px] font-normal text-white/75">Member dashboard</span>
           </Link>
           <Link
-            href="/founders"
+            href={founderHqHref}
             className="flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 rounded-[10px] border border-[#d8d8d8] bg-transparent px-4 py-3 text-center text-sm font-medium text-[#121212] no-underline transition-colors hover:bg-[#f5f4f1]"
           >
             <span>Founder HQ</span>

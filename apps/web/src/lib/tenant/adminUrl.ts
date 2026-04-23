@@ -5,6 +5,19 @@ function tenantSubdomainOrigin(orgSlug: string): string {
   return `https://${orgSlug}.${root}`;
 }
 
+/** Canonical tenant origin, preserving localhost dev host/port when applicable. */
+export function tenantSubdomainOriginForHost(orgSlug: string, hostHeader: string | null): string {
+  const host = (hostHeader ?? '').trim();
+  const [hostnameRaw = '', portRaw] = host.split(':');
+  const hostname = hostnameRaw.toLowerCase();
+  const port = portRaw?.trim();
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    const portSuffix = port ? `:${port}` : '';
+    return `http://${orgSlug}.localhost${portSuffix}`;
+  }
+  return tenantSubdomainOrigin(orgSlug);
+}
+
 function isBrowserOnTenantHost(orgSlug: string): boolean {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname.toLowerCase();

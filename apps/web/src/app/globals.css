@@ -191,6 +191,21 @@ html[data-a11y-dim-flashing-lights='1'] video {
   .text-balance {
     text-wrap: balance;
   }
+
+  /*
+   * Main shell pages frequently use `mx-auto max-w-*` as their root wrapper.
+   * Inside the workspace we want those wrappers to fill available width while
+   * preserving each page's existing responsive paddings.
+   */
+  .workspace-fluid > .mx-auto[class*='max-w-'],
+  .workspace-fluid > :where(div,section,main) > .mx-auto[class*='max-w-'],
+  .public-fluid > .mx-auto[class*='max-w-'],
+  .public-fluid > :where(div,section,main) > .mx-auto[class*='max-w-'] {
+    margin-left: 0;
+    margin-right: 0;
+    max-width: none;
+    width: 100%;
+  }
 }
 
 /* App loader animations */

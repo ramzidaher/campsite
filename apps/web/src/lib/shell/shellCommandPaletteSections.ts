@@ -35,6 +35,7 @@ export function buildShellCommandPaletteSections(opts: {
   orgName: string;
   showMyHrRecordNav: boolean;
   showLeaveNav: boolean;
+  showAttendanceNav: boolean;
   showPerformanceNav: boolean;
   showOneOnOneNav: boolean;
   showOnboardingNav: boolean;
@@ -42,6 +43,7 @@ export function buildShellCommandPaletteSections(opts: {
   showApprovalsStandalone: boolean;
   managerNavSectionLabel: string;
   managerNavItems: MainShellAdminNavItem[] | null;
+  financeNavItems: MainShellAdminNavItem[] | null;
   hrNavItems: MainShellAdminNavItem[] | null;
   adminNavItems: MainShellAdminNavItem[] | null;
 }): ShellCommandPaletteSection[] {
@@ -79,6 +81,14 @@ export function buildShellCommandPaletteSections(opts: {
   );
   if (opts.showLeaveNav) {
     main.push({ id: 'nav-leave', label: 'Leave', href: '/leave', keywords: ['time off', 'pto', 'holiday', 'absence'] });
+  }
+  if (opts.showAttendanceNav) {
+    main.push({
+      id: 'nav-attendance',
+      label: 'Attendance',
+      href: '/attendance',
+      keywords: ['clock in', 'clock out', 'timesheet', 'hours'],
+    });
   }
   if (opts.showPerformanceNav) {
     main.push({
@@ -183,6 +193,13 @@ export function buildShellCommandPaletteSections(opts: {
       id: 'hr',
       heading: 'HR',
       items: adminItemsToPalette('hr', opts.hrNavItems, ['hr', 'people'], opts.orgName),
+    });
+  }
+  if (opts.financeNavItems?.length) {
+    sections.push({
+      id: 'finance',
+      heading: 'Finance',
+      items: adminItemsToPalette('fin', opts.financeNavItems, ['finance', 'payroll', 'wagesheets'], opts.orgName),
     });
   }
   if (opts.adminNavItems?.length) {

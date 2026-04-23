@@ -91,6 +91,8 @@ function tone(name: ShellNavIconId, style: ShellIconStyle) {
       return ICON_TONE.lilac;
     case 'managerSection':
       return ICON_TONE.lilac;
+    case 'financeSection':
+      return ICON_TONE.green;
     case 'hrSection':
       return ICON_TONE.sky;
     case 'adminSection':
@@ -251,6 +253,8 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <Briefcase {...p} />;
     case 'managerSection':
       return <SquarePlus {...p} />;
+    case 'financeSection':
+      return <CircleDollarSign {...p} />;
     case 'hrSection':
       return <Star {...p} />;
     case 'adminSection':

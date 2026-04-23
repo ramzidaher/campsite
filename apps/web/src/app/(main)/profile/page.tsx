@@ -23,12 +23,15 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getDisplayName, getProfileInitials } from '@/lib/names';
 import { normalizeUiMode } from '@/lib/uiMode';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { warnIfSlowServerPath } from '@/lib/perf/serverPerf';
 import { withServerPerf } from '@/lib/perf/serverPerf';
 
 const PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS = 1400;
 /** Cap slow HR RPCs so a stuck Supabase query does not block the whole profile response. */
 const PROFILE_HEAVY_RPC_TIMEOUT_MS = 1200;
+/** Cap simple org config lookups to keep profile render responsive under DB pressure. */
+const PROFILE_ORG_CONFIG_TIMEOUT_MS = 900;
 
 async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: unknown): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -78,7 +81,43 @@ export default async function MyProfilePage({
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await withServerPerf(
+  const shellBundle = await getCachedMainShellLayoutBundle().catch(() => null);
+  const shellOrgId =
+    shellBundle && typeof shellBundle.org_id === 'string' ? shellBundle.org_id : null;
+  const shellPermissions = Array.isArray(shellBundle?.permission_keys)
+    ? shellBundle.permission_keys.map((k) => String(k))
+    : null;
+
+  const profileFromShell =
+    shellBundle &&
+    typeof shellBundle.profile_full_name === 'string' &&
+    typeof shellBundle.email === 'string'
+      ? {
+          org_id: shellOrgId,
+          status: 'active',
+          full_name: shellBundle.profile_full_name,
+          preferred_name:
+            typeof shellBundle.profile_preferred_name === 'string'
+              ? shellBundle.profile_preferred_name
+              : null,
+          email: shellBundle.email,
+          avatar_url:
+            typeof shellBundle.profile_avatar_url === 'string'
+              ? shellBundle.profile_avatar_url
+              : null,
+          role:
+            typeof shellBundle.profile_role === 'string'
+              ? shellBundle.profile_role
+              : null,
+          reports_to_user_id: null,
+          ui_mode:
+            typeof shellBundle.ui_mode === 'string' ? shellBundle.ui_mode : null,
+        }
+      : null;
+
+  const { data: profile } = profileFromShell
+    ? { data: profileFromShell }
+    : await withServerPerf(
     '/profile',
     'profile_lookup',
     supabase
@@ -92,7 +131,10 @@ export default async function MyProfilePage({
 
   const orgId = profile.org_id as string;
   // Reuse request-cached permission bundle from layout to avoid many per-page RPC calls.
-  const permissionKeys = await withServerPerf('/profile', 'get_my_permissions', getMyPermissions(orgId), 350);
+  const permissionKeys =
+    shellOrgId === orgId && shellPermissions
+      ? shellPermissions
+      : await withServerPerf('/profile', 'get_my_permissions', getMyPermissions(orgId), 350);
   const canViewOwn = permissionKeys.includes('hr.view_own');
   if (!canViewOwn) redirect('/dashboard');
   const canPerf = permissionKeys.includes('performance.view_own');
@@ -137,17 +179,25 @@ export default async function MyProfilePage({
     withServerPerf(
       '/profile',
       'leave_settings_year',
-      supabase
-        .from('org_leave_settings')
-        .select('leave_year_start_month, leave_year_start_day')
-        .eq('org_id', orgId)
-        .maybeSingle(),
+      resolveWithTimeout(
+        supabase
+          .from('org_leave_settings')
+          .select('leave_year_start_month, leave_year_start_day')
+          .eq('org_id', orgId)
+          .maybeSingle(),
+        PROFILE_ORG_CONFIG_TIMEOUT_MS,
+        { data: null, error: null },
+      ),
       350
     ),
     withServerPerf(
       '/profile',
       'org_timezone_lookup',
-      supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
+      resolveWithTimeout(
+        supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
+        PROFILE_ORG_CONFIG_TIMEOUT_MS,
+        { data: null, error: null },
+      ),
       300
     ),
   ]);

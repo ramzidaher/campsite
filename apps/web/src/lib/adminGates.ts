@@ -76,6 +76,7 @@ export type ShellNavIconId =
   | 'integrations'
   | 'manager'
   | 'managerSection'
+  | 'financeSection'
   | 'hrSection'
   | 'adminSection'
   | 'oneOnOnes'
@@ -344,12 +345,6 @@ export function getMainShellHrNavItemsByPermissions(
     items.push({ href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'Reporting' });
   if (p.includes('leave.view_own'))
     items.push({ href: '/attendance', label: 'Attendance', icon: 'attendance', section: 'Reporting' });
-  if (p.includes('leave.approve_direct_reports') || p.includes('leave.manage_org'))
-    items.push({ href: '/hr/timesheets', label: 'Timesheet review', icon: 'calendar', section: 'Payroll & time' });
-  if (p.includes('payroll.view') || p.includes('payroll.manage'))
-    items.push({ href: '/hr/finance', label: 'Finance', icon: 'dashboard', section: 'Payroll & time' });
-  if (p.includes('payroll.view') || p.includes('payroll.manage'))
-    items.push({ href: '/hr/wagesheets', label: 'Wagesheets', icon: 'payroll', section: 'Payroll & time' });
   if (
     p.includes('privacy.retention_policy.view') ||
     p.includes('privacy.erasure_request.review') ||
@@ -357,8 +352,29 @@ export function getMainShellHrNavItemsByPermissions(
   ) {
     items.push({ href: '/admin/privacy', label: 'Privacy center', icon: 'privacy', section: 'Compliance' });
   }
-  if (p.includes('hr.manage_records'))
-    items.push({ href: '/hr/attendance-settings', label: 'Attendance sites', icon: 'orgSettings', section: 'Payroll & time' });
+  return items.length ? items : null;
+}
+
+export function getMainShellFinanceNavItemsByPermissions(
+  permissions: readonly string[] | null | undefined
+): MainShellAdminNavItem[] | null {
+  const p = permissions ?? [];
+  const canViewFinance = p.includes('payroll.view') || p.includes('payroll.manage');
+  const canReviewTimesheets = p.includes('leave.approve_direct_reports') || p.includes('leave.manage_org');
+  const canManageAttendanceSites = p.includes('hr.manage_records');
+  if (!canViewFinance && !canReviewTimesheets && !canManageAttendanceSites) return null;
+
+  const items: MainShellAdminNavItem[] = [];
+  if (canViewFinance) {
+    items.push({ href: '/finance', label: 'Overview', icon: 'dashboard', exact: true });
+    items.push({ href: '/finance/wagesheets', label: 'Wagesheets', icon: 'payroll', section: 'Payroll & time' });
+  }
+  if (canReviewTimesheets) {
+    items.push({ href: '/finance/timesheets', label: 'Timesheet review', icon: 'calendar', section: 'Payroll & time' });
+  }
+  if (canManageAttendanceSites) {
+    items.push({ href: '/finance/attendance-settings', label: 'Attendance sites', icon: 'orgSettings', section: 'Payroll & time' });
+  }
   return items.length ? items : null;
 }
 

@@ -63,6 +63,10 @@ const nextConfig: NextConfig = {
       { source: '/hr/recruitment/:id', destination: '/hr/hiring/requests/:id', permanent: true },
       { source: '/hr/recruitment', destination: '/hr/hiring/requests', permanent: true },
       { source: '/hr/people', destination: '/hr/records', permanent: true },
+      { source: '/hr/finance', destination: '/finance', permanent: true },
+      { source: '/hr/wagesheets', destination: '/finance/wagesheets', permanent: true },
+      { source: '/hr/timesheets', destination: '/finance/timesheets', permanent: true },
+      { source: '/hr/attendance-settings', destination: '/finance/attendance-settings', permanent: true },
     ];
   },
   eslint: {

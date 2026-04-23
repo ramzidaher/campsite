@@ -84,7 +84,7 @@ export function DashboardHome({
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-[28px]">
+    <div className="w-full px-5 py-7 sm:px-[28px]">
       {variant === 'dashboard' ? <DashboardCampfireAmbient /> : null}
       {variant === 'dashboard' ? <h1 className="sr-only">Dashboard</h1> : null}
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

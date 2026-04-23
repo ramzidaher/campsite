@@ -92,14 +92,8 @@ export function AttendanceClockClient({
         lng = pos.coords.longitude;
         acc = pos.coords.accuracy;
       } catch {
-        setErr('Location unavailable. Allow location or ask your manager to record time.');
-        setBusy(false);
-        return;
+        // Location is optional: when unavailable we still allow punch events.
       }
-    } else {
-      setErr('Geolocation not supported in this browser.');
-      setBusy(false);
-      return;
     }
 
     const { error } = await supabase.rpc('attendance_clock_event', {
@@ -177,6 +171,9 @@ export function AttendanceClockClient({
           Clock out
         </button>
       </div>
+      <p className="text-[12px] text-[#6b6b6b]">
+        Location is optional. If permitted, we attach it to your punch for attendance accuracy.
+      </p>
 
       <div className="rounded-xl border border-[#e8e4dc] bg-white px-4 py-3">
         <p className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">This week (from punches)</p>

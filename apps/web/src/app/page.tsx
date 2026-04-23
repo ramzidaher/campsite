@@ -5,8 +5,7 @@ import { LandingPage } from '@/components/marketing/LandingPage';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { tenantHostMatchesOrg } from '@/lib/tenant/adminUrl';
-import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
+import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -54,7 +53,7 @@ export default async function HomePage() {
         .maybeSingle();
       const orgSlug = (org?.slug as string | undefined)?.trim();
       if (orgSlug && !tenantHostMatchesOrg(orgSlug, host)) {
-        redirect(`https://${orgSlug}.${getTenantRootDomain()}/dashboard`);
+        redirect(`${tenantSubdomainOriginForHost(orgSlug, host)}/dashboard`);
       }
     }
 
