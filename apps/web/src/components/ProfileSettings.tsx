@@ -224,6 +224,11 @@ export function ProfileSettings({
   const [avatarPreviewFailed, setAvatarPreviewFailed] = useState(false);
   const [channelPrefs, setChannelPrefs] = useState<BroadcastChannelPref[]>(initialBroadcastChannels);
   const [channelBusyId, setChannelBusyId] = useState<string | null>(null);
+  const [channelsLoading, setChannelsLoading] = useState(false);
+  const [channelsLoaded, setChannelsLoaded] = useState(initialBroadcastChannels.length > 0);
+  const [canManageDiscountsState, setCanManageDiscountsState] = useState(canManageDiscounts);
+  const [discountPermLoading, setDiscountPermLoading] = useState(false);
+  const [discountPermLoaded, setDiscountPermLoaded] = useState(canManageDiscounts);
   const [a11yPrefs, setA11yPrefs] = useState<AccessibilityPreferences>(DEFAULT_ACCESSIBILITY_PREFERENCES);
   const [shellIconStyle, setShellIconStyle] = useState<ShellIconStyle>('classic');
   const { prefs: uiSoundPrefs, setEnabled: setUiSoundEnabled, setVolume: setUiSoundVolume } =
@@ -249,6 +254,13 @@ export function ProfileSettings({
   }, [initial]);
 
   useEffect(() => { setChannelPrefs(initialBroadcastChannels); }, [initialBroadcastChannels]);
+  useEffect(() => {
+    setChannelsLoaded(initialBroadcastChannels.length > 0);
+  }, [initialBroadcastChannels]);
+  useEffect(() => {
+    setCanManageDiscountsState(canManageDiscounts);
+    setDiscountPermLoaded(canManageDiscounts);
+  }, [canManageDiscounts]);
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(SHELL_MODE_STORAGE_KEY);
@@ -348,6 +360,86 @@ export function ProfileSettings({
     }
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [channelPrefs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadChannels() {
+      if (activeTab !== 'channels' || !currentOrgId || channelsLoaded || channelsLoading) return;
+      setChannelsLoading(true);
+      const supabase = createClient();
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user || cancelled) {
+        if (!cancelled) setChannelsLoading(false);
+        return;
+      }
+      const [{ data: orgDepts }, { data: subs }] = await Promise.all([
+        supabase.from('departments').select('id, name').eq('org_id', currentOrgId).eq('is_archived', false),
+        supabase.from('user_subscriptions').select('channel_id, subscribed').eq('user_id', u.user.id),
+      ]);
+      if (cancelled) return;
+      const deptIds = [...new Set((orgDepts ?? []).map((d) => d.id as string).filter(Boolean))];
+      if (!deptIds.length) {
+        setChannelsLoaded(true);
+        setChannelsLoading(false);
+        return;
+      }
+      const { data: chans } = await supabase
+        .from('broadcast_channels')
+        .select('id, name, dept_id')
+        .in('dept_id', deptIds)
+        .order('name');
+      if (cancelled) return;
+      const subMap = new Map((subs ?? []).map((s) => [s.channel_id as string, Boolean(s.subscribed)]));
+      const deptNameById = new Map<string, string>();
+      for (const d of orgDepts ?? []) {
+        const did = d.id as string;
+        const n = String(d.name ?? '').trim();
+        deptNameById.set(did, n || 'Department');
+      }
+      const rows: BroadcastChannelPref[] = [];
+      for (const c of chans ?? []) {
+        const id = c.id as string;
+        rows.push({
+          channel_id: id,
+          name: String(c.name ?? ''),
+          dept_id: c.dept_id as string,
+          dept_name: deptNameById.get(c.dept_id as string) ?? 'Department',
+          subscribed: subMap.get(id) ?? false,
+        });
+      }
+      rows.sort((a, b) => a.dept_name.localeCompare(b.dept_name) || a.name.localeCompare(b.name));
+      setChannelPrefs(rows);
+      setChannelsLoaded(true);
+      setChannelsLoading(false);
+    }
+    void loadChannels();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, channelsLoaded, channelsLoading, currentOrgId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDiscountPermission() {
+      if (activeTab !== 'integrations' || !currentOrgId || discountPermLoaded || discountPermLoading) return;
+      setDiscountPermLoading(true);
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc('get_my_permissions', { p_org_id: currentOrgId });
+      if (cancelled) return;
+      if (!error) {
+        const hasDiscountsView = Array.isArray(data)
+          ? data.some((row) => String((row as { permission_key?: string }).permission_key ?? '') === 'discounts.view')
+          : false;
+        setCanManageDiscountsState(hasDiscountsView);
+      }
+      setDiscountPermLoaded(true);
+      setDiscountPermLoading(false);
+    }
+    void loadDiscountPermission();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, currentOrgId, discountPermLoaded, discountPermLoading]);
 
   function setAccessibilityPref<K extends keyof AccessibilityPreferences>(
     key: K,
@@ -1031,7 +1123,11 @@ export function ProfileSettings({
           <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
             <h2 className={sectionTitle}>{settingsBroadcastChannelsTitle}</h2>
             <p className={sectionDesc}>{settingsBroadcastChannelsHelp}</p>
-            {channelPrefs.length === 0 ? (
+            {channelsLoading ? (
+              <p className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[13px] text-[#6b6b6b]">
+                Loading channels...
+              </p>
+            ) : channelPrefs.length === 0 ? (
               <p className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[13px] text-[#9b9b9b]">
                 No broadcast channels yet. Org admins add channels under Admin → Departments; then you can follow them here.
               </p>
@@ -1101,7 +1197,7 @@ export function ProfileSettings({
                 </div>
               </div>
             </div>
-            {canManageDiscounts ? (
+            {canManageDiscountsState ? (
               <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
                 <h2 className={sectionTitle}>Organisation tools</h2>
                 <p className={sectionDesc}>Configure staff discount tiers shown on discount cards.</p>
@@ -1109,6 +1205,9 @@ export function ProfileSettings({
                   Discount tiers
                 </Link>
               </div>
+            ) : null}
+            {discountPermLoading ? (
+              <p className="px-1 text-[12.5px] text-[#9b9b9b]">Checking organisation tools access...</p>
             ) : null}
           </div>
         )}

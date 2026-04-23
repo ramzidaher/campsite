@@ -1,7 +1,6 @@
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { getCelebrationModeOptions, type OrgCelebrationModeOverride } from '@/lib/holidayThemes';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -51,23 +50,10 @@ export default async function SettingsPage({
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  type BroadcastChannelPref = {
-    channel_id: string;
-    name: string;
-    dept_id: string;
-    dept_name: string;
-    subscribed: boolean;
-  };
-
-  const broadcastChannelPrefs: BroadcastChannelPref[] = [];
   const orgId = profile?.org_id as string | undefined;
-  let canManageDiscounts = false;
   let orgCelebrationOverrides: OrgCelebrationModeOverride[] = [];
   if (orgId) {
-    const [{ data: orgDepts }, { data: subs }, permKeys, { data: celebrationRows }] = await Promise.all([
-      supabase.from('departments').select('id, name').eq('org_id', orgId).eq('is_archived', false),
-      supabase.from('user_subscriptions').select('channel_id, subscribed').eq('user_id', user.id),
-      getMyPermissions(orgId),
+    const [{ data: celebrationRows }] = await Promise.all([
       supabase
         .from('org_celebration_modes')
         .select(
@@ -77,38 +63,7 @@ export default async function SettingsPage({
         .order('display_order', { ascending: true })
         .order('label', { ascending: true }),
     ]);
-    canManageDiscounts = permKeys.includes('discounts.view');
     orgCelebrationOverrides = (celebrationRows ?? []) as OrgCelebrationModeOverride[];
-    const deptIds = [...new Set((orgDepts ?? []).map((d) => d.id as string).filter(Boolean))];
-    if (deptIds.length) {
-      const { data: chans } = await supabase
-        .from('broadcast_channels')
-        .select('id, name, dept_id')
-        .in('dept_id', deptIds)
-        .order('name');
-      const subMap = new Map(
-        (subs ?? []).map((s) => [s.channel_id as string, Boolean(s.subscribed)])
-      );
-      const deptNameById = new Map<string, string>();
-      for (const d of orgDepts ?? []) {
-        const did = d.id as string;
-        const n = String(d.name ?? '').trim();
-        deptNameById.set(did, n || 'Department');
-      }
-      for (const c of chans ?? []) {
-        const id = c.id as string;
-        broadcastChannelPrefs.push({
-          channel_id: id,
-          name: String(c.name ?? ''),
-          dept_id: c.dept_id as string,
-          dept_name: deptNameById.get(c.dept_id as string) ?? 'Department',
-          subscribed: subMap.get(id) ?? false,
-        });
-      }
-      broadcastChannelPrefs.sort(
-        (a, b) => a.dept_name.localeCompare(b.dept_name) || a.name.localeCompare(b.name)
-      );
-    }
   }
 
   return (
@@ -141,8 +96,8 @@ export default async function SettingsPage({
                 }
               : null
           }
-        initialBroadcastChannels={broadcastChannelPrefs}
-        canManageDiscounts={canManageDiscounts}
+        initialBroadcastChannels={[]}
+        canManageDiscounts={false}
         celebrationModeOptions={getCelebrationModeOptions(orgCelebrationOverrides)}
       />
     </div>
