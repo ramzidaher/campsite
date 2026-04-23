@@ -107,6 +107,7 @@ export function DashboardHome({
           {showPrimaryComposeCta ? (
             <Link
               href={composeHref}
+              prefetch={false}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
             >
               ✏ New broadcast
@@ -115,6 +116,7 @@ export function DashboardHome({
           {canCompose && !showPrimaryComposeCta ? (
             <Link
               href={composeHref}
+              prefetch={false}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] shadow-sm transition-opacity hover:opacity-90"
             >
               ✏ Submit draft for approval
@@ -125,7 +127,7 @@ export function DashboardHome({
 
       <div className={`mb-6 grid grid-cols-1 gap-3.5 sm:grid-cols-2 ${statGridLg}`}>
         {showBroadcastTotal ? (
-          <Link href="/broadcasts" className={statTileClass}>
+          <Link href="/broadcasts" prefetch={false} className={statTileClass}>
             <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
               <span>📡</span> Total broadcasts
             </div>
@@ -141,7 +143,7 @@ export function DashboardHome({
 
         {showMemberTotal ? (
           membersStatHref ? (
-            <Link href={membersStatHref} className={statTileClass}>
+            <Link href={membersStatHref} prefetch={false} className={statTileClass}>
               {memberTileInner}
             </Link>
           ) : (
@@ -152,6 +154,7 @@ export function DashboardHome({
         {data.pendingCount !== null ? (
           <Link
             href={pendingHref}
+            prefetch={false}
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
             <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
@@ -175,6 +178,7 @@ export function DashboardHome({
         ) : showUnreadBroadcastKpi ? (
           <Link
             href="/broadcasts"
+            prefetch={false}
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
             <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
@@ -188,6 +192,7 @@ export function DashboardHome({
         ) : (
           <Link
             href="/broadcasts"
+            prefetch={false}
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
             <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
@@ -200,6 +205,7 @@ export function DashboardHome({
 
         <Link
           href="/rota"
+          prefetch={false}
           className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
         >
           <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
@@ -241,6 +247,7 @@ export function DashboardHome({
             <h3 className="font-authSerif text-[17px] tracking-tight text-[#121212]">Recent broadcasts</h3>
             <Link
               href={isAdmin ? '/admin/broadcasts' : '/broadcasts'}
+              prefetch={false}
               className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
             >
               View all →
@@ -270,6 +277,7 @@ export function DashboardHome({
                   <Link
                     key={b.id}
                     href={`/broadcasts/${b.id}`}
+                    prefetch={false}
                     aria-label={
                       unread
                         ? `${b.title}. Unread broadcast. Sent ${relTime(b.sent_at)}.`
