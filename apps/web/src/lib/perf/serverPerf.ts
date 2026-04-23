@@ -2,8 +2,12 @@ const PERF_WARN_THRESHOLD_MS = 1200;
 const PERF_WARN_OP_THRESHOLD_MS = 450;
 
 export function warnIfSlowServerPath(path: string, startedAtMs: number) {
+  warnIfSlowServerPathWithThreshold(path, startedAtMs, PERF_WARN_THRESHOLD_MS);
+}
+
+export function warnIfSlowServerPathWithThreshold(path: string, startedAtMs: number, thresholdMs: number) {
   const elapsedMs = Date.now() - startedAtMs;
-  if (elapsedMs < PERF_WARN_THRESHOLD_MS) return;
+  if (elapsedMs < thresholdMs) return;
   // Keep logs compact and machine-searchable for incident timelines.
   console.warn(`[perf][server][slow_path] path=${path} duration_ms=${elapsedMs}`);
 }

@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { fetchSpreadsheetValues, refreshGoogleAccessToken } from '@/lib/google/googleSheetsAccess';
 import {
+  decryptGoogleTokenIfConfigured,
+  encryptGoogleTokenIfConfigured,
+  isGoogleTokenCryptoConfigured,
+} from '@/lib/google/googleTokenCrypto';
+import {
   cellAt,
   columnLettersToIndex,
   normalizeTimeToHms,
@@ -28,8 +33,10 @@ type MappingRow = {
 
 type ConnRow = {
   id: string;
-  access_token: string;
-  refresh_token: string;
+  access_token: string | null;
+  refresh_token: string | null;
+  access_token_encrypted: string | null;
+  refresh_token_encrypted: string | null;
   expires_at: string;
   spreadsheet_id: string | null;
   sheet_name: string | null;
@@ -92,7 +99,9 @@ export async function POST() {
 
   const { data: conn, error: connErr } = await supabase
     .from('google_connections')
-    .select('id, access_token, refresh_token, expires_at, spreadsheet_id, sheet_name')
+    .select(
+      'id, access_token, refresh_token, access_token_encrypted, refresh_token_encrypted, expires_at, spreadsheet_id, sheet_name',
+    )
     .eq('id', m.connection_id)
     .eq('user_id', user.id)
     .single();
@@ -122,17 +131,37 @@ export async function POST() {
   const colDept = m.col_dept?.trim() ? columnLettersToIndex(m.col_dept.trim()) : -1;
   const colRole = m.col_role?.trim() ? columnLettersToIndex(m.col_role.trim()) : -1;
 
-  let accessToken = c.access_token;
+  const refreshToken =
+    decryptGoogleTokenIfConfigured(c.refresh_token_encrypted) ?? c.refresh_token ?? null;
+  let accessToken = decryptGoogleTokenIfConfigured(c.access_token_encrypted) ?? c.access_token ?? '';
+  if (!refreshToken || !accessToken) {
+    return NextResponse.json(
+      { error: 'Google connection token is missing. Reconnect Google Sheets in Settings.' },
+      { status: 400 },
+    );
+  }
+
   const exp = new Date(c.expires_at).getTime();
   if (exp < Date.now() + 60_000) {
     try {
-      const t = await refreshGoogleAccessToken(c.refresh_token);
+      const t = await refreshGoogleAccessToken(refreshToken);
       accessToken = t.access_token;
       const expiresAt = new Date(Date.now() + t.expires_in * 1000).toISOString();
+      const encryptedAccess = encryptGoogleTokenIfConfigured(accessToken);
+      const encryptedMode = isGoogleTokenCryptoConfigured();
+      const encryptedRefresh =
+        isGoogleTokenCryptoConfigured() && !c.refresh_token_encrypted
+          ? encryptGoogleTokenIfConfigured(refreshToken)
+          : { ciphertext: c.refresh_token_encrypted, kid: null as string | null };
       await supabase
         .from('google_connections')
         .update({
-          access_token: accessToken,
+          access_token: encryptedMode ? null : accessToken,
+          access_token_encrypted: encryptedAccess.ciphertext,
+          refresh_token_encrypted: encryptedRefresh.ciphertext,
+          token_encryption_kid: encryptedAccess.kid ?? encryptedRefresh.kid,
+          token_encrypted_at:
+            encryptedAccess.ciphertext || encryptedRefresh.ciphertext ? new Date().toISOString() : null,
           expires_at: expiresAt,
           updated_at: new Date().toISOString(),
         })

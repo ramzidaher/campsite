@@ -13,6 +13,38 @@ import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
 import { withServerPerf } from '@/lib/perf/serverPerf';
+const DASHBOARD_NON_CRITICAL_TIMEOUT_MS = 2200;
+
+async function resolveWithTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs: number,
+  fallback: T,
+  label: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let didTimeout = false;
+  try {
+    return await Promise.race<T>([
+      Promise.resolve(promise),
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => {
+          didTimeout = true;
+          // #region agent log
+          fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'post-fix',hypothesisId:'H1',location:'loadDashboardHome.ts:resolveWithTimeout',message:'Dashboard timeout fallback fired',data:{timeoutMs,label},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          resolve(fallback);
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+    if (!didTimeout) {
+      // #region agent log
+      fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'post-fix',hypothesisId:'H1',location:'loadDashboardHome.ts:resolveWithTimeout',message:'Dashboard timeout fallback not used',data:{timeoutMs,label},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+    }
+  }
+}
 
 export type PendingPreviewRow = {
   id: string;
@@ -138,36 +170,52 @@ export async function loadDashboardHome(
       : Promise.resolve({ data: 0, error: null });
   const useCachedPendingApprovals = options?.initialPendingApprovals !== undefined;
 
+  const dashboardQueryStartedAt = Date.now();
   const [statCounts, shiftsWeekRes, nextShiftRes, recentRawRes, eventsRawRes, shiftCalendarRawRes, unreadRpc] =
     await Promise.all([
       withServerPerf(
         '/dashboard',
         'fetch_dashboard_stat_counts',
-        fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
-        400
+        resolveWithTimeout(
+          fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
+          10000,
+          null,
+          'fetch_dashboard_stat_counts',
+        ),
+        1500
       ),
       withServerPerf(
         '/dashboard',
         'rota_shifts_week_count',
-        supabase
-          .from('rota_shifts')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .gte('start_time', w0.toISOString())
-          .lt('start_time', w1.toISOString()),
-        350
+        resolveWithTimeout(
+          supabase
+            .from('rota_shifts')
+            .select('id', { count: 'planned', head: true })
+            .eq('user_id', userId)
+            .gte('start_time', w0.toISOString())
+            .lt('start_time', w1.toISOString()),
+          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          { data: null, error: null, count: 0 } as any,
+          'rota_shifts_week_count',
+        ),
+        2300
       ),
       withServerPerf(
         '/dashboard',
         'next_shift_lookup',
-        supabase
-          .from('rota_shifts')
-          .select('start_time,end_time,role_label')
-          .eq('user_id', userId)
-          .gte('start_time', now.toISOString())
-          .order('start_time', { ascending: true })
-          .limit(1),
-        350
+        resolveWithTimeout(
+          supabase
+            .from('rota_shifts')
+            .select('start_time,end_time,role_label')
+            .eq('user_id', userId)
+            .gte('start_time', now.toISOString())
+            .order('start_time', { ascending: true })
+            .limit(1),
+          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          { data: [], error: null } as any,
+          'next_shift_lookup',
+        ),
+        2300
       ),
       withServerPerf(
         '/dashboard',
@@ -181,35 +229,48 @@ export async function loadDashboardHome(
           .eq('status', 'sent')
           .order('sent_at', { ascending: false })
           .limit(3),
-        350
+        2300
       ),
       withServerPerf(
         '/dashboard',
         'upcoming_calendar_events',
-        supabase
-          .from('calendar_events')
-          .select('id,title,start_time')
-          .eq('org_id', orgId)
-          .gte('start_time', now.toISOString())
-          .order('start_time', { ascending: true })
-          .limit(5),
-        350
+        resolveWithTimeout(
+          supabase
+            .from('calendar_events')
+            .select('id,title,start_time')
+            .eq('org_id', orgId)
+            .gte('start_time', now.toISOString())
+            .order('start_time', { ascending: true })
+            .limit(5),
+          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          { data: [], error: null } as any,
+          'upcoming_calendar_events',
+        ),
+        2300
       ),
       withServerPerf(
         '/dashboard',
         'upcoming_shifts_calendar',
-        supabase
-          .from('rota_shifts')
-          .select('id,start_time,role_label')
-          .eq('user_id', userId)
-          .gte('start_time', now.toISOString())
-          .lt('start_time', monthEnd.toISOString())
-          .order('start_time', { ascending: true })
-          .limit(8),
-        350
+        resolveWithTimeout(
+          supabase
+            .from('rota_shifts')
+            .select('id,start_time,role_label')
+            .eq('user_id', userId)
+            .gte('start_time', now.toISOString())
+            .lt('start_time', monthEnd.toISOString())
+            .order('start_time', { ascending: true })
+            .limit(8),
+          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          { data: [], error: null } as any,
+          'upcoming_shifts_calendar',
+        ),
+        2300
       ),
-      withServerPerf('/dashboard', 'unread_count', unreadRpcPromise, 300),
+      withServerPerf('/dashboard', 'unread_count', unreadRpcPromise, 1200),
     ]);
+  // #region agent log
+  fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'run1',hypothesisId:'H2',location:'loadDashboardHome.ts:postPromiseAll',message:'Dashboard query bundle completed',data:{durationMs:Date.now()-dashboardQueryStartedAt,recentRawCount:Array.isArray(recentRawRes?.data)?recentRawRes.data.length:-1,calendarCount:Array.isArray(eventsRawRes?.data)?eventsRawRes.data.length:-1,shiftCalendarCount:Array.isArray(shiftCalendarRawRes?.data)?shiftCalendarRawRes.data.length:-1,shiftsWeekCount:shiftsWeekRes?.count ?? null},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   const shiftsThisWeek = shiftsWeekRes.count;
   const nextShifts = nextShiftRes.data;
   const recentRaw = recentRawRes.data;
@@ -221,6 +282,9 @@ export async function loadDashboardHome(
     userId,
     (recentRaw ?? []) as RawBroadcast[]
   );
+  // #region agent log
+  fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'run1',hypothesisId:'H3',location:'loadDashboardHome.ts:recentBroadcasts',message:'Broadcast enrichment result',data:{rawCount:Array.isArray(recentRaw)?recentRaw.length:-1,enrichedCount:Array.isArray(recentBroadcasts)?recentBroadcasts.length:-1},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 
   let pendingCount: number | null = null;
   if (isApproverRole(profile.role) || canFinalApproveRotaRequests(profile.role)) {
@@ -229,7 +293,13 @@ export async function loadDashboardHome(
       pendingCount =
         navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
     } else {
-      const { data: navN } = await supabase.rpc('pending_approvals_nav_count');
+      const navRes = await resolveWithTimeout(
+        supabase.rpc('pending_approvals_nav_count'),
+        DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+        { data: 0, error: null } as any,
+        'pending_approvals_nav_count',
+      );
+      const navN = navRes?.data;
       pendingCount =
         navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
     }
@@ -244,7 +314,7 @@ export async function loadDashboardHome(
         : Number(unreadRaw);
 
   const eventColors = ['#44403c', '#059669', '#7C3AED', '#C2410C', '#E11D48'];
-  const upcomingCalendarEvents: UpcomingEventRow[] = (eventsRaw ?? []).map((e, i) => ({
+  const upcomingCalendarEvents: UpcomingEventRow[] = (eventsRaw ?? []).map((e: any, i: number) => ({
     id: e.id as string,
     title: e.title as string,
     start_time: e.start_time as string,
@@ -252,7 +322,7 @@ export async function loadDashboardHome(
     kind: 'event',
   }));
 
-  const upcomingShiftRows: UpcomingEventRow[] = (shiftCalendarRaw ?? []).map((s) => ({
+  const upcomingShiftRows: UpcomingEventRow[] = (shiftCalendarRaw ?? []).map((s: any) => ({
     id: `shift-${String(s.id)}`,
     title: ((s.role_label as string | null)?.trim() || 'Upcoming shift'),
     start_time: s.start_time as string,

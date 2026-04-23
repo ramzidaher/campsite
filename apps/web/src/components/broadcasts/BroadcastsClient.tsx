@@ -16,6 +16,7 @@ import { countPendingBroadcastApprovalsForViewer } from '@/lib/broadcasts/countP
 import { BroadcastComposer } from './BroadcastComposer';
 import Link from 'next/link';
 import { BroadcastFeed, type BroadcastFeedHandle } from './BroadcastFeed';
+import type { FeedRow } from '@/lib/broadcasts/feedTypes';
 import { departmentsForBroadcast, type DeptRow } from './dept-scope';
 
 type Profile = {
@@ -45,10 +46,12 @@ type FeedLayoutLens = 'stream' | 'timeline';
 
 export function BroadcastsClient({
   profile,
+  initialFeedRows,
   initialWorkspace,
   initialCompose,
 }: {
   profile: Profile;
+  initialFeedRows?: FeedRow[];
   initialWorkspace?: WorkspaceView;
   /** Open composer from `?compose=1` */
   initialCompose?: boolean;
@@ -566,6 +569,7 @@ export function BroadcastsClient({
               supabase={supabase}
               orgId={profile.org_id}
               userId={profile.id}
+              initialRows={initialFeedRows}
               viewerDeptIds={viewerDeptIds}
               deptFilter={feedDeptFilterSet}
               catFilter={emptyFilterSet}

@@ -97,12 +97,10 @@ Deno.serve(async (req) => {
     Math.max(1, Number(new URL(req.url).searchParams.get('limit')) || 20),
   );
 
-  const { data: jobs, error: jobErr } = await supabase
-    .from('rota_notification_jobs')
-    .select('id, org_id, event_type, rota_shift_id, change_request_id, payload, created_at, attempts')
-    .is('processed_at', null)
-    .order('created_at', { ascending: true })
-    .limit(limitJobs);
+  const { data: jobs, error: jobErr } = await supabase.rpc('claim_rota_notification_jobs', {
+    p_limit: limitJobs,
+    p_lease_seconds: 120,
+  });
 
   if (jobErr) {
     return new Response(JSON.stringify({ error: jobErr.message }), {
@@ -133,6 +131,8 @@ Deno.serve(async (req) => {
           processed_at: new Date().toISOString(),
           attempts: attempts + 1,
           last_error: 'max_attempts_exceeded',
+          claimed_at: null,
+          claim_expires_at: null,
         })
         .eq('id', id);
       results.push({
@@ -156,6 +156,8 @@ Deno.serve(async (req) => {
         .update({
           attempts: attempts + 1,
           last_error: rpcErr.message.slice(0, 500),
+          claimed_at: null,
+          claim_expires_at: null,
         })
         .eq('id', id);
       results.push({
@@ -180,6 +182,8 @@ Deno.serve(async (req) => {
           processed_at: new Date().toISOString(),
           attempts: attempts + 1,
           last_error: null,
+          claimed_at: null,
+          claim_expires_at: null,
         })
         .eq('id', id);
       results.push({
@@ -203,6 +207,8 @@ Deno.serve(async (req) => {
         .update({
           attempts: attempts + 1,
           last_error: tokErr.message.slice(0, 500),
+          claimed_at: null,
+          claim_expires_at: null,
         })
         .eq('id', id);
       results.push({
@@ -238,6 +244,8 @@ Deno.serve(async (req) => {
           processed_at: new Date().toISOString(),
           attempts: attempts + 1,
           last_error: null,
+          claimed_at: null,
+          claim_expires_at: null,
         })
         .eq('id', id);
       results.push({
@@ -268,6 +276,8 @@ Deno.serve(async (req) => {
           processed_at: dead ? new Date().toISOString() : null,
           attempts: attempts + 1,
           last_error: sendErr.slice(0, 500),
+          claimed_at: null,
+          claim_expires_at: null,
         })
         .eq('id', id);
       results.push({
@@ -285,6 +295,8 @@ Deno.serve(async (req) => {
           processed_at: new Date().toISOString(),
           attempts: attempts + 1,
           last_error: null,
+          claimed_at: null,
+          claim_expires_at: null,
         })
         .eq('id', id);
       results.push({

@@ -1,5 +1,10 @@
 import { calendarDeleteEvent, calendarInsertPrimaryEvent, calendarPatchEvent } from '@/lib/google/googleCalendarApi';
 import { refreshGoogleAccessToken } from '@/lib/google/googleSheetsAccess';
+import {
+  decryptGoogleTokenIfConfigured,
+  encryptGoogleTokenIfConfigured,
+  isGoogleTokenCryptoConfigured,
+} from '@/lib/google/googleTokenCrypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -12,30 +17,59 @@ export async function getCalendarAccessTokenForUser(
 ): Promise<string | null> {
   const { data: row } = await admin
     .from('google_connections')
-    .select('access_token, refresh_token, expires_at')
+    .select('access_token, refresh_token, access_token_encrypted, refresh_token_encrypted, expires_at')
     .eq('user_id', userId)
     .eq('type', 'calendar')
     .maybeSingle();
 
-  if (!row?.refresh_token) return null;
+  const refreshToken =
+    decryptGoogleTokenIfConfigured(row?.refresh_token_encrypted as string | null) ??
+    ((row?.refresh_token as string | null) ?? null);
+  if (!refreshToken) return null;
 
-  const expMs = row.expires_at ? new Date(row.expires_at as string).getTime() : 0;
-  if (expMs > Date.now() + 90_000 && row.access_token) {
-    return row.access_token as string;
+  const accessTokenFromRow =
+    decryptGoogleTokenIfConfigured(row?.access_token_encrypted as string | null) ??
+    ((row?.access_token as string | null) ?? null);
+
+  const expMs = row?.expires_at ? new Date(row.expires_at as string).getTime() : 0;
+  if (expMs > Date.now() + 90_000 && accessTokenFromRow) {
+    return accessTokenFromRow;
   }
 
   try {
-    const { access_token, expires_in } = await refreshGoogleAccessToken(row.refresh_token as string);
+    const { access_token, expires_in } = await refreshGoogleAccessToken(refreshToken);
     const expiresAt = new Date(Date.now() + expires_in * 1000).toISOString();
+    const encryptedAccess = encryptGoogleTokenIfConfigured(access_token);
+    const encryptedMode = isGoogleTokenCryptoConfigured();
     await admin
       .from('google_connections')
       .update({
-        access_token,
+        access_token: encryptedMode ? null : access_token,
+        access_token_encrypted: encryptedAccess.ciphertext,
+        token_encryption_kid: encryptedAccess.kid,
+        token_encrypted_at: encryptedAccess.ciphertext ? new Date().toISOString() : null,
         expires_at: expiresAt,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
       .eq('type', 'calendar');
+
+    // Lazy backfill: once configured, ensure refresh token is also encrypted.
+    if (isGoogleTokenCryptoConfigured() && !(row?.refresh_token_encrypted as string | null)) {
+      const encryptedRefresh = encryptGoogleTokenIfConfigured(refreshToken);
+      if (encryptedRefresh.ciphertext) {
+        await admin
+          .from('google_connections')
+          .update({
+            refresh_token_encrypted: encryptedRefresh.ciphertext,
+            token_encryption_kid: encryptedRefresh.kid,
+            token_encrypted_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+          .eq('type', 'calendar');
+      }
+    }
     return access_token;
   } catch {
     return null;

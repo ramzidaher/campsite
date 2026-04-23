@@ -26,13 +26,14 @@ import { orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { createClient } from '@/lib/supabase/client';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
 import { nextUiMode, type UiMode } from '@/lib/uiMode';
-import { ChevronDown, Menu } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
 const MANAGER_NAV_EXPANDED_KEY = 'campsite_nav_manager_expanded';
 const FINANCE_NAV_EXPANDED_KEY = 'campsite_nav_finance_expanded';
 const HR_NAV_EXPANDED_KEY = 'campsite_nav_hr_expanded';
+const DESKTOP_SIDEBAR_OPEN_KEY = 'campsite_sidebar_desktop_open';
 const SHELL_MODE_STORAGE_KEY = 'campsite_shell_mode';
 const SHELL_MODE_AUTO_STORAGE_KEY = 'campsite_shell_mode_auto_enabled';
 const LEGACY_PRIDE_MODE_STORAGE_KEY = 'campsite_pride_mode';
@@ -116,6 +117,39 @@ function NavLink({
           </span>
         ) : null}
       </span>
+    </Link>
+  );
+}
+
+function RailIconLink({
+  href,
+  icon,
+  label,
+  onNavigate,
+}: {
+  href: string;
+  icon: ShellNavIconId;
+  label: string;
+  onNavigate?: () => void;
+}) {
+  const pathname = usePathname() ?? '';
+  const active =
+    pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
+  return (
+    <Link
+      href={href}
+      prefetch={false}
+      onClick={onNavigate}
+      className={[
+        'flex h-9 w-9 items-center justify-center rounded-md transition-colors',
+        active
+          ? 'bg-white/[0.12] text-[#faf9f6]'
+          : 'text-white/55 hover:bg-white/[0.08] hover:text-white/85',
+      ].join(' ')}
+      title={label}
+      aria-label={label}
+    >
+      <ShellNavIcon name={icon} />
     </Link>
   );
 }
@@ -216,6 +250,7 @@ export function AppShell({
   initialUiMode?: UiMode;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
+  const [desktopNavOpen, setDesktopNavOpen] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
   const [managerNavExpanded, setManagerNavExpanded] = useState(true);
   const [financeNavExpanded, setFinanceNavExpanded] = useState(true);
@@ -298,6 +333,9 @@ export function AppShell({
       const fin = localStorage.getItem(FINANCE_NAV_EXPANDED_KEY);
       if (fin === '0') setFinanceNavExpanded(false);
       else if (fin === '1') setFinanceNavExpanded(true);
+      const desktopSidebar = localStorage.getItem(DESKTOP_SIDEBAR_OPEN_KEY);
+      if (desktopSidebar === '1') setDesktopNavOpen(true);
+      else if (desktopSidebar === '0') setDesktopNavOpen(false);
       const savedMode = localStorage.getItem(SHELL_MODE_STORAGE_KEY);
       const legacyPride = localStorage.getItem(LEGACY_PRIDE_MODE_STORAGE_KEY) === '1';
       if (savedMode) setShellMode(normalizeCelebrationMode(savedMode));
@@ -432,6 +470,21 @@ export function AppShell({
     playUiSound('menu_close');
   };
 
+  const toggleDesktopSidebar = () => {
+    setDesktopNavOpen((open) => {
+      const next = !open;
+      try {
+        localStorage.setItem(DESKTOP_SIDEBAR_OPEN_KEY, next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      playUiSound(next ? 'menu_open' : 'menu_close');
+      return next;
+    });
+  };
+
+  const showExpandedSidebar = mobileNav || desktopNavOpen;
+
   return (
     <div
       className="campsite-paper flex min-h-screen text-[#121212]"
@@ -451,8 +504,10 @@ export function AppShell({
       <aside
         aria-label="Primary"
         className={[
-          'fixed left-0 top-0 z-[100] flex h-screen w-[240px] shrink-0 flex-col overflow-hidden bg-[#121212] text-[#faf9f6] transition-transform md:translate-x-0',
-          mobileNav ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+          'fixed left-0 top-0 z-[100] flex h-screen w-[240px] shrink-0 flex-col overflow-hidden bg-[#121212] text-[#faf9f6] transition-[width,transform]',
+          mobileNav ? 'translate-x-0' : '-translate-x-full',
+          'md:translate-x-0',
+          desktopNavOpen ? 'md:w-[240px]' : 'md:w-[58px]',
         ].join(' ')}
         style={
           shellGradientAllowed
@@ -464,43 +519,62 @@ export function AppShell({
             : { backgroundColor: '#121212' }
         }
       >
-        <Link
-          href="/dashboard"
-          prefetch={false}
-          onClick={closeMobile}
-          className="relative z-[1] flex items-center gap-2.5 border-b border-white/[0.07] px-5 py-5"
+        <div
+          className="absolute right-0 top-0 z-[5] hidden h-full w-4 cursor-ew-resize items-center justify-center text-white/35 transition-colors hover:bg-white/[0.06] hover:text-white/80 md:flex"
+          role="button"
+          tabIndex={0}
+          aria-label={desktopNavOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-controls="primary-navigation"
+          onClick={toggleDesktopSidebar}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleDesktopSidebar();
+            }
+          }}
         >
-          <CampsiteLogoMark className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white/[0.12]" />
-          <span className="font-authSerif text-[19px] tracking-tight text-[#faf9f6]">Campsite</span>
-        </Link>
-
-        <div className="relative z-[1] border-b border-white/[0.07] px-5 py-3">
-          <button
-            type="button"
-            className="flex w-full cursor-pointer items-center gap-2 rounded-lg bg-white/[0.07] px-2.5 py-2 text-left transition-colors hover:bg-white/[0.11]"
-            title="Organisation"
-          >
-            <div className="flex h-6 w-6 shrink-0 overflow-hidden rounded-[5px] bg-white/20 text-[11px] font-semibold text-white">
-              {showOrgLogo ? (
-                <img
-                  src={safeOrgLogo!}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  onError={() => setOrgLogoFailed(true)}
-                />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center">{orgInitials}</span>
-              )}
-            </div>
-            <span className="min-w-0 flex-1 truncate text-xs font-medium text-white/[0.8]">{orgName}</span>
-          </button>
+          {desktopNavOpen ? <ChevronLeft size={13} aria-hidden /> : <ChevronRight size={13} aria-hidden />}
         </div>
 
-        <nav
-          id="primary-navigation"
-          className="shell-sidebar-scroll relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-3 pt-2 [scrollbar-gutter:stable]"
-          aria-label="Main"
-        >
+        {showExpandedSidebar ? (
+          <>
+            <Link
+              href="/dashboard"
+              prefetch={false}
+              onClick={closeMobile}
+              className="relative z-[1] flex items-center gap-2.5 border-b border-white/[0.07] px-5 py-5"
+            >
+              <CampsiteLogoMark className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white/[0.12]" />
+              <span className="font-authSerif text-[19px] tracking-tight text-[#faf9f6]">Campsite</span>
+            </Link>
+
+            <div className="relative z-[1] border-b border-white/[0.07] px-5 py-3">
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-lg bg-white/[0.07] px-2.5 py-2 text-left transition-colors hover:bg-white/[0.11]"
+                title="Organisation"
+              >
+                <div className="flex h-6 w-6 shrink-0 overflow-hidden rounded-[5px] bg-white/20 text-[11px] font-semibold text-white">
+                  {showOrgLogo ? (
+                    <img
+                      src={safeOrgLogo!}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={() => setOrgLogoFailed(true)}
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center">{orgInitials}</span>
+                  )}
+                </div>
+                <span className="min-w-0 flex-1 truncate text-xs font-medium text-white/[0.8]">{orgName}</span>
+              </button>
+            </div>
+
+            <nav
+              id="primary-navigation"
+              className="shell-sidebar-scroll relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-3 pt-2 [scrollbar-gutter:stable]"
+              aria-label="Main"
+            >
           <div className="space-y-0.5">
             <NavLink href="/dashboard" icon="dashboard" label="Dashboard" onNavigate={closeMobile} />
             {showMyHrRecordNav ? (
@@ -582,14 +656,14 @@ export function AppShell({
 
           {adminNavItems && adminNavItems.length > 0 ? (
             <div
-              className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
+              className="mt-2"
               style={{ order: 30 }}
             >
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-[14px] border px-3 py-3 text-left text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-colors',
-                  'border-[#5d342e] bg-[#2c1c1a] text-[#ff9a7c] hover:bg-[#33201e]',
+                  'flex w-full items-center gap-2 rounded-lg border border-[#5d342e]/70 px-2.5 py-2 text-left transition-colors',
+                  'text-[#ea9b84] hover:bg-white/[0.07]',
                 ].join(' ')}
                 aria-expanded={adminNavExpanded}
                 aria-controls="admin-shell-nav-items"
@@ -614,10 +688,8 @@ export function AppShell({
                   setHrNavExpanded(false);
                 }}
               >
-                <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="adminSection" open={adminNavExpanded} />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#cb6f35]" />
+                <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.02em] text-[#ea9b84]">
                   Admin
                 </span>
                 <ChevronDown
@@ -653,7 +725,7 @@ export function AppShell({
                       return (
                         <Fragment key={item.href}>
                           {showSection ? (
-                            <div className="border-t border-white/[0.09] pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#8b5843]">
+                            <div className="pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-white/35">
                               {item_.section}
                             </div>
                           ) : null}
@@ -664,12 +736,12 @@ export function AppShell({
                             className={
                               isOverview
                                 ? [
-                                    'flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[13px] transition-colors',
-                                    active ? 'bg-white/[0.1] text-[#ffb9a6]' : 'text-[#b4978d] hover:bg-white/[0.06] hover:text-[#d9b2a4]',
+                                    'flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] transition-colors',
+                                    active ? 'bg-white/[0.12] font-medium text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
                                   ].join(' ')
                                 : [
-                                    'flex items-center gap-2 rounded-[7px] pl-[22px] pr-2.5 py-[5.5px] text-[12.5px] transition-colors',
-                                    active ? 'bg-white/[0.1] text-[#ffb9a6]' : 'text-[#b4978d] hover:bg-white/[0.05] hover:text-[#d9b2a4]',
+                                    'flex items-center gap-2 rounded-[10px] pl-[22px] pr-2.5 py-[7px] text-[12.5px] transition-colors',
+                                    active ? 'bg-white/[0.12] text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white/80',
                                   ].join(' ')
                             }
                           >
@@ -678,7 +750,7 @@ export function AppShell({
                                 <ShellNavIcon name={item_.icon} />
                               </span>
                             ) : (
-                              <span className={['h-[6px] w-[6px] shrink-0 rounded-full bg-[#ff8a65]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#8f7cf7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
                           </Link>
@@ -693,14 +765,14 @@ export function AppShell({
 
           {managerNavItems && managerNavItems.length > 0 ? (
             <div
-              className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
+              className="mt-2"
               style={{ order: 10 }}
             >
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-[14px] border px-3 py-3 text-left text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-colors',
-                  'border-[#3d3774] bg-[#201b3f] text-[#a89af7] hover:bg-[#262048]',
+                  'flex w-full items-center gap-2 rounded-lg border border-[#3d3774]/70 px-2.5 py-2 text-left transition-colors',
+                  'text-[#a89af7] hover:bg-white/[0.07]',
                 ].join(' ')}
                 aria-expanded={managerNavExpanded}
                 aria-controls="manager-shell-nav-items"
@@ -726,10 +798,8 @@ export function AppShell({
                   setHrNavExpanded(false);
                 }}
               >
-                <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="managerSection" open={managerNavExpanded} />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#8f7cf7]" />
+                <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.02em] text-[#a89af7]">
                   {managerNavSectionLabel}
                 </span>
                 <ChevronDown
@@ -765,7 +835,7 @@ export function AppShell({
                       return (
                         <Fragment key={`${item.href}-${item.label}`}>
                           {showSection ? (
-                            <div className="border-t border-white/[0.09] pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#7f75ad]">
+                            <div className="pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-white/35">
                               {item_.section}
                             </div>
                           ) : null}
@@ -776,12 +846,12 @@ export function AppShell({
                             className={
                               isOverview
                                 ? [
-                                    'flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[13px] transition-colors',
-                                    active ? 'bg-white/[0.1] text-[#d4ceff]' : 'text-[#b0b0bc] hover:bg-white/[0.06] hover:text-[#d4ceff]',
+                                    'flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] transition-colors',
+                                    active ? 'bg-white/[0.12] font-medium text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
                                   ].join(' ')
                                 : [
-                                    'flex items-center gap-2 rounded-[7px] pl-[22px] pr-2.5 py-[5.5px] text-[12.5px] transition-colors',
-                                    active ? 'bg-white/[0.1] text-[#d4ceff]' : 'text-[#b0b0bc] hover:bg-white/[0.05] hover:text-[#d4ceff]',
+                                    'flex items-center gap-2 rounded-[10px] pl-[22px] pr-2.5 py-[7px] text-[12.5px] transition-colors',
+                                    active ? 'bg-white/[0.12] text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white/80',
                                   ].join(' ')
                             }
                           >
@@ -790,7 +860,7 @@ export function AppShell({
                                 <ShellNavIcon name={item_.icon} />
                               </span>
                             ) : (
-                              <span className={['h-[6px] w-[6px] shrink-0 rounded-full bg-[#a89af7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#8f7cf7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
                           </Link>
@@ -805,14 +875,14 @@ export function AppShell({
 
           {financeNavItems && financeNavItems.length > 0 ? (
             <div
-              className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
+              className="mt-2"
               style={{ order: 15 }}
             >
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-[14px] border px-3 py-3 text-left text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-colors',
-                  'border-[#2d5b44] bg-[#173426] text-[#9ae8c2] hover:bg-[#1d422f]',
+                  'flex w-full items-center gap-2 rounded-lg border border-[#2d5b44]/70 px-2.5 py-2 text-left transition-colors',
+                  'text-[#80d5ad] hover:bg-white/[0.07]',
                 ].join(' ')}
                 aria-expanded={financeNavExpanded}
                 aria-controls="finance-shell-nav-items"
@@ -838,10 +908,8 @@ export function AppShell({
                   setHrNavExpanded(false);
                 }}
               >
-                <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="financeSection" open={financeNavExpanded} />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#2da772]" />
+                <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.02em] text-[#80d5ad]">
                   Finance
                 </span>
                 <ChevronDown
@@ -877,7 +945,7 @@ export function AppShell({
                       return (
                         <Fragment key={`${item_.href}-${item_.label}`}>
                           {showSection ? (
-                            <div className="border-t border-white/[0.09] pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#4a8966]">
+                            <div className="pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-white/35">
                               {item_.section}
                             </div>
                           ) : null}
@@ -888,12 +956,12 @@ export function AppShell({
                             className={
                               isOverview
                                 ? [
-                                    'flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[13px] transition-colors',
-                                    active ? 'bg-white/[0.1] text-[#c8f7de]' : 'text-[#a8bbb0] hover:bg-white/[0.06] hover:text-[#c8f7de]',
+                                    'flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] transition-colors',
+                                    active ? 'bg-white/[0.12] font-medium text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
                                   ].join(' ')
                                 : [
-                                    'flex items-center gap-2 rounded-[7px] pl-[22px] pr-2.5 py-[5.5px] text-[12.5px] transition-colors',
-                                    active ? 'bg-white/[0.1] text-[#c8f7de]' : 'text-[#a8bbb0] hover:bg-white/[0.05] hover:text-[#c8f7de]',
+                                    'flex items-center gap-2 rounded-[10px] pl-[22px] pr-2.5 py-[7px] text-[12.5px] transition-colors',
+                                    active ? 'bg-white/[0.12] text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white/80',
                                   ].join(' ')
                             }
                           >
@@ -902,7 +970,7 @@ export function AppShell({
                                 <ShellNavIcon name={item_.icon} />
                               </span>
                             ) : (
-                              <span className={['h-[6px] w-[6px] shrink-0 rounded-full bg-[#9ae8c2]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#8f7cf7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
                           </Link>
@@ -917,14 +985,14 @@ export function AppShell({
 
           {hrNavItems && hrNavItems.length > 0 ? (
             <div
-              className="mt-1.5 rounded-[16px] border border-white/[0.08] bg-[#111113] p-1"
+              className="mt-2"
               style={{ order: 20 }}
             >
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-[14px] border px-3 py-3 text-left text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-colors',
-                  'border-[#264e63] bg-[#142a36] text-[#4fc3f7] hover:bg-[#183243]',
+                  'flex w-full items-center gap-2 rounded-lg border border-[#264e63]/70 px-2.5 py-2 text-left transition-colors',
+                  'text-[#7ecaf2] hover:bg-white/[0.07]',
                 ].join(' ')}
                 aria-expanded={hrNavExpanded}
                 aria-controls="hr-shell-nav-items"
@@ -950,10 +1018,8 @@ export function AppShell({
                   setFinanceNavExpanded(false);
                 }}
               >
-                <span className="flex w-5 shrink-0 items-center justify-center text-current">
-                  <ShellNavIcon name="hrSection" open={hrNavExpanded} />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[11px] leading-none">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#2f9cd4]" />
+                <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.02em] text-[#7ecaf2]">
                   HR
                 </span>
                 <ChevronDown
@@ -989,7 +1055,7 @@ export function AppShell({
                       return (
                         <Fragment key={`${item_.href}-${item_.label}`}>
                           {showSection ? (
-                            <div className="border-t border-white/[0.09] pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#2d6f86]">
+                            <div className="pt-2.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-white/35">
                               {item_.section}
                             </div>
                           ) : null}
@@ -1000,12 +1066,12 @@ export function AppShell({
                             className={
                               isOverview
                                 ? [
-                                    'flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[13px] transition-colors',
-                                    active ? 'bg-white/[0.1] text-[#b7e7fb]' : 'text-[#a4b5bf] hover:bg-white/[0.06] hover:text-[#b7e7fb]',
+                                    'flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] transition-colors',
+                                    active ? 'bg-white/[0.12] font-medium text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
                                   ].join(' ')
                                 : [
-                                    'flex items-center gap-2 rounded-[7px] pl-[22px] pr-2.5 py-[5.5px] text-[12.5px] transition-colors',
-                                    active ? 'bg-white/[0.1] text-[#b7e7fb]' : 'text-[#a4b5bf] hover:bg-white/[0.05] hover:text-[#b7e7fb]',
+                                    'flex items-center gap-2 rounded-[10px] pl-[22px] pr-2.5 py-[7px] text-[12.5px] transition-colors',
+                                    active ? 'bg-white/[0.12] text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white/80',
                                   ].join(' ')
                             }
                           >
@@ -1014,7 +1080,7 @@ export function AppShell({
                                 <ShellNavIcon name={item_.icon} />
                               </span>
                             ) : (
-                              <span className={['h-[6px] w-[6px] shrink-0 rounded-full bg-[#4fc3f7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#8f7cf7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
                           </Link>
@@ -1038,47 +1104,96 @@ export function AppShell({
               />
             </div>
           ) : null}
-        </nav>
+            </nav>
 
-        <Link
-          href="/settings"
-          prefetch={false}
-          onClick={closeMobile}
-          className="relative z-[1] mt-auto flex items-center gap-2.5 border-t border-white/[0.07] px-3 py-3.5 transition-colors hover:bg-white/[0.06]"
-        >
-          <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white/[0.18] text-[13px] font-semibold text-[#faf9f6]">
-            {showUserAvatar ? (
-              <img
-                src={safeUserAvatar!}
-                alt=""
-                className="h-full w-full object-cover"
-                onError={() => setUserAvatarFailed(true)}
-              />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center">{userInitials}</span>
-            )}
-          </div>
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="truncate text-[12.5px] font-medium text-white/[0.85]">{userName}</div>
-            <div className="truncate text-[11px] text-white/35">
-              {hasTenantProfile ? (
-                <>
-                  {userRoleLabel}
-                  {deptLine ? ` · ${deptLine}` : ''}
-                </>
-              ) : (
-                'Finish registration'
-              )}
+            <div className="relative z-[1] mt-auto border-t border-white/[0.07] px-3 py-3.5">
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/settings"
+                  prefetch={false}
+                  onClick={closeMobile}
+                  className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-white/[0.06]"
+                >
+                  <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white/[0.18] text-[13px] font-semibold text-[#faf9f6]">
+                    {showUserAvatar ? (
+                      <img
+                        src={safeUserAvatar!}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        onError={() => setUserAvatarFailed(true)}
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center">{userInitials}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="truncate text-[12.5px] font-medium text-white/[0.85]">{userName}</div>
+                    <div className="truncate text-[11px] text-white/35">
+                      {hasTenantProfile ? (
+                        <>
+                          {userRoleLabel}
+                          {deptLine ? ` · ${deptLine}` : ''}
+                        </>
+                      ) : (
+                        'Finish registration'
+                      )}
+                    </div>
+                  </div>
+                  <span className="flex shrink-0 text-white/30">
+                    <ShellNavIcon name="settings" />
+                  </span>
+                </Link>
+              </div>
             </div>
+          </>
+        ) : (
+          <div className="hidden h-full flex-col items-center border-r border-white/[0.07] px-2.5 py-3 md:flex">
+            <button
+              type="button"
+              className="group relative mb-2 flex h-9 w-9 items-center justify-center rounded-md bg-white/[0.04] text-white/80 transition-colors hover:bg-white/[0.11] hover:text-white"
+              aria-label="Expand sidebar"
+              aria-controls="primary-navigation"
+              onClick={toggleDesktopSidebar}
+            >
+              <CampsiteLogoMark className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.12] transition-opacity duration-150 group-hover:opacity-0" />
+              <ChevronRight
+                className="pointer-events-none absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                aria-hidden
+              />
+            </button>
+            <div className="mt-2 flex flex-col items-center gap-2">
+              <RailIconLink href="/dashboard" icon="dashboard" label="Dashboard" />
+              <RailIconLink href="/broadcasts" icon="broadcasts" label="Broadcasts" />
+              <RailIconLink href="/calendar" icon="calendar" label="Calendar" />
+              <RailIconLink href="/resources" icon="resources" label="Resources" />
+            </div>
+            <Link
+              href="/settings"
+              prefetch={false}
+              className="mt-auto mb-1 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white/[0.15] text-[11px] font-semibold text-white/85 transition-colors hover:bg-white/[0.24]"
+              title="Settings"
+              aria-label="Settings"
+            >
+              {showUserAvatar ? (
+                <img
+                  src={safeUserAvatar!}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onError={() => setUserAvatarFailed(true)}
+                />
+              ) : (
+                <span>{userInitials}</span>
+              )}
+            </Link>
           </div>
-          <span className="flex shrink-0 text-white/30">
-            <ShellNavIcon name="settings" />
-          </span>
-        </Link>
+        )}
       </aside>
 
       <div
-        className="flex min-h-screen flex-1 flex-col md:ml-[240px]"
+        className={[
+          'flex min-h-screen flex-1 flex-col transition-[margin] duration-200',
+          desktopNavOpen ? 'md:ml-[240px]' : 'md:ml-[58px]',
+        ].join(' ')}
         style={
           shellGradientAllowed
             ? {

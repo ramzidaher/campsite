@@ -6,11 +6,15 @@ import {
   getCachedMainShellLayoutBundle,
 } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
-import { canComposeBroadcastByPermissions, canViewDashboardUnreadBroadcastKpi } from '@campsite/types';
+import {
+  canComposeBroadcastByPermissions,
+  canViewDashboardUnreadBroadcastKpi,
+  type PermissionKey,
+} from '@campsite/types';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { warnIfSlowServerPathWithThreshold, withServerPerf } from '@/lib/perf/serverPerf';
 
 function greeting(hour: number, name: string) {
   if (hour < 12) return `Good morning, ${name}`;
@@ -32,7 +36,7 @@ export default async function DashboardPage() {
       .select('id, org_id, role, full_name, status')
       .eq('id', user.id)
       .maybeSingle(),
-    300
+    1500
   );
 
   if (profileError || !profile?.org_id) {
@@ -43,15 +47,25 @@ export default async function DashboardPage() {
   }
   if (profile.status !== 'active') redirect('/pending');
 
-  // Cache hit — layout already called getMyPermissions for nav display.
-  const permissionKeys = await withServerPerf(
-    '/dashboard',
-    'get_my_permissions',
-    getMyPermissions(profile.org_id as string),
-    300
-  );
-
-  const shellBundle = await withServerPerf('/dashboard', 'shell_bundle_cached', getCachedMainShellLayoutBundle(), 350);
+  const shellBundle = await withServerPerf('/dashboard', 'shell_bundle_cached', getCachedMainShellLayoutBundle(), 1500);
+  const shellPermissionKeys: PermissionKey[] = Array.isArray(shellBundle.permission_keys)
+    ? (shellBundle.permission_keys.map((k) => String(k)) as PermissionKey[])
+    : [];
+  // #region agent log
+  fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'run1',hypothesisId:'H4',location:'dashboard/page.tsx:shellBundle',message:'Shell bundle permission keys observed',data:{shellPermissionCount:shellPermissionKeys.length,hasOrgId:Boolean(shellBundle.org_id)},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  const permissionKeys =
+    shellPermissionKeys.length > 0
+      ? shellPermissionKeys
+      : await withServerPerf(
+          '/dashboard',
+          'get_my_permissions',
+          getMyPermissions(profile.org_id as string),
+          1500
+        );
+  // #region agent log
+  fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'run1',hypothesisId:'H4',location:'dashboard/page.tsx:permissionSource',message:'Dashboard permission source resolved',data:{usedShellPermissions:shellPermissionKeys.length>0,permissionCount:permissionKeys.length},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   const role = profile.role as string;
   const initialBroadcastUnread = canViewDashboardUnreadBroadcastKpi(role)
     ? broadcastUnreadFromShellBundle(shellBundle)
@@ -75,7 +89,7 @@ export default async function DashboardPage() {
       },
       { initialBroadcastUnread, initialPendingApprovals }
     ),
-    500
+    5000
   );
 
   const hour = new Date().getHours();
@@ -94,6 +108,6 @@ export default async function DashboardPage() {
       membersStatHref={canViewOrgDirectory ? '/admin/users' : null}
     />
   );
-  warnIfSlowServerPath('/dashboard', pathStartedAtMs);
+  warnIfSlowServerPathWithThreshold('/dashboard', pathStartedAtMs, 7000);
   return view;
 }

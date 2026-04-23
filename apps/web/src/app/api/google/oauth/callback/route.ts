@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { encryptGoogleTokenIfConfigured, isGoogleTokenCryptoConfigured } from '@/lib/google/googleTokenCrypto';
 
 /** Exchanges Google OAuth code and stores tokens in `google_connections`. */
 export async function GET(req: Request) {
@@ -98,12 +99,21 @@ export async function GET(req: Request) {
     googleEmail = u.email ?? null;
   }
 
+  const encryptedAccess = encryptGoogleTokenIfConfigured(tokens.access_token);
+  const encryptedRefresh = encryptGoogleTokenIfConfigured(refreshToken);
+  const encryptedMode = isGoogleTokenCryptoConfigured();
+
   const { error } = await supabase.from('google_connections').upsert(
     {
       user_id: user.id,
       type: meta.type,
-      access_token: tokens.access_token,
-      refresh_token: refreshToken,
+      access_token: encryptedMode ? null : tokens.access_token,
+      refresh_token: encryptedMode ? null : refreshToken,
+      access_token_encrypted: encryptedAccess.ciphertext,
+      refresh_token_encrypted: encryptedRefresh.ciphertext,
+      token_encryption_kid: encryptedAccess.kid ?? encryptedRefresh.kid,
+      token_encrypted_at:
+        encryptedAccess.ciphertext && encryptedRefresh.ciphertext ? new Date().toISOString() : null,
       expires_at: expiresAt,
       google_email: googleEmail,
       updated_at: new Date().toISOString(),

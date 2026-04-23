@@ -57,12 +57,12 @@ export async function fetchDashboardStatCounts(
     const [bc, mc] = await Promise.all([
       supabase
         .from('broadcasts')
-        .select('id', { count: 'exact', head: true })
+        .select('id', { count: 'planned', head: true })
         .eq('org_id', orgId)
         .eq('status', 'sent'),
       supabase
         .from('profiles')
-        .select('id', { count: 'exact', head: true })
+        .select('id', { count: 'planned', head: true })
         .eq('org_id', orgId)
         .eq('status', 'active'),
     ]);
@@ -86,7 +86,7 @@ export async function fetchDashboardStatCounts(
   if (showSentBroadcastKpi) {
     const { count } = await supabase
       .from('broadcasts')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'planned', head: true })
       .eq('org_id', orgId)
       .eq('status', 'sent')
       .in('dept_id', deptIds);
@@ -106,7 +106,7 @@ export async function fetchDashboardStatCounts(
 
   const { count: memberActiveTotal } = await supabase
     .from('profiles')
-    .select('id', { count: 'exact', head: true })
+    .select('id', { count: 'planned', head: true })
     .eq('org_id', orgId)
     .eq('status', 'active')
     .in('id', memberUserIds);

@@ -1,213 +1,339 @@
-# Database Audit – Actionable TODO List
+# Database Audit - Actionable TODO List
 
-## 🏗️ Phase 0 – Migration Safety (Do This Before Touching Anything)
+This checklist is aligned to the live schema snapshot and your tenancy model:
 
-> **⚠️ Many of the ALTER TABLE commands in later phases will take an `AccessExclusiveLock` and block all reads/writes on a live system. Follow these patterns for every migration.**
+- users can belong to multiple orgs (`user_org_memberships`)
+- `profiles` acts as active-org context
+- external candidates can apply to many orgs
 
-- [ ] Always add new columns as `NULL` first — never add a `NOT NULL` column with no default in a single step
-- [ ] Backfill data in batches (e.g., `UPDATE ... WHERE id BETWEEN x AND y`) rather than a single full-table update
-- [ ] For `NOT NULL` columns: backfill first, then `ALTER TABLE ... ALTER COLUMN ... SET NOT NULL` — note that `VALIDATE CONSTRAINT` applies to CHECK and FK constraints only, not `NOT NULL`; use `NOT VALID` / `VALIDATE CONSTRAINT` for any new CHECK or FK constraints to avoid holding a full table lock during validation
-- [ ] Create indexes using `CREATE INDEX CONCURRENTLY` — avoids table locks entirely
-- [ ] Drop columns in two steps: first stop writing to the column in application code, then drop it in a later deploy
-- [ ] Test every migration on a production-size data clone before running on live — never assume a migration that was fast in dev will be fast in prod
+Use status tags in each section:
 
----
-
-## 🚨 Phase 1 – Critical Security & Integrity Fixes
-
-- [ ] Remove all plaintext token columns (`portal_token` on `job_applications` and `application_offers`) — use only the existing `portal_token_hash` columns for lookups
-- [ ] Ensure OAuth tokens are encrypted before insertion — `google_connections.access_token` and `refresh_token` must never be stored in plaintext (application/KMS level)
-- [ ] Review `DEFAULT auth.uid()` on `created_by` / `updated_by` columns per table (`employee_hr_records`, `recruitment_requests`, `review_cycles`, `onboarding_templates`, `sickness_absences`) — these silently store NULL when writes come from service roles or migration scripts; audit each table's write paths and remove the default on any table that is written to outside a user session context
-- [ ] Conduct a row-level access review for every table storing PII — verify RLS policies exist, are correctly scoped by `org_id`, and are not bypassed by service role connections; tables requiring immediate review: `employee_hr_records`, `employee_bank_details`, `employee_uk_tax_details`, `employee_medical_notes`, `google_connections`, `candidate_profiles`
-- [ ] Enforce strict Row Level Security (RLS) on all remaining tenant-scoped tables not yet covered
-- [ ] Add composite unique keys `(org_id, id)` on parent tables that are referenced by tenant-scoped children — the purpose is to allow composite FK references from child tables, not to add new uniqueness (since `id` is already the PK); skip tables that are intentionally global (e.g., `permission_catalog`)
-- [ ] Add composite `(org_id, FK_column)` foreign key references on tenant-scoped child tables — this prevents a row in Org A from referencing an entity belonging to Org B; apply selectively to tables that carry `org_id` and reference a parent that also carries `org_id`; do not force this on references to global/shared tables
-- [ ] Review and explicitly define `ON DELETE` behaviour for every foreign key — currently all default silently to `NO ACTION`, which blocks `privacy_erasure_requests` at the database level
-- [ ] Set `FILLFACTOR 80` specifically on tables with frequent in-place updates: `employee_hr_records`, notification read-state tables, and any counter/status tables — do not apply broadly; tables that are mostly append-only gain nothing and waste space:
-  ```sql
-  ALTER TABLE public.employee_hr_records SET (fillfactor = 80);
-  ```
+- `[MISSING]` = not present in schema snapshot and should be added
+- `[VALIDATE]` = appears partially handled; verify exact behavior in prod
+- `[PARTIAL]` = implemented in part; follow-up step still required
+- `[DONE]` = appears present in schema snapshot
 
 ---
 
-## ⚠️ Phase 2 – Data Integrity Enforcement
+## True Open Items (current)
 
-**Unique org-scoped business keys (new — these are silent collision points even when PKs are fine):**
-- [ ] Enforce unique slugs/keys per org on user-facing identifiers:
-  - [ ] `organisations.slug` — globally unique
-  - [ ] `job_listings.slug` scoped to `org_id`
-  - [ ] `org_roles.key` scoped to `org_id`
-  - [ ] `hr_custom_field_definitions.key` scoped to `org_id`
-  - [ ] `broadcast_channels` name scoped to `org_id` (verify business rule)
-  - [ ] `staff_resource_folders` name scoped to parent folder / org (verify business rule)
+Use this as the active queue; everything else below is full context/history.
 
-**Singleton table protection:**
-- [ ] Enforce one-row-per-org on settings tables that are logically singleton:
-  - [ ] `org_attendance_settings` — add `UNIQUE (org_id)` or use `org_id` as PK
-  - [ ] `org_leave_settings` — same
-  - [ ] `org_hr_metric_settings` — same
-  - [ ] `platform_legal_settings` already uses `CHECK (id = 1)` — verify this is sufficient or replace with a proper guard
-
-**Duplicate active-record prevention:**
-- [ ] Audit all "current state with history" tables for exactly-one-active-row guarantees:
-  - [ ] `employee_bank_details (org_id, user_id) WHERE is_active = true`
-  - [ ] `employee_uk_tax_details (org_id, user_id) WHERE is_active = true`
-  - [ ] `employee_medical_notes` — determine if there is a "current" concept and enforce it
-  - [ ] `leave_allowances (org_id, user_id, leave_year)` — one allowance row per user per year
-  - [ ] `one_on_one_pair_settings (org_id, manager_user_id, report_user_id)` — one settings row per pair
-  - [ ] `weekly_timesheets (org_id, user_id, week_start_date)` — one timesheet per user per week
-
-**Chronological constraints:**
-- [ ] Add `end >= start` (or `end > start` where zero-duration is invalid) constraints on all time-based tables: `leave_requests`, `rota_shifts`, `interview_slots`, `one_on_one_meetings`, `calendar_events`, `sickness_absences`, `weekly_timesheets`, `org_leave_holiday_periods`
-
-**Status/timestamp consistency:**
-- [ ] Add conditional CHECK constraints ensuring workflow status and timestamps agree:
-  - [ ] `status = 'signed'` → `signed_at IS NOT NULL AND signer_typed_name IS NOT NULL`
-  - [ ] `status = 'declined'` → `declined_at IS NOT NULL`
-  - [ ] `status = 'approved'` → `decided_at IS NOT NULL AND decided_by IS NOT NULL`
-  - [ ] `status = 'pending_edit'` → `proposed_start_date IS NOT NULL AND proposed_end_date IS NOT NULL`
-  - [ ] Cancelled/archived states should be mutually exclusive with active flags
-
-**Other uniqueness:**
-- [ ] Add uniqueness constraints on:
-  - [ ] `(event_id, profile_id)` for `calendar_event_attendees`
-  - [ ] `(org_id, manager_user_id, report_user_id)` for `one_on_one_pair_settings`
-  - [ ] `(org_id, user_id, leave_year)` for `leave_allowances`
-  - [ ] `(org_id, user_id, definition_id)` for `hr_custom_field_values`
-  - [ ] `(org_id, user_id, week_start_date)` for `weekly_timesheets`
-  - [ ] `(user_id, type)` for `google_connections`
-
-**Email normalisation (treat as high priority — obvious collision point across multiple tables):**
-- [ ] Apply `citext` extension or lower-case unique indexes to all email columns: `profiles.email`, `user_org_memberships.email`, `job_applications.candidate_email`, `google_connections.google_email` — case-sensitive duplicates silently accumulate otherwise
-
-**Other integrity:**
-- [ ] Add trigger to maintain `search_tsv` on UPDATE of `title`/`body` on `broadcasts` and `staff_resources` — column DEFAULT only fires on INSERT, leaving the search index stale after any update
-- [ ] Fix `discount_tiers.discount_value` and `valid_at` — change from `text` to `numeric` and `daterange` respectively
-- [ ] Identify the hottest multi-table write flows (leave approval, rota assignment, HR record updates) and standardise their table access order in application code to prevent circular wait deadlocks — this is an application-layer concern that cannot be enforced by the schema, but the paths must be explicitly documented
-- [ ] Add optimistic locking to core mutable records (`employee_hr_records`, `leave_requests`, `application_offers`) — prevents lost updates without holding row locks:
-  ```sql
-  ALTER TABLE public.employee_hr_records ADD COLUMN version integer NOT NULL DEFAULT 1;
-  -- Application layer: UPDATE ... SET version = version + 1 WHERE id = $1 AND version = $2
-  -- If 0 rows updated, another process won the race — retry or surface conflict to user
-  ```
+1. [PARTIAL] Finalize `google_connections` encrypted-only cutover
+   - enforce encrypted-only in all envs
+   - drop legacy plaintext token columns when coverage is 100%
+2. [PARTIAL] Finish `discount_tiers` type migration
+   - migrate reads/writes to typed columns (`discount_value_pct`, `valid_on`)
+   - retire legacy text fields (`discount_value`, `valid_at`)
+3. [MISSING] Full RLS audit/closure for all exposed tenant tables (especially PII paths)
+   - progress: began advisor-driven RLS performance/hardening pass (`20260730186000_rls_initplan_org_leave_holiday_periods.sql`)
+4. [PARTIAL] Explicit `ON DELETE` strategy for privacy-erasure-sensitive graphs
+   - inventory view added: `public.db_fk_delete_action_audit`
+   - decide and apply target actions (`CASCADE`/`SET NULL`/`RESTRICT`) per sensitive graph
+   - current audit pass confirms key workflow/event graphs are already explicit; remaining work is documenting final decisions for actor/profile references
+5. [PARTIAL] Define retention windows by domain (audit, notifications, jobs, rate-limit events)
+   - seeded defaults in `privacy_retention_policies`; next step is enabling/enforcing scheduled cleanup workers everywhere
+6. [MISSING] Candidate identity model decision (global candidate vs org-scoped profile)
+7. [MISSING] Notification model consolidation strategy (optional but recommended)
+8. [MISSING] Soft-delete standardization decision (`deleted_at` vs domain-specific patterns)
+9. [MISSING] Naming consistency pass (`profile_id`/`user_id`/`auth_user_id`, `dept_id`/`department_id`)
+10. [PARTIAL] Confirm all remaining FK columns have supporting indexes and all queue workers use `FOR UPDATE SKIP LOCKED`
+   - index audit view added: `public.db_fk_missing_index_audit`
+   - phase-1 hotpath FK indexes applied in `20260730179000_hotpath_fk_indexes_phase1.sql`
+   - phase-2 workflow FK indexes applied in `20260730180000_hotpath_fk_indexes_phase2.sql`; continue with remaining long-tail tables in batches
+   - phase-3/4 completed and audit view corrected in `20260730181000`-`20260730183000`
+   - FK index side is closed (`0` missing)
+   - active queue workers now claim jobs via SKIP LOCKED (`20260730184000_notification_queue_claims_skip_locked.sql`)
+   - remaining validation: ensure any future/new queue workers follow the same claim pattern
 
 ---
 
-## ⚡ Phase 3 – Performance & Indexing
+## Phase 0 - Migration Safety (always apply)
 
-- [ ] Add indexes on all foreign key columns
-- [ ] Add composite indexes for high-traffic queries:
-  - [ ] `(org_id, user_id)` on `employee_hr_records`
-  - [ ] `(org_id, status)` on `leave_requests`, `job_applications`, `job_listings`
-  - [ ] `(org_id, start_date, end_date)` on `leave_requests`
-  - [ ] `(user_id, clocked_at DESC)` and `(org_id, clocked_at DESC)` on `attendance_events`
-  - [ ] `(org_id, user_id, start_date)` on `sickness_absences`
-  - [ ] `(org_id, start_time)` and `(user_id, start_time, end_time)` on `rota_shifts`
-  - [ ] `(recipient_id, read_at)` on all notification tables
-- [ ] Add partial indexes for:
-  - [ ] Unread notifications (`read_at IS NULL`)
-  - [ ] Unprocessed jobs (`processed_at IS NULL`)
-  - [ ] Active/current records (e.g., `status = 'live'` on `job_listings`)
-  - [ ] Pending requests on `leave_requests`
-- [ ] Add GIN indexes for:
-  - [ ] `tsvector` search columns (`broadcasts.search_tsv`, `staff_resources.search_tsv`)
-  - [ ] JSONB fields queried for specific keys (e.g., `employee_case_records.linked_documents`)
-  - [ ] ARRAY fields used in filters (e.g., `candidate_profiles.skills`)
-- [ ] Optimise job/queue tables:
-  - [ ] Add polling indexes on `created_at WHERE processed_at IS NULL` for all `*_notification_jobs` tables
-  - [ ] Ensure workers use `FOR UPDATE SKIP LOCKED`
-  - [ ] Add deduplication constraints (enforce `dedupe_key` uniqueness on `hr_metric_notifications`)
+- [ ] Add columns nullable first; backfill; then enforce `NOT NULL`
+- [ ] Use batched backfills for large tables
+- [ ] Use `NOT VALID` + `VALIDATE CONSTRAINT` for new CHECK/FK where possible
+- [ ] Use `CREATE INDEX CONCURRENTLY` on live systems
+- [ ] Do two-step drops: stop writes first, drop in later deploy
+- [ ] Test migrations on production-like data size
 
 ---
 
-## 📈 Phase 4 – Scalability & Growth
+## Phase 1 - P0 Security + Tenant Integrity
 
-> **⚠️ Only partition tables that are realistically approaching or exceeding ~10 million rows. Below that threshold, partition pruning overhead can slow queries rather than speed them up. Target the specific event/log tables listed below — do not prematurely partition operational tables like `leave_requests` or `job_applications`.**
+### Tokens and secrets
 
-- [ ] Partition high-volume event/log tables by time (monthly):
-  - [ ] `attendance_events` (partition by `clocked_at`)
-  - [ ] `scan_logs` (partition by `created_at`)
-  - [ ] `platform_audit_events` (partition by `created_at`)
-  - [ ] `employee_hr_record_events` and `employee_bank_detail_events` (partition by `created_at`)
-  - [ ] `audit_role_events` (partition by `created_at`)
-  - [ ] `job_listing_public_metrics` (partition by `created_at`)
-  - [ ] `job_application_rate_limit_events` (partition by `attempted_at`)
-  - [ ] `public_token_access_events` (partition by `created_at`)
-  - [ ] All notification tables if not consolidated
-- [ ] Define explicit retention windows (not just vague cleanup policies) for each table category:
-  - [ ] Audit logs — e.g., retain 7 years for compliance, archive to cold storage after 1 year
-  - [ ] Notifications / read receipts — e.g., hard delete after 90 days
-  - [ ] Job queue rows — e.g., delete processed rows after 30 days
-  - [ ] Rate limit events — e.g., delete after 24–72 hours
-- [ ] Introduce rollup tables for metrics (daily/hourly aggregation) — specifically `job_listing_metric_daily` to replace raw row-per-event model in `job_listing_public_metrics`
-- [ ] Reduce index bloat on append-only tables using partial indexes
-- [ ] Evaluate switching heavy event/log tables to `bigint GENERATED ALWAYS AS IDENTITY` or UUIDv7 IDs to avoid B-tree fragmentation from random UUIDs
+- [VALIDATE] `portal_token_hash` exists on `job_applications` and `application_offers`; plaintext `portal_token` still exists and should be removed once fully cut over
+- [DONE] Encrypt `google_connections.access_token` and `refresh_token` at rest (app/KMS + encrypted columns)
 
----
+### Multi-org tenant integrity (critical for your model)
 
-## 🧱 Phase 5 – Structural Refactoring
+- [DONE] Add org-consistency enforcement for all profile references in tenant tables (`*_user_id`, `*_by`, `recipient_id`, `created_by`, `updated_by`, etc.) so referenced profile belongs to same `org_id` as the row
+- [PARTIAL] Add composite tenant FKs where practical: child `(org_id, parent_id)` -> parent `(org_id, id)` (or trigger fallback where composite FK is impractical)
+- [VALIDATE] Review all references to `profiles(id)` because `profiles.org_id` is active-context and mutable
+- [VALIDATE] Confirm external candidate flows are isolated by `job_applications.org_id` and never assume candidate belongs to one org
 
-> **⚠️ High effort: breaking up `employee_hr_records` will require rewriting a significant portion of application queries. Only prioritise this now if you are already experiencing row contention or lock timeouts on that table — otherwise treat it as a planned refactor for a future cycle.**
+### RLS / write path safety
 
-- [ ] Split `employee_hr_records` into domain-specific tables:
-  - [ ] `employee_contract_terms` (FTE, hours, pay band)
-  - [ ] `employee_rtw_records` (RTW status, visa info)
-  - [ ] `employee_address_records`
-  - [ ] `employee_emergency_contacts` (proper table — currently 3 flat text columns, also duplicated with `employee_dependants.is_emergency_contact`)
-- [ ] Normalise candidate identity into a single `candidates` master table; link `job_applications` and `candidate_profiles` to it
-- [ ] Remove duplicated membership/role data between `profiles` and `user_org_memberships` — pick one source of truth per field
-- [ ] Consolidate the six separate notification tables (`application_notifications`, `calendar_event_notifications`, `hr_metric_notifications`, `leave_notifications`, `leave_finance_notifications`, `recruitment_notifications`) into a unified typed model
-- [ ] Replace JSONB used for permanent queryable core logic with proper relational tables (e.g., `employee_case_records.linked_documents` → junction table)
-- [ ] Normalise arrays (e.g., `candidate_profiles.skills`) into junction tables if heavily queried
-- [ ] Drop `job_listings.posted_year` — it is a stale derived column that does not update when `published_at` changes; compute at query time instead
+- [VALIDATE] Run PII RLS review for `employee_hr_records`, `employee_bank_details`, `employee_uk_tax_details`, `employee_medical_notes`, `google_connections`, `candidate_profiles`
+- [MISSING] Ensure all tenant tables in exposed schemas have explicit RLS policies
+- [VALIDATE] Audit `DEFAULT auth.uid()` on `created_by` / `updated_by`; remove defaults where service-role/background jobs write rows
+
+### FK deletion behavior
+
+- [MISSING] Explicitly define `ON DELETE` strategy for privacy-erasure-sensitive graphs; avoid accidental `NO ACTION` deadlocks
 
 ---
 
-## 🧠 Phase 6 – Architecture & Consistency
+## Phase 2 - P1 Data Integrity
 
-- [ ] Standardise naming conventions:
-  - [ ] `profile_id` vs `user_id` vs `auth_user_id` — pick one per reference target and apply consistently
-  - [ ] `department_id` vs `dept_id` — standardise to one across the schema
-- [ ] Remove legacy role fields:
-  - [ ] `profiles.role`
-  - [ ] `user_org_memberships.role`
-- [ ] Fully migrate to RBAC (`org_roles`, `user_org_role_assignments`, `user_permission_overrides`)
-- [ ] Standardise soft-delete strategy to `deleted_at timestamptz NULL` across the entire schema (currently using at least four different patterns: `archived_at`, `is_archived`, `voided_at`, `status = 'cancelled'`)
-- [ ] Separate schemas by concern:
-  - [ ] `core` — operational tables
-  - [ ] `audit` — all event/history/log tables
-  - [ ] `secrets` — encrypted payload tables, token tables
-  - [ ] `analytics` — metrics and rollup tables
-- [ ] Add immutability triggers on all audit log tables — even admins must not be able to `UPDATE` or `DELETE` rows from `platform_audit_events`, `audit_role_events`, `employee_hr_record_events`, etc.:
-  ```sql
-  CREATE OR REPLACE FUNCTION prevent_audit_mutation() RETURNS trigger AS $$
-  BEGIN RAISE EXCEPTION 'Audit records are immutable'; END $$ LANGUAGE plpgsql;
+### Must-have uniqueness (duplicate prevention)
 
-  CREATE TRIGGER audit_immutable
-  BEFORE UPDATE OR DELETE ON public.platform_audit_events
-  FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();
-  -- Repeat for all audit/event tables
-  ```
-- [ ] Add cross-tenant `org_id` consistency triggers as a second line of defence — verify that child and parent rows share the same `org_id` on insert/update; covers tables where composite FKs cannot be added immediately
-- [ ] Resolve the `broadcast_channels.dept_id NOT NULL` inconsistency — channels are forced to belong to a department, but `broadcasts.is_org_wide = true` exists; these are conceptually incompatible
-- [ ] Split overloaded `org_leave_settings` into purpose-specific tables (`org_leave_calendar_settings`, `org_leave_entitlement_settings`, `org_leave_statutory_settings`)
+- [DONE] `weekly_timesheets (org_id, user_id, week_start_date)` unique
+- [DONE] `leave_allowances (org_id, user_id, leave_year)` unique
+- [DONE] `one_on_one_pair_settings (org_id, manager_user_id, report_user_id)` unique
+- [DONE] `calendar_event_attendees (event_id, profile_id)` unique
+- [DONE] `wagesheet_lines (org_id, user_id, week_start_date, line_type)` unique
+- [DONE] `google_connections (user_id, type)` unique
+- [DONE] `hr_custom_field_values (org_id, user_id, definition_id)` unique
+
+### Org-scoped business keys
+
+- [DONE] `organisations.slug` globally unique
+- [DONE] `job_listings (org_id, slug)` unique
+- [DONE] `org_roles (org_id, key)` unique
+- [DONE] `hr_custom_field_definitions (org_id, key)` unique
+- [DONE] `broadcast_channels` naming uniqueness rule (per dept vs per org) and enforce with index
+- [DONE] `staff_resource_folders` naming rule (parent/org scope) and enforce with index
+
+### Singleton protection
+
+- [DONE] `org_attendance_settings` one-row-per-org (PK `org_id`)
+- [DONE] `org_leave_settings` one-row-per-org (PK `org_id`)
+- [DONE] `org_hr_metric_settings` one-row-per-org (PK `org_id`)
+- [VALIDATE] `platform_legal_settings` singleton (`CHECK (id = 1)`) is sufficient for your governance needs
+
+### Active-row uniqueness
+
+- [DONE] `employee_bank_details` should enforce one active row per `(org_id, user_id)`
+- [DONE] `employee_uk_tax_details` should enforce one active row per `(org_id, user_id)`
+- [VALIDATE] Decide if `employee_medical_notes` needs one-current-row rule and enforce if yes
+
+### Time and lifecycle consistency
+
+- [DONE] Add or validate `end >= start` / `end > start` checks on:
+  - `leave_requests`
+  - `rota_shifts`
+  - `interview_slots`
+  - `one_on_one_meetings`
+  - `calendar_events`
+  - `sickness_absences`
+  - `weekly_timesheets`
+  - `org_leave_holiday_periods`
+  - `employee_employment_history`
+- [DONE] Add conditional status/timestamp checks:
+  - `signed` -> `signed_at` (and signer data) present
+  - `declined` -> `declined_at` present
+  - `approved` -> decision fields present
+  - `pending_edit` -> proposed fields present
+
+### Data type and search correctness
+
+- [PARTIAL] Fix `discount_tiers.discount_value` and `valid_at` from `text` to proper numeric/range types
+- [DONE] `search_tsv` freshness on UPDATE for `broadcasts` and `staff_resources` (generated column or trigger)
+
+### Email normalization
+
+- [DONE] Normalize and constrain emails (`lower(...)` functional unique index or `citext`) for:
+  - `profiles.email`
+  - `user_org_memberships.email`
+  - `job_applications.candidate_email`
+  - `google_connections.google_email`
 
 ---
 
-## 🔍 Phase 7 – Advanced Improvements
+## Phase 3 - Performance and workload safety
 
-- [ ] Install `btree_gist` extension before adding any exclusion constraints — required to use equality operators (e.g., `user_id WITH =`) alongside range operators in the same constraint:
-  ```sql
-  CREATE EXTENSION IF NOT EXISTS btree_gist;
-  ```
-- [ ] Add exclusion constraints (GiST) for overlapping time ranges — always scope with a `WHERE` filter to keep the index small and fast:
-  - [ ] `rota_shifts` — prevent overlapping shifts per user `WHERE status != 'cancelled'`
-  - [ ] `employee_employment_history` — prevent overlapping active periods per user `WHERE status = 'active'`
-  - [ ] `interview_slots` — prevent overlapping slots per job listing `WHERE status IN ('available', 'booked')`
-- [ ] Add generated or functional indexes for case-insensitive search/filter (e.g., `lower(email)`, `lower(slug)`)
-- [ ] Add partial indexes for "live" subsets (active listings, pending requests, unread items)
-- [ ] Document and enforce snapshot vs live data strategy — notification/audit tables store immutable text snapshots of names/titles by design; this should be explicit, not accidental
-- [ ] Introduce a dedicated context table (`user_active_context`) for active org/session instead of embedding session-like state in `profiles.org_id` or `founder_acting_org`
-- [ ] Add a versioned history table for `platform_legal_settings` — a single mutable singleton row loses the audit trail of legal document changes, which matters for compliance
+- [VALIDATE] Index all FK columns lacking supporting indexes
+- [VALIDATE] Composite hot-path indexes:
+  - `employee_hr_records (org_id, user_id)`
+  - `leave_requests (org_id, status)` and `(org_id, start_date, end_date)`
+  - `job_applications (org_id, stage/status)`
+  - `job_listings (org_id, status)`
+  - `attendance_events (user_id, clocked_at desc)` and `(org_id, clocked_at desc)`
+  - `sickness_absences (org_id, user_id, start_date)`
+  - notification tables `(recipient_id, read_at)`
+- [VALIDATE] Partial indexes:
+  - unread rows (`read_at IS NULL`)
+  - pending jobs (`processed_at IS NULL`)
+  - active/live subsets (`status = 'live'`, etc.)
+- [VALIDATE] Queue workers use `FOR UPDATE SKIP LOCKED`
+- [DONE] Dedupe guarantees on notification/job tables (e.g., `hr_metric_notifications.dedupe_key`)
 
 ---
+
+## Phase 4 - Scalability and lifecycle
+
+- [VALIDATE] Partition only event/log tables near 10M+ rows:
+  - `attendance_events`, `scan_logs`, `platform_audit_events`
+  - `employee_hr_record_events`, `employee_bank_detail_events`
+  - `audit_role_events`, `job_listing_public_metrics`
+  - `job_application_rate_limit_events`, `public_token_access_events`
+- [MISSING] Define explicit retention windows by domain (audit vs notifications vs jobs vs rate-limit logs)
+- [MISSING] Add rollups for high-write metrics (`job_listing_metric_daily`)
+
+---
+
+## Phase 5 - Structural refactors (high effort)
+
+- [VALIDATE] Split `employee_hr_records` only if contention/lock pain is measurable
+- [MISSING] Candidate identity model decision:
+  - global candidate identity vs org-scoped candidate profile
+  - clear links from `job_applications` / `candidate_profiles`
+- [VALIDATE] Resolve dual source of truth between `profiles` and `user_org_memberships`
+- [MISSING] Consolidate fragmented notification tables into typed unified model (optional but recommended)
+- [VALIDATE] Replace heavily queried JSON/ARRAY fields with relational/junction models where necessary
+- [MISSING] Remove stale derived column `job_listings.posted_year` or keep it generated and consistent
+
+---
+
+## Phase 6 - Governance and consistency
+
+- [MISSING] Naming consistency pass (`profile_id` vs `user_id` vs `auth_user_id`, `dept_id` vs `department_id`)
+- [VALIDATE] Legacy role field deprecation plan (`profiles.role`, `user_org_memberships.role`) after RBAC transition
+- [VALIDATE] Complete RBAC migration (`org_roles`, `user_org_role_assignments`, `user_permission_overrides`)
+- [MISSING] Standardize soft-delete semantics (`deleted_at`) or explicitly document domain-specific alternatives
+- [DONE] Audit/event immutability triggers (`platform_audit_events`, `audit_role_events`, `employee_*_events`, etc.)
+- [VALIDATE] `broadcast_channels.dept_id NOT NULL` vs `broadcasts.is_org_wide` model consistency
+
+---
+
+## Phase 7 - Advanced integrity and UX hardening
+
+- [DONE] Add `btree_gist` and exclusion constraints for overlap prevention:
+  - `rota_shifts` per user
+  - `employee_employment_history` active periods
+  - `interview_slots` per listing/resource
+- [VALIDATE] Snapshot-vs-live policy documentation for notifications/audit text fields
+- [VALIDATE] Active-org context model (`profiles.org_id` / `founder_acting_org`) and whether to move to dedicated `user_active_context`
+- [DONE] Add versioned history for `platform_legal_settings`
+
+---
+
+## Immediate execution order (suggested)
+
+1. Phase 1 tenant integrity + token encryption
+2. Phase 2 uniqueness/check constraints
+3. Phase 3 indexes and queue safety
+4. Remaining phases based on observed load and product roadmap
+
+---
+
+## Progress log
+
+- [DONE] Applied `20260730151000_integrity_uniques_and_date_guards.sql`
+  - Added core uniqueness guards for timesheets, allowances, 1:1 pairs, attendees, wagesheet lines, Google connections, and custom field values
+  - Added org-scoped unique keys for `job_listings.slug`, `org_roles.key`, and `hr_custom_field_definitions.key`
+  - Added and validated chronological check constraints for key date/time ranges
+- [DONE] Applied `20260730152000_google_connections_token_encryption_stage1.sql`
+  - Added additive encrypted token columns (`*_encrypted`, `token_encryption_kid`, `token_encrypted_at`)
+  - Kept legacy plaintext columns for compatibility during rollout
+- [DONE] Applied `20260730153000_org_membership_reference_guards.sql`
+  - Added membership-based tenant integrity trigger helper (`enforce_org_membership_refs`)
+  - Enforced same-org membership references on core org-scoped tables (`leave_requests`, `weekly_timesheets`, `sickness_absences`, `attendance_events`, `employee_hr_records`, notifications, application notes/messages)
+- [DONE] Applied `20260730154000_hotpath_notification_queue_indexes.sql`
+  - Added/confirmed unread notification indexes across application/recruitment/leave/HR metric notification tables
+  - Added/confirmed pending queue polling indexes on broadcast/rota/one-on-one job tables
+  - Added event lookup indexes for rate-limit/token-attempt tables
+- [DONE] Applied `20260730155000_status_timestamp_consistency_guards.sql`
+  - Added status/timestamp consistency checks (as `NOT VALID`) for `application_offers`, `leave_requests`, `leave_carryover_requests`, `leave_encashment_requests`, and `toil_credit_requests`
+  - New writes are protected immediately; legacy rows can be cleaned and validated later
+- [DONE] Applied `20260730160000_org_membership_reference_guards_phase2.sql`
+  - Extended membership-based tenant guards to additional leave/HR/payroll/1:1/calendar/recruitment tables
+  - Cross-org user references are now blocked on insert/update across a broader set of org-scoped write paths
+- [DONE] Applied `20260730161000_validate_status_consistency_constraints.sql`
+  - Backfilled malformed legacy status rows for offers/leave workflows
+  - Validated previously `NOT VALID` status/timestamp consistency constraints
+  - Status consistency guards are now fully enforced
+- [DONE] Applied `20260730162000_parent_org_fk_guards.sql`
+  - Added parent-org mismatch guard helper (`enforce_parent_org_match`)
+  - Enforced same-org parent references across recruitment/applications/calendar/attendance/leave/payroll notification paths
+- [DONE] Applied `20260730163000_email_normalization_and_lookup_indexes.sql`
+  - Backfilled normalized (trim/lower) email values on `profiles`, `user_org_memberships`, `job_applications`, and `google_connections`
+  - Added write-time normalization triggers for those email fields
+  - Added case-insensitive lookup indexes (`lower(email)` style) without imposing risky global uniqueness
+- [DONE] Applied `20260730164000_discount_tiers_typed_columns_stage1.sql`
+  - Added typed columns on `discount_tiers` (`discount_value_pct`, `valid_on`) with safe parser/backfill functions
+  - Kept legacy text fields (`discount_value`, `valid_at`) for compatibility
+  - Added typed constraints and performance indexes (including GiST on validity range)
+- [DONE] Applied `20260730165000_discount_tiers_typed_sync_trigger.sql`
+  - Added trigger-based dual-write sync from legacy text fields to typed columns on `discount_tiers`
+  - Existing app writes now keep typed columns current without frontend changes
+- [DONE] Applied `20260730166000_active_row_and_notification_dedupe_guards.sql`
+  - Enforced one-active-row uniqueness for `employee_bank_details` and `employee_uk_tax_details` via partial unique indexes
+  - Cleaned duplicate active rows safely before index creation
+  - Enforced dedupe key uniqueness for `hr_metric_notifications` with pre-cleanup
+- [DONE] Applied `20260730167000_channel_and_folder_naming_uniques.sql`
+  - Enforced case-insensitive unique channel names per department in `broadcast_channels`
+  - Enforced case-insensitive unique active folder names per `(org_id, parent_id)` in `staff_resource_folders`
+  - Normalized/trimmed names and safely renamed duplicates before creating unique indexes
+- [DONE] Applied `20260730168000_audit_tables_immutability_triggers.sql`
+  - Added immutable UPDATE/DELETE guards on core audit/event tables (platform, privacy erasure, HR events, custom field events, recruitment status events)
+  - Audit/event rows are now append-only by trigger policy
+- [DONE] Applied `20260730169000_parent_org_fk_guards_phase2.sql`
+  - Extended parent-org mismatch guards to screening, onboarding, review, metrics, and custom question-set link tables
+  - Reduced remaining risk of cross-org parent references in secondary workflows
+- [DONE] Applied `20260730170000_search_tsv_update_triggers.sql`
+  - Added adaptive search-index freshness handling for `broadcasts` and `staff_resources`
+  - If `search_tsv` is generated, no trigger is needed; if not generated, update triggers are installed
+- [DONE] Applied `20260730171000_overlap_exclusion_constraints.sql`
+  - Added `btree_gist` extension and overlap detection logic for `rota_shifts`, `interview_slots`, and `employee_employment_history`
+  - `rota_shifts` exclusion creation initially skipped due to overlap data; later enforced via follow-up cleanup migration
+- [DONE] Applied `20260730172000_rota_shift_overlap_cleanup_and_enforce.sql`
+  - Added deterministic cleanup for overlapping assigned `rota_shifts` (secondary conflicts are unassigned and logged)
+  - Added cleanup event log table: `rota_shift_overlap_cleanup_events`
+  - Successfully enforced `rota_shifts_no_overlap_per_user_excl` exclusion constraint after cleanup
+- [DONE] Applied `20260730173000_platform_legal_settings_history.sql`
+  - Added `platform_legal_settings_history` table for versioned legal-content snapshots
+  - Added insert/update capture trigger on `platform_legal_settings`
+  - Backfilled current singleton row into history
+- [DONE] Applied `20260730174000_google_tokens_encrypted_cutover_stage2.sql`
+  - Made legacy plaintext Google token columns nullable and added token-pair presence guard
+  - Backfilled encryption metadata and scrubbed plaintext where encrypted tokens exist
+  - Added tracking index for rows still missing encrypted token payloads
+- [DONE] Applied `20260730175000_google_tokens_encrypted_guardrails.sql`
+  - Added DB trigger guard to prevent partial encrypted payload writes and auto-scrub plaintext when encrypted values exist
+  - Added auto-enable encrypted-only constraint path when migration coverage reaches 100%
+- [DONE] Applied `20260730176000_remove_noop_parent_org_triggers.sql`
+  - Removed no-op parent-org guard triggers on `payroll_wagesheet_reviews` and `wagesheet_lines` to reduce write-path overhead
+- [DONE] Applied `20260730177000_retention_policy_defaults.sql`
+  - Seeded explicit per-org retention defaults for audit logs, notifications, queue rows, and rate-limit/token-attempt events
+  - Added active-domain index to support retention sweeper jobs
+- [DONE] Applied `20260730178000_fk_policy_and_index_audit_views.sql`
+  - Added `public.db_fk_delete_action_audit` to inventory current FK `ON DELETE` behavior across `public` schema
+  - Added `public.db_fk_missing_index_audit` to identify foreign keys lacking supporting leading-column indexes
+- [DONE] Applied `20260730179000_hotpath_fk_indexes_phase1.sql`
+  - Added/confirmed FK-leading indexes for dashboard and notification hot paths (calendar attendees, recipient-scoped notifications, queue relation links)
+  - Kept migration idempotent with `IF NOT EXISTS`; existing indexes were skipped safely
+- [DONE] Applied `20260730180000_hotpath_fk_indexes_phase2.sql`
+  - Added/confirmed a conservative second batch of FK-leading indexes for leave, recruitment, payroll, and employee-HR workflow paths
+  - Continued batched approach to reduce migration lock risk while closing `db_fk_missing_index_audit` findings
+- [DONE] Applied `20260730181000_hotpath_fk_indexes_phase3.sql`
+  - Added/confirmed FK-leading indexes for onboarding, performance/review, and remaining employee HR event tables
+- [DONE] Applied `20260730182000_fix_fk_missing_index_audit_view.sql`
+  - Corrected `db_fk_missing_index_audit` array-position logic to eliminate false positives caused by `pg_index.indkey` lower-bound behavior
+- [DONE] Applied `20260730183000_hotpath_fk_indexes_phase4_tail.sql`
+  - Added tail batch of remaining FK-leading indexes surfaced by the corrected audit view
+  - Re-validated audit output: `db_fk_missing_index_audit` now returns `0` rows
+- [DONE] Applied `20260730184000_notification_queue_claims_skip_locked.sql`
+  - Added leased-claim RPCs using `FOR UPDATE SKIP LOCKED` for `rota_notification_jobs`, `calendar_event_notification_jobs`, and `one_on_one_notification_jobs`
+  - Added claim metadata columns (`claimed_at`, `claim_expires_at`) and updated active queue workers to claim via RPC before processing
+- [DONE] Applied `20260730185000_audit_views_security_invoker.sql`
+  - Hardened introspection audit views (`db_fk_delete_action_audit`, `db_fk_missing_index_audit`) with `security_invoker = true`
+  - Resolved SECURITY DEFINER advisor findings introduced by these audit views
+- [DONE] Applied `20260730186000_rls_initplan_org_leave_holiday_periods.sql`
+  - Optimized `org_leave_holiday_periods` RLS policies to use `(select auth.uid())`/initplan style
+  - Reduces per-row auth function re-evaluation on leave holiday policy checks
+- [DONE] Applied `20260730187000_rls_initplan_leave_docs_training_records.sql`
+  - Optimized `leave_request_documents` and `employee_training_records` RLS policy predicates to initplan `(select auth.uid())` pattern
+  - Re-ran advisors and cleared the corresponding `auth_rls_initplan` findings for those tables

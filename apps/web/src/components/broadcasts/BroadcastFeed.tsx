@@ -36,6 +36,7 @@ type Props = {
   supabase: SupabaseClient;
   orgId: string;
   userId: string;
+  initialRows?: FeedRow[];
   viewerDeptIds?: Set<string>;
   deptFilter: Set<string>;
   catFilter: Set<string>;
@@ -429,6 +430,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
     supabase,
     orgId,
     userId,
+    initialRows = [],
     viewerDeptIds = new Set(),
     deptFilter,
     catFilter,
@@ -541,6 +543,13 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
       const rows = await enrichBroadcastRows(supabase, userId, raw);
       return { rows, hasMore: raw.length === pageSize };
     },
+    initialData:
+      initialRows.length > 0
+        ? {
+            pages: [{ rows: initialRows, hasMore: initialRows.length === pageSize }],
+            pageParams: [0],
+          }
+        : undefined,
     getNextPageParam: (lastPage, allPages) => (lastPage.hasMore ? allPages.length : undefined),
   });
 
@@ -691,9 +700,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
         </p>
       ) : null}
 
-      {loading && !rows.length ? (
-        <p className="text-sm text-[#6b6b6b]">Loading...</p>
-      ) : trulyEmpty ? (
+      {loading && !rows.length ? null : trulyEmpty ? (
         <div className="py-12 text-center text-[#9b9b9b]">
           <div className="mb-3 text-4xl" aria-hidden>
             📭

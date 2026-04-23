@@ -1,4 +1,6 @@
 import { BroadcastsClient } from '@/components/broadcasts/BroadcastsClient';
+import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
+import type { RawBroadcast } from '@/lib/broadcasts/feedTypes';
 import { createClient } from '@/lib/supabase/server';
 import {
   canComposeBroadcast,
@@ -60,6 +62,19 @@ export default async function BroadcastsPage({
         : undefined;
 
   const initialCompose = sp.compose === '1';
+  const { data: initialFeedRaw } = await supabase
+    .from('broadcasts')
+    .select('id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide,cover_image_url')
+    .eq('org_id', profile.org_id)
+    .eq('status', 'sent')
+    .order('is_pinned', { ascending: false })
+    .order('sent_at', { ascending: false })
+    .limit(20);
+  const initialFeedRows = await enrichBroadcastRows(
+    supabase,
+    user.id,
+    ((initialFeedRaw ?? []) as unknown as RawBroadcast[]),
+  );
 
   return (
     <BroadcastsClient
@@ -69,6 +84,7 @@ export default async function BroadcastsPage({
         role: profile.role,
         full_name: profile.full_name,
       }}
+      initialFeedRows={initialFeedRows}
       initialWorkspace={initialWorkspace}
       initialCompose={initialCompose}
     />
