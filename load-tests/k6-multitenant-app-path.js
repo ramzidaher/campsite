@@ -3,15 +3,8 @@ import { check, sleep } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Rate } from 'k6/metrics';
 
-// Direct Supabase RPC stress test profile.
-// This script does NOT represent the full production app request path.
-const SUPABASE_URL = __ENV.SUPABASE_URL || __ENV.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY =
-  __ENV.SUPABASE_ANON_KEY ||
-  __ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  __ENV.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  __ENV.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
-const USERS_CSV_PATH = __ENV.K6_USERS_CSV ?? 'scripts/ussu-provision-output/ussu-password-import.csv';
+const APP_BASE_URL = __ENV.APP_BASE_URL;
+const USERS_CSV_PATH = __ENV.K6_USERS_CSV ?? 'reports/incident/k6-token-static-users.csv';
 const USERS_CSV_ENV_FILTER = (__ENV.K6_USERS_CSV_ENV ?? '').trim().toLowerCase();
 const SCENARIO_DURATION = __ENV.K6_SCENARIO_DURATION ?? '5m';
 const THINK_MIN_MS = Number.parseInt(__ENV.K6_THINK_MIN_MS ?? '200', 10);
@@ -19,34 +12,32 @@ const THINK_MAX_MS = Number.parseInt(__ENV.K6_THINK_MAX_MS ?? '900', 10);
 const PREAUTH_ALL = (__ENV.K6_PREAUTH_ALL ?? '1') !== '0';
 const SETUP_TIMEOUT = __ENV.K6_SETUP_TIMEOUT ?? '10m';
 const PREAUTH_REQUIRED_RATIO = Number.parseFloat(__ENV.K6_PREAUTH_REQUIRED_RATIO ?? '1');
-const RPC_TIMEOUT = __ENV.K6_RPC_TIMEOUT ?? '20s';
+const HTTP_TIMEOUT = __ENV.K6_HTTP_TIMEOUT ?? '20s';
 const SUMMARY_EXPORT_PATH = __ENV.K6_SAFE_SUMMARY_EXPORT ?? '';
-/** When "1", layout-style load uses two parallel PostgREST RPCs like Next.js cached shell bundle. */
-const USE_PARALLEL_SHELL = (__ENV.K6_USE_PARALLEL_SHELL ?? '1').trim() !== '0';
-const USERS_CSV_RAW = readUsersCsvRaw();
-const rpcTimeouts = new Counter('rpc_timeouts');
-const rpcTimeoutRate = new Rate('rpc_timeout_rate');
-const rpcNon200Rate = new Rate('rpc_non_200_rate');
-const authTokenRequestsDuringTest = new Counter('auth_token_requests_during_test');
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !USERS_CSV_PATH) {
+const USERS_CSV_RAW = readUsersCsvRaw();
+const appTimeouts = new Counter('app_timeouts');
+const appTimeoutRate = new Rate('app_timeout_rate');
+const appNon200Rate = new Rate('app_non_200_rate');
+const authTokenRequestsDuringTest = new Counter('auth_token_requests_during_test');
+const shellCacheHitRate = new Rate('shell_cache_hit_rate');
+const shellCacheMissRate = new Rate('shell_cache_miss_rate');
+const shellCacheCoalescedRate = new Rate('shell_cache_coalesced_rate');
+const shellCacheUnknownRate = new Rate('shell_cache_unknown_rate');
+
+if (!APP_BASE_URL || !USERS_CSV_PATH) {
   throw new Error(
-    'Missing env vars: set SUPABASE_URL/SUPABASE_ANON_KEY (or NEXT_PUBLIC equivalents). ' +
-      'Also supports NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY. ' +
-      'K6_USERS_CSV defaults to scripts/qa-login-import.csv.'
+    'Missing env vars: set APP_BASE_URL and K6_USERS_CSV (token-static CSV with access_token).'
   );
 }
 
 const thresholds = {
   http_req_failed: ['rate<0.01'],
   http_req_duration: ['p(95)<900', 'p(99)<1800'],
-  rpc_timeout_rate: ['rate<0.2'],
-  rpc_non_200_rate: ['rate<0.3'],
+  app_timeout_rate: ['rate<0.2'],
+  app_non_200_rate: ['rate<0.3'],
   auth_token_requests_during_test: ['count==0'],
-  'http_req_duration{endpoint:rpc_badges}': ['p(95)<700', 'p(99)<1400'],
-  'http_req_duration{endpoint:rpc_layout}': ['p(95)<900', 'p(99)<1700'],
-  'http_req_duration{endpoint:rpc_structural}': ['p(95)<900', 'p(99)<1700'],
-  'http_req_duration{endpoint:rpc_scheduling}': ['p(95)<1100', 'p(99)<2200'],
+  'http_req_duration{endpoint:app_shell_bundle}': ['p(95)<900', 'p(99)<1700'],
 };
 
 export const options = {
@@ -112,7 +103,6 @@ function readUsersCsvRaw() {
   try {
     return open(USERS_CSV_PATH);
   } catch (firstErr) {
-    // k6 resolves open() paths relative to this script, so retry one level up for repo-root style paths.
     if (!USERS_CSV_PATH.startsWith('/')) {
       try {
         return open(`../${USERS_CSV_PATH}`);
@@ -158,7 +148,7 @@ function loadUsersFromCsv(raw) {
   }
 
   if (users.length < 10) {
-    throw new Error('Need at least 10 users in K6 CSV for multitenant reliability test');
+    throw new Error('Need at least 10 users in K6 CSV for app-path multitenant test');
   }
   return users;
 }
@@ -168,81 +158,55 @@ function randomThinkSec() {
   return ms / 1000;
 }
 
-function shellRpcHeaders(token) {
+function appHeaders(token) {
   return {
-    apikey: SUPABASE_ANON_KEY,
     Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
+    Accept: 'application/json',
   };
 }
 
-function recordRpcOutcome(res) {
+function recordOutcome(res) {
   const timedOut = String(res.error || '').toLowerCase().includes('timeout');
-  if (timedOut) rpcTimeouts.add(1);
-  rpcTimeoutRate.add(timedOut);
-  rpcNon200Rate.add(res.status !== 200);
+  if (timedOut) appTimeouts.add(1);
+  appTimeoutRate.add(timedOut);
+  appNon200Rate.add(res.status !== 200);
+
+  let status = 'unknown';
+  try {
+    const body = res.json();
+    const raw = body && typeof body === 'object' ? body.shell_response_cache_status : null;
+    if (typeof raw === 'string') status = raw;
+  } catch {
+    status = 'unknown';
+  }
+  shellCacheHitRate.add(status === 'hit');
+  shellCacheMissRate.add(status === 'miss');
+  shellCacheCoalescedRate.add(status === 'coalesced');
+  shellCacheUnknownRate.add(status === 'unknown');
 }
 
-function callRpc(token, rpcName, endpointTag) {
-  const res = http.post(
-    `${SUPABASE_URL}/rest/v1/rpc/${rpcName}`,
-    '{}',
-    {
-      headers: shellRpcHeaders(token),
-      timeout: RPC_TIMEOUT,
-      tags: { endpoint: endpointTag, scenario: exec.scenario.name || 'unknown' },
-    }
-  );
-  check(res, {
-    [`${rpcName} status is 200`]: (r) => r.status === 200,
+function callAppShellBundle(token) {
+  const scenario = exec.scenario.name || 'unknown';
+  const res = http.get(`${APP_BASE_URL}/api/loadtest/shell-bundle`, {
+    headers: appHeaders(token),
+    timeout: HTTP_TIMEOUT,
+    tags: { endpoint: 'app_shell_bundle', scenario },
   });
-  recordRpcOutcome(res);
+  check(res, { 'app shell bundle status is 200': (r) => r.status === 200 });
+  recordOutcome(res);
   return res;
 }
 
-/** Matches apps/web cached shell: structural || badge in one logical step (parallel HTTP). */
-function callShellLayoutLikeProd(token) {
-  const scenario = exec.scenario.name || 'unknown';
-  if (!USE_PARALLEL_SHELL) {
-    return callRpc(token, 'main_shell_layout_bundle', 'rpc_layout');
-  }
-  const params = {
-    headers: shellRpcHeaders(token),
-    timeout: RPC_TIMEOUT,
-  };
-  const responses = http.batch([
-    ['POST', `${SUPABASE_URL}/rest/v1/rpc/main_shell_layout_structural`, '{}', { ...params, tags: { endpoint: 'rpc_structural', scenario } }],
-    ['POST', `${SUPABASE_URL}/rest/v1/rpc/main_shell_badge_counts_bundle`, '{}', { ...params, tags: { endpoint: 'rpc_badges', scenario } }],
-  ]);
-  for (const res of responses) {
-    check(res, { 'parallel shell rpc status is 200': (r) => r.status === 200 });
-    recordRpcOutcome(res);
-  }
-  return responses;
-}
-
 function weightedNormalFlow(token) {
-  const r = Math.random();
-  if (r < 0.7) {
-    callRpc(token, 'main_shell_badge_counts_bundle', 'rpc_badges');
-  } else {
-    callShellLayoutLikeProd(token);
-  }
+  callAppShellBundle(token);
 }
 
 function burstFlow(token) {
-  callRpc(token, 'main_shell_badge_counts_bundle', 'rpc_badges');
-  if (Math.random() < 0.5) {
-    callShellLayoutLikeProd(token);
-  }
+  callAppShellBundle(token);
 }
 
 function noisyNeighborFlow(token) {
-  // Keep noisy traffic concentrated on the shell hot path under test.
-  callRpc(token, 'main_shell_badge_counts_bundle', 'rpc_badges');
-  if (Math.random() < 0.4) {
-    callShellLayoutLikeProd(token);
-  }
+  callAppShellBundle(token);
 }
 
 function getVuUser(users, group) {
@@ -256,11 +220,11 @@ function getVuUser(users, group) {
 
 function getToken(authUsers, group) {
   if (!authUsers.length) {
-    throw new Error('No pre-authenticated users available');
+    throw new Error('No token-static users available');
   }
   const user = getVuUser(authUsers, group);
   if (!user.token) {
-    throw new Error(`Missing pre-auth token for ${user.email}`);
+    throw new Error(`Missing access_token for ${user.email}`);
   }
   return user.token;
 }
@@ -276,25 +240,20 @@ export function setup() {
     const user = users[i];
     if (!user.accessToken) {
       throw new Error(
-        `Missing access_token in K6 CSV for user ${user.email}. ` +
-          'Token-static mode requires pre-auth tokens for every VU user.'
+        `Missing access_token in K6 CSV for user ${user.email}. Token-static app-path mode requires it.`
       );
     }
-    authUsers.push({
-      ...user,
-      token: user.accessToken,
-    });
+    authUsers.push({ ...user, token: user.accessToken });
   }
 
   const required = Math.ceil(preauthCount * PREAUTH_REQUIRED_RATIO);
   if (authUsers.length < required) {
     throw new Error(
-      `Insufficient pre-auth users: ${authUsers.length}/${preauthCount}. ` +
-        `Required at least ${required}.`
+      `Insufficient token users: ${authUsers.length}/${preauthCount}. Required at least ${required}.`
     );
   }
 
-  console.log(`token-static setup complete: ${authUsers.length}/${preauthCount} users ready`);
+  console.log(`app-path token-static setup complete: ${authUsers.length}/${preauthCount} users ready`);
   return { authUsers };
 }
 
@@ -327,15 +286,11 @@ export default function (data) {
 }
 
 export function handleSummary(data) {
-  if (!SUMMARY_EXPORT_PATH) {
-    return {};
-  }
-
+  if (!SUMMARY_EXPORT_PATH) return {};
   const safe = JSON.parse(JSON.stringify(data));
   if (safe && typeof safe === 'object' && 'setup_data' in safe) {
     delete safe.setup_data;
   }
-
   return {
     [SUMMARY_EXPORT_PATH]: JSON.stringify(safe, null, 2),
   };

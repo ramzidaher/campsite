@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   resolveBadgeWithGuardrails,
@@ -43,6 +44,13 @@ export const getCachedMainShellLayoutBundle = cache(async (): Promise<Record<str
     data: { user },
   } = await supabase.auth.getUser();
   const viewerKey = user?.id ?? 'anonymous';
+  return getMainShellLayoutBundleForViewer(supabase, viewerKey);
+});
+
+export async function getMainShellLayoutBundleForViewer(
+  supabase: Pick<SupabaseClient, 'rpc'>,
+  viewerKey: string
+): Promise<ShellBundle> {
   const now = Date.now();
   const cached = shellResponseCache.get(viewerKey);
   if (cached && cached.expiresAt > now) {
@@ -101,7 +109,7 @@ export const getCachedMainShellLayoutBundle = cache(async (): Promise<Record<str
   } finally {
     shellInFlight.delete(viewerKey);
   }
-});
+}
 
 export function broadcastUnreadFromShellBundle(b: Record<string, unknown>): number {
   const v = b['broadcast_unread'];
