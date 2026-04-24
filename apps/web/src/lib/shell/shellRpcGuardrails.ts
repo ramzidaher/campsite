@@ -33,7 +33,7 @@ export async function resolveStructuralWithTimeout<T>(
 
 export async function resolveBadgeWithGuardrails<T extends { data: unknown; error: unknown }>(
   cacheKey: string,
-  badgeRpcFactory: () => Promise<T>
+  badgeRpcFactory: () => PromiseLike<T>
 ): Promise<{ value: T; meta: GuardrailMeta }> {
   const now = Date.now();
   const reasons: string[] = [];
