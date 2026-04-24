@@ -7,7 +7,7 @@ import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { getSupabasePublicKey, getSupabaseUrl } from './env';
 import { createClient } from './server';
 
-type AuthValidationSource = 'local_jwt' | 'cache_hit' | 'remote_user';
+type AuthValidationSource = 'local_jwt' | 'cache_hit' | 'remote_user' | 'cookie_session';
 
 export type ApiAuthUserResult = {
   user: User | null;
@@ -37,6 +37,7 @@ type TokenCacheEntry = {
 };
 
 const AUTH_CACHE_TTL_MS = Number.parseInt(process.env.CAMPSITE_AUTH_CACHE_TTL_MS ?? '45000', 10);
+const JWKS_FETCH_TIMEOUT_MS = Number.parseInt(process.env.CAMPSITE_AUTH_JWKS_TIMEOUT_MS ?? '15000', 10);
 const ALLOW_REMOTE_USER_FALLBACK = process.env.CAMPSITE_AUTH_REMOTE_FALLBACK === '1';
 const tokenAuthCache = new Map<string, TokenCacheEntry>();
 const tokenAuthInFlight = new Map<string, Promise<ApiAuthUserResult>>();
@@ -117,13 +118,21 @@ async function verifyLocally(token: string, url: string): Promise<JWTPayload> {
     const verified = await jwtVerify(token, new TextEncoder().encode(secret), {
       issuer,
       audience,
+      clockTolerance: 60,
     });
     return verified.payload;
   }
   if (!jwks) {
-    jwks = createRemoteJWKSet(new URL(`${url.replace(/\/+$/, '')}/auth/v1/.well-known/jwks.json`));
+    jwks = createRemoteJWKSet(new URL(`${url.replace(/\/+$/, '')}/auth/v1/.well-known/jwks.json`), {
+      timeoutDuration: JWKS_FETCH_TIMEOUT_MS,
+      cacheMaxAge: 600_000,
+    });
   }
-  const verified = await jwtVerify(token, jwks, { issuer, audience });
+  const verified = await jwtVerify(token, jwks, {
+    issuer,
+    audience,
+    clockTolerance: 60,
+  });
   return verified.payload;
 }
 
@@ -171,7 +180,7 @@ export async function getUserFromApiRequestWithReason(req: Request): Promise<Api
       jwtExpUnix: null,
       serverNowUnix,
       secondsUntilExpiry: null,
-      authValidationSource: 'local_jwt',
+      authValidationSource: 'cookie_session',
     });
   }
 
@@ -270,7 +279,11 @@ export async function getUserFromApiRequestWithReason(req: Request): Promise<Api
       const code =
         error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : null;
       const expiredByTime = secondsUntilExpiry !== null && secondsUntilExpiry <= 0;
-      const expiredByMessage = /expired|exp/i.test(message) || /expired|exp/i.test(code ?? '');
+      const jwksOrNetworkIssue = code === 'ERR_JWKS_TIMEOUT' || /timed out|fetch failed|network/i.test(message);
+      const expiredByMessage =
+        !jwksOrNetworkIssue &&
+        (/expired/i.test(message) ||
+          (typeof code === 'string' && /jwt[_-]?expired|token[_-]?expired|ERR_JWT_EXPIRED/i.test(code)));
       if (ALLOW_REMOTE_USER_FALLBACK) {
         remoteUserCalls += 1;
         const sb = createSupabaseJsClient(url, key);
@@ -313,8 +326,12 @@ export async function getUserFromApiRequestWithReason(req: Request): Promise<Api
         });
       }
       return toResult({
-      user: null,
-        reason: expiredByTime || expiredByMessage ? 'jwt_expired' : 'jwt_invalid',
+        user: null,
+        reason: jwksOrNetworkIssue
+          ? 'jwt_validation_error'
+          : expiredByTime || expiredByMessage
+            ? 'jwt_expired'
+            : 'jwt_invalid',
         hasAuthorizationHeader,
         authErrorCode: code,
         authErrorMessage: message || null,

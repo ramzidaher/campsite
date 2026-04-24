@@ -68,7 +68,7 @@ function logRouteEvent(params: {
   jwtExpUnix: number | null;
   serverNowUnix: number;
   secondsUntilExpiry: number | null;
-  authValidationSource: 'local_jwt' | 'cache_hit' | 'remote_user';
+  authValidationSource: 'local_jwt' | 'cache_hit' | 'remote_user' | 'cookie_session';
   authRemoteUserCalls: number;
   authRemoteUserFailures: number;
 }) {

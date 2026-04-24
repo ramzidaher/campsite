@@ -1,6 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import exec from 'k6/execution';
+import encoding from 'k6/encoding';
 import { Counter, Rate } from 'k6/metrics';
 
 const APP_BASE_URL = __ENV.APP_BASE_URL;
