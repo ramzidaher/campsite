@@ -68,6 +68,9 @@ function logRouteEvent(params: {
   jwtExpUnix: number | null;
   serverNowUnix: number;
   secondsUntilExpiry: number | null;
+  authValidationSource: 'local_jwt' | 'cache_hit' | 'remote_user';
+  authRemoteUserCalls: number;
+  authRemoteUserFailures: number;
 }) {
   console.info(
     JSON.stringify({
@@ -91,6 +94,9 @@ export async function GET(req: Request) {
         jwtExpUnix: authResult.jwtExpUnix,
         serverNowUnix: authResult.serverNowUnix,
         secondsUntilExpiry: authResult.secondsUntilExpiry,
+        authValidationSource: authResult.authValidationSource,
+        authRemoteUserCalls: authResult.authRemoteUserCalls,
+        authRemoteUserFailures: authResult.authRemoteUserFailures,
       })
     );
     return NextResponse.json(
@@ -102,6 +108,9 @@ export async function GET(req: Request) {
         jwt_exp_unix: authResult.jwtExpUnix,
         server_now_unix: authResult.serverNowUnix,
         seconds_until_expiry: authResult.secondsUntilExpiry,
+        auth_validation_source: authResult.authValidationSource,
+        auth_remote_user_calls: authResult.authRemoteUserCalls,
+        auth_remote_user_failures: authResult.authRemoteUserFailures,
       },
       { status: 401, headers: { 'Cache-Control': 'no-store' } }
     );
@@ -167,6 +176,9 @@ export async function GET(req: Request) {
     jwtExpUnix: authResult.jwtExpUnix,
     serverNowUnix: authResult.serverNowUnix,
     secondsUntilExpiry: authResult.secondsUntilExpiry,
+    authValidationSource: authResult.authValidationSource,
+    authRemoteUserCalls: authResult.authRemoteUserCalls,
+    authRemoteUserFailures: authResult.authRemoteUserFailures,
   });
   return response;
 }
