@@ -1,21 +1,36 @@
 import { cache } from 'react';
 
+import {
+  resolveBadgeWithGuardrails,
+  resolveStructuralWithTimeout,
+} from '@/lib/shell/shellRpcGuardrails';
 import { createClient } from './server';
 
-const BADGE_RPC_TIMEOUT_MS = 250;
+const SHELL_RESPONSE_CACHE_TTL_MS = Number.parseInt(
+  process.env.CAMPSITE_SHELL_RESPONSE_CACHE_TTL_MS ?? '3000',
+  10
+);
 
-async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: T): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  try {
-    return await Promise.race<T>([
-      Promise.resolve(promise),
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => resolve(fallback), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
+type ShellBundle = Record<string, unknown>;
+type ShellCacheEntry = {
+  value: ShellBundle;
+  cachedAt: number;
+  expiresAt: number;
+};
+
+const shellResponseCache = new Map<string, ShellCacheEntry>();
+const shellInFlight = new Map<string, Promise<ShellBundle>>();
+
+function withShellCacheMeta(
+  value: ShellBundle,
+  status: 'hit' | 'miss' | 'coalesced',
+  cachedAt: number
+): ShellBundle {
+  return {
+    ...value,
+    shell_response_cache_status: status,
+    shell_response_cache_age_ms: Math.max(0, Date.now() - cachedAt),
+  };
 }
 
 /**
@@ -24,30 +39,68 @@ async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number,
  */
 export const getCachedMainShellLayoutBundle = cache(async (): Promise<Record<string, unknown>> => {
   const supabase = await createClient();
-  const structuralPromise = supabase.rpc('main_shell_layout_structural');
-  const badgePromise = resolveWithTimeout(
-    supabase.rpc('main_shell_badge_counts_bundle'),
-    BADGE_RPC_TIMEOUT_MS,
-    { data: {}, error: null } as Awaited<ReturnType<typeof supabase.rpc>>,
-  );
-  const [structural, badge] = await Promise.all([structuralPromise, badgePromise]);
-  if (structural.error) throw structural.error;
-  // Badge payload is non-critical for initial shell render; fallback to empty and let
-  // client-side realtime/query sync populate fresh values.
-  if (badge.error) {
-    const s =
-      structural.data && typeof structural.data === 'object'
-        ? (structural.data as Record<string, unknown>)
-        : {};
-    return { ...s };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const viewerKey = user?.id ?? 'anonymous';
+  const now = Date.now();
+  const cached = shellResponseCache.get(viewerKey);
+  if (cached && cached.expiresAt > now) {
+    return withShellCacheMeta(cached.value, 'hit', cached.cachedAt);
   }
+
+  const inFlight = shellInFlight.get(viewerKey);
+  if (inFlight) {
+    const value = await inFlight;
+    return withShellCacheMeta(value, 'coalesced', Date.now());
+  }
+
+  const fetchPromise = (async () => {
+  const structuralPromise = resolveStructuralWithTimeout(
+    supabase.rpc('main_shell_layout_structural'),
+    { data: {}, error: null } as Awaited<ReturnType<typeof supabase.rpc>>
+  );
+  const badgePromise = resolveBadgeWithGuardrails(
+    `shell:badge:${viewerKey}`,
+    () => supabase.rpc('main_shell_badge_counts_bundle')
+  );
+  const [structuralWrapped, badgeWrapped] = await Promise.all([structuralPromise, badgePromise]);
+  const structural = structuralWrapped.value;
+  const badge = badgeWrapped.value;
+  if (structural.error) throw structural.error;
   const s =
     structural.data && typeof structural.data === 'object'
       ? (structural.data as Record<string, unknown>)
       : {};
-  const b =
-    badge.data && typeof badge.data === 'object' ? (badge.data as Record<string, unknown>) : {};
-  return { ...s, ...b };
+  const b = badge.data && typeof badge.data === 'object' ? (badge.data as Record<string, unknown>) : {};
+  const isDegraded = structuralWrapped.timedOut || Boolean(badge.error) || badgeWrapped.meta.degraded;
+  const reasons = [
+    ...(structuralWrapped.timedOut ? ['structural_timeout'] : []),
+    ...(badge.error ? ['badge_rpc_error'] : []),
+    ...badgeWrapped.meta.reasons,
+  ];
+  const merged = {
+    ...s,
+    ...b,
+    shell_degraded: isDegraded,
+    shell_guardrail_reasons: [...new Set(reasons)],
+    shell_cache_status: badgeWrapped.meta.cacheStatus,
+  };
+  shellResponseCache.set(viewerKey, {
+    value: merged,
+    cachedAt: Date.now(),
+    expiresAt: Date.now() + SHELL_RESPONSE_CACHE_TTL_MS,
+  });
+  return merged;
+  })();
+
+  shellInFlight.set(viewerKey, fetchPromise);
+  try {
+    const value = await fetchPromise;
+    return withShellCacheMeta(value, 'miss', Date.now());
+  } finally {
+    shellInFlight.delete(viewerKey);
+  }
 });
 
 export function broadcastUnreadFromShellBundle(b: Record<string, unknown>): number {
