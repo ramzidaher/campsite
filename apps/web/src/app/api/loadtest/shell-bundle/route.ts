@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { getUserFromApiRequest, createSupabaseForApiRequest } from '@/lib/supabase/apiRouteAuth';
-import { getMainShellLayoutBundleForViewer } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import { createSupabaseForApiRequest, getUserFromApiRequestWithReason } from '@/lib/supabase/apiRouteAuth';
+import {
+  getMainShellLayoutBundleForViewer,
+  getStaleOrDefaultShellBundle,
+} from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 
 export const dynamic = 'force-dynamic';
@@ -31,10 +34,59 @@ const META_KEYS = new Set([
   'shell_guardrail_reasons',
 ]);
 
+const APP_ROUTE_TIMEOUT_MS = Number.parseInt(process.env.CAMPSITE_SHELL_APP_ROUTE_TIMEOUT_MS ?? '4000', 10);
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<{ value: T; timedOut: boolean }> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let timedOut = false;
+  try {
+    const value = await Promise.race([
+      promise,
+      new Promise<T>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          timedOut = true;
+          reject(new Error(`app_route_timeout_after_${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+    return { value, timedOut };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function logRouteEvent(params: {
+  userId: string;
+  cacheStatus: string;
+  durationMs: number;
+  timeoutFallbackUsed: boolean;
+  responseStatus: number;
+  authReason: string;
+  hasAuthorizationHeader: boolean;
+}) {
+  console.info(
+    JSON.stringify({
+      event: 'loadtest_shell_bundle_response',
+      ...params,
+    })
+  );
+}
+
 export async function GET(req: Request) {
-  const user = await getUserFromApiRequest(req);
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const startedAt = Date.now();
+  const authResult = await getUserFromApiRequestWithReason(req);
+  if (!authResult.user) {
+    console.warn(
+      JSON.stringify({
+        event: 'loadtest_shell_bundle_auth_failure',
+        reason: authResult.reason,
+        hasAuthorizationHeader: authResult.hasAuthorizationHeader,
+      })
+    );
+    return NextResponse.json(
+      { error: 'unauthorized', auth_reason: authResult.reason },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } }
+    );
   }
 
   const supabase = await createSupabaseForApiRequest(req);
@@ -42,7 +94,25 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'supabase_unavailable' }, { status: 500 });
   }
 
-  const bundle = await getMainShellLayoutBundleForViewer(supabase, user.id);
+  const viewerKey = authResult.user.id;
+  let timeoutFallbackUsed = false;
+  let bundle: Record<string, unknown>;
+  try {
+    const resolved = await withTimeout(
+      getMainShellLayoutBundleForViewer(supabase, viewerKey),
+      APP_ROUTE_TIMEOUT_MS
+    );
+    bundle = resolved.value;
+  } catch {
+    timeoutFallbackUsed = true;
+    bundle = getStaleOrDefaultShellBundle(viewerKey);
+    bundle = {
+      ...bundle,
+      shell_degraded: true,
+      shell_degraded_reason: 'app_timeout_fallback',
+    };
+  }
+
   const badgeData = parseShellBadgeCounts(bundle);
   const structuralData: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(bundle)) {
@@ -51,7 +121,7 @@ export async function GET(req: Request) {
     structuralData[key] = value;
   }
 
-  return NextResponse.json(
+  const response = NextResponse.json(
     {
       structural: structuralData,
       badges: badgeData,
@@ -65,4 +135,15 @@ export async function GET(req: Request) {
     },
     { headers: { 'Cache-Control': 'no-store' } }
   );
+  logRouteEvent({
+    userId: viewerKey,
+    cacheStatus:
+      typeof bundle.shell_response_cache_status === 'string' ? bundle.shell_response_cache_status : 'unknown',
+    durationMs: Date.now() - startedAt,
+    timeoutFallbackUsed,
+    responseStatus: response.status,
+    authReason: authResult.reason,
+    hasAuthorizationHeader: authResult.hasAuthorizationHeader,
+  });
+  return response;
 }

@@ -20,6 +20,8 @@ const appTimeouts = new Counter('app_timeouts');
 const appTimeoutRate = new Rate('app_timeout_rate');
 const appNon200Rate = new Rate('app_non_200_rate');
 const authTokenRequestsDuringTest = new Counter('auth_token_requests_during_test');
+const missingAuthorizationHeader = new Counter('missing_authorization_header');
+const tokenExpiringDuringRun = new Counter('token_expiring_during_run');
 const shellCacheHitRate = new Rate('shell_cache_hit_rate');
 const shellCacheMissRate = new Rate('shell_cache_miss_rate');
 const shellCacheCoalescedRate = new Rate('shell_cache_coalesced_rate');
@@ -159,10 +161,26 @@ function randomThinkSec() {
 }
 
 function appHeaders(token) {
+  if (!token) {
+    missingAuthorizationHeader.add(1);
+    return { Accept: 'application/json' };
+  }
   return {
     Authorization: `Bearer ${token}`,
     Accept: 'application/json',
   };
+}
+
+function parseJwtExp(token) {
+  const parts = String(token).split('.');
+  if (parts.length < 2) return null;
+  try {
+    const payload = JSON.parse(encoding.b64decode(parts[1], 'rawurl', 's'));
+    if (!payload || typeof payload.exp !== 'number') return null;
+    return payload.exp;
+  } catch {
+    return null;
+  }
 }
 
 function recordOutcome(res) {
@@ -236,6 +254,9 @@ export function setup() {
     : Math.min(Number.parseInt(__ENV.K6_PREAUTH_COUNT ?? '30', 10), users.length);
   const authUsers = [];
 
+  const durationSeconds = Number.parseInt((SCENARIO_DURATION || '5m').replace('m', ''), 10) * 60;
+  const minRequiredExp = Math.floor(Date.now() / 1000) + durationSeconds + 180;
+
   for (let i = 0; i < preauthCount; i += 1) {
     const user = users[i];
     if (!user.accessToken) {
@@ -243,7 +264,15 @@ export function setup() {
         `Missing access_token in K6 CSV for user ${user.email}. Token-static app-path mode requires it.`
       );
     }
-    authUsers.push({ ...user, token: user.accessToken });
+    const token = user.accessToken;
+    const exp = parseJwtExp(token);
+    if (exp !== null && exp <= minRequiredExp) {
+      tokenExpiringDuringRun.add(1);
+      throw new Error(
+        `Token for ${user.email} expires before run window closes (exp=${exp}, min_required=${minRequiredExp}).`
+      );
+    }
+    authUsers.push({ ...user, token });
   }
 
   const required = Math.ceil(preauthCount * PREAUTH_REQUIRED_RATIO);
