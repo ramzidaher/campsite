@@ -44,36 +44,49 @@ const thresholds = {
   'http_req_duration{endpoint:app_shell_bundle}': ['p(95)<900', 'p(99)<1700'],
 };
 
-export const options = {
-  setupTimeout: SETUP_TIMEOUT,
-  thresholds,
-  scenarios: {
-    normal_multitenant: {
+function buildScenarios() {
+  const normalVus = Number.parseInt(__ENV.K6_NORMAL_VUS ?? '80', 10);
+  const burstVus = Number.parseInt(__ENV.K6_BURST_VUS ?? '180', 10);
+  const noisyVus = Number.parseInt(__ENV.K6_NOISY_VUS ?? '30', 10);
+  const scenarios = {};
+  if (normalVus > 0) {
+    scenarios.normal_multitenant = {
       executor: 'constant-vus',
-      vus: Number.parseInt(__ENV.K6_NORMAL_VUS ?? '80', 10),
+      vus: normalVus,
       duration: SCENARIO_DURATION,
       gracefulStop: '30s',
       exec: 'runNormalScenario',
-    },
-    burst_window: {
+    };
+  }
+  if (burstVus > 0) {
+    scenarios.burst_window = {
       executor: 'ramping-vus',
       startTime: '30s',
       stages: [
-        { duration: '30s', target: Number.parseInt(__ENV.K6_BURST_VUS ?? '180', 10) },
-        { duration: '90s', target: Number.parseInt(__ENV.K6_BURST_VUS ?? '180', 10) },
+        { duration: '30s', target: burstVus },
+        { duration: '90s', target: burstVus },
         { duration: '30s', target: 0 },
       ],
       gracefulRampDown: '20s',
       exec: 'runBurstScenario',
-    },
-    noisy_neighbor: {
+    };
+  }
+  if (noisyVus > 0) {
+    scenarios.noisy_neighbor = {
       executor: 'constant-vus',
-      vus: Number.parseInt(__ENV.K6_NOISY_VUS ?? '30', 10),
+      vus: noisyVus,
       duration: SCENARIO_DURATION,
       gracefulStop: '20s',
       exec: 'runNoisyNeighborScenario',
-    },
-  },
+    };
+  }
+  return scenarios;
+}
+
+export const options = {
+  setupTimeout: SETUP_TIMEOUT,
+  thresholds,
+  scenarios: buildScenarios(),
 };
 
 function parseCsvLine(line) {
