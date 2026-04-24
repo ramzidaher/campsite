@@ -19,6 +19,7 @@ const USERS_CSV_RAW = readUsersCsvRaw();
 const appTimeouts = new Counter('app_timeouts');
 const appTimeoutRate = new Rate('app_timeout_rate');
 const appNon200Rate = new Rate('app_non_200_rate');
+const app401Rate = new Rate('app_401_rate');
 const authTokenRequestsDuringTest = new Counter('auth_token_requests_during_test');
 const missingAuthorizationHeader = new Counter('missing_authorization_header');
 const tokenExpiringDuringRun = new Counter('token_expiring_during_run');
@@ -38,6 +39,7 @@ const thresholds = {
   http_req_duration: ['p(95)<900', 'p(99)<1800'],
   app_timeout_rate: ['rate<0.2'],
   app_non_200_rate: ['rate<0.3'],
+  app_401_rate: ['rate<0.3'],
   auth_token_requests_during_test: ['count==0'],
   'http_req_duration{endpoint:app_shell_bundle}': ['p(95)<900', 'p(99)<1700'],
 };
@@ -188,6 +190,7 @@ function recordOutcome(res) {
   if (timedOut) appTimeouts.add(1);
   appTimeoutRate.add(timedOut);
   appNon200Rate.add(res.status !== 200);
+  app401Rate.add(res.status === 401);
 
   let status = 'unknown';
   try {
@@ -252,6 +255,7 @@ export function setup() {
   const preauthCount = PREAUTH_ALL
     ? users.length
     : Math.min(Number.parseInt(__ENV.K6_PREAUTH_COUNT ?? '30', 10), users.length);
+  const configuredNormalVus = Number.parseInt(__ENV.K6_NORMAL_VUS ?? '80', 10);
   const authUsers = [];
 
   const durationSeconds = Number.parseInt((SCENARIO_DURATION || '5m').replace('m', ''), 10) * 60;
@@ -283,6 +287,11 @@ export function setup() {
   }
 
   console.log(`app-path token-static setup complete: ${authUsers.length}/${preauthCount} users ready`);
+  const effectiveUsersForNormal = Math.max(1, Math.min(configuredNormalVus, authUsers.length));
+  const reuseFactor = configuredNormalVus / effectiveUsersForNormal;
+  console.log(
+    `token assignment: normal_vus=${configuredNormalVus} unique_tokens=${effectiveUsersForNormal} reuse_factor=${reuseFactor.toFixed(2)}x`
+  );
   return { authUsers };
 }
 

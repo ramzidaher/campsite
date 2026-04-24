@@ -63,6 +63,11 @@ function logRouteEvent(params: {
   responseStatus: number;
   authReason: string;
   hasAuthorizationHeader: boolean;
+  authErrorCode: string | null;
+  authErrorMessage: string | null;
+  jwtExpUnix: number | null;
+  serverNowUnix: number;
+  secondsUntilExpiry: number | null;
 }) {
   console.info(
     JSON.stringify({
@@ -81,10 +86,23 @@ export async function GET(req: Request) {
         event: 'loadtest_shell_bundle_auth_failure',
         reason: authResult.reason,
         hasAuthorizationHeader: authResult.hasAuthorizationHeader,
+        authErrorCode: authResult.authErrorCode,
+        authErrorMessage: authResult.authErrorMessage,
+        jwtExpUnix: authResult.jwtExpUnix,
+        serverNowUnix: authResult.serverNowUnix,
+        secondsUntilExpiry: authResult.secondsUntilExpiry,
       })
     );
     return NextResponse.json(
-      { error: 'unauthorized', auth_reason: authResult.reason },
+      {
+        error: 'unauthorized',
+        auth_reason: authResult.reason,
+        auth_error_code: authResult.authErrorCode,
+        auth_error_message: authResult.authErrorMessage,
+        jwt_exp_unix: authResult.jwtExpUnix,
+        server_now_unix: authResult.serverNowUnix,
+        seconds_until_expiry: authResult.secondsUntilExpiry,
+      },
       { status: 401, headers: { 'Cache-Control': 'no-store' } }
     );
   }
@@ -144,6 +162,11 @@ export async function GET(req: Request) {
     responseStatus: response.status,
     authReason: authResult.reason,
     hasAuthorizationHeader: authResult.hasAuthorizationHeader,
+    authErrorCode: authResult.authErrorCode,
+    authErrorMessage: authResult.authErrorMessage,
+    jwtExpUnix: authResult.jwtExpUnix,
+    serverNowUnix: authResult.serverNowUnix,
+    secondsUntilExpiry: authResult.secondsUntilExpiry,
   });
   return response;
 }
