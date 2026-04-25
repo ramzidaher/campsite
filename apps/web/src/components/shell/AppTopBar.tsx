@@ -26,6 +26,7 @@ export function AppTopBar({
   paletteSections,
   uiMode = 'classic',
   onToggleUiMode,
+  onOpenMobileNav,
 }: {
   userInitials: string;
   avatarImageSrc?: string | null;
@@ -41,6 +42,7 @@ export function AppTopBar({
   paletteSections: ShellCommandPaletteSection[];
   uiMode?: UiMode;
   onToggleUiMode?: () => void;
+  onOpenMobileNav?: () => void;
 }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
@@ -66,7 +68,19 @@ export function AppTopBar({
         color: 'var(--org-brand-text)',
       }}
     >
-      <div className="min-w-0 flex-1" aria-hidden />
+      <div className="flex min-w-0 flex-1 items-center">
+        {onOpenMobileNav ? (
+          <button
+            type="button"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-white text-xl leading-none text-[var(--org-brand-muted)] md:hidden"
+            aria-label="Open navigation"
+            onClick={onOpenMobileNav}
+            style={{ borderColor: 'var(--org-brand-border)' }}
+          >
+            ☰
+          </button>
+        ) : null}
+      </div>
       <div className="relative min-w-0 flex-1 sm:max-w-[420px]">
         <ShellCommandMenu
           sections={paletteSections}

@@ -571,7 +571,28 @@ export default async function MyProfilePage({
     ),
   ]);
 
-  const fileRow = (fileRows.data ?? [])[0];
+  type EmployeeFileRow = {
+    job_title?: string | null;
+    grade_level?: string | null;
+    pay_grade?: string | null;
+    position_type?: string | null;
+    employment_basis?: string | null;
+    contract_type?: string | null;
+    fte?: number | string | null;
+    weekly_hours?: number | null;
+    work_location?: string | null;
+    employment_start_date?: string | null;
+    length_of_service_years?: number | null;
+    length_of_service_months?: number | null;
+    department_start_date?: string | null;
+    continuous_employment_start_date?: string | null;
+    probation_end_date?: string | null;
+    notice_period_weeks?: number | null;
+    salary_band?: string | null;
+    reports_to_name?: string | null;
+    notes?: string | null;
+  };
+  const fileRow = ((fileRows.data ?? [])[0] ?? null) as EmployeeFileRow | null;
   const deptNames: string[] = [];
   for (const row of udRes.data ?? []) {
     const raw = row.departments as { name: string } | { name: string }[] | null;

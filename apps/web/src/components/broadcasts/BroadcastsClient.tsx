@@ -324,15 +324,15 @@ export function BroadcastsClient({
 
   const closeCompose = useCallback(() => {
     setComposeOpen(false);
-    const p = new URLSearchParams(searchParams.toString());
+    const p = new URLSearchParams(searchParams?.toString() ?? '');
     p.delete('compose');
     const qs = p.toString();
     router.replace(qs ? `/broadcasts?${qs}` : '/broadcasts', { scroll: false });
   }, [router, searchParams]);
 
   useEffect(() => {
-    const t = searchParams.get('tab');
-    const c = searchParams.get('compose') === '1';
+    const t = searchParams?.get('tab');
+    const c = searchParams?.get('compose') === '1';
     setComposeOpen(c);
     if (t === 'drafts' && composeAllowed) setWorkspaceView('drafts');
     else if (t === 'submitted' && composeAllowed) setWorkspaceView('submitted');
@@ -413,7 +413,7 @@ export function BroadcastsClient({
 
       {!composeOpen && workspaceView === 'feed' ? (
         <>
-          <div className="flex flex-wrap items-center justify-end gap-3 border-b border-[#e8e8e8] py-3">
+          <div className="flex flex-wrap items-center justify-end gap-3 py-3">
             <button
               type="button"
               className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"

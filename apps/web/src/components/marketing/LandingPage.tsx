@@ -1006,45 +1006,96 @@ export function LandingPage() {
             padding-left: 18px;
             padding-right: 18px;
           }
+          .landing-page .v5-nav {
+            height: 58px;
+            padding-left: 14px;
+            padding-right: 14px;
+          }
+          .landing-page .v5-logo {
+            font-size: 18px;
+          }
+          .landing-page .v5-logo-mark {
+            height: 18px;
+            width: 18px;
+          }
           .landing-page .v5-nav-link {
-            font-size: 13px;
+            font-size: 11px;
+            letter-spacing: 0.08em;
           }
           .landing-page .v5-nav-middle {
-            left: auto;
-            right: 18px;
+            position: static;
             transform: none;
-            margin-right: 148px;
+            margin: 0;
+            flex: 1;
+            justify-content: center;
+            pointer-events: none;
+          }
+          .landing-page .v5-nav-right {
+            gap: 0;
+          }
+          .landing-page .v5-btn-fun {
+            font-size: 10.5px;
+            padding: 8px 12px;
+            letter-spacing: 0.06em;
           }
           .landing-page .v5-hero {
             grid-template-columns: 1fr;
-            gap: 26px;
+            gap: 20px;
             min-height: auto;
           }
           .landing-page .v5-hero-shell {
-            padding-top: 36px;
+            padding-top: 28px;
+          }
+          .landing-page .v5-hero-title {
+            font-size: clamp(46px, 14vw, 58px);
+            line-height: 1.02;
+            margin-bottom: 14px;
+          }
+          .landing-page .v5-hero-desc {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 20px;
           }
           .landing-page .v5-bottom-bar {
             height: 22px;
             padding: 0 8px;
+            gap: 8px;
           }
           .landing-page .v5-bottom-bar .font-mono {
-            font-size: 9px;
-            letter-spacing: 0.06em;
+            font-size: 8px;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+          }
+          .landing-page .v5-bottom-bar > :first-child {
+            max-width: 58%;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
           .landing-page .v5-hero-right {
-            height: 340px;
+            height: auto;
+            display: grid;
+            gap: 10px;
+            padding-bottom: 18px;
+          }
+          .landing-page .v5-ui-card {
+            position: relative;
+            left: auto;
+            right: auto;
+            top: auto;
+            bottom: auto;
           }
           .landing-page .v5-card-announcement {
-            left: 0;
-            width: 260px;
+            width: calc(100% - 34px);
           }
           .landing-page .v5-card-rota {
-            right: 0;
-            width: 220px;
+            width: calc(100% - 12px);
+            margin-left: auto;
+            margin-top: -8px;
           }
           .landing-page .v5-card-approval {
-            left: 0;
-            width: 250px;
+            width: calc(100% - 42px);
+            margin-top: -8px;
+            z-index: 2;
           }
           .landing-page .v5-hero-actions {
             flex-direction: column;

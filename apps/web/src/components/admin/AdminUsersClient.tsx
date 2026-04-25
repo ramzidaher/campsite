@@ -170,7 +170,7 @@ export function AdminUsersClient({
 
   const filterHref = useCallback(
     (patch: Record<string, string | undefined>) => {
-      const p = new URLSearchParams(searchParams.toString());
+      const p = new URLSearchParams(searchParams?.toString() ?? '');
       for (const [k, v] of Object.entries(patch)) {
         if (!v || v === 'all') p.delete(k);
         else p.set(k, v);
@@ -194,7 +194,7 @@ export function AdminUsersClient({
   }, [defaultFilters.q, defaultFilters.status, defaultFilters.role, defaultFilters.dept]);
 
   useEffect(() => {
-    const inUrl = (searchParams.get('q') ?? '').trim();
+    const inUrl = (searchParams?.get('q') ?? '').trim();
     const next = qInput.trim();
     if (next === inUrl) return;
     startSearchTransition(() => {

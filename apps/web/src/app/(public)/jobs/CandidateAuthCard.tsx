@@ -65,7 +65,7 @@ export function CandidateAuthCard({
 }: CandidateAuthCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextUrl = searchParams.get('next') || defaultNext;
+  const nextUrl = searchParams?.get('next') || defaultNext;
 
   const [tab, setTab] = useState<Tab>(defaultTab);
   const [regStep, setRegStep] = useState<RegStep>(0);

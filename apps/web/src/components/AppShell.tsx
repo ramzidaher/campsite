@@ -26,7 +26,7 @@ import { orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { createClient } from '@/lib/supabase/client';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
 import { nextUiMode, type UiMode } from '@/lib/uiMode';
-import { ChevronDown, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
@@ -1275,33 +1275,6 @@ export function AppShell({
             : { backgroundColor: 'var(--org-brand-bg)' }
         }
       >
-        <div
-          className="flex h-[60px] items-center border-b px-4 md:hidden"
-          style={{
-            borderColor: 'var(--org-brand-border)',
-            background: 'var(--org-brand-bg)',
-            color: 'var(--org-brand-text)',
-          }}
-        >
-          <button
-            type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/[0.14] active:bg-white/[0.18]"
-            aria-label="Open navigation"
-            aria-expanded={mobileNav}
-            aria-controls="primary-navigation"
-            onClick={() => {
-              setMobileNav(true);
-              playUiSound('menu_open');
-            }}
-          >
-            <Menu
-              className="h-[22px] w-[22px] text-[#faf9f6]"
-              strokeWidth={1.75}
-              aria-hidden
-            />
-          </button>
-          <span className="ml-3 font-authSerif text-lg text-white">Campsite</span>
-        </div>
         <AppTopBar
           userInitials={userInitials}
           avatarImageSrc={showUserAvatar ? safeUserAvatar! : null}
@@ -1314,6 +1287,10 @@ export function AppShell({
           paletteSections={paletteSections}
           uiMode={uiMode}
           onToggleUiMode={toggleUiMode}
+          onOpenMobileNav={() => {
+            setMobileNav(true);
+            playUiSound('menu_open');
+          }}
         />
         <main id="main-content" tabIndex={-1} className="workspace-fluid flex-1 overflow-x-hidden overflow-y-auto">
           {children}
