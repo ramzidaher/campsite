@@ -670,12 +670,7 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
 
   const trulyEmpty = !loading && rowsAfterDept.length === 0;
 
-  const showFeedNavStrip =
-    anchorBroadcastId != null &&
-    !searchActive &&
-    !loading &&
-    (!trulyEmpty || sessionAnchor != null) &&
-    (!filteredOutByUnread || sessionAnchor != null);
+  const showFeedNavStrip = false;
 
   return (
     <div className="flex flex-col gap-2.5">

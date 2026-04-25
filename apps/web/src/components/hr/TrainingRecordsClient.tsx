@@ -122,11 +122,11 @@ export function TrainingRecordsClient({
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] p-5">
+    <section className="mt-6 rounded-xl border border-[#d8d8d8] bg-white p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-[15px] font-semibold text-[var(--color-text-primary)]">Training records</h2>
-          <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">
+          <h2 className="text-[15px] font-semibold text-[#121212]">Training records</h2>
+          <p className="mt-1 text-[12px] text-[#9b9b9b]">
             Track learning, certifications, expiry dates, and completion status.
           </p>
         </div>
@@ -146,23 +146,23 @@ export function TrainingRecordsClient({
       ) : null}
 
       {canEdit ? (
-        <div className="mt-4 grid gap-3 rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] p-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3 sm:grid-cols-2">
           <input
             value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             placeholder="Training title"
-            className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-2 text-[13px]"
+            className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           />
           <input
             value={form.provider}
             onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))}
             placeholder="Provider"
-            className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-2 text-[13px]"
+            className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           />
           <select
             value={form.status}
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as TrainingStatus }))}
-            className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-2 text-[13px]"
+            className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           >
             <option value="planned">Planned</option>
             <option value="in_progress">In progress</option>
@@ -173,32 +173,32 @@ export function TrainingRecordsClient({
             type="date"
             value={form.started_on}
             onChange={(e) => setForm((f) => ({ ...f, started_on: e.target.value }))}
-            className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-2 text-[13px]"
+            className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           />
           <input
             type="date"
             value={form.completed_on}
             onChange={(e) => setForm((f) => ({ ...f, completed_on: e.target.value }))}
-            className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-2 text-[13px]"
+            className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           />
           <input
             type="date"
             value={form.expires_on}
             onChange={(e) => setForm((f) => ({ ...f, expires_on: e.target.value }))}
-            className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-2 text-[13px]"
+            className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           />
           <input
             value={form.certificate_document_url}
             onChange={(e) => setForm((f) => ({ ...f, certificate_document_url: e.target.value }))}
             placeholder="Certificate URL (optional)"
-            className="sm:col-span-2 rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-2 text-[13px]"
+            className="sm:col-span-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           />
           <textarea
             rows={2}
             value={form.notes}
             onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
             placeholder="Notes"
-            className="sm:col-span-2 rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-2 text-[13px]"
+            className="sm:col-span-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           />
           <div className="sm:col-span-2">
             <button
@@ -215,25 +215,25 @@ export function TrainingRecordsClient({
 
       <div className="mt-4 space-y-2">
         {sortedRows.length === 0 ? (
-          <p className="text-[12px] text-[var(--color-text-secondary)]">No training records yet.</p>
+          <p className="text-[12px] text-[#9b9b9b]">No training records yet.</p>
         ) : (
           sortedRows.map((row) => (
             <div
               key={row.id}
-              className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] px-3 py-3 text-[12.5px]"
+              className="rounded-lg border border-[#ececec] bg-[#faf9f6] px-3 py-3 text-[12.5px]"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-medium text-[var(--color-text-primary)]">{row.title}</p>
-                  <p className="text-[var(--color-text-secondary)]">
+                  <p className="font-medium text-[#121212]">{row.title}</p>
+                  <p className="text-[#6b6b6b]">
                     {row.provider || 'No provider'} · {row.status.replace('_', ' ')}
                   </p>
-                  <p className="text-[var(--color-text-tertiary)]">
+                  <p className="text-[#9b9b9b]">
                     {row.started_on ? `Started ${row.started_on}` : 'Start date not set'}
                     {row.completed_on ? ` · Completed ${row.completed_on}` : ''}
                     {row.expires_on ? ` · Expires ${row.expires_on}` : ''}
                   </p>
-                  {row.notes ? <p className="mt-1 text-[var(--color-text-secondary)]">{row.notes}</p> : null}
+                  {row.notes ? <p className="mt-1 text-[#6b6b6b]">{row.notes}</p> : null}
                   {row.certificate_document_url ? (
                     <a
                       href={row.certificate_document_url}
@@ -250,7 +250,7 @@ export function TrainingRecordsClient({
                     type="button"
                     disabled={busy}
                     onClick={() => void deleteRecord(row.id)}
-                    className="rounded border border-[var(--color-border-tertiary)] px-2.5 py-1 text-[12px] text-[var(--color-text-primary)] hover:bg-[var(--color-background-secondary)]"
+                    className="rounded-lg border border-[#fecaca] bg-white px-3 py-1.5 text-[12px] text-[#991b1b] hover:bg-[#fef2f2] disabled:opacity-50"
                   >
                     Remove
                   </button>
