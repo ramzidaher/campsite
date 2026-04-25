@@ -17,6 +17,12 @@ const SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS = Number.parseInt(
 );
 
 type ShellBundle = Record<string, unknown>;
+type ShellRpcOptions = {
+  structuralRpcName?: string;
+  structuralRpcArgs?: Record<string, unknown>;
+  badgeRpcName?: string;
+  badgeRpcArgs?: Record<string, unknown>;
+};
 type ShellCacheEntry = {
   value: ShellBundle;
   cachedAt: number;
@@ -99,8 +105,13 @@ export const getCachedMainShellLayoutBundle = cache(async (): Promise<Record<str
 
 export async function getMainShellLayoutBundleForViewer(
   supabase: Pick<SupabaseClient, 'rpc'>,
-  viewerKey: string
+  viewerKey: string,
+  rpcOptions?: ShellRpcOptions
 ): Promise<ShellBundle> {
+  const structuralRpcName = rpcOptions?.structuralRpcName ?? 'main_shell_layout_structural';
+  const structuralRpcArgs = rpcOptions?.structuralRpcArgs;
+  const badgeRpcName = rpcOptions?.badgeRpcName ?? 'main_shell_badge_counts_bundle';
+  const badgeRpcArgs = rpcOptions?.badgeRpcArgs;
   const now = Date.now();
   const cached = shellResponseCache.get(viewerKey);
   if (cached && cached.expiresAt > now) {
@@ -121,12 +132,12 @@ export async function getMainShellLayoutBundleForViewer(
 
   const fetchPromise = (async () => {
   const structuralPromise = resolveStructuralWithTimeout(
-    supabase.rpc('main_shell_layout_structural'),
+    supabase.rpc(structuralRpcName, structuralRpcArgs),
     { data: {}, error: null } as Awaited<ReturnType<typeof supabase.rpc>>
   );
   const badgePromise = resolveBadgeWithGuardrails(
     `shell:badge:${viewerKey}`,
-    () => supabase.rpc('main_shell_badge_counts_bundle')
+    () => supabase.rpc(badgeRpcName, badgeRpcArgs)
   );
   const [structuralWrapped, badgeWrapped] = await Promise.all([structuralPromise, badgePromise]);
   const structural = structuralWrapped.value;

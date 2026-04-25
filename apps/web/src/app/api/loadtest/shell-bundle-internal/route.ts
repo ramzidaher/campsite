@@ -118,7 +118,15 @@ export async function GET(req: Request) {
   let timeoutFallbackUsed = false;
   let bundle: Record<string, unknown>;
   try {
-    const resolved = await withTimeout(getMainShellLayoutBundleForViewer(supabase, viewerKey), APP_ROUTE_TIMEOUT_MS);
+    const resolved = await withTimeout(
+      getMainShellLayoutBundleForViewer(supabase, viewerKey, {
+        structuralRpcName: 'main_shell_layout_structural_for_user',
+        structuralRpcArgs: { p_user_id: loadtestUserId },
+        badgeRpcName: 'main_shell_badge_counts_bundle_for_user',
+        badgeRpcArgs: { p_user_id: loadtestUserId },
+      }),
+      APP_ROUTE_TIMEOUT_MS
+    );
     bundle = resolved.value;
   } catch {
     timeoutFallbackUsed = true;
