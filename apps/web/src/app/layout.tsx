@@ -11,6 +11,7 @@ const dmSerif = DM_Serif_Display({
   subsets: ['latin'],
   variable: '--font-auth-serif',
   weight: '400',
+  style: ['normal', 'italic'],
 });
 
 const siteUrl =

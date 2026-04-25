@@ -1,0 +1,30 @@
+[
+  {
+    "command": "outliers",
+    "ok": false,
+    "exitCode": 1,
+    "stdout": "{}",
+    "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\nunexpected login role status 544: {\"message\":\"Failed to create login role: Connection terminated due to connection timeout\"}\nConnect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD"
+  },
+  {
+    "command": "calls",
+    "ok": false,
+    "exitCode": 1,
+    "stdout": "{}",
+    "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\nunexpected login role status 544: {\"message\":\"Failed to create login role: Connection terminated due to connection timeout\"}\nConnect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD"
+  },
+  {
+    "command": "blocking",
+    "ok": false,
+    "exitCode": 1,
+    "stdout": "{}",
+    "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\nunexpected login role status 544: {\"message\":\"Failed to create login role: Connection terminated due to connection timeout\"}\nConnect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD"
+  },
+  {
+    "command": "index-stats",
+    "ok": false,
+    "exitCode": 1,
+    "stdout": "{}",
+    "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\nunexpected login role status 544: {\"message\":\"Failed to create login role: Connection terminated due to connection timeout\"}\nConnect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD"
+  }
+]

@@ -1,0 +1,722 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "checks": {
+                    "login status is 200": {
+                        "name": "login status is 200",
+                        "path": "::setup::login status is 200",
+                        "id": "bb27b460b057923f4a083e3603c038b9",
+                        "passes": 30,
+                        "fails": 0
+                    },
+                    "login has token": {
+                        "passes": 30,
+                        "fails": 0,
+                        "name": "login has token",
+                        "path": "::setup::login has token",
+                        "id": "2a64ccc0036069b6bf05082925ff90b6"
+                    }
+                },
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {}
+            }
+        },
+        "checks": {
+            "login status is 200": {
+                "fails": 0,
+                "name": "login status is 200",
+                "path": "::login status is 200",
+                "id": "baba87e761865dc93085ee0c1fe25f4c",
+                "passes": 1
+            },
+            "login has token": {
+                "id": "76fad3378234b1d9b3859991679a6c46",
+                "passes": 1,
+                "fails": 0,
+                "name": "login has token",
+                "path": "::login has token"
+            },
+            "main_shell_scheduling_bundle status is 200": {
+                "id": "47fb1cf27f1c872a76a07c7c3df3b1de",
+                "passes": 0,
+                "fails": 1,
+                "name": "main_shell_scheduling_bundle status is 200",
+                "path": "::main_shell_scheduling_bundle status is 200"
+            },
+            "main_shell_badge_counts_bundle status is 200": {
+                "name": "main_shell_badge_counts_bundle status is 200",
+                "path": "::main_shell_badge_counts_bundle status is 200",
+                "id": "9b90f7993ea27f6269172b7a9497ab1c",
+                "passes": 1,
+                "fails": 0
+            }
+        }
+    },
+    "metrics": {
+        "vus_max": {
+            "value": 1,
+            "min": 1,
+            "max": 1
+        },
+        "data_sent": {
+            "count": 9618,
+            "rate": 443.24502735349034
+        },
+        "data_received": {
+            "count": 79350,
+            "rate": 3656.8406030879037
+        },
+        "http_req_duration{endpoint:rpc_scheduling}": {
+            "min": 6865.987,
+            "med": 6865.987,
+            "max": 6865.987,
+            "p(90)": 6865.987,
+            "p(95)": 6865.987,
+            "avg": 6865.987,
+            "thresholds": {
+                "p(99)<2200": true,
+                "p(95)<1100": true
+            }
+        },
+        "http_req_blocked": {
+            "med": 0.001,
+            "max": 125.028,
+            "p(90)": 0.002,
+            "p(95)": 10.856399999999963,
+            "avg": 4.612333333333335,
+            "min": 0.001
+        },
+        "http_req_failed": {
+            "passes": 1,
+            "fails": 32,
+            "thresholds": {
+                "rate<0.01": true
+            },
+            "value": 0.030303030303030304
+        },
+        "http_req_duration{endpoint:rpc_badges}": {
+            "avg": 4346.903,
+            "min": 4346.903,
+            "med": 4346.903,
+            "max": 4346.903,
+            "p(90)": 4346.903,
+            "p(95)": 4346.903,
+            "thresholds": {
+                "p(99)<1400": true,
+                "p(95)<700": true
+            }
+        },
+        "http_req_duration": {
+            "p(95)": 2205.828799999995,
+            "avg": 523.1695757575757,
+            "min": 129.603,
+            "med": 175.436,
+            "max": 6865.987,
+            "p(90)": 290.2246,
+            "thresholds": {
+                "p(95)<900": true,
+                "p(99)<1800": true
+            }
+        },
+        "http_reqs": {
+            "count": 33,
+            "rate": 1.5208032753862737
+        },
+        "http_req_tls_handshaking": {
+            "min": 0,
+            "med": 0,
+            "max": 17.951,
+            "p(90)": 0,
+            "p(95)": 6.6651999999999765,
+            "avg": 1.048909090909091
+        },
+        "http_req_waiting": {
+            "p(90)": 288.0192,
+            "p(95)": 2205.018199999995,
+            "avg": 522.4724242424243,
+            "min": 128.972,
+            "med": 174.852,
+            "max": 6865.49
+        },
+        "vus": {
+            "value": 1,
+            "min": 0,
+            "max": 1
+        },
+        "http_req_duration{endpoint:rpc_layout}": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "thresholds": {
+                "p(95)<900": false,
+                "p(99)<1700": false
+            }
+        },
+        "http_req_connecting": {
+            "avg": 0.6136969696969696,
+            "min": 0,
+            "med": 0,
+            "max": 11.277,
+            "p(90)": 0,
+            "p(95)": 3.589999999999987
+        },
+        "checks": {
+            "passes": 63,
+            "fails": 1,
+            "value": 0.984375
+        },
+        "iteration_duration": {
+            "p(90)": 7326.067966,
+            "p(95)": 7446.0261285,
+            "avg": 6366.402666,
+            "min": 5166.821041,
+            "med": 6366.402666,
+            "max": 7565.984291
+        },
+        "iterations": {
+            "count": 2,
+            "rate": 0.09216989547795598
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 129.603,
+            "med": 174.719,
+            "max": 4346.903,
+            "p(90)": 278.0406,
+            "p(95)": 511.4066999999994,
+            "avg": 324.95653125
+        },
+        "http_req_sending": {
+            "avg": 0.4833636363636365,
+            "min": 0.159,
+            "med": 0.388,
+            "max": 2.569,
+            "p(90)": 0.6086,
+            "p(95)": 0.776
+        },
+        "http_req_receiving": {
+            "med": 0.159,
+            "max": 1.494,
+            "p(90)": 0.3118,
+            "p(95)": 0.3308,
+            "avg": 0.21378787878787878,
+            "min": 0.055
+        }
+    },
+    "setup_data": {
+        "users": [
+            {
+                "email": "james.hann@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "lindsay.horler@camp-site.co.uk",
+                "env": "production"
+            },
+            {
+                "email": "rachael.wall@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "password": "Campsite@2026!",
+                "email": "olga.saskova@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": ""
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "sarthak.peshin@camp-site.co.uk"
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "aarun.palmer@camp-site.co.uk"
+            },
+            {
+                "email": "kirsty.burnett@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "michelle.heath@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "mary.morrison@camp-site.co.uk",
+                "env": "production"
+            },
+            {
+                "email": "amalia.tarabuta@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "tarek.khalil@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "poppy.wootton@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "jamie.bond@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "daisy.billinge@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "password": "Campsite@2026!",
+                "email": "tyler.cohen@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": ""
+            },
+            {
+                "email": "hannah.ward@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "irma.romei@camp-site.co.uk"
+            },
+            {
+                "email": "tracey.dempster@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "anthony.gorin@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "amanda.cole@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "jane.trueman@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "password": "Campsite@2026!",
+                "email": "kael.rigelsford@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": ""
+            },
+            {
+                "email": "darcey.james@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "archie.brigden@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "imogen.greene@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "matilda.torre@camp-site.co.uk",
+                "env": "production"
+            },
+            {
+                "email": "mysha.salman@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "damien.pearson@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "leisha.bathija@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "miran.saadoun@camp-site.co.uk",
+                "env": "production"
+            },
+            {
+                "email": "ruby.gislingham@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "isla.thorpe@camp-site.co.uk"
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "yanna.erikson@camp-site.co.uk"
+            },
+            {
+                "email": "yoad.haran-diman@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "iona.reid@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "diana.sarmiento@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "maseni.soare@camp-site.co.uk",
+                "env": "production"
+            },
+            {
+                "email": "eva.samuels@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "gabrielle.stein@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "shraddha.sujatha@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "sabrina.harverson@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "zoe.silver@camp-site.co.uk",
+                "env": "production"
+            },
+            {
+                "email": "yomn.ghadir@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "frances.davies@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "ciarn.clark@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "ali.arief@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "ramzi.daher@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "gloria.agyare@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "katie.vicary@camp-site.co.uk"
+            },
+            {
+                "email": "joe.mcgarry@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "kathy.oregan@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "robert.luscombe@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "william.david@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "johany.moise@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "florence.mckenzie@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "password": "Campsite@2026!",
+                "email": "holly.neal@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": ""
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "radhika.thapliyal@camp-site.co.uk"
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "kate.vessey@camp-site.co.uk"
+            },
+            {
+                "email": "phoebe.purver@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "rafal.nassar@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "bee.aumeer@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "marcela.valds@camp-site.co.uk"
+            },
+            {
+                "password": "Campsite@2026!",
+                "email": "raheel.aslam@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": ""
+            },
+            {
+                "email": "jyothi.hanumantha@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "zaryab.pervez@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "adaeze.nicole@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "jess.james@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "tebello.motaung@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "jess.james2@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "maha.hamdani@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "kriti.sriram@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "luke.azaredo@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "payal.singh@camp-site.co.uk"
+            },
+            {
+                "email": "evelyn.panvalkar@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "mohammed.khanani@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "delaram.mahmoudzadeh@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "olashubomi.kehinde@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "elgasim.hamad@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "email": "lewis.wilson@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "password": "Campsite@2026!",
+                "email": "esther.adeyemo@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": ""
+            },
+            {
+                "email": "elena.southard@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": "",
+                "password": "Campsite@2026!"
+            },
+            {
+                "password": "Campsite@2026!",
+                "email": "annie.mcentee@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": ""
+            },
+            {
+                "password": "Campsite@2026!",
+                "email": "ella.goodchild@camp-site.co.uk",
+                "env": "production",
+                "orgSlug": ""
+            },
+            {
+                "orgSlug": "",
+                "password": "Campsite@2026!",
+                "email": "lyds.knowles@camp-site.co.uk",
+                "env": "production"
+            }
+        ]
+    }
+}

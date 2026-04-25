@@ -1,0 +1,78 @@
+{
+  "startedAt": "2026-04-24T16:12:37.321Z",
+  "finishedAt": "2026-04-24T16:17:39.336Z",
+  "durationSec": 300,
+  "intervalSec": 20,
+  "totalSamples": 8,
+  "target": "linked",
+  "dbUrlProvided": false,
+  "commandTimeoutSec": 15,
+  "commandRetries": 2,
+  "commandSummary": [
+    {
+      "command": "db-stats",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 5372.75,
+      "maxMs": 18557,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "long-running-queries",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 3869.63,
+      "maxMs": 10511,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "blocking",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 3387.25,
+      "maxMs": 8208,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "locks",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 2542.25,
+      "maxMs": 3822,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "outliers",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 2239.88,
+      "maxMs": 2482,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "index-stats",
+      "runs": 7,
+      "failures": 0,
+      "avgMs": 3241.86,
+      "maxMs": 5266,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    }
+  ],
+  "findings": [
+    "[sample 7] db-stats required 2 attempt(s)."
+  ],
+  "checks": [
+    "db-stats",
+    "long-running-queries",
+    "blocking",
+    "locks",
+    "outliers",
+    "index-stats"
+  ]
+}

@@ -32,6 +32,84 @@ const PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS = 1400;
 const PROFILE_HEAVY_RPC_TIMEOUT_MS = 1200;
 /** Cap simple org config lookups to keep profile render responsive under DB pressure. */
 const PROFILE_ORG_CONFIG_TIMEOUT_MS = 900;
+const PROFILE_RPC_TTL_MS = 10_000;
+const PROFILE_RPC_STALE_WINDOW_MS = 45_000;
+
+type RpcCacheEntry<T> = {
+  value: T;
+  expiresAt: number;
+  staleUntil: number;
+  inFlight?: Promise<T>;
+  refreshInFlight?: Promise<void>;
+};
+
+const hrEmployeeFileCache = new Map<string, RpcCacheEntry<{ data: unknown[]; error: null }>>();
+
+async function getCachedHrEmployeeFile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<{ data: unknown[]; error: null }> {
+  const now = Date.now();
+  const key = userId;
+  const entry = hrEmployeeFileCache.get(key);
+
+  if (entry) {
+    if (now < entry.expiresAt) return entry.value;
+    if (now < entry.staleUntil) {
+      if (!entry.refreshInFlight) {
+        entry.refreshInFlight = (async () => {
+          try {
+            const refreshed = await resolveWithTimeout(
+              supabase.rpc('hr_employee_file', { p_user_id: userId }),
+              PROFILE_HEAVY_RPC_TIMEOUT_MS,
+              { data: [], error: null }
+            );
+            const refreshedAt = Date.now();
+            hrEmployeeFileCache.set(key, {
+              value: refreshed as { data: unknown[]; error: null },
+              expiresAt: refreshedAt + PROFILE_RPC_TTL_MS,
+              staleUntil: refreshedAt + PROFILE_RPC_STALE_WINDOW_MS,
+            });
+          } catch {
+            // Keep stale value when background refresh fails.
+          } finally {
+            const latest = hrEmployeeFileCache.get(key);
+            if (latest) latest.refreshInFlight = undefined;
+          }
+        })();
+      }
+      return entry.value;
+    }
+    if (entry.inFlight) return entry.inFlight;
+  }
+
+  const inFlight = resolveWithTimeout(
+    supabase.rpc('hr_employee_file', { p_user_id: userId }),
+    PROFILE_HEAVY_RPC_TIMEOUT_MS,
+    { data: [], error: null }
+  ) as Promise<{ data: unknown[]; error: null }>;
+
+  hrEmployeeFileCache.set(key, {
+    value: entry?.value ?? { data: [], error: null },
+    expiresAt: entry?.expiresAt ?? 0,
+    staleUntil: entry?.staleUntil ?? 0,
+    inFlight,
+  });
+
+  try {
+    const resolved = await inFlight;
+    const fetchedAt = Date.now();
+    hrEmployeeFileCache.set(key, {
+      value: resolved,
+      expiresAt: fetchedAt + PROFILE_RPC_TTL_MS,
+      staleUntil: fetchedAt + PROFILE_RPC_STALE_WINDOW_MS,
+    });
+    return resolved;
+  } finally {
+    const latest = hrEmployeeFileCache.get(key);
+    if (latest) latest.inFlight = undefined;
+  }
+}
 
 async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: unknown): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -237,11 +315,7 @@ export default async function MyProfilePage({
     withServerPerf(
       '/profile',
       'rpc_hr_employee_file',
-      resolveWithTimeout(
-        supabase.rpc('hr_employee_file', { p_user_id: user.id }),
-        PROFILE_HEAVY_RPC_TIMEOUT_MS,
-        { data: [], error: null },
-      ),
+      getCachedHrEmployeeFile(supabase, user.id),
       450,
     ),
     supabase

@@ -1,5 +1,5 @@
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
-import { loadDashboardHome } from '@/lib/dashboard/loadDashboardHome';
+import { loadDashboardHomeGuarded } from '@/lib/dashboard/loadDashboardHome';
 import { isPlatformFounder } from '@/lib/platform/requirePlatformFounder';
 import {
   broadcastUnreadFromShellBundle,
@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { warnIfSlowServerPathWithThreshold, withServerPerf } from '@/lib/perf/serverPerf';
+import { headers } from 'next/headers';
 
 function greeting(hour: number, name: string) {
   if (hour < 12) return `Good morning, ${name}`;
@@ -76,10 +77,16 @@ export default async function DashboardPage() {
       ? Number(initialPendingApprovalsRaw)
       : undefined;
 
+  const reqHeaders = await headers();
+  const cacheControl = reqHeaders.get('cache-control') ?? '';
+  const pragma = reqHeaders.get('pragma') ?? '';
+  const manualRefresh =
+    /no-cache|max-age=0/i.test(cacheControl) || /no-cache/i.test(pragma);
+
   const data = await withServerPerf(
     '/dashboard',
     'load_dashboard_home',
-    loadDashboardHome(
+    loadDashboardHomeGuarded(
       supabase,
       user.id,
       profile.org_id as string,
@@ -87,7 +94,7 @@ export default async function DashboardPage() {
         full_name: profile.full_name as string | null,
         role,
       },
-      { initialBroadcastUnread, initialPendingApprovals }
+      { initialBroadcastUnread, initialPendingApprovals, manualRefresh }
     ),
     5000
   );

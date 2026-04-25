@@ -483,6 +483,24 @@ export function AppShell({
     });
   };
 
+  const openRoleSectionFromRail = (role: 'admin' | 'manager' | 'finance' | 'hr') => {
+    setDesktopNavOpen(true);
+    setAdminNavExpanded(role === 'admin');
+    setManagerNavExpanded(role === 'manager');
+    setFinanceNavExpanded(role === 'finance');
+    setHrNavExpanded(role === 'hr');
+    try {
+      localStorage.setItem(DESKTOP_SIDEBAR_OPEN_KEY, '1');
+      localStorage.setItem(ADMIN_NAV_EXPANDED_KEY, role === 'admin' ? '1' : '0');
+      localStorage.setItem(MANAGER_NAV_EXPANDED_KEY, role === 'manager' ? '1' : '0');
+      localStorage.setItem(FINANCE_NAV_EXPANDED_KEY, role === 'finance' ? '1' : '0');
+      localStorage.setItem(HR_NAV_EXPANDED_KEY, role === 'hr' ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+    playUiSound('menu_open');
+  };
+
   const showExpandedSidebar = mobileNav || desktopNavOpen;
 
   return (
@@ -649,7 +667,7 @@ export function AppShell({
             <div className="mt-3 mb-1 px-2">
               <div className="h-px bg-white/[0.08]" />
               <div className="pt-3 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-white/28">
-                Role access
+                My organisation
               </div>
             </div>
           ) : null}
@@ -662,7 +680,10 @@ export function AppShell({
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-lg border border-[#5d342e]/70 px-2.5 py-2 text-left transition-colors',
+                  'flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors',
+                  adminNavExpanded
+                    ? 'rounded-t-lg border border-b-0 border-[#5d342e]/70 bg-white/[0.03]'
+                    : 'rounded-lg border border-[#5d342e]/70',
                   'text-[#ea9b84] hover:bg-white/[0.07]',
                 ].join(' ')}
                 aria-expanded={adminNavExpanded}
@@ -712,7 +733,7 @@ export function AppShell({
                 ].join(' ')}
               >
                 <div className="min-h-0 overflow-hidden" inert={!adminNavExpanded ? true : undefined}>
-                  <div className="relative mt-1 space-y-0.5 px-1 pb-1">
+                  <div className="relative space-y-0.5 rounded-b-lg border border-t-0 border-[#5d342e]/70 bg-white/[0.03] px-1 pb-1 pt-1.5">
                     {adminNavItems.map((item, idx) => {
                       const item_ = withLiveBadge(item);
                       const prev = idx > 0 ? adminNavItems[idx - 1] : undefined;
@@ -737,11 +758,11 @@ export function AppShell({
                               isOverview
                                 ? [
                                     'flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] transition-colors',
-                                    active ? 'bg-white/[0.12] font-medium text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                                    active ? 'bg-white/[0.1] text-[#ffb9a6]' : 'text-[#b4978d] hover:bg-white/[0.06] hover:text-[#d9b2a4]',
                                   ].join(' ')
                                 : [
                                     'flex items-center gap-2 rounded-[10px] pl-[22px] pr-2.5 py-[7px] text-[12.5px] transition-colors',
-                                    active ? 'bg-white/[0.12] text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white/80',
+                                    active ? 'bg-white/[0.1] text-[#ffb9a6]' : 'text-[#b4978d] hover:bg-white/[0.05] hover:text-[#d9b2a4]',
                                   ].join(' ')
                             }
                           >
@@ -750,7 +771,7 @@ export function AppShell({
                                 <ShellNavIcon name={item_.icon} />
                               </span>
                             ) : (
-                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#8f7cf7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#cb6f35]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
                           </Link>
@@ -771,7 +792,10 @@ export function AppShell({
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-lg border border-[#3d3774]/70 px-2.5 py-2 text-left transition-colors',
+                  'flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors',
+                  managerNavExpanded
+                    ? 'rounded-t-lg border border-b-0 border-[#3d3774]/70 bg-white/[0.03]'
+                    : 'rounded-lg border border-[#3d3774]/70',
                   'text-[#a89af7] hover:bg-white/[0.07]',
                 ].join(' ')}
                 aria-expanded={managerNavExpanded}
@@ -822,7 +846,7 @@ export function AppShell({
                 ].join(' ')}
               >
                 <div className="min-h-0 overflow-hidden" inert={!managerNavExpanded ? true : undefined}>
-                  <div className="relative mt-1 space-y-0.5 px-1 pb-1">
+                  <div className="relative space-y-0.5 rounded-b-lg border border-t-0 border-[#3d3774]/70 bg-white/[0.03] px-1 pb-1 pt-1.5">
                     {managerNavItems.map((item, idx) => {
                       const item_ = withLiveBadge(item);
                       const prev = idx > 0 ? managerNavItems[idx - 1] : undefined;
@@ -847,11 +871,11 @@ export function AppShell({
                               isOverview
                                 ? [
                                     'flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] transition-colors',
-                                    active ? 'bg-white/[0.12] font-medium text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                                    active ? 'bg-white/[0.1] text-[#d4ceff]' : 'text-[#b0b0bc] hover:bg-white/[0.06] hover:text-[#d4ceff]',
                                   ].join(' ')
                                 : [
                                     'flex items-center gap-2 rounded-[10px] pl-[22px] pr-2.5 py-[7px] text-[12.5px] transition-colors',
-                                    active ? 'bg-white/[0.12] text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white/80',
+                                    active ? 'bg-white/[0.1] text-[#d4ceff]' : 'text-[#b0b0bc] hover:bg-white/[0.05] hover:text-[#d4ceff]',
                                   ].join(' ')
                             }
                           >
@@ -881,7 +905,10 @@ export function AppShell({
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-lg border border-[#2d5b44]/70 px-2.5 py-2 text-left transition-colors',
+                  'flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors',
+                  financeNavExpanded
+                    ? 'rounded-t-lg border border-b-0 border-[#2d5b44]/70 bg-white/[0.03]'
+                    : 'rounded-lg border border-[#2d5b44]/70',
                   'text-[#80d5ad] hover:bg-white/[0.07]',
                 ].join(' ')}
                 aria-expanded={financeNavExpanded}
@@ -932,7 +959,7 @@ export function AppShell({
                 ].join(' ')}
               >
                 <div className="min-h-0 overflow-hidden" inert={!financeNavExpanded ? true : undefined}>
-                  <div className="relative mt-1 space-y-0.5 px-1 pb-1">
+                  <div className="relative space-y-0.5 rounded-b-lg border border-t-0 border-[#2d5b44]/70 bg-white/[0.03] px-1 pb-1 pt-1.5">
                     {financeNavItems.map((item, idx) => {
                       const item_ = withLiveBadge(item);
                       const prev = idx > 0 ? financeNavItems[idx - 1] : undefined;
@@ -957,11 +984,11 @@ export function AppShell({
                               isOverview
                                 ? [
                                     'flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] transition-colors',
-                                    active ? 'bg-white/[0.12] font-medium text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                                    active ? 'bg-white/[0.1] text-[#c8f7de]' : 'text-[#a8bbb0] hover:bg-white/[0.06] hover:text-[#c8f7de]',
                                   ].join(' ')
                                 : [
                                     'flex items-center gap-2 rounded-[10px] pl-[22px] pr-2.5 py-[7px] text-[12.5px] transition-colors',
-                                    active ? 'bg-white/[0.12] text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white/80',
+                                    active ? 'bg-white/[0.1] text-[#c8f7de]' : 'text-[#a8bbb0] hover:bg-white/[0.05] hover:text-[#c8f7de]',
                                   ].join(' ')
                             }
                           >
@@ -970,7 +997,7 @@ export function AppShell({
                                 <ShellNavIcon name={item_.icon} />
                               </span>
                             ) : (
-                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#8f7cf7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#2da772]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
                           </Link>
@@ -991,7 +1018,10 @@ export function AppShell({
               <button
                 type="button"
                 className={[
-                  'flex w-full items-center gap-2 rounded-lg border border-[#264e63]/70 px-2.5 py-2 text-left transition-colors',
+                  'flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors',
+                  hrNavExpanded
+                    ? 'rounded-t-lg border border-b-0 border-[#264e63]/70 bg-white/[0.03]'
+                    : 'rounded-lg border border-[#264e63]/70',
                   'text-[#7ecaf2] hover:bg-white/[0.07]',
                 ].join(' ')}
                 aria-expanded={hrNavExpanded}
@@ -1042,7 +1072,7 @@ export function AppShell({
                 ].join(' ')}
               >
                 <div className="min-h-0 overflow-hidden" inert={!hrNavExpanded ? true : undefined}>
-                  <div className="relative mt-1 space-y-0.5 px-1 pb-1">
+                  <div className="relative space-y-0.5 rounded-b-lg border border-t-0 border-[#264e63]/70 bg-white/[0.03] px-1 pb-1 pt-1.5">
                     {hrNavItems.map((item, idx) => {
                       const item_ = withLiveBadge(item);
                       const prev = idx > 0 ? hrNavItems[idx - 1] : undefined;
@@ -1067,11 +1097,11 @@ export function AppShell({
                               isOverview
                                 ? [
                                     'flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] transition-colors',
-                                    active ? 'bg-white/[0.12] font-medium text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.07] hover:text-white/85',
+                                    active ? 'bg-white/[0.1] text-[#b7e7fb]' : 'text-[#a4b5bf] hover:bg-white/[0.06] hover:text-[#b7e7fb]',
                                   ].join(' ')
                                 : [
                                     'flex items-center gap-2 rounded-[10px] pl-[22px] pr-2.5 py-[7px] text-[12.5px] transition-colors',
-                                    active ? 'bg-white/[0.12] text-[#faf9f6]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white/80',
+                                    active ? 'bg-white/[0.1] text-[#b7e7fb]' : 'text-[#a4b5bf] hover:bg-white/[0.05] hover:text-[#b7e7fb]',
                                   ].join(' ')
                             }
                           >
@@ -1080,7 +1110,7 @@ export function AppShell({
                                 <ShellNavIcon name={item_.icon} />
                               </span>
                             ) : (
-                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#8f7cf7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
+                              <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#2f9cd4]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
                           </Link>
@@ -1150,10 +1180,11 @@ export function AppShell({
           <div className="hidden h-full flex-col items-center border-r border-white/[0.07] px-2.5 py-3 md:flex">
             <button
               type="button"
-              className="group relative mb-2 flex h-9 w-9 items-center justify-center rounded-md bg-white/[0.04] text-white/80 transition-colors hover:bg-white/[0.11] hover:text-white"
+              className="group relative mb-2 flex h-10 w-full cursor-pointer items-center justify-center rounded-md bg-white/[0.04] text-white/80 transition-colors hover:bg-white/[0.11] hover:text-white"
               aria-label="Expand sidebar"
               aria-controls="primary-navigation"
               onClick={toggleDesktopSidebar}
+              title="Open sidebar"
             >
               <CampsiteLogoMark className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/[0.12] transition-opacity duration-150 group-hover:opacity-0" />
               <ChevronRight
@@ -1167,6 +1198,46 @@ export function AppShell({
               <RailIconLink href="/calendar" icon="calendar" label="Calendar" />
               <RailIconLink href="/resources" icon="resources" label="Resources" />
             </div>
+            {(managerNavItems?.length || financeNavItems?.length || hrNavItems?.length || adminNavItems?.length) ? (
+              <div className="mt-3 mb-1 flex flex-col items-center gap-1.5">
+                {managerNavItems?.length ? (
+                  <button
+                    type="button"
+                    className="h-2.5 w-2.5 rounded-full bg-[#8f7cf7] opacity-85 transition hover:scale-110 hover:opacity-100"
+                    title={managerNavSectionLabel}
+                    aria-label={`Open ${managerNavSectionLabel} role access`}
+                    onClick={() => openRoleSectionFromRail('manager')}
+                  />
+                ) : null}
+                {financeNavItems?.length ? (
+                  <button
+                    type="button"
+                    className="h-2.5 w-2.5 rounded-full bg-[#2da772] opacity-85 transition hover:scale-110 hover:opacity-100"
+                    title="Finance"
+                    aria-label="Open Finance role access"
+                    onClick={() => openRoleSectionFromRail('finance')}
+                  />
+                ) : null}
+                {hrNavItems?.length ? (
+                  <button
+                    type="button"
+                    className="h-2.5 w-2.5 rounded-full bg-[#2f9cd4] opacity-85 transition hover:scale-110 hover:opacity-100"
+                    title="HR"
+                    aria-label="Open HR role access"
+                    onClick={() => openRoleSectionFromRail('hr')}
+                  />
+                ) : null}
+                {adminNavItems?.length ? (
+                  <button
+                    type="button"
+                    className="h-2.5 w-2.5 rounded-full bg-[#cb6f35] opacity-85 transition hover:scale-110 hover:opacity-100"
+                    title="Admin"
+                    aria-label="Open Admin role access"
+                    onClick={() => openRoleSectionFromRail('admin')}
+                  />
+                ) : null}
+              </div>
+            ) : null}
             <Link
               href="/settings"
               prefetch={false}

@@ -1,0 +1,95 @@
+{
+  "startedAt": "2026-04-24T10:08:20.307Z",
+  "finishedAt": "2026-04-24T10:13:32.317Z",
+  "durationSec": 300,
+  "intervalSec": 20,
+  "totalSamples": 1,
+  "target": "linked",
+  "dbUrlProvided": false,
+  "commandTimeoutSec": 15,
+  "commandRetries": 2,
+  "commandSummary": [
+    {
+      "command": "db-stats",
+      "runs": 1,
+      "failures": 1,
+      "avgMs": 48656,
+      "maxMs": 48656,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "long-running-queries",
+      "runs": 1,
+      "failures": 1,
+      "avgMs": 48634,
+      "maxMs": 48634,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "blocking",
+      "runs": 1,
+      "failures": 1,
+      "avgMs": 48655,
+      "maxMs": 48655,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "locks",
+      "runs": 1,
+      "failures": 1,
+      "avgMs": 48693,
+      "maxMs": 48693,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "outliers",
+      "runs": 1,
+      "failures": 1,
+      "avgMs": 48691,
+      "maxMs": 48691,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "index-stats",
+      "runs": 1,
+      "failures": 1,
+      "avgMs": 48676,
+      "maxMs": 48676,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    }
+  ],
+  "findings": [
+    "[sample 1] db-stats failed (exit null): Using workdir /Users/ramzidaher/Projects/CampSite/supabase Initialising login role...",
+    "[sample 1] db-stats timed out after command timeout.",
+    "[sample 1] db-stats required 3 attempt(s).",
+    "[sample 1] long-running-queries failed (exit null): Using workdir /Users/ramzidaher/Projects/CampSite/supabase Initialising login role...",
+    "[sample 1] long-running-queries timed out after command timeout.",
+    "[sample 1] long-running-queries required 3 attempt(s).",
+    "[sample 1] blocking failed (exit null): Using workdir /Users/ramzidaher/Projects/CampSite/supabase Initialising login role...",
+    "[sample 1] blocking timed out after command timeout.",
+    "[sample 1] blocking required 3 attempt(s).",
+    "[sample 1] locks failed (exit null): Using workdir /Users/ramzidaher/Projects/CampSite/supabase Initialising login role...",
+    "[sample 1] locks timed out after command timeout.",
+    "[sample 1] locks required 3 attempt(s).",
+    "[sample 1] outliers failed (exit null): Using workdir /Users/ramzidaher/Projects/CampSite/supabase Initialising login role...",
+    "[sample 1] outliers timed out after command timeout.",
+    "[sample 1] outliers required 3 attempt(s).",
+    "[sample 1] index-stats failed (exit null): Using workdir /Users/ramzidaher/Projects/CampSite/supabase Initialising login role...",
+    "[sample 1] index-stats timed out after command timeout.",
+    "[sample 1] index-stats required 3 attempt(s)."
+  ],
+  "checks": [
+    "db-stats",
+    "long-running-queries",
+    "blocking",
+    "locks",
+    "outliers",
+    "index-stats"
+  ]
+}

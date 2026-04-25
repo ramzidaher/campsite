@@ -1,0 +1,76 @@
+{
+  "startedAt": "2026-04-23T22:06:40.949Z",
+  "finishedAt": "2026-04-23T22:11:49.873Z",
+  "durationSec": 300,
+  "intervalSec": 20,
+  "totalSamples": 8,
+  "target": "linked",
+  "dbUrlProvided": false,
+  "commandTimeoutSec": 15,
+  "commandRetries": 2,
+  "commandSummary": [
+    {
+      "command": "db-stats",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 3760.63,
+      "maxMs": 6952,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "long-running-queries",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 2436.63,
+      "maxMs": 3116,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "blocking",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 3237.38,
+      "maxMs": 8612,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "locks",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 2946.63,
+      "maxMs": 4084,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "outliers",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 3077.5,
+      "maxMs": 5239,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "index-stats",
+      "runs": 8,
+      "failures": 0,
+      "avgMs": 3153.13,
+      "maxMs": 6068,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    }
+  ],
+  "findings": [],
+  "checks": [
+    "db-stats",
+    "long-running-queries",
+    "blocking",
+    "locks",
+    "outliers",
+    "index-stats"
+  ]
+}

@@ -1,57 +1,25 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CampfireLoaderInline } from '@/components/CampfireLoaderInline';
 import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 
 function Navigation() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    document.body.classList.toggle('dark');
-    localStorage.setItem('theme', isDarkMode ? 'light' : 'dark');
-  };
-
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 px-4 py-4 md:px-8">
-      <nav className="grid grid-cols-[1fr_auto_1fr] items-center">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="inline-flex items-center gap-2.5 font-mono">
-            <CampsiteLogoMark className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-md bg-[#292f33]" />
-            CAMPSITE
+    <header className="v5-nav-wrap">
+      <nav className="v5-nav">
+        <div className="v5-nav-left">
+          <Link href="/" className="v5-logo-wrap">
+            <CampsiteLogoMark className="v5-logo-mark" />
+            <span className="v5-logo">Campsite</span>
           </Link>
-          <button type="button" onClick={toggleDarkMode} className="font-mono hidden md:block">
-            DARK MODE
-          </button>
         </div>
-        <button type="button" className="font-mono justify-self-center">
-          MENU
-        </button>
-        <div className="flex items-center justify-end">
-          <div className="group relative">
-            <a
-              href="#contact"
-              className="font-mono inline-flex items-center text-[11px] uppercase tracking-[0.18em] transition-opacity"
-              style={{ color: 'var(--lp-foreground)' }}
-            >
-              LET&apos;S TALK
-            </a>
-
-            <div className="absolute right-0 top-full min-w-[130px] pt-1.5">
-              <div
-                className="pointer-events-none translate-y-1 opacity-0 transition-all duration-150 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
-              >
-                <Link href="/login" className="font-mono block py-1.5 text-[11px] uppercase tracking-[0.18em] text-[color:var(--lp-foreground)]/90 hover:underline">
-                  Login
-                </Link>
-                <Link href="/register" className="font-mono block py-1.5 text-[11px] uppercase tracking-[0.18em] text-[color:var(--lp-foreground)]/70 hover:text-[color:var(--lp-foreground)] hover:underline">
-                  Register
-                </Link>
-              </div>
-            </div>
-          </div>
+        <div className="v5-nav-middle">
+          <span className="v5-nav-link v5-nav-talk">Let&apos;s talk</span>
+        </div>
+        <div className="v5-nav-right">
+          <Link href="/login" className="v5-btn-fun">Enter Camp -&gt;</Link>
         </div>
       </nav>
     </header>
@@ -107,63 +75,61 @@ function BottomLeftTagline() {
 }
 
 function HeroSection() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  useEffect(() => {
-    let raf = 0;
-    const onScroll = () => {
-      if (raf) return;
-      raf = window.requestAnimationFrame(() => {
-        raf = 0;
-        const section = sectionRef.current;
-        if (!section) return;
-        const rect = section.getBoundingClientRect();
-        const sectionTravel = Math.max(1, rect.height * 0.85);
-        // 0 at page top; increases only as hero scrolls past viewport top.
-        const raw = -rect.top / sectionTravel;
-        const clamped = Math.max(0, Math.min(1, raw));
-        setScrollProgress(clamped);
-      });
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    return () => {
-      if (raf) window.cancelAnimationFrame(raf);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-    };
-  }, []);
-
-  const headingScale = 1 + scrollProgress * 1.05;
-  const headingY = -scrollProgress * 120;
-  const headingOpacity = 1 - scrollProgress * 0.45;
-
   return (
-    <section
-      ref={sectionRef}
-      className="relative min-h-screen overflow-hidden px-4 pb-12 pt-20 md:px-8"
-    >
-      <div className="relative mx-auto min-h-[calc(100vh-8rem)] max-w-7xl">
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <h1
-            className="font-grot text-center text-[clamp(3.5rem,14vw,10rem)] leading-[0.85]"
-            style={{
-              transform: `translateY(${headingY}px) scale(${headingScale})`,
-              opacity: headingOpacity,
-              transition: 'transform 120ms linear, opacity 120ms linear',
-              willChange: 'transform, opacity',
-            }}
-          >
-            <span className="block">RUN</span>
-            <span className="block">
-              YOUR <span style={{ color: '#f38f0c' }}>TEAM</span>
-            </span>
-            <span className="block">BETTER</span>
+    <section className="v5-hero-shell">
+      <div className="v5-hero">
+        <div className="v5-hero-left">
+          <h1 className="v5-hero-title">
+            Run your team.
+            <em> Not your tools.</em>
           </h1>
+          <p className="v5-hero-desc">
+            CampSite brings announcements, rota, HR, hiring, and approvals into one workspace so your team
+            always knows what is going on.
+          </p>
+          <div className="v5-hero-actions">
+            <Link href="/register" className="v5-btn-primary">Start your workspace -&gt;</Link>
+            <button type="button" className="v5-btn-secondary">See how it works</button>
+          </div>
         </div>
+        <div className="v5-hero-right">
+          <div className="v5-ui-card v5-card-announcement">
+            <div className="v5-card-tag">Announcement</div>
+            <div className="v5-card-title">New shift policy posted</div>
+            <div className="v5-card-meta">Posted by Ops · All front-of-house staff</div>
+            <div className="v5-avatars">
+              <div className="v5-avatar v5-av1">KL</div>
+              <div className="v5-avatar v5-av2">MB</div>
+              <div className="v5-avatar v5-av3">TH</div>
+              <div className="v5-avatar v5-av4">+14</div>
+              <span className="v5-card-label">17 recipients · 12 read</span>
+            </div>
+          </div>
 
+          <div className="v5-ui-card v5-card-rota">
+            <div className="v5-card-tag">Today&apos;s rota</div>
+            <div className="v5-rota-row"><span>Katie L.</span><span>09:00-17:00</span></div>
+            <div className="v5-rota-row"><span>Marcus B.</span><span>12:00-20:00</span></div>
+            <div className="v5-rota-row"><span>Tara H.</span><span className="v5-rota-off">Day off</span></div>
+            <div className="v5-rota-row"><span>Owen R.</span><span>14:00-22:00</span></div>
+          </div>
+
+          <div className="v5-ui-card v5-card-approval">
+            <div className="v5-card-row">
+              <div>
+                <div className="v5-card-title">Holiday request</div>
+                <div className="v5-card-meta">Submitted by Marcus B.</div>
+              </div>
+              <span className="v5-status-badge">Pending</span>
+            </div>
+            <div className="v5-card-meta-row"><span>Dates</span><strong>14-18 Jul · 5 days</strong></div>
+            <div className="v5-card-meta-row"><span>Cover arranged</span><strong>Yes</strong></div>
+            <div className="v5-card-actions">
+              <button type="button" className="v5-card-action">Decline</button>
+              <button type="button" className="v5-card-action v5-card-action-accent">Approve -&gt;</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -604,8 +570,10 @@ export function LandingPage() {
   return (
     <div className="landing-page min-h-screen bg-[color:var(--lp-background)] text-[color:var(--lp-foreground)]">
       <Navigation />
-      <div className="fixed bottom-0 left-0 z-40 p-2"><BottomLeftTagline /></div>
-      <div className="fixed bottom-0 right-0 z-40 p-2"><Clock /></div>
+      <div className="v5-bottom-bar">
+        <BottomLeftTagline />
+        <Clock />
+      </div>
       <main className="min-h-screen">
         <HeroSection />
         <StatementSection />
@@ -681,6 +649,412 @@ export function LandingPage() {
         }
         .landing-page .service-item { transition: all 0.3s ease; cursor: pointer; }
         .landing-page .service-item:hover { color: var(--lp-accent); }
+
+        .landing-page .v5-nav-wrap {
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          background: #0e0d0c;
+        }
+        .landing-page .v5-nav {
+          position: relative;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          height: 64px;
+          padding: 0 18px;
+          width: 100%;
+        }
+        .landing-page .v5-nav-left,
+        .landing-page .v5-nav-right {
+          display: flex;
+          align-items: center;
+          flex-shrink: 0;
+        }
+        .landing-page .v5-nav-left { gap: 22px; }
+        .landing-page .v5-nav-middle {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+        }
+        .landing-page .v5-nav-right { gap: 10px; }
+        .landing-page .v5-logo-wrap {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none;
+          color: inherit;
+        }
+        .landing-page .v5-logo-mark {
+          display: flex;
+          height: 22px;
+          width: 22px;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          border-radius: 6px;
+          background: #292f33;
+        }
+        .landing-page .v5-logo {
+          font-family: var(--font-auth-serif), Georgia, ui-serif, serif;
+          font-size: 22px;
+          font-weight: 600;
+          letter-spacing: -0.02em;
+          white-space: nowrap;
+          color: #fff;
+        }
+        .landing-page .v5-nav-link {
+          font-size: 13px;
+          color: #fff;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+        .landing-page .v5-nav-talk {
+          color: rgba(255, 255, 255, 0.86);
+        }
+        .landing-page .v5-btn-fun {
+          font-size: 13px;
+          border-radius: 999px;
+          white-space: nowrap;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 9px 16px;
+          color: #fff;
+          background: #e8622a;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          box-shadow: 0 0 0 2px rgba(232, 98, 42, 0.2);
+        }
+        .landing-page .v5-hero-shell {
+          padding: 56px 0 48px;
+          background: #0e0d0c;
+          color: #f0ebe3;
+        }
+        .landing-page .v5-hero {
+          padding: 0 32px;
+          max-width: 1180px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          align-items: center;
+          gap: 48px;
+          min-height: calc(100vh - 180px);
+        }
+        .landing-page .v5-hero-left {
+          max-width: 540px;
+        }
+        .landing-page .v5-social-proof {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(232, 98, 42, 0.1);
+          border: 1px solid rgba(232, 98, 42, 0.24);
+          border-radius: 40px;
+          padding: 6px 16px;
+          margin-bottom: 24px;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #e8622a;
+        }
+        .landing-page .v5-avatars { display: flex; }
+        .landing-page .v5-avatar {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          border: 1.5px solid #1a1815;
+          margin-left: -6px;
+          font-size: 9px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+        }
+        .landing-page .v5-avatar:first-child { margin-left: 0; }
+        .landing-page .v5-av1 { background: #3a5a8a; }
+        .landing-page .v5-av2 { background: #5a3a7a; }
+        .landing-page .v5-av3 { background: #3a7a5a; }
+        .landing-page .v5-av4 { background: #7a5a3a; }
+        .landing-page .v5-live-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #e8622a;
+          margin-right: 2px;
+          display: inline-block;
+          animation: pulse 2s infinite;
+        }
+        .landing-page .v5-hero-title {
+          font-family: var(--font-auth-serif), Georgia, ui-serif, serif;
+          font-size: clamp(52px, 5.2vw, 74px);
+          font-weight: 700;
+          line-height: 1.03;
+          letter-spacing: -0.03em;
+          margin-bottom: 20px;
+          max-width: 620px;
+          white-space: normal;
+        }
+        .landing-page .v5-hero-title em {
+          display: block;
+          font-style: italic;
+          color: #e8622a;
+        }
+        .landing-page .v5-hero-desc {
+          font-size: 18px;
+          line-height: 1.6;
+          color: rgba(240, 235, 227, 0.62);
+          max-width: 460px;
+          margin: 0 0 28px;
+          font-weight: 300;
+        }
+        .landing-page .v5-hero-actions {
+          display: flex;
+          gap: 14px;
+          align-items: center;
+          margin-bottom: 16px;
+        }
+        .landing-page .v5-btn-primary {
+          background: #e8622a;
+          color: #fff;
+          font-size: 15px;
+          font-weight: 500;
+          padding: 13px 24px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+        }
+        .landing-page .v5-btn-secondary {
+          background: transparent;
+          color: rgba(240, 235, 227, 0.72);
+          font-size: 15px;
+          font-weight: 400;
+          padding: 13px 20px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          cursor: pointer;
+        }
+        .landing-page .v5-no-bs {
+          font-size: 13px;
+          color: rgba(240, 235, 227, 0.4);
+        }
+        .landing-page .v5-bottom-bar {
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 40;
+          height: 24px;
+          padding: 0 10px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #0e0d0c;
+        }
+        .landing-page .v5-bottom-bar .font-mono {
+          color: #fff;
+          font-size: 10px;
+          letter-spacing: 0.08em;
+        }
+
+        .landing-page .v5-hero-right {
+          position: relative;
+          height: 460px;
+        }
+        .landing-page .v5-ui-card {
+          position: absolute;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.11);
+          padding: 12px 14px;
+          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(4px);
+        }
+        .landing-page .v5-card-announcement {
+          top: 0;
+          left: 10%;
+          width: 304px;
+          border-color: rgba(232, 98, 42, 0.2);
+        }
+        .landing-page .v5-card-rota {
+          top: 110px;
+          right: 0;
+          width: 264px;
+        }
+        .landing-page .v5-card-approval {
+          bottom: 24px;
+          left: 2%;
+          width: 280px;
+        }
+        .landing-page .v5-card-tag {
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.5);
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          margin-bottom: 10px;
+          font-weight: 600;
+        }
+        .landing-page .v5-card-title {
+          font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 4px;
+          color: #faf9f6;
+          letter-spacing: 0.01em;
+        }
+        .landing-page .v5-card-meta {
+          font-size: 12px;
+          color: rgba(250, 249, 246, 0.52);
+        }
+        .landing-page .v5-card-label {
+          margin-left: 6px;
+          font-size: 10.5px;
+          color: rgba(250, 249, 246, 0.44);
+        }
+        .landing-page .v5-rota-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 13px;
+          padding: 9px 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          color: rgba(250, 249, 246, 0.86);
+        }
+        .landing-page .v5-rota-row:last-child {
+          border-bottom: none;
+        }
+        .landing-page .v5-rota-row span:last-child {
+          color: #ffb49b;
+          font-size: 10.5px;
+          font-weight: 600;
+          background: rgba(232, 98, 42, 0.18);
+          border: 1px solid rgba(232, 98, 42, 0.26);
+          padding: 2px 8px;
+          border-radius: 999px;
+        }
+        .landing-page .v5-rota-row span.v5-rota-off {
+          color: rgba(250, 249, 246, 0.4);
+          background: rgba(255, 255, 255, 0.07);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .landing-page .v5-card-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 10px;
+          gap: 10px;
+        }
+        .landing-page .v5-status-badge {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: #fbbf24;
+          border: 1px solid rgba(251, 191, 36, 0.3);
+          background: rgba(251, 191, 36, 0.14);
+          border-radius: 999px;
+          padding: 4px 9px;
+        }
+        .landing-page .v5-card-meta-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 12px;
+          margin-bottom: 4px;
+          color: rgba(250, 249, 246, 0.6);
+        }
+        .landing-page .v5-card-meta-row strong {
+          font-weight: 500;
+          color: #faf9f6;
+        }
+        .landing-page .v5-card-actions {
+          margin-top: 12px;
+          display: flex;
+          gap: 8px;
+        }
+        .landing-page .v5-card-action {
+          flex: 1;
+          padding: 8px 0;
+          font-size: 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          color: rgba(250, 249, 246, 0.84);
+          background: rgba(255, 255, 255, 0.04);
+        }
+        .landing-page .v5-card-action.v5-card-action-accent {
+          color: #ffb49b;
+          border-color: rgba(232, 98, 42, 0.3);
+          background: rgba(232, 98, 42, 0.16);
+        }
+        .landing-page .v5-btn-primary:hover,
+        .landing-page .v5-btn-fun:hover {
+          opacity: 0.9;
+        }
+
+        @media (max-width: 640px) {
+          .landing-page .v5-nav,
+          .landing-page .v5-hero {
+            padding-left: 18px;
+            padding-right: 18px;
+          }
+          .landing-page .v5-nav-link {
+            font-size: 13px;
+          }
+          .landing-page .v5-nav-middle {
+            left: auto;
+            right: 18px;
+            transform: none;
+            margin-right: 148px;
+          }
+          .landing-page .v5-hero {
+            grid-template-columns: 1fr;
+            gap: 26px;
+            min-height: auto;
+          }
+          .landing-page .v5-hero-shell {
+            padding-top: 36px;
+          }
+          .landing-page .v5-bottom-bar {
+            height: 22px;
+            padding: 0 8px;
+          }
+          .landing-page .v5-bottom-bar .font-mono {
+            font-size: 9px;
+            letter-spacing: 0.06em;
+          }
+          .landing-page .v5-hero-right {
+            height: 340px;
+          }
+          .landing-page .v5-card-announcement {
+            left: 0;
+            width: 260px;
+          }
+          .landing-page .v5-card-rota {
+            right: 0;
+            width: 220px;
+          }
+          .landing-page .v5-card-approval {
+            left: 0;
+            width: 250px;
+          }
+          .landing-page .v5-hero-actions {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .landing-page .v5-btn-primary,
+          .landing-page .v5-btn-secondary {
+            width: 100%;
+          }
+        }
       `}</style>
     </div>
   );

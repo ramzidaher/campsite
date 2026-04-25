@@ -1,0 +1,10 @@
+{
+  "parsed": 2000,
+  "statusDist": {
+    "200": 2000
+  },
+  "non200Count": 0,
+  "timeoutCount": 0,
+  "non200Samples": [],
+  "timeoutSamples": []
+}

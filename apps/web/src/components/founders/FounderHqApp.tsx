@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   deactivatePlatformOrg,
@@ -238,6 +238,8 @@ export function FounderHqApp({
   const [busyHardDelete, setBusyHardDelete] = useState(false);
   const [busyRemoveUserId, setBusyRemoveUserId] = useState<string | null>(null);
   const [busyProfileId, setBusyProfileId] = useState<string | null>(null);
+  const [governanceActionOverlay, setGovernanceActionOverlay] = useState<{ orgId: string; label: string } | null>(null);
+  const governanceOverlayTimer = useRef<number | null>(null);
   const firstOrgId = orgs[0]?.id ?? '';
   const [broadcastDraft, setBroadcastDraft] = useState({
     title: '',
@@ -284,6 +286,40 @@ export function FounderHqApp({
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
+  }, []);
+
+  const clearGovernanceActionOverlay = useCallback(() => {
+    if (governanceOverlayTimer.current !== null) {
+      window.clearTimeout(governanceOverlayTimer.current);
+      governanceOverlayTimer.current = null;
+    }
+    setGovernanceActionOverlay(null);
+  }, []);
+
+  const showGovernanceActionOverlay = useCallback(
+    (orgId: string, label: string, autoHideMs?: number) => {
+      if (governanceOverlayTimer.current !== null) {
+        window.clearTimeout(governanceOverlayTimer.current);
+        governanceOverlayTimer.current = null;
+      }
+      setGovernanceActionOverlay({ orgId, label });
+      if (!autoHideMs) return;
+      governanceOverlayTimer.current = window.setTimeout(() => {
+        setGovernanceActionOverlay((curr) =>
+          curr && curr.orgId === orgId && curr.label === label ? null : curr
+        );
+        governanceOverlayTimer.current = null;
+      }, autoHideMs);
+    },
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      if (governanceOverlayTimer.current !== null) {
+        window.clearTimeout(governanceOverlayTimer.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -801,7 +837,12 @@ export function FounderHqApp({
     router.refresh();
   };
 
-  const saveGovernance = async (org: FounderOrg, forceLogout: boolean, opts?: { clearTrial?: boolean }) => {
+  const saveGovernance = async (
+    org: FounderOrg,
+    forceLogout: boolean,
+    opts?: { clearTrial?: boolean; actionLabel?: string }
+  ) => {
+    showGovernanceActionOverlay(org.id, opts?.actionLabel ?? (forceLogout ? 'Forcing logout...' : 'Saving...'));
     setBusy(true);
     const result = await updateOrganisationGovernance({
       orgId: org.id,
@@ -815,6 +856,7 @@ export function FounderHqApp({
       clearTrial: opts?.clearTrial ?? false,
     });
     setBusy(false);
+    clearGovernanceActionOverlay();
     if (!result.ok) {
       showToast(result.error);
       return;
@@ -824,6 +866,7 @@ export function FounderHqApp({
   };
 
   const unlockOrganisation = async (org: FounderOrg) => {
+    showGovernanceActionOverlay(org.id, 'Unlocking...');
     setBusy(true);
     const result = await updateOrganisationGovernance({
       orgId: org.id,
@@ -837,6 +880,7 @@ export function FounderHqApp({
       clearTrial: false,
     });
     setBusy(false);
+    clearGovernanceActionOverlay();
     if (!result.ok) {
       showToast(result.error);
       return;
@@ -1507,6 +1551,7 @@ export function FounderHqApp({
                   <tbody>
                     {orgs.map((org) => {
                       const firstMemberId = allMembers.find((m) => m.org_id === org.id)?.id;
+                      const governanceOverlayActive = governanceActionOverlay?.orgId === org.id;
                       const daysLeft = trialDaysRemaining(org.subscription_trial_ends_at);
                       const trialLabel =
                         org.subscription_trial_ends_at == null
@@ -1609,7 +1654,12 @@ export function FounderHqApp({
                                   type="button"
                                   className="btn btn-ghost btn-sm"
                                   disabled={busy}
-                                  onClick={() => void saveGovernance(org, false, { clearTrial: true })}
+                                  onClick={() =>
+                                    void saveGovernance(org, false, {
+                                      clearTrial: true,
+                                      actionLabel: 'Clearing trial...',
+                                    })
+                                  }
                                 >
                                   Clear trial
                                 </button>
@@ -1620,16 +1670,30 @@ export function FounderHqApp({
                             {org.is_locked ? 'Locked' : 'Unlocked'} · {org.maintenance_mode ? 'Maintenance' : 'Live'}
                           </td>
                           <td>
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <div className="governance-actions-wrap">
+                              {governanceOverlayActive ? (
+                                <div className="governance-actions-overlay" role="status" aria-live="polite">
+                                  <span>{governanceActionOverlay.label}</span>
+                                </div>
+                              ) : null}
+                              <div
+                                className={`governance-actions${governanceOverlayActive ? ' is-obscured' : ''}`}
+                                style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
+                              >
                               <button
                                 type="button"
                                 className="btn btn-ghost btn-sm"
                                 disabled={busy}
-                                onClick={() =>
+                                onClick={() => {
+                                  showGovernanceActionOverlay(
+                                    org.id,
+                                    org.is_locked ? 'Unlocking draft...' : 'Locking draft...',
+                                    1000
+                                  );
                                   setOrgs((prev) =>
                                     prev.map((p) => (p.id === org.id ? { ...p, is_locked: !p.is_locked } : p))
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 Toggle lock
                               </button>
@@ -1637,13 +1701,18 @@ export function FounderHqApp({
                                 type="button"
                                 className="btn btn-ghost btn-sm"
                                 disabled={busy}
-                                onClick={() =>
+                                onClick={() => {
+                                  showGovernanceActionOverlay(
+                                    org.id,
+                                    org.maintenance_mode ? 'Maintenance off (draft)...' : 'Maintenance on (draft)...',
+                                    1000
+                                  );
                                   setOrgs((prev) =>
                                     prev.map((p) =>
                                       p.id === org.id ? { ...p, maintenance_mode: !p.maintenance_mode } : p
                                     )
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 Toggle maintenance
                               </button>
@@ -1659,7 +1728,11 @@ export function FounderHqApp({
                                 type="button"
                                 className="btn btn-primary btn-sm"
                                 disabled={busy}
-                                onClick={() => void saveGovernance(org, false)}
+                                onClick={() =>
+                                  void saveGovernance(org, false, {
+                                    actionLabel: 'Saving governance...',
+                                  })
+                                }
                               >
                                 Save
                               </button>
@@ -1667,7 +1740,11 @@ export function FounderHqApp({
                                 type="button"
                                 className="btn btn-danger btn-sm"
                                 disabled={busy}
-                                onClick={() => void saveGovernance(org, true)}
+                                onClick={() =>
+                                  void saveGovernance(org, true, {
+                                    actionLabel: 'Forcing logout...',
+                                  })
+                                }
                               >
                                 Force logout
                               </button>
@@ -1681,6 +1758,7 @@ export function FounderHqApp({
                               >
                                 View as org admin
                               </button>
+                              </div>
                             </div>
                           </td>
                         </tr>

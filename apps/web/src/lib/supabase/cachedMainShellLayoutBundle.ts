@@ -11,6 +11,10 @@ const SHELL_RESPONSE_CACHE_TTL_MS = Number.parseInt(
   process.env.CAMPSITE_SHELL_RESPONSE_CACHE_TTL_MS ?? '10000',
   10
 );
+const SHELL_RESPONSE_CACHE_NO_PROFILE_TTL_MS = Number.parseInt(
+  process.env.CAMPSITE_SHELL_RESPONSE_CACHE_NO_PROFILE_TTL_MS ?? '750',
+  10
+);
 const SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS = Number.parseInt(
   process.env.CAMPSITE_SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS ?? '4000',
   10
@@ -33,6 +37,16 @@ type ShellCacheEntry = {
 
 const shellResponseCache = new Map<string, ShellCacheEntry>();
 const shellInFlight = new Map<string, Promise<ShellBundle>>();
+
+function isMissingProfileBundle(value: ShellBundle): boolean {
+  return value.has_profile === false;
+}
+
+function nextShellExpiry(value: ShellBundle, now: number): number {
+  // Profile bootstrap can complete seconds after auth. Keep "no profile" cache very short
+  // so users don't get stuck on stale "Finish setup" UI after registration succeeds.
+  return now + (isMissingProfileBundle(value) ? SHELL_RESPONSE_CACHE_NO_PROFILE_TTL_MS : SHELL_RESPONSE_CACHE_TTL_MS);
+}
 
 function withShellCacheMeta(
   value: ShellBundle,
@@ -162,10 +176,11 @@ export async function getMainShellLayoutBundleForViewer(
         shell_cache_status:
           typeof payload.shell_cache_status === 'string' ? payload.shell_cache_status : 'single-rpc',
       };
+      const cachedAt = Date.now();
       shellResponseCache.set(viewerKey, {
         value: merged,
-        cachedAt: Date.now(),
-        expiresAt: Date.now() + SHELL_RESPONSE_CACHE_TTL_MS,
+        cachedAt,
+        expiresAt: nextShellExpiry(merged, cachedAt),
       });
       return merged;
     }
@@ -201,10 +216,11 @@ export async function getMainShellLayoutBundleForViewer(
       shell_guardrail_reasons: [...new Set(reasons)],
       shell_cache_status: badgeWrapped.meta.cacheStatus,
     };
+    const cachedAt = Date.now();
     shellResponseCache.set(viewerKey, {
       value: merged,
-      cachedAt: Date.now(),
-      expiresAt: Date.now() + SHELL_RESPONSE_CACHE_TTL_MS,
+      cachedAt,
+      expiresAt: nextShellExpiry(merged, cachedAt),
     });
     return merged;
   })();

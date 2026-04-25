@@ -1,0 +1,81 @@
+{
+  "startedAt": "2026-04-23T21:06:36.054Z",
+  "finishedAt": "2026-04-23T21:11:39.877Z",
+  "durationSec": 300,
+  "intervalSec": 20,
+  "totalSamples": 5,
+  "target": "linked",
+  "dbUrlProvided": false,
+  "commandTimeoutSec": 15,
+  "commandRetries": 2,
+  "commandSummary": [
+    {
+      "command": "db-stats",
+      "runs": 5,
+      "failures": 0,
+      "avgMs": 13612.4,
+      "maxMs": 45486,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "long-running-queries",
+      "runs": 5,
+      "failures": 0,
+      "avgMs": 3003.6,
+      "maxMs": 3991,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "blocking",
+      "runs": 5,
+      "failures": 0,
+      "avgMs": 4443.2,
+      "maxMs": 9822,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "locks",
+      "runs": 5,
+      "failures": 0,
+      "avgMs": 5723,
+      "maxMs": 12353,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "outliers",
+      "runs": 5,
+      "failures": 1,
+      "avgMs": 13857,
+      "maxMs": 48669,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    },
+    {
+      "command": "index-stats",
+      "runs": 4,
+      "failures": 0,
+      "avgMs": 5153,
+      "maxMs": 8177,
+      "nonZeroRows": 0,
+      "lastRowCount": null
+    }
+  ],
+  "findings": [
+    "[sample 4] db-stats required 3 attempt(s).",
+    "[sample 5] outliers failed (exit null): Using workdir /Users/ramzidaher/Projects/CampSite/supabase Initialising login role...",
+    "[sample 5] outliers timed out after command timeout.",
+    "[sample 5] outliers required 3 attempt(s)."
+  ],
+  "checks": [
+    "db-stats",
+    "long-running-queries",
+    "blocking",
+    "locks",
+    "outliers",
+    "index-stats"
+  ]
+}

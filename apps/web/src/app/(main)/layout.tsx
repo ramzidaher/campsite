@@ -1,5 +1,6 @@
 import { AppShell } from '@/components/AppShell';
 import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
+import { OrgStateOverlay } from '@/components/tenant/OrgStateOverlay';
 import { MainProviders } from '@/components/providers/MainProviders';
 import { ThemeRoot } from '@/components/ThemeRoot';
 import {
@@ -9,9 +10,9 @@ import {
   getMainShellManagerNavItemsByPermissions,
   getMainShellManagerNavSectionLabel,
 } from '@/lib/adminGates';
+import { CreditCard, Lock, Wrench } from 'lucide-react';
 import { normalizeCelebrationMode } from '@/lib/holidayThemes';
 import type { OrgCelebrationModeOverride } from '@/lib/holidayThemes';
-import { resolveTenantGovernanceRedirect } from '@/lib/tenantGovernanceGate';
 import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { normalizeUiMode } from '@/lib/uiMode';
@@ -54,19 +55,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     typeof b[k] === 'string' ? (b[k] as string) : null;
 
   const isPlatformOperator = Boolean(b['is_platform_operator']);
-  const governanceRedirect = resolveTenantGovernanceRedirect({
-    pathname,
-    isPlatformOperator,
-    hasOrgId: Boolean(str('org_id')),
-    orgIsLocked: Boolean(b['org_is_locked']),
-    orgMaintenanceMode: Boolean(b['org_maintenance_mode']),
-    orgSubscriptionStatus: str('org_subscription_status'),
-    orgTrialEndsAtIso: str('org_subscription_trial_ends_at'),
-    now: new Date(),
-  });
-  if (governanceRedirect) {
-    redirect(governanceRedirect);
-  }
+  const hasOrgId = Boolean(str('org_id'));
+  const orgIsLocked = Boolean(b['org_is_locked']);
+  const orgMaintenanceMode = Boolean(b['org_maintenance_mode']);
+  const orgSubscriptionStatus = str('org_subscription_status');
+  const orgTrialEndsAtIso = str('org_subscription_trial_ends_at');
+  const trialExpired =
+    orgSubscriptionStatus === 'trial' &&
+    Boolean(orgTrialEndsAtIso) &&
+    !Number.isNaN(new Date(orgTrialEndsAtIso!).getTime()) &&
+    new Date(orgTrialEndsAtIso!).getTime() < Date.now();
+
+  const blockedState =
+    !hasOrgId || isPlatformOperator
+      ? null
+      : orgIsLocked
+        ? 'org_locked'
+        : orgMaintenanceMode
+          ? 'maintenance'
+          : trialExpired
+            ? 'trial_ended'
+            : null;
 
   const num = (k: string): number => {
     const v = b[k];
@@ -304,7 +313,39 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           initialCelebrationAutoEnabled={initialCelebrationAutoEnabled}
           orgCelebrationOverrides={orgCelebrationOverrides}
         >
-          {children}
+          <>
+            {children}
+            {blockedState === 'maintenance' ? (
+              <OrgStateOverlay
+                icon={Wrench}
+                title="We'll be back shortly"
+                message="Your organisation is temporarily in maintenance mode while updates are being applied. Please check back in a little while."
+                actionHref="/login"
+                actionLabel="Sign out"
+                footerText="If this continues, contact your organisation admin."
+              />
+            ) : null}
+            {blockedState === 'org_locked' ? (
+              <OrgStateOverlay
+                icon={Lock}
+                title="Account locked"
+                message="Access to this organisation is currently locked. Billing or subscription updates may be required before access can be restored."
+                actionHref="/login"
+                actionLabel="Sign out"
+                footerText="You can use another account, or wait for your organisation admin to restore access."
+              />
+            ) : null}
+            {blockedState === 'trial_ended' ? (
+              <OrgStateOverlay
+                icon={CreditCard}
+                title="Trial ended"
+                message="Your organisation's trial period has ended. A subscription step is now needed to continue using Campsite."
+                actionHref="/login"
+                actionLabel="Sign out"
+                footerText="Ask your organisation admin to complete billing activation."
+              />
+            ) : null}
+          </>
         </AppShell>
       </MainProviders>
     </ThemeRoot>

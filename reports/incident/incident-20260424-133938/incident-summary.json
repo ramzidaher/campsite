@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-04-24T12:39:51.427Z",
+  "inputs": {
+    "dbSummaryPath": "/Users/ramzidaher/Projects/CampSite/reports/db-audit/db-slowwatch-20260424-132304/summary.json",
+    "k6SummaryPath": "reports/incident/k6-summary-latest.json",
+    "apiLogPath": null,
+    "inspectDir": "/Users/ramzidaher/Projects/CampSite/reports/incident/incident-20260424-133938/supabase-inspect"
+  },
+  "priorities": [
+    "Slow query outliers are elevated.",
+    "Load-test latency high (p95 1163ms, p99 0ms)."
+  ],
+  "evidence": [
+    "[sample 2] locks required 2 attempt(s).",
+    "[sample 5] outliers required 2 attempt(s).",
+    "[sample 7] db-stats required 2 attempt(s).",
+    "k6 http_req_failed rate=0.00927661853862823 p95=1163.0921999999987 p99=n/a rpc_timeout_rate=0.007980475899938987 rpc_non_200_rate=0.007980475899938987 rpc_timeouts=654"
+  ],
+  "actions": [
+    "Collect top pg_stat_statements fingerprints and add tenant-scoped indexes.",
+    "Tune query plans and connection usage, then rerun same scenario for before/after comparison."
+  ]
+}

@@ -1,0 +1,212 @@
+[
+  {
+    "sampleIndex": 1,
+    "startedAt": "2026-04-24T10:08:20.308Z",
+    "checks": [
+      {
+        "command": "db-stats",
+        "ok": false,
+        "exitCode": null,
+        "elapsedMs": 48656,
+        "stdout": "",
+        "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+        "timedOut": true,
+        "parsed": null,
+        "rowCount": null,
+        "attempts": [
+          {
+            "attempt": 1,
+            "exitCode": null,
+            "elapsedMs": 15013,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 2,
+            "exitCode": null,
+            "elapsedMs": 15028,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 3,
+            "exitCode": null,
+            "elapsedMs": 15013,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          }
+        ]
+      },
+      {
+        "command": "long-running-queries",
+        "ok": false,
+        "exitCode": null,
+        "elapsedMs": 48634,
+        "stdout": "",
+        "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+        "timedOut": true,
+        "parsed": null,
+        "rowCount": null,
+        "attempts": [
+          {
+            "attempt": 1,
+            "exitCode": null,
+            "elapsedMs": 15012,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 2,
+            "exitCode": null,
+            "elapsedMs": 15010,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 3,
+            "exitCode": null,
+            "elapsedMs": 15011,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          }
+        ]
+      },
+      {
+        "command": "blocking",
+        "ok": false,
+        "exitCode": null,
+        "elapsedMs": 48655,
+        "stdout": "",
+        "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+        "timedOut": true,
+        "parsed": null,
+        "rowCount": null,
+        "attempts": [
+          {
+            "attempt": 1,
+            "exitCode": null,
+            "elapsedMs": 15022,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 2,
+            "exitCode": null,
+            "elapsedMs": 15011,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 3,
+            "exitCode": null,
+            "elapsedMs": 15020,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          }
+        ]
+      },
+      {
+        "command": "locks",
+        "ok": false,
+        "exitCode": null,
+        "elapsedMs": 48693,
+        "stdout": "",
+        "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+        "timedOut": true,
+        "parsed": null,
+        "rowCount": null,
+        "attempts": [
+          {
+            "attempt": 1,
+            "exitCode": null,
+            "elapsedMs": 15045,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 2,
+            "exitCode": null,
+            "elapsedMs": 15013,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 3,
+            "exitCode": null,
+            "elapsedMs": 15030,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          }
+        ]
+      },
+      {
+        "command": "outliers",
+        "ok": false,
+        "exitCode": null,
+        "elapsedMs": 48691,
+        "stdout": "",
+        "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+        "timedOut": true,
+        "parsed": null,
+        "rowCount": null,
+        "attempts": [
+          {
+            "attempt": 1,
+            "exitCode": null,
+            "elapsedMs": 15014,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 2,
+            "exitCode": null,
+            "elapsedMs": 15047,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\nConnecting to remote database...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 3,
+            "exitCode": null,
+            "elapsedMs": 15026,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          }
+        ]
+      },
+      {
+        "command": "index-stats",
+        "ok": false,
+        "exitCode": null,
+        "elapsedMs": 48676,
+        "stdout": "",
+        "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+        "timedOut": true,
+        "parsed": null,
+        "rowCount": null,
+        "attempts": [
+          {
+            "attempt": 1,
+            "exitCode": null,
+            "elapsedMs": 15026,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 2,
+            "exitCode": null,
+            "elapsedMs": 15031,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          },
+          {
+            "attempt": 3,
+            "exitCode": null,
+            "elapsedMs": 15017,
+            "stderr": "Using workdir /Users/ramzidaher/Projects/CampSite/supabase\nInitialising login role...\n",
+            "timedOut": true
+          }
+        ]
+      }
+    ]
+  }
+]

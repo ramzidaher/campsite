@@ -1,0 +1,71 @@
+{
+  "generated_at": "2026-04-24T19:12:32.781Z",
+  "endpoint": "https://camp-site.co.uk/api/loadtest/shell-bundle",
+  "note": "Requested 100 concurrent; token pool currently has 84 users, so 84 were executed.",
+  "one": {
+    "summary": {
+      "total": 1,
+      "ok200jsoncache": 1,
+      "statusDist": {
+        "200": 1
+      },
+      "errorTypes": {
+        "none": 1
+      },
+      "cacheStatusDist": {
+        "miss": 1
+      }
+    },
+    "nonOkSamples": []
+  },
+  "ten": {
+    "summary": {
+      "total": 10,
+      "ok200jsoncache": 10,
+      "statusDist": {
+        "200": 10
+      },
+      "errorTypes": {
+        "none": 10
+      },
+      "cacheStatusDist": {
+        "hit": 1,
+        "miss": 9
+      }
+    },
+    "nonOkSamples": []
+  },
+  "fifty": {
+    "summary": {
+      "total": 50,
+      "ok200jsoncache": 50,
+      "statusDist": {
+        "200": 50
+      },
+      "errorTypes": {
+        "none": 50
+      },
+      "cacheStatusDist": {
+        "miss": 49,
+        "hit": 1
+      }
+    },
+    "nonOkSamples": []
+  },
+  "hundred": {
+    "summary": {
+      "total": 84,
+      "ok200jsoncache": 84,
+      "statusDist": {
+        "200": 84
+      },
+      "errorTypes": {
+        "none": 84
+      },
+      "cacheStatusDist": {
+        "miss": 84
+      }
+    },
+    "nonOkSamples": []
+  }
+}

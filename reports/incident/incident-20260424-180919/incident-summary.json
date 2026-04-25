@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-04-24T17:09:32.975Z",
+  "inputs": {
+    "dbSummaryPath": "/Users/ramzidaher/Projects/CampSite/reports/db-audit/db-slowwatch-20260424-171237/summary.json",
+    "k6SummaryPath": "reports/incident/k6-summary-latest.json",
+    "apiLogPath": null,
+    "inspectDir": "/Users/ramzidaher/Projects/CampSite/reports/incident/incident-20260424-180919/supabase-inspect"
+  },
+  "priorities": [
+    "Load-test failure rate high (7.47%).",
+    "Load-test latency high (p95 20000ms, p99 0ms)."
+  ],
+  "evidence": [
+    "[sample 7] db-stats required 2 attempt(s).",
+    "k6 http_req_failed rate=0.074662521946867 p95=20000.368 p99=n/a rpc_timeout_rate=0.07136030582988213 rpc_non_200_rate=0.07136030582988213 rpc_timeouts=2464"
+  ],
+  "actions": [
+    "Apply backpressure and request shedding on hot endpoints to protect core flows.",
+    "Tune query plans and connection usage, then rerun same scenario for before/after comparison."
+  ]
+}

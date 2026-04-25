@@ -23,8 +23,13 @@ export function useShellBadgeCounts(initialData?: ShellBadgeCounts) {
     queryKey: SHELL_BADGE_COUNTS_QUERY_KEY,
     queryFn: async () => {
       const supabase = createClient();
-      const { data } = await supabase.rpc('main_shell_badge_counts_bundle');
-      return parseShellBadgeCounts(data);
+      const timeoutMs = 1200;
+      const rpcPromise = supabase.rpc('main_shell_badge_counts_bundle');
+      const timeoutPromise = new Promise<{ data: unknown }>((resolve) =>
+        setTimeout(() => resolve({ data: initialData ?? {} }), timeoutMs)
+      );
+      const resolved = await Promise.race([rpcPromise, timeoutPromise]);
+      return parseShellBadgeCounts(resolved?.data ?? initialData ?? {});
     },
     initialData,
     initialDataUpdatedAt: initialData ? Date.now() : undefined,

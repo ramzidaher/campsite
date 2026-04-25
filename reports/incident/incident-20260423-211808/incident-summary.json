@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-04-23T20:18:08.471Z",
+  "inputs": {
+    "dbSummaryPath": "/Users/ramzidaher/Projects/CampSite/reports/db-audit/db-slowwatch-20260423-205803/summary.json",
+    "k6SummaryPath": "reports/incident/k6-summary-latest.json",
+    "apiLogPath": null
+  },
+  "priorities": [
+    "Slow query outliers are elevated."
+  ],
+  "evidence": [
+    "[sample 1] db-stats required 2 attempt(s).",
+    "[sample 4] db-stats required 3 attempt(s).",
+    "[sample 4] locks required 2 attempt(s).",
+    "k6 http_req_failed rate=n/a p95=n/a p99=n/a"
+  ],
+  "actions": [
+    "Collect top pg_stat_statements fingerprints and add tenant-scoped indexes."
+  ]
+}

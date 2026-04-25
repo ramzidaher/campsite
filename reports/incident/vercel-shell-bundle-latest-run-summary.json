@@ -1,0 +1,232 @@
+{
+  "parsed": 2000,
+  "statusDist": {
+    "0": 223,
+    "401": 1777
+  },
+  "non200Count": 2000,
+  "timeoutCount": 0,
+  "non200Samples": [
+    {
+      "timestamp": 1777058183349,
+      "status": 0,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058183282,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058183174,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058183088,
+      "status": 0,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182981,
+      "status": 0,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182965,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182936,
+      "status": 0,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182760,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182554,
+      "status": 0,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182544,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182153,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182140,
+      "status": 0,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182091,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058182084,
+      "status": 0,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058181911,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058181773,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058181734,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058181709,
+      "status": 0,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058181223,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    },
+    {
+      "timestamp": 1777058180875,
+      "status": 401,
+      "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}",
+      "logs": [
+        {
+          "level": "warning",
+          "message": "{\"event\":\"loadtest_shell_bundle_auth_failure\",\"reason\":\"jwt_invalid_or_expired\",\"hasAuthorizationHeader\":true}"
+        }
+      ]
+    }
+  ],
+  "timeoutSamples": []
+}
