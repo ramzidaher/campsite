@@ -25,6 +25,7 @@
     "loadtest:k6:multitenant:5m:legacyLayout": "K6_SCENARIO_DURATION=5m K6_USE_PARALLEL_SHELL=0 K6_SAFE_SUMMARY_EXPORT=reports/incident/k6-summary-legacy-layout-latest.json k6 run load-tests/k6-multitenant-reliability.js",
     "incident:report": "node scripts/incident-report.mjs --k6Summary reports/incident/k6-summary-latest.json",
     "incident:report:appPath": "node scripts/incident-report.mjs --k6Summary reports/incident/k6-summary-app-path-latest.json",
+    "incident:regen-k6-tokens": "node scripts/regen-k6-token-csv.mjs",
     "provision:university-of-sussex-student-union": "node scripts/provision-university-of-sussex-student-union.mjs",
     "generate:ussu-password-tsv": "python3 scripts/generate-ussu-password-import-tsv.py",
     "add-platform-founder": "node scripts/add-platform-founder.mjs",
