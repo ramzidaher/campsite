@@ -159,6 +159,9 @@ export async function GET(req: Request) {
       shell_guardrail_reasons: Array.isArray(bundle.shell_guardrail_reasons)
         ? bundle.shell_guardrail_reasons
         : [],
+      auth_validation_source: authResult.authValidationSource,
+      auth_remote_user_calls: authResult.authRemoteUserCalls,
+      auth_remote_user_failures: authResult.authRemoteUserFailures,
     },
     { headers: { 'Cache-Control': 'no-store' } }
   );
