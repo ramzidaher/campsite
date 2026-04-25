@@ -5,6 +5,8 @@ import encoding from 'k6/encoding';
 import { Counter, Rate } from 'k6/metrics';
 
 const APP_BASE_URL = __ENV.APP_BASE_URL;
+const INTERNAL_MODE = (__ENV.K6_LOADTEST_INTERNAL ?? '0') === '1';
+const LOADTEST_SECRET = __ENV.LOADTEST_SECRET ?? '';
 const USERS_CSV_PATH = __ENV.K6_USERS_CSV ?? 'reports/incident/k6-token-static-users.csv';
 const USERS_CSV_ENV_FILTER = (__ENV.K6_USERS_CSV_ENV ?? '').trim().toLowerCase();
 const SCENARIO_DURATION = __ENV.K6_SCENARIO_DURATION ?? '5m';
@@ -28,11 +30,20 @@ const shellCacheHitRate = new Rate('shell_cache_hit_rate');
 const shellCacheMissRate = new Rate('shell_cache_miss_rate');
 const shellCacheCoalescedRate = new Rate('shell_cache_coalesced_rate');
 const shellCacheUnknownRate = new Rate('shell_cache_unknown_rate');
+const shellDegradedRate = new Rate('shell_degraded_rate');
+const shellDegradedCount = new Counter('shell_degraded_count');
+const vercel504Rate = new Rate('vercel_504_rate');
+const vercel504Count = new Counter('vercel_504_count');
+const supabaseRpcTimeoutRate = new Rate('supabase_rpc_timeout_rate');
+const supabaseRpcTimeoutCount = new Counter('supabase_rpc_timeout_count');
 
 if (!APP_BASE_URL || !USERS_CSV_PATH) {
   throw new Error(
     'Missing env vars: set APP_BASE_URL and K6_USERS_CSV (token-static CSV with access_token).'
   );
+}
+if (INTERNAL_MODE && !LOADTEST_SECRET) {
+  throw new Error('K6_LOADTEST_INTERNAL=1 requires LOADTEST_SECRET.');
 }
 
 const thresholds = {
@@ -176,7 +187,15 @@ function randomThinkSec() {
   return ms / 1000;
 }
 
-function appHeaders(token) {
+function appHeaders(token, user) {
+  if (INTERNAL_MODE) {
+    return {
+      Accept: 'application/json',
+      'x-loadtest-secret': LOADTEST_SECRET,
+      'x-loadtest-user-id': user?.email ?? `vu-${__VU}`,
+      'x-loadtest-org-id': user?.orgSlug || user?.env || 'loadtest-org',
+    };
+  }
   if (!token) {
     missingAuthorizationHeader.add(1);
     return { Accept: 'application/json' };
@@ -207,10 +226,17 @@ function recordOutcome(res) {
   app401Rate.add(res.status === 401);
 
   let status = 'unknown';
+  let degraded = false;
+  let guardrailReasons = [];
   try {
     const body = res.json();
     const raw = body && typeof body === 'object' ? body.shell_response_cache_status : null;
     if (typeof raw === 'string') status = raw;
+    degraded = Boolean(body && typeof body === 'object' && body.shell_degraded);
+    guardrailReasons =
+      body && typeof body === 'object' && Array.isArray(body.shell_guardrail_reasons)
+        ? body.shell_guardrail_reasons
+        : [];
   } catch {
     status = 'unknown';
   }
@@ -218,30 +244,38 @@ function recordOutcome(res) {
   shellCacheMissRate.add(status === 'miss');
   shellCacheCoalescedRate.add(status === 'coalesced');
   shellCacheUnknownRate.add(status === 'unknown');
+  shellDegradedRate.add(degraded);
+  if (degraded) shellDegradedCount.add(1);
+  vercel504Rate.add(res.status === 504);
+  if (res.status === 504) vercel504Count.add(1);
+  const hasRpcTimeout = guardrailReasons.some((x) => typeof x === 'string' && x.includes('timeout'));
+  supabaseRpcTimeoutRate.add(hasRpcTimeout);
+  if (hasRpcTimeout) supabaseRpcTimeoutCount.add(1);
 }
 
-function callAppShellBundle(token) {
+function callAppShellBundle(token, user) {
   const scenario = exec.scenario.name || 'unknown';
-  const res = http.get(`${APP_BASE_URL}/api/loadtest/shell-bundle`, {
-    headers: appHeaders(token),
+  const endpointPath = INTERNAL_MODE ? '/api/loadtest/shell-bundle-internal' : '/api/loadtest/shell-bundle';
+  const res = http.get(`${APP_BASE_URL}${endpointPath}`, {
+    headers: appHeaders(token, user),
     timeout: HTTP_TIMEOUT,
-    tags: { endpoint: 'app_shell_bundle', scenario },
+    tags: { endpoint: INTERNAL_MODE ? 'app_shell_bundle_internal' : 'app_shell_bundle', scenario },
   });
   check(res, { 'app shell bundle status is 200': (r) => r.status === 200 });
   recordOutcome(res);
   return res;
 }
 
-function weightedNormalFlow(token) {
-  callAppShellBundle(token);
+function weightedNormalFlow(token, user) {
+  callAppShellBundle(token, user);
 }
 
-function burstFlow(token) {
-  callAppShellBundle(token);
+function burstFlow(token, user) {
+  callAppShellBundle(token, user);
 }
 
-function noisyNeighborFlow(token) {
-  callAppShellBundle(token);
+function noisyNeighborFlow(token, user) {
+  callAppShellBundle(token, user);
 }
 
 function getVuUser(users, group) {
@@ -253,11 +287,19 @@ function getVuUser(users, group) {
   return users[(__VU - 1) % users.length];
 }
 
-function getToken(authUsers, group) {
+function getTokenUser(authUsers, group) {
   if (!authUsers.length) {
     throw new Error('No token-static users available');
   }
   const user = getVuUser(authUsers, group);
+  return user;
+}
+
+function getToken(authUsers, group) {
+  const user = getTokenUser(authUsers, group);
+  if (INTERNAL_MODE) {
+    return '';
+  }
   if (!user.token) {
     throw new Error(`Missing access_token for ${user.email}`);
   }
@@ -277,6 +319,10 @@ export function setup() {
 
   for (let i = 0; i < preauthCount; i += 1) {
     const user = users[i];
+    if (INTERNAL_MODE) {
+      authUsers.push({ ...user, token: '' });
+      continue;
+    }
     if (!user.accessToken) {
       throw new Error(
         `Missing access_token in K6 CSV for user ${user.email}. Token-static app-path mode requires it.`
@@ -311,22 +357,25 @@ export function setup() {
 
 export function runNormalScenario(data) {
   authTokenRequestsDuringTest.add(0);
+  const user = getTokenUser(data.authUsers, 'normal');
   const token = getToken(data.authUsers, 'normal');
-  weightedNormalFlow(token);
+  weightedNormalFlow(token, user);
   sleep(randomThinkSec());
 }
 
 export function runBurstScenario(data) {
   authTokenRequestsDuringTest.add(0);
+  const user = getTokenUser(data.authUsers, 'normal');
   const token = getToken(data.authUsers, 'normal');
-  burstFlow(token);
+  burstFlow(token, user);
   sleep(0.1 + Math.random() * 0.2);
 }
 
 export function runNoisyNeighborScenario(data) {
   authTokenRequestsDuringTest.add(0);
+  const user = getTokenUser(data.authUsers, 'noisy');
   const token = getToken(data.authUsers, 'noisy');
-  noisyNeighborFlow(token);
+  noisyNeighborFlow(token, user);
   sleep(0.15 + Math.random() * 0.25);
 }
 

@@ -21,6 +21,7 @@
     "loadtest:k6:multitenant": "k6 run load-tests/k6-multitenant-reliability.js",
     "loadtest:k6:multitenant:5m": "K6_SCENARIO_DURATION=5m K6_SAFE_SUMMARY_EXPORT=reports/incident/k6-summary-latest.json k6 run load-tests/k6-multitenant-reliability.js",
     "loadtest:k6:multitenant:5m:appPath": "K6_SCENARIO_DURATION=5m K6_SAFE_SUMMARY_EXPORT=reports/incident/k6-summary-app-path-latest.json k6 run load-tests/k6-multitenant-app-path.js",
+    "loadtest:k6:multitenant:5m:appPathInternal": "K6_LOADTEST_INTERNAL=1 K6_SCENARIO_DURATION=5m K6_SAFE_SUMMARY_EXPORT=reports/incident/k6-summary-app-path-internal-latest.json k6 run load-tests/k6-multitenant-app-path.js",
     "loadtest:k6:multitenant:5m:parallelShell": "K6_SCENARIO_DURATION=5m K6_USE_PARALLEL_SHELL=1 K6_SAFE_SUMMARY_EXPORT=reports/incident/k6-summary-parallel-shell-latest.json k6 run load-tests/k6-multitenant-reliability.js",
     "loadtest:k6:multitenant:5m:legacyLayout": "K6_SCENARIO_DURATION=5m K6_USE_PARALLEL_SHELL=0 K6_SAFE_SUMMARY_EXPORT=reports/incident/k6-summary-legacy-layout-latest.json k6 run load-tests/k6-multitenant-reliability.js",
     "incident:report": "node scripts/incident-report.mjs --k6Summary reports/incident/k6-summary-latest.json",
