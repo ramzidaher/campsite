@@ -166,6 +166,9 @@ export function FinanceHubClient({
   });
   const [err, setErr] = useState<string | null>(null);
   const [actionNote, setActionNote] = useState<Record<string, string>>({});
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [payElementsOpen, setPayElementsOpen] = useState(false);
+  const [manualOverridesOpen, setManualOverridesOpen] = useState(false);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -709,65 +712,71 @@ export function FinanceHubClient({
   }, [visibleRows]);
 
   return (
-    <div className="space-y-8 font-sans text-[#121212]">
+    <div className="space-y-5 font-sans text-[#121212]">
       {err ? <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-900">{err}</p> : null}
 
-      <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-6">
-        <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
-          <label className="text-[12px] font-semibold text-[#6b6b6b]">
-            Week start
-            <input
-              type="date"
-              value={weekFilter}
-              onChange={(e) => setWeekFilter(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] lg:mt-0 lg:min-w-[12rem]"
-            />
-          </label>
-          <label className="text-[12px] font-semibold text-[#6b6b6b]">
-            Month
-            <input
-              type="month"
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] lg:mt-0 lg:min-w-[10rem]"
-            />
-          </label>
-          <button type="button" onClick={() => void load()} className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12.5px] sm:w-auto">
-            Refresh
-          </button>
-          <button type="button" onClick={exportCsv} className="w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
-            Export CSV
-          </button>
-          <button type="button" onClick={() => void exportXlsx()} className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12.5px] sm:w-auto">
-            Export Excel
-          </button>
-        </div>
-        <p className="mt-3 text-[13px] leading-relaxed text-[#6b6b6b]">
-          Live wage sheet uses timesheets, rota, leave, sickness, SSP, and manual overrides so finance can review total pay at a glance.
-        </p>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Total gross</p>
-          <p className="mt-2 text-[24px] font-bold tabular-nums text-[#121212] sm:text-[30px]">£{monthlyTotals.gross.toFixed(2)}</p>
-        </div>
-        <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">SSP total</p>
-          <p className="mt-2 text-[24px] font-bold tabular-nums text-[#121212] sm:text-[30px]">£{monthlyTotals.ssp.toFixed(2)}</p>
-        </div>
-        <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Overrides total</p>
-          <p className="mt-2 text-[24px] font-bold tabular-nums text-[#121212] sm:text-[30px]">£{monthlyTotals.overrides.toFixed(2)}</p>
-        </div>
-        <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Overtime hours</p>
-          <p className="mt-2 text-[24px] font-bold tabular-nums text-[#121212] sm:text-[30px]">{weeklyTotals.overtimeHours.toFixed(2)}</p>
+      <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-[14px] font-semibold text-[#121212]">Overview</h2>
+            <p className="mt-1 text-[12px] text-[#6b6b6b]">Live wage sheet across all pay frequencies.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+            <label className="text-[12px] font-semibold text-[#6b6b6b]">
+              Week start
+              <input
+                type="date"
+                value={weekFilter}
+                onChange={(e) => setWeekFilter(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] lg:mt-0 lg:min-w-[12rem]"
+              />
+            </label>
+            <label className="text-[12px] font-semibold text-[#6b6b6b]">
+              Month
+              <input
+                type="month"
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] lg:mt-0 lg:min-w-[10rem]"
+              />
+            </label>
+            <button type="button" onClick={() => void load()} className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12.5px] sm:w-auto">
+              Refresh
+            </button>
+            <button type="button" onClick={exportCsv} className="w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
+              Export CSV
+            </button>
+            <button type="button" onClick={() => void exportXlsx()} className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12.5px] sm:w-auto">
+              Export Excel
+            </button>
+          </div>
         </div>
       </section>
 
       <section className="rounded-xl border border-[#e8e8e8] bg-white p-5">
-        <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pay frequency totals</h2>
+        <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Summary</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Total gross</p>
+            <p className="mt-2 text-[24px] font-bold tabular-nums text-[#121212] sm:text-[30px]">£{monthlyTotals.gross.toFixed(2)}</p>
+          </div>
+          <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">SSP total</p>
+            <p className="mt-2 text-[24px] font-bold tabular-nums text-[#121212] sm:text-[30px]">£{monthlyTotals.ssp.toFixed(2)}</p>
+          </div>
+          <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Overrides total</p>
+            <p className="mt-2 text-[24px] font-bold tabular-nums text-[#121212] sm:text-[30px]">£{monthlyTotals.overrides.toFixed(2)}</p>
+          </div>
+          <div className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Overtime hours</p>
+            <p className="mt-2 text-[24px] font-bold tabular-nums text-[#121212] sm:text-[30px]">{weeklyTotals.overtimeHours.toFixed(2)}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-[#e8e8e8] bg-white p-5">
+        <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">By pay frequency</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-[#d8d8d8] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Weekly payroll</p>
@@ -808,67 +817,86 @@ export function FinanceHubClient({
         </section>
       ) : null}
 
-      {canManagePolicy ? (
-        <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-6">
-          <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Payroll policy</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <label className="text-[12px] font-semibold text-[#6b6b6b]">
-              Hourly holiday uplift %
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={policyInputs.holidayPct}
-                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, holidayPct: e.target.value }))}
-                className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]"
-              />
-            </label>
-            <label className="text-[12px] font-semibold text-[#6b6b6b]">
-              SSP override weekly rate
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={policyInputs.sspOverrideRate}
-                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, sspOverrideRate: e.target.value }))}
-                placeholder="Optional"
-                className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
-              <input
-                type="checkbox"
-                checked={policyInputs.allowBiWeekly}
-                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, allowBiWeekly: e.target.checked }))}
-              />
-              Allow bi-weekly pay cycle
-            </label>
-            <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
-              <input
-                type="checkbox"
-                checked={policyInputs.realtimeEnabled}
-                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, realtimeEnabled: e.target.checked }))}
-              />
-              Auto realtime refresh
-            </label>
-            <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
-              <input
-                type="checkbox"
-                checked={policyInputs.sspOverrideEnabled}
-                onChange={(e) => setPolicyInputs((prev) => ({ ...prev, sspOverrideEnabled: e.target.checked }))}
-              />
-              Enable SSP override policy
-            </label>
+      <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-6">
+        <button
+          type="button"
+          onClick={() => setPolicyOpen((prev) => !prev)}
+          className="flex w-full items-center justify-between text-left text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]"
+        >
+          <span>Payroll policy</span>
+          <span className="text-[14px]">{policyOpen ? '−' : '+'}</span>
+        </button>
+        {policyOpen && canManagePolicy ? (
+          <div className="mt-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <label className="text-[12px] font-semibold text-[#6b6b6b]">
+                Hourly holiday uplift %
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={policyInputs.holidayPct}
+                  onChange={(e) => setPolicyInputs((prev) => ({ ...prev, holidayPct: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]"
+                />
+              </label>
+              <label className="text-[12px] font-semibold text-[#6b6b6b]">
+                SSP override weekly rate
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={policyInputs.sspOverrideRate}
+                  onChange={(e) => setPolicyInputs((prev) => ({ ...prev, sspOverrideRate: e.target.value }))}
+                  placeholder="Optional"
+                  className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
+                <input
+                  type="checkbox"
+                  checked={policyInputs.allowBiWeekly}
+                  onChange={(e) => setPolicyInputs((prev) => ({ ...prev, allowBiWeekly: e.target.checked }))}
+                />
+                Allow bi-weekly pay cycle
+              </label>
+              <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
+                <input
+                  type="checkbox"
+                  checked={policyInputs.realtimeEnabled}
+                  onChange={(e) => setPolicyInputs((prev) => ({ ...prev, realtimeEnabled: e.target.checked }))}
+                />
+                Auto realtime refresh
+              </label>
+              <label className="flex items-center gap-2 text-[12px] font-semibold text-[#6b6b6b]">
+                <input
+                  type="checkbox"
+                  checked={policyInputs.sspOverrideEnabled}
+                  onChange={(e) => setPolicyInputs((prev) => ({ ...prev, sspOverrideEnabled: e.target.checked }))}
+                />
+                Enable SSP override policy
+              </label>
+            </div>
+            <button type="button" onClick={() => void savePolicy()} className="mt-3 w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
+              Save policy
+            </button>
+            {policy ? <p className="mt-2 text-[12px] text-[#6b6b6b]">Current policy is active for calculation and exports.</p> : null}
           </div>
-          <button type="button" onClick={() => void savePolicy()} className="mt-3 w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
-            Save policy
-          </button>
-          {policy ? <p className="mt-2 text-[12px] text-[#6b6b6b]">Current policy is active for calculation and exports.</p> : null}
-        </section>
-      ) : null}
+        ) : null}
+      </section>
 
       {canManagePayElements ? (
         <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setPayElementsOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between text-left text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]"
+          >
+            <span>Pay elements</span>
+            <span className="text-[14px]">{payElementsOpen ? '−' : '+'}</span>
+          </button>
+          {payElementsOpen && canManagePayElements ? (
+            <div className="mt-4">
           <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pay elements</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <label className="text-[12px] font-semibold text-[#6b6b6b]">
@@ -996,141 +1024,155 @@ export function FinanceHubClient({
               </tbody>
             </table>
           </div>
-        </section>
+          </div>
+        ) : null}
+      </section>
       ) : null}
 
       {canManage ? (
         <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-6">
-          <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Manual overrides</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="text-[12px] font-semibold text-[#6b6b6b]">
-              Employee
-              <select value={adjustUserId} onChange={(e) => setAdjustUserId(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] bg-white px-3 py-2 text-[14px]">
-                <option value="">Select</option>
-                {people.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.full_name ?? p.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-[12px] font-semibold text-[#6b6b6b]">
-              Week start
-              <input type="date" value={adjustWeek} onChange={(e) => setAdjustWeek(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]" />
-            </label>
-            <label className="text-[12px] font-semibold text-[#6b6b6b]">
-              Override amount (GBP)
-              <input type="number" step="0.01" value={adjustAmount} onChange={(e) => setAdjustAmount(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]" />
-            </label>
-            <label className="text-[12px] font-semibold text-[#6b6b6b]">
-              Reason
-              <input value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]" />
-            </label>
-          </div>
-          <button type="button" onClick={() => void saveAdjustment()} className="mt-3 w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
-            Save override
+          <button
+            type="button"
+            onClick={() => setManualOverridesOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between text-left text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]"
+          >
+            <span>Manual overrides</span>
+            <span className="text-[14px]">{manualOverridesOpen ? '−' : '+'}</span>
           </button>
+          {manualOverridesOpen ? (
+            <div className="mt-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <label className="text-[12px] font-semibold text-[#6b6b6b]">
+                  Employee
+                  <select value={adjustUserId} onChange={(e) => setAdjustUserId(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] bg-white px-3 py-2 text-[14px]">
+                    <option value="">Select</option>
+                    {people.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.full_name ?? p.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-[12px] font-semibold text-[#6b6b6b]">
+                  Week start
+                  <input type="date" value={adjustWeek} onChange={(e) => setAdjustWeek(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]" />
+                </label>
+                <label className="text-[12px] font-semibold text-[#6b6b6b]">
+                  Override amount (GBP)
+                  <input type="number" step="0.01" value={adjustAmount} onChange={(e) => setAdjustAmount(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]" />
+                </label>
+                <label className="text-[12px] font-semibold text-[#6b6b6b]">
+                  Reason
+                  <input value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] px-3 py-2 text-[14px]" />
+                </label>
+              </div>
+              <button type="button" onClick={() => void saveAdjustment()} className="mt-3 w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
+                Save override
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
-      <section className="space-y-4">
-        <div className="grid gap-3 sm:hidden">
-          {visibleRows.length === 0 ? (
-            <div className="rounded-xl border border-[#e8e8e8] bg-white px-4 py-6 text-center text-[13px] text-[#6b6b6b]">
-              No finance rows yet. Approve timesheets or clear week filter.
-            </div>
-          ) : (
-            visibleRows.map((r) => {
-              const role = profiles[r.userId] ?? 'csa';
-              return (
-                <article key={`${r.userId}:${r.weekStart}`} className="rounded-xl border border-[#e8e8e8] bg-white p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[14px] font-semibold text-[#121212]">{r.name}</p>
-                      <p className="mt-1 text-[12px] text-[#6b6b6b]">{r.weekStart}</p>
-                      <p className="mt-1 text-[11px] uppercase tracking-wide text-[#9b9b9b]">{r.reviewStatus.replace('_', ' ')}</p>
-                    </div>
-                    {canManage ? (
-                      <select
-                        value={role}
-                        onChange={(e) => void setPayRole(r.userId, e.target.value as 'csa' | 'dm')}
-                        className="rounded border border-[#d8d8d8] bg-white px-2 py-1 text-[12px]"
-                      >
-                        <option value="csa">CSA</option>
-                        <option value="dm">DM</option>
-                      </select>
-                    ) : (
-                      <span className="rounded-full bg-[#f4f4f4] px-2 py-1 text-[11px] uppercase tracking-wide text-[#6b6b6b]">{role}</span>
-                    )}
-                  </div>
-                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
-                    <div>
-                      <dt className="text-[#9b9b9b]">Actual hrs</dt>
-                      <dd className="font-medium tabular-nums">{r.actualHours.toFixed(2)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[#9b9b9b]">Scheduled hrs</dt>
-                      <dd className="font-medium tabular-nums">{r.scheduledHours.toFixed(2)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[#9b9b9b]">Holiday days</dt>
-                      <dd className="font-medium tabular-nums">{r.holidayDays.toFixed(1)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[#9b9b9b]">Absence days</dt>
-                      <dd className="font-medium tabular-nums">{r.sicknessDays.toFixed(1)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[#9b9b9b]">Overtime hrs</dt>
-                      <dd className="font-medium tabular-nums">{r.overtimeHours.toFixed(2)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[#9b9b9b]">Base pay</dt>
-                      <dd className="font-medium tabular-nums">£{r.basePay.toFixed(2)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[#9b9b9b]">SSP</dt>
-                      <dd className="font-medium tabular-nums">£{r.ssp.toFixed(2)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[#9b9b9b]">Manual adj</dt>
-                      <dd className="font-medium tabular-nums">£{r.adjustments.toFixed(2)}</dd>
-                    </div>
-                  </dl>
-                  <p className="mt-3 border-t border-[#f0f0f0] pt-2 text-[13px] font-semibold tabular-nums text-[#121212]">
-                    Projected gross: £{r.projectedGross.toFixed(2)}
-                  </p>
-                  {canFinanceApprove ? (
-                    <div className="mt-3 space-y-2">
-                      <input
-                        placeholder="Approval note / payment reference"
-                        value={actionNote[`${r.userId}:${r.weekStart}`] ?? ''}
-                        onChange={(e) => setActionNote((prev) => ({ ...prev, [`${r.userId}:${r.weekStart}`]: e.target.value }))}
-                        className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px]"
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => void decideReview(r, 'manager_approve')} className="rounded-lg border border-[#d8d8d8] px-2 py-1 text-[11px]">
-                          Manager approve
-                        </button>
-                        <button type="button" onClick={() => void decideReview(r, 'finance_approve')} className="rounded-lg border border-[#d8d8d8] px-2 py-1 text-[11px]">
-                          Finance approve
-                        </button>
-                        <button type="button" onClick={() => void decideReview(r, 'mark_paid')} className="rounded-lg bg-[#121212] px-2 py-1 text-[11px] text-white">
-                          Mark paid
-                        </button>
-                        <button type="button" onClick={() => void decideReview(r, 'reject')} className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-900">
-                          Send back
-                        </button>
+      <section className="rounded-xl border border-[#e8e8e8] bg-white p-5">
+        <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Finance rows</h2>
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-3 sm:hidden">
+            {visibleRows.length === 0 ? (
+              <div className="rounded-xl border border-[#e8e8e8] bg-white px-4 py-6 text-center text-[13px] text-[#6b6b6b]">
+                No finance rows yet. Approve timesheets or clear week filter.
+              </div>
+            ) : (
+              visibleRows.map((r) => {
+                const role = profiles[r.userId] ?? 'csa';
+                return (
+                  <article key={`${r.userId}:${r.weekStart}`} className="rounded-xl border border-[#e8e8e8] bg-white p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[14px] font-semibold text-[#121212]">{r.name}</p>
+                        <p className="mt-1 text-[12px] text-[#6b6b6b]">{r.weekStart}</p>
+                        <p className="mt-1 text-[11px] uppercase tracking-wide text-[#9b9b9b]">{r.reviewStatus.replace('_', ' ')}</p>
                       </div>
+                      {canManage ? (
+                        <select
+                          value={role}
+                          onChange={(e) => void setPayRole(r.userId, e.target.value as 'csa' | 'dm')}
+                          className="rounded border border-[#d8d8d8] bg-white px-2 py-1 text-[12px]"
+                        >
+                          <option value="csa">CSA</option>
+                          <option value="dm">DM</option>
+                        </select>
+                      ) : (
+                        <span className="rounded-full bg-[#f4f4f4] px-2 py-1 text-[11px] uppercase tracking-wide text-[#6b6b6b]">{role}</span>
+                      )}
                     </div>
-                  ) : null}
-                </article>
-              );
-            })
-          )}
-        </div>
-
-        <div className="hidden overflow-x-auto rounded-xl border border-[#e8e8e8] bg-white sm:block">
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
+                      <div>
+                        <dt className="text-[#9b9b9b]">Actual hrs</dt>
+                        <dd className="font-medium tabular-nums">{r.actualHours.toFixed(2)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#9b9b9b]">Scheduled hrs</dt>
+                        <dd className="font-medium tabular-nums">{r.scheduledHours.toFixed(2)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#9b9b9b]">Holiday days</dt>
+                        <dd className="font-medium tabular-nums">{r.holidayDays.toFixed(1)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#9b9b9b]">Absence days</dt>
+                        <dd className="font-medium tabular-nums">{r.sicknessDays.toFixed(1)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#9b9b9b]">Overtime hrs</dt>
+                        <dd className="font-medium tabular-nums">{r.overtimeHours.toFixed(2)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#9b9b9b]">Base pay</dt>
+                        <dd className="font-medium tabular-nums">£{r.basePay.toFixed(2)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#9b9b9b]">SSP</dt>
+                        <dd className="font-medium tabular-nums">£{r.ssp.toFixed(2)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[#9b9b9b]">Manual adj</dt>
+                        <dd className="font-medium tabular-nums">£{r.adjustments.toFixed(2)}</dd>
+                      </div>
+                    </dl>
+                    <p className="mt-3 border-t border-[#f0f0f0] pt-2 text-[13px] font-semibold tabular-nums text-[#121212]">
+                      Projected gross: £{r.projectedGross.toFixed(2)}
+                    </p>
+                    {canFinanceApprove ? (
+                      <div className="mt-3 space-y-2">
+                        <input
+                          placeholder="Approval note / payment reference"
+                          value={actionNote[`${r.userId}:${r.weekStart}`] ?? ''}
+                          onChange={(e) => setActionNote((prev) => ({ ...prev, [`${r.userId}:${r.weekStart}`]: e.target.value }))}
+                          className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px]"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <button type="button" onClick={() => void decideReview(r, 'manager_approve')} className="rounded-lg border border-[#d8d8d8] px-2 py-1 text-[11px]">
+                            Manager approve
+                          </button>
+                          <button type="button" onClick={() => void decideReview(r, 'finance_approve')} className="rounded-lg border border-[#d8d8d8] px-2 py-1 text-[11px]">
+                            Finance approve
+                          </button>
+                          <button type="button" onClick={() => void decideReview(r, 'mark_paid')} className="rounded-lg bg-[#121212] px-2 py-1 text-[11px] text-white">
+                            Mark paid
+                          </button>
+                          <button type="button" onClick={() => void decideReview(r, 'reject')} className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-900">
+                            Send back
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })
+            )}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-[#e8e8e8] bg-white sm:block">
           <table className="w-full min-w-[1280px] text-left text-[13px]">
             <thead className="border-b border-[#e8e4dc] bg-[#faf9f6] text-[11px] uppercase tracking-wide text-[#9b9b9b]">
               <tr>
@@ -1228,6 +1270,7 @@ export function FinanceHubClient({
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
     </div>
