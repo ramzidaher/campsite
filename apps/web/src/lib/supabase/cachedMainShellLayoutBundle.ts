@@ -8,7 +8,7 @@ import {
 import { createClient } from './server';
 
 const SHELL_RESPONSE_CACHE_TTL_MS = Number.parseInt(
-  process.env.CAMPSITE_SHELL_RESPONSE_CACHE_TTL_MS ?? '3000',
+  process.env.CAMPSITE_SHELL_RESPONSE_CACHE_TTL_MS ?? '10000',
   10
 );
 const SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS = Number.parseInt(
@@ -18,6 +18,8 @@ const SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS = Number.parseInt(
 
 type ShellBundle = Record<string, unknown>;
 type ShellRpcOptions = {
+  bundleRpcName?: string;
+  bundleRpcArgs?: Record<string, unknown>;
   structuralRpcName?: string;
   structuralRpcArgs?: Record<string, unknown>;
   badgeRpcName?: string;
@@ -91,8 +93,8 @@ export function getStaleOrDefaultShellBundle(viewerKey: string): ShellBundle {
 }
 
 /**
- * Two parallel RPCs (`main_shell_layout_structural` + `main_shell_badge_counts_bundle`)
- * merged to the same shape as legacy `main_shell_layout_bundle`, shared via React `cache()`.
+ * Shell bundle loader shared via React `cache()`.
+ * Uses a single merged RPC by default, with optional split-RPC compatibility.
  */
 export const getCachedMainShellLayoutBundle = cache(async (): Promise<Record<string, unknown>> => {
   const supabase = await createClient();
@@ -108,6 +110,8 @@ export async function getMainShellLayoutBundleForViewer(
   viewerKey: string,
   rpcOptions?: ShellRpcOptions
 ): Promise<ShellBundle> {
+  const bundleRpcName = rpcOptions?.bundleRpcName ?? 'main_shell_layout_bundle';
+  const bundleRpcArgs = rpcOptions?.bundleRpcArgs;
   const structuralRpcName = rpcOptions?.structuralRpcName ?? 'main_shell_layout_structural';
   const structuralRpcArgs = rpcOptions?.structuralRpcArgs;
   const badgeRpcName = rpcOptions?.badgeRpcName ?? 'main_shell_badge_counts_bundle';
@@ -131,42 +135,78 @@ export async function getMainShellLayoutBundleForViewer(
   }
 
   const fetchPromise = (async () => {
-  const structuralPromise = resolveStructuralWithTimeout(
-    supabase.rpc(structuralRpcName, structuralRpcArgs),
-    { data: {}, error: null } as Awaited<ReturnType<typeof supabase.rpc>>
-  );
-  const badgePromise = resolveBadgeWithGuardrails(
-    `shell:badge:${viewerKey}`,
-    () => supabase.rpc(badgeRpcName, badgeRpcArgs)
-  );
-  const [structuralWrapped, badgeWrapped] = await Promise.all([structuralPromise, badgePromise]);
-  const structural = structuralWrapped.value;
-  const badge = badgeWrapped.value;
-  if (structural.error) throw structural.error;
-  const s =
-    structural.data && typeof structural.data === 'object'
-      ? (structural.data as Record<string, unknown>)
-      : {};
-  const b = badge.data && typeof badge.data === 'object' ? (badge.data as Record<string, unknown>) : {};
-  const isDegraded = structuralWrapped.timedOut || Boolean(badge.error) || badgeWrapped.meta.degraded;
-  const reasons = [
-    ...(structuralWrapped.timedOut ? ['structural_timeout'] : []),
-    ...(badge.error ? ['badge_rpc_error'] : []),
-    ...badgeWrapped.meta.reasons,
-  ];
-  const merged = {
-    ...s,
-    ...b,
-    shell_degraded: isDegraded,
-    shell_guardrail_reasons: [...new Set(reasons)],
-    shell_cache_status: badgeWrapped.meta.cacheStatus,
-  };
-  shellResponseCache.set(viewerKey, {
-    value: merged,
-    cachedAt: Date.now(),
-    expiresAt: Date.now() + SHELL_RESPONSE_CACHE_TTL_MS,
-  });
-  return merged;
+    // Default path: one merged RPC reduces DB round-trips under Nano constraints.
+    if (!rpcOptions?.structuralRpcName && !rpcOptions?.badgeRpcName) {
+      const wrapped = await resolveStructuralWithTimeout(
+        supabase.rpc(bundleRpcName, bundleRpcArgs),
+        { data: {}, error: null } as Awaited<ReturnType<typeof supabase.rpc>>
+      );
+      const result = wrapped.value;
+      if (result.error) throw result.error;
+      const payload =
+        result.data && typeof result.data === 'object'
+          ? (result.data as Record<string, unknown>)
+          : {};
+      const reasons = wrapped.timedOut ? ['timeout'] : [];
+      const merged = {
+        ...payload,
+        shell_degraded: wrapped.timedOut || Boolean(payload.shell_degraded),
+        shell_guardrail_reasons: [
+          ...new Set([
+            ...(Array.isArray(payload.shell_guardrail_reasons)
+              ? payload.shell_guardrail_reasons.filter((x): x is string => typeof x === 'string')
+              : []),
+            ...reasons,
+          ]),
+        ],
+        shell_cache_status:
+          typeof payload.shell_cache_status === 'string' ? payload.shell_cache_status : 'single-rpc',
+      };
+      shellResponseCache.set(viewerKey, {
+        value: merged,
+        cachedAt: Date.now(),
+        expiresAt: Date.now() + SHELL_RESPONSE_CACHE_TTL_MS,
+      });
+      return merged;
+    }
+
+    // Compatibility path for explicit split-RPC callers.
+    const structuralPromise = resolveStructuralWithTimeout(
+      supabase.rpc(structuralRpcName, structuralRpcArgs),
+      { data: {}, error: null } as Awaited<ReturnType<typeof supabase.rpc>>
+    );
+    const badgePromise = resolveBadgeWithGuardrails(
+      `shell:badge:${viewerKey}`,
+      () => supabase.rpc(badgeRpcName, badgeRpcArgs)
+    );
+    const [structuralWrapped, badgeWrapped] = await Promise.all([structuralPromise, badgePromise]);
+    const structural = structuralWrapped.value;
+    const badge = badgeWrapped.value;
+    if (structural.error) throw structural.error;
+    const s =
+      structural.data && typeof structural.data === 'object'
+        ? (structural.data as Record<string, unknown>)
+        : {};
+    const b = badge.data && typeof badge.data === 'object' ? (badge.data as Record<string, unknown>) : {};
+    const isDegraded = structuralWrapped.timedOut || Boolean(badge.error) || badgeWrapped.meta.degraded;
+    const reasons = [
+      ...(structuralWrapped.timedOut ? ['structural_timeout'] : []),
+      ...(badge.error ? ['badge_rpc_error'] : []),
+      ...badgeWrapped.meta.reasons,
+    ];
+    const merged = {
+      ...s,
+      ...b,
+      shell_degraded: isDegraded,
+      shell_guardrail_reasons: [...new Set(reasons)],
+      shell_cache_status: badgeWrapped.meta.cacheStatus,
+    };
+    shellResponseCache.set(viewerKey, {
+      value: merged,
+      cachedAt: Date.now(),
+      expiresAt: Date.now() + SHELL_RESPONSE_CACHE_TTL_MS,
+    });
+    return merged;
   })();
 
   shellInFlight.set(viewerKey, fetchPromise);

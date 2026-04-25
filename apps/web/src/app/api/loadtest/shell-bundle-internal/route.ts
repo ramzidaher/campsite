@@ -120,10 +120,8 @@ export async function GET(req: Request) {
   try {
     const resolved = await withTimeout(
       getMainShellLayoutBundleForViewer(supabase, viewerKey, {
-        structuralRpcName: 'main_shell_layout_structural_for_user',
-        structuralRpcArgs: { p_user_id: loadtestUserId },
-        badgeRpcName: 'main_shell_badge_counts_bundle_for_user',
-        badgeRpcArgs: { p_user_id: loadtestUserId },
+        bundleRpcName: 'main_shell_layout_bundle_for_user',
+        bundleRpcArgs: { p_user_id: loadtestUserId },
       }),
       APP_ROUTE_TIMEOUT_MS
     );

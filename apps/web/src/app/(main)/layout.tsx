@@ -45,8 +45,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const headerStore = await headers();
   const pathname = headerStore.get('x-campsite-pathname') ?? '';
 
-  // Two parallel shell RPCs (structural + badge counts), merged to one bundle shape.
-  // Cached so child routes (e.g. dashboard) reuse the same result in one request.
+  // Shell bundle is loaded once and cached per request so child routes reuse it.
+  // Runtime loader prefers a single merged RPC on Nano to reduce round trips.
   const b = await withServerPerf('/(main)/layout', 'main_shell_layout_bundle_cached', getCachedMainShellLayoutBundle());
   const initialShellBadgeCounts = parseShellBadgeCounts(b);
 
