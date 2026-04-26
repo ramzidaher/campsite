@@ -84,7 +84,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     return 0;
   };
 
-  const hasProfile     = Boolean(b['has_profile']);
+  const hasProfileFlag = b['has_profile'];
+  const hasProfile = hasProfileFlag === true;
+  const profileSetupRequired = hasProfileFlag === false;
   const emailLocal     = str('email')?.split('@')[0]?.trim() ?? '';
   const profileRole    = str('profile_role')?.trim() || null;
   const currentOrgId   = str('org_id');
@@ -113,7 +115,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const userName = hasProfile
     ? str('profile_full_name')?.trim() || emailLocal || 'Account'
-    : emailLocal || 'Finish setup';
+    : profileSetupRequired
+      ? emailLocal || 'Finish setup'
+      : emailLocal || 'Account';
 
   // Badge counts
   const unreadBroadcasts              = num('broadcast_unread');
@@ -280,6 +284,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userAvatarUrl={userAvatarUrl}
           userRoleLabel={userRoleLabel}
           hasTenantProfile={hasTenantProfile}
+          profileSetupRequired={profileSetupRequired}
           deptLine={deptLine}
           profileRole={profileRole}
           initialShellBadgeCounts={initialShellBadgeCounts}

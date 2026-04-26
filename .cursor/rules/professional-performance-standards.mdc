@@ -31,3 +31,5 @@ For any new feature, refactor, or integration in this repository:
    - Favor predictable, measurable improvements over speculative complexity.
 7. **People / HR UI consistency (when in scope).**
    - For typography, shell chrome, hiring hub tabs, and canonical routes under `apps/web/src/app/(main)/hr/**`, follow `.cursor/rules/hr-people-workspace-ui.mdc` so new screens match Time off and the People workspace without reintroducing duplicate nav or legacy `/hr/recruitment/:id` URLs.
+8. **Performance incident workflow safety (always).**
+   - For performance/reliability investigations and fixes, follow `.cursor/rules/performance-change-safety-workflow.mdc` before changing app or SQL behavior.

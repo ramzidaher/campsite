@@ -165,6 +165,7 @@ export function AppShell({
   userAvatarUrl = null,
   userRoleLabel,
   hasTenantProfile,
+  profileSetupRequired = false,
   deptLine,
   profileRole,
   unreadBroadcasts,
@@ -208,6 +209,8 @@ export function AppShell({
   userRoleLabel: string;
   /** False when signed in but no `profiles` row yet (e.g. mid-registration). */
   hasTenantProfile: boolean;
+  /** True only when shell bundle explicitly confirms registration is incomplete. */
+  profileSetupRequired?: boolean;
   deptLine: string | null;
   profileRole: string | null;
   unreadBroadcasts: number;
@@ -1164,8 +1167,10 @@ export function AppShell({
                           {userRoleLabel}
                           {deptLine ? ` · ${deptLine}` : ''}
                         </>
-                      ) : (
+                      ) : profileSetupRequired ? (
                         'Finish registration'
+                      ) : (
+                        'Member account'
                       )}
                     </div>
                   </div>

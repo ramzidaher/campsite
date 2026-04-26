@@ -1,0 +1,34 @@
+---
+description: Prevent regression loops during performance and reliability work
+alwaysApply: true
+---
+
+# Performance change safety workflow
+
+Use this workflow for any performance, latency, timeout, or scalability task.
+
+1. **One bottleneck, one fix, one validation loop.**
+   - Do not bundle unrelated app + SQL + infra changes in one step.
+   - Ship only the smallest change that targets the confirmed bottleneck.
+2. **Diagnose before modifying.**
+   - Confirm source with runtime evidence (MCP logs, query stats, perf markers).
+   - Do not guess root cause or "optimize broadly" without current evidence.
+3. **Protect hot-path read-only constraints.**
+   - Never add writes inside read-heavy shell/layout/profile request paths.
+   - If caching needs writes, do writes out-of-band (trigger/job/manual refresh path).
+4. **Deployment gate is mandatory before validation.**
+   - After code or migration changes, do not run comparison tests until deployed and confirmed live.
+   - Confirm live path/version via logs and expected endpoint/RPC behavior.
+5. **Validation must be controlled and comparable.**
+   - Start with single-request smoke, then low concurrency tiers.
+   - Use same endpoint/path/profile and report before-vs-after deltas.
+   - Stop if health degrades or timeout/error signals spike.
+6. **Use guardrails at request pressure points.**
+   - Prefer in-flight dedupe, short TTL cache, stale-while-revalidate, debounce, and safe aborts.
+   - Avoid naive repeated refresh/fanout patterns that multiply backend load.
+7. **Rollback discipline.**
+   - If change increases timeout/degraded/error rates, revert that specific change quickly.
+   - Document what regressed, why, and what remains unchanged.
+8. **Do not claim success without evidence.**
+   - Include concrete metrics/log deltas and health state in conclusions.
+   - Distinguish clearly: "platform healthy" vs "request path degraded."
