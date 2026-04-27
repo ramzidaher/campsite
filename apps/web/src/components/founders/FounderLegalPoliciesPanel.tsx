@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BroadcastBodyEditor } from '@/components/broadcasts/BroadcastBodyEditor';
 import { LegalMarkdownArticle } from '@/components/legal/LegalMarkdownArticle';
-import { upsertPlatformLegalSettings } from '@/app/(founders)/founders/platform-actions';
+import {
+  listLegalAcceptanceEvents,
+  upsertPlatformLegalSettings,
+  type FounderLegalAcceptanceEvent,
+} from '@/app/(founders)/founders/platform-actions';
 import { extractMarkdownHeadings, type MarkdownHeading } from '@/lib/legal/markdownHeadings';
 import { PUBLIC_LEGAL_DOCS, type LegalPublicDocId } from '@/lib/legal/publicLegalDocs';
 import type { PlatformLegalSettings } from '@/lib/legal/types';
@@ -27,6 +31,9 @@ export function FounderLegalPoliciesPanel({
   const [tab, setTab] = useState<DocTab>('terms');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [eventsBusy, setEventsBusy] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [acceptanceEvents, setAcceptanceEvents] = useState<FounderLegalAcceptanceEvent[]>([]);
   const [tocQuery, setTocQuery] = useState('');
   const pendingHeadingScroll = useRef<string | null>(null);
 
@@ -89,6 +96,26 @@ export function FounderLegalPoliciesPanel({
     }, 80);
     return () => window.clearTimeout(t);
   }, [tab, currentMarkdown]);
+
+  const loadAcceptanceEvents = useCallback(async () => {
+    setEventsBusy(true);
+    setEventsError(null);
+    const res = await listLegalAcceptanceEvents({
+      bundleVersion: bundleVersion.trim() || null,
+      limit: 25,
+      offset: 0,
+    });
+    setEventsBusy(false);
+    if (!res.ok) {
+      setEventsError(res.error);
+      return;
+    }
+    setAcceptanceEvents(res.data);
+  }, [bundleVersion]);
+
+  useEffect(() => {
+    void loadAcceptanceEvents();
+  }, [loadAcceptanceEvents]);
 
   async function handleSave() {
     setMessage(null);
@@ -343,6 +370,14 @@ export function FounderLegalPoliciesPanel({
               <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void handleSave()}>
                 {busy ? 'Saving…' : 'Save & publish'}
               </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={eventsBusy}
+                onClick={() => void loadAcceptanceEvents()}
+              >
+                {eventsBusy ? 'Refreshing consent log…' : 'Refresh consent log'}
+              </button>
               {message ? (
                 <span
                   style={{
@@ -354,6 +389,61 @@ export function FounderLegalPoliciesPanel({
                 </span>
               ) : null}
             </div>
+          </div>
+
+          <div className="card card-pad" style={{ marginTop: 16 }}>
+            <div className="section-title" style={{ marginBottom: 8 }}>
+              Legal acceptance audit log
+            </div>
+            <p style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.55, marginBottom: 12 }}>
+              Immutable events for legal acceptance, including accepted bundle version, timestamp, and legal text
+              fingerprint hash.
+            </p>
+            {eventsError ? (
+              <div style={{ marginBottom: 12, fontSize: 12.5, color: 'var(--red)' }}>Error: {eventsError}</div>
+            ) : null}
+            {acceptanceEvents.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: 'var(--text3)' }}>
+                {eventsBusy ? 'Loading acceptance records…' : 'No acceptance records found for this bundle yet.'}
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>Accepted</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>Email</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>Bundle</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>Source</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>IP</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>Host/Path</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>Fingerprint</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {acceptanceEvents.map((row) => (
+                      <tr key={row.id}>
+                        <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>
+                          {new Date(row.accepted_at).toLocaleString()}
+                        </td>
+                        <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>{row.email ?? '-'}</td>
+                        <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>
+                          <code style={{ fontSize: 11.5 }}>{row.bundle_version}</code>
+                        </td>
+                        <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>{row.acceptance_source}</td>
+                        <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>{row.request_ip ?? '-'}</td>
+                        <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>
+                          {(row.request_host ?? '-') + (row.request_path ? ` ${row.request_path}` : '')}
+                        </td>
+                        <td style={{ padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>
+                          <code style={{ fontSize: 11.5 }}>{row.legal_text_sha256.slice(0, 16)}…</code>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -158,6 +158,9 @@ export const PERMISSION_KEYS = [
   'one_on_one.view_all_checkins',
   'one_on_one.manage_direct_reports',
   'one_on_one.manage_templates',
+  // Reporting
+  'reports.view',
+  'reports.manage',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];

@@ -36,6 +36,7 @@ export function AttendanceClockClient({
     { id: string; clocked_at: string; direction: string; source: string }[]
   >([]);
   const [tsStatus, setTsStatus] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const refresh = useCallback(async () => {
     setErr(null);
@@ -71,6 +72,43 @@ export function AttendanceClockClient({
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const activeClockInIso = useMemo(() => {
+    const latest = events[0];
+    if (!latest || latest.direction !== 'in') return null;
+    return latest.clocked_at;
+  }, [events]);
+
+  useEffect(() => {
+    if (!activeClockInIso) return;
+    setNowMs(Date.now());
+    const id = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [activeClockInIso]);
+
+  const liveElapsedMs = useMemo(() => {
+    if (!activeClockInIso) return 0;
+    const diff = nowMs - new Date(activeClockInIso).getTime();
+    return Math.max(0, diff);
+  }, [activeClockInIso, nowMs]);
+
+  const liveElapsedMinutes = useMemo(() => Math.floor(liveElapsedMs / 60000), [liveElapsedMs]);
+
+  const displayMinutes = useMemo(() => {
+    if (minutes == null) return null;
+    return minutes + liveElapsedMinutes;
+  }, [liveElapsedMinutes, minutes]);
+
+  const liveDurationLabel = useMemo(() => {
+    if (!activeClockInIso) return null;
+    const totalSeconds = Math.floor(liveElapsedMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutesPart = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours}h ${String(minutesPart).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+  }, [activeClockInIso, liveElapsedMs]);
 
   async function clock(direction: 'in' | 'out') {
     if (!enabled) return;
@@ -178,9 +216,16 @@ export function AttendanceClockClient({
       <div className="rounded-xl border border-[#e8e4dc] bg-white px-4 py-3">
         <p className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">This week (from punches)</p>
         <p className="mt-1 font-authSerif text-[22px] text-[#121212]">
-          {minutes != null ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : '—'}
+          {displayMinutes != null ? `${Math.floor(displayMinutes / 60)}h ${displayMinutes % 60}m` : '—'}
         </p>
       </div>
+
+      {liveDurationLabel ? (
+        <div className="rounded-xl border border-[#e8e4dc] bg-[#faf9f6] px-4 py-3">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Live timer</p>
+          <p className="mt-1 font-authSerif text-[22px] text-[#121212]">{liveDurationLabel}</p>
+        </div>
+      ) : null}
 
       <div>
         <button

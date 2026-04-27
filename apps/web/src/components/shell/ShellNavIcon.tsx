@@ -119,6 +119,8 @@ function tone(name: ShellNavIconId, style: ShellIconStyle) {
       return ICON_TONE.cyan;
     case 'payroll':
       return ICON_TONE.green;
+    case 'reports':
+      return ICON_TONE.amber;
     case 'settings':
       return ICON_TONE.orange;
     case 'members':
@@ -229,6 +231,8 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <Timer {...p} />;
     case 'payroll':
       return <CircleDollarSign {...p} />;
+    case 'reports':
+      return <BarChart3 {...p} />;
     case 'orgSettings':
       return <Wrench {...p} />;
     case 'notifications':

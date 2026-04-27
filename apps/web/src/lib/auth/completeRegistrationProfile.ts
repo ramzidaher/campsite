@@ -11,6 +11,9 @@ type RegMeta = {
   register_subscriptions?: string;
   register_avatar_url?: string;
   register_legal_bundle_version?: string;
+  register_legal_host?: string;
+  register_legal_path?: string;
+  register_legal_user_agent?: string;
   full_name?: string;
 };
 
@@ -114,6 +117,14 @@ async function insertProfileFromJwtMetadata(
       : '';
   const legalBundle =
     legalRaw.length > 256 ? legalRaw.slice(0, 256) : legalRaw.length > 0 ? legalRaw : null;
+  const legalHost =
+    typeof meta.register_legal_host === 'string' ? meta.register_legal_host.trim() || null : null;
+  const legalPath =
+    typeof meta.register_legal_path === 'string' ? meta.register_legal_path.trim() || null : null;
+  const legalUserAgentRaw =
+    typeof meta.register_legal_user_agent === 'string' ? meta.register_legal_user_agent.trim() : '';
+  const legalUserAgent =
+    legalUserAgentRaw.length > 2048 ? legalUserAgentRaw.slice(0, 2048) : legalUserAgentRaw || null;
 
   const { error: pErr } = await supabase.from('profiles').insert({
     id: user.id,
@@ -158,6 +169,21 @@ async function insertProfileFromJwtMetadata(
         return { ok: true };
       }
       return { ok: false, message: sErr.message };
+    }
+  }
+
+  if (legalBundle) {
+    const { error: legalErr } = await supabase.rpc('record_my_legal_acceptance', {
+      p_bundle_version: legalBundle,
+      p_accepted_at: new Date().toISOString(),
+      p_acceptance_source: 'registration_fallback',
+      p_request_host: legalHost,
+      p_request_path: legalPath,
+      p_user_agent: legalUserAgent,
+      p_evidence: { flow: 'fallback_insert_profile_from_jwt' },
+    });
+    if (legalErr) {
+      return { ok: false, message: legalErr.message };
     }
   }
 

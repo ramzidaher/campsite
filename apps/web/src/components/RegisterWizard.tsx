@@ -362,6 +362,9 @@ export function RegisterWizard({
         register_create_org_name: nameTrim,
         register_create_org_slug: workspaceSlugNormalized,
         register_legal_bundle_version: initialLegalBundleVersion,
+        register_legal_host: window.location.host,
+        register_legal_path: window.location.pathname,
+        register_legal_user_agent: navigator.userAgent,
       };
       if (newOrgLogoUrl.trim()) {
         createMeta.register_create_org_logo_url = newOrgLogoUrl.trim();
@@ -400,6 +403,9 @@ export function RegisterWizard({
         register_org_id: orgId,
         register_dept_ids: JSON.stringify([...selectedDeptIds]),
         register_legal_bundle_version: initialLegalBundleVersion,
+        register_legal_host: window.location.host,
+        register_legal_path: window.location.pathname,
+        register_legal_user_agent: navigator.userAgent,
       };
       const { data, error: signErr } = await supabase.auth.signUp({
         email,
@@ -421,6 +427,24 @@ export function RegisterWizard({
     /** Set when a file was uploaded; profile row may already exist from the auth trigger before metadata had the URL. */
     let uploadedAvatarPublicUrl: string | null = null;
     const { completeRegistrationProfileIfNeeded } = await import('@/lib/auth/completeRegistrationProfile');
+    const legalFlow = createOrgFlow ? 'create_org' : 'join_org';
+
+    async function recordServerLegalAcceptance(bundleVersion: string) {
+      try {
+        await fetch('/api/legal/acceptance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bundleVersion,
+            acceptedAt: new Date().toISOString(),
+            source: 'registration_server_capture',
+            flow: legalFlow,
+          }),
+        });
+      } catch {
+        // Do not block registration success on supplemental server-side evidence logging.
+      }
+    }
 
     async function withUploadedAvatarIfPresent(userRow: User): Promise<User> {
       if (!optionalAvatarFile) return userRow;
@@ -496,6 +520,7 @@ export function RegisterWizard({
           return;
         }
       }
+      await recordServerLegalAcceptance(initialLegalBundleVersion);
       setLoading(false);
       if (prof.status === 'active') {
         router.replace('/');
@@ -664,7 +689,7 @@ export function RegisterWizard({
               >
                 Data processing information
               </Link>{' '}
-              (bundle {initialLegalBundleVersion}).
+              {/* (bundle {initialLegalBundleVersion}). */}
             </label>
           </div>
           <button

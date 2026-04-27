@@ -17,6 +17,11 @@ type OverrideRow = {
 };
 
 type PermissionTab = 'give' | 'restrict' | 'advanced';
+type OverridePayload = {
+  overrides: OverrideRow[];
+  pickerItems: PermissionPickerItem[];
+  baseRolePermissionKeys: string[];
+};
 
 /** Native checkbox styling so the checked tick is visible across browsers (esp. with cream surfaces). */
 const PERM_CHECKBOX_ADD =
@@ -25,6 +30,9 @@ const PERM_CHECKBOX_RESTRICT =
   'mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-[#b8b8b8] bg-white accent-[#b91c1c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b91c1c] disabled:cursor-not-allowed';
 const PERM_CHECKBOX_REPLACE =
   'mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-[#d97706]/80 bg-white accent-[#92400e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d97706] disabled:cursor-not-allowed';
+const OVERRIDES_CACHE_TTL_MS = 8000;
+const permissionOverridesCache = new Map<string, { payload: OverridePayload; freshUntil: number }>();
+const permissionOverridesInFlight = new Map<string, Promise<OverridePayload>>();
 
 export function MemberPermissionOverridesPanel({
   targetUserId,
@@ -49,6 +57,12 @@ export function MemberPermissionOverridesPanel({
   const [replaceSearch, setReplaceSearch] = useState('');
   const [existingSearch, setExistingSearch] = useState('');
   const [fetching, setFetching] = useState(true);
+
+  const setFromPayload = useCallback((payload: OverridePayload) => {
+    setOverrides(payload.overrides);
+    setPickerItems(payload.pickerItems);
+    setBaseRolePermissionKeys(payload.baseRolePermissionKeys);
+  }, []);
 
   const assignableKeys = useMemo(
     () => new Set(pickerItems.filter((i) => i.assignable_into_custom_role).map((i) => i.key)),
@@ -80,29 +94,57 @@ export function MemberPermissionOverridesPanel({
     [byMode.replace],
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceRefresh = false) => {
     setLoadErr(null);
+    const cacheKey = targetUserId;
+    const now = Date.now();
+    const cached = permissionOverridesCache.get(cacheKey);
+    if (!forceRefresh && cached && cached.freshUntil > now) {
+      setFromPayload(cached.payload);
+      setFetching(false);
+      return;
+    }
     setFetching(true);
     try {
-      const res = await fetch(`/api/admin/members/${targetUserId}/permission-overrides`, { cache: 'no-store' });
-      const data = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        overrides?: OverrideRow[];
-        permission_picker?: { items?: PermissionPickerItem[] };
-        base_role?: { label?: string | null };
-        base_role_permission_keys?: string[];
-      };
-      if (!res.ok) {
-        setLoadErr(data.error ?? 'Could not load permission overrides');
-        return;
+      const existing = permissionOverridesInFlight.get(cacheKey);
+      const request =
+        existing ??
+        fetch(`/api/admin/members/${targetUserId}/permission-overrides`, { cache: 'no-store' })
+          .then(async (res) => {
+            const data = (await res.json().catch(() => ({}))) as {
+              error?: string;
+              overrides?: OverrideRow[];
+              permission_picker?: { items?: PermissionPickerItem[] };
+              base_role?: { label?: string | null };
+              base_role_permission_keys?: string[];
+            };
+            if (!res.ok) {
+              throw new Error(data.error ?? 'Could not load permission overrides');
+            }
+            return {
+              overrides: data.overrides ?? [],
+              pickerItems: data.permission_picker?.items ?? [],
+              baseRolePermissionKeys: data.base_role_permission_keys ?? [],
+            } satisfies OverridePayload;
+          })
+          .finally(() => {
+            permissionOverridesInFlight.delete(cacheKey);
+          });
+      if (!existing) {
+        permissionOverridesInFlight.set(cacheKey, request);
       }
-      setOverrides(data.overrides ?? []);
-      setPickerItems(data.permission_picker?.items ?? []);
-      setBaseRolePermissionKeys(data.base_role_permission_keys ?? []);
+      const payload = await request;
+      permissionOverridesCache.set(cacheKey, {
+        payload,
+        freshUntil: Date.now() + OVERRIDES_CACHE_TTL_MS,
+      });
+      setFromPayload(payload);
+    } catch (err) {
+      setLoadErr(err instanceof Error ? err.message : 'Could not load permission overrides');
     } finally {
       setFetching(false);
     }
-  }, [targetUserId]);
+  }, [targetUserId, setFromPayload]);
 
   useEffect(() => {
     void load();
@@ -136,7 +178,7 @@ export function MemberPermissionOverridesPanel({
       return;
     }
     setSelectedAddKeys(new Set());
-    await load();
+    await load(true);
   }
 
   async function removeOverride(row: OverrideRow) {
@@ -161,7 +203,7 @@ export function MemberPermissionOverridesPanel({
       }
     }
     setBusy(false);
-    await load();
+    await load(true);
   }
 
   async function clearReplaceMode() {
@@ -179,7 +221,7 @@ export function MemberPermissionOverridesPanel({
       setLoadErr(data.error ?? 'Could not clear');
       return;
     }
-    await load();
+    await load(true);
   }
 
   const permLabel = (key: string) => pickerItems.find((p) => p.key === key)?.label ?? key;
@@ -480,7 +522,7 @@ export function MemberPermissionOverridesPanel({
                   return;
                 }
                 setSelectedReplaceKeys(new Set());
-                await load();
+                await load(true);
               }}
             >
               Add to allowlist

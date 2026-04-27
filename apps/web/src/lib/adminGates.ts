@@ -95,7 +95,8 @@ export type ShellNavIconId =
   | 'absenceReport'
   | 'attendance'
   | 'payroll'
-  | 'privacy';
+  | 'privacy'
+  | 'reports';
 
 /** Main app sidebar: links under “Admin” / “Manager”; optional `section` renders a group heading like the reference admin nav. */
 export type MainShellAdminNavItem = {
@@ -293,7 +294,8 @@ export function getMainShellHrNavItemsByPermissions(
       k.startsWith('onboarding.') ||
       k.startsWith('performance.') ||
       k.startsWith('one_on_one.') ||
-      k.startsWith('payroll.')
+      k.startsWith('payroll.') ||
+      k.startsWith('reports.')
   );
   if (!canSeeAnyHr) return null;
 
@@ -352,6 +354,9 @@ export function getMainShellHrNavItemsByPermissions(
   ) {
     items.push({ href: '/admin/privacy', label: 'Privacy center', icon: 'privacy', section: 'Compliance' });
   }
+  if (p.includes('reports.view')) {
+    items.push({ href: '/reports', label: 'Reports', icon: 'reports', section: 'Reporting' });
+  }
   return items.length ? items : null;
 }
 
@@ -362,7 +367,8 @@ export function getMainShellFinanceNavItemsByPermissions(
   const canViewFinance = p.includes('payroll.view') || p.includes('payroll.manage');
   const canReviewTimesheets = p.includes('leave.approve_direct_reports') || p.includes('leave.manage_org');
   const canManageAttendanceSites = p.includes('hr.manage_records');
-  if (!canViewFinance && !canReviewTimesheets && !canManageAttendanceSites) return null;
+  const canSeeReports = p.includes('reports.view');
+  if (!canViewFinance && !canReviewTimesheets && !canManageAttendanceSites && !canSeeReports) return null;
 
   const items: MainShellAdminNavItem[] = [];
   if (canViewFinance) {
@@ -374,6 +380,9 @@ export function getMainShellFinanceNavItemsByPermissions(
   }
   if (canManageAttendanceSites) {
     items.push({ href: '/finance/attendance-settings', label: 'Attendance sites', icon: 'orgSettings', section: 'Payroll & time' });
+  }
+  if (canSeeReports) {
+    items.push({ href: '/reports', label: 'Reports', icon: 'reports', section: 'Reporting' });
   }
   return items.length ? items : null;
 }
@@ -389,7 +398,8 @@ export function getMainShellManagerNavItemsByPermissions(
   const canViewDepts = p.includes('departments.view');
   const canViewTeams = p.includes('teams.view');
   const canReviewMembers = p.includes('approvals.members.review');
-  if (!canManageWorkspace && !canViewDepts && !canViewTeams && !canReviewMembers) return null;
+  const canViewReports = p.includes('reports.view');
+  if (!canManageWorkspace && !canViewDepts && !canViewTeams && !canReviewMembers && !canViewReports) return null;
 
   if (canManageWorkspace) items.push({ href: '/manager', label: 'Overview', icon: 'home', exact: true });
   if (
@@ -431,5 +441,9 @@ export function getMainShellManagerNavItemsByPermissions(
     items.push({ href: '/manager/departments', label: 'Departments', icon: 'departments', section: 'Your departments' });
   if (canViewTeams)
     items.push({ href: '/manager/teams', label: 'Teams', icon: 'teams', section: 'Your departments' });
+  if (canViewReports)
+    items.push({ href: '/reports', label: 'Reports', icon: 'reports', section: 'Reporting' });
+  if (canManageWorkspace || canViewDepts || canViewTeams)
+    items.push({ href: '/manager/org-chart', label: 'Live org chart', icon: 'orgChart', section: 'People' });
   return items;
 }

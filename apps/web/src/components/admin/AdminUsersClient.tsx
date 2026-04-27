@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 export type UserRow = {
   id: string;
@@ -20,6 +20,7 @@ export type UserRow = {
 };
 
 const PAGE = 25;
+const SEARCH_DEBOUNCE_MS = 350;
 
 const ROLE_OPTION_LABEL: Record<string, string> = {
   unassigned: 'Unassigned',
@@ -135,6 +136,8 @@ export function AdminUsersClient({
   const [deptFilter, setDeptFilter] = useState(defaultFilters.dept ?? 'all');
   const [showInfo, setShowInfo] = useState(false);
   const [isSearchPending, startSearchTransition] = useTransition();
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchSeqRef = useRef(0);
 
   const activeDepts = departments.filter((d) => !d.is_archived);
   const [bulkApproveRole, setBulkApproveRole] = useState<string>('');
@@ -197,9 +200,24 @@ export function AdminUsersClient({
     const inUrl = (searchParams?.get('q') ?? '').trim();
     const next = qInput.trim();
     if (next === inUrl) return;
-    startSearchTransition(() => {
-      router.replace(filterHref({ q: next || undefined }));
-    });
+    searchSeqRef.current += 1;
+    const seq = searchSeqRef.current;
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      // Drop stale queued search updates when user keeps typing.
+      if (seq !== searchSeqRef.current) return;
+      startSearchTransition(() => {
+        router.replace(filterHref({ q: next || undefined }));
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
+      }
+    };
   }, [qInput, router, filterHref, searchParams]);
 
   const filteredRows = useMemo(() => {

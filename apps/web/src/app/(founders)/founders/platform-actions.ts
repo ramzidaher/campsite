@@ -6,6 +6,22 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export type PlatformActionResult = { ok: true } | { ok: false; error: string };
 export type PlatformActionDataResult<T> = { ok: true; data: T } | { ok: false; error: string };
+export type FounderLegalAcceptanceEvent = {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  email: string | null;
+  acceptance_source: string;
+  bundle_version: string;
+  legal_text_sha256: string;
+  accepted_at: string;
+  request_host: string | null;
+  request_path: string | null;
+  user_agent: string | null;
+  request_ip: string | null;
+  created_at: string;
+  total_count: number;
+};
 
 async function collectUserDeleteBlockers(admin: ReturnType<typeof createServiceRoleClient>, userId: string): Promise<string[]> {
   const checks: Array<{ table: string; column: string }> = [
@@ -292,4 +308,23 @@ export async function upsertPlatformLegalSettings(input: {
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+export async function listLegalAcceptanceEvents(input?: {
+  bundleVersion?: string | null;
+  limit?: number;
+  offset?: number;
+}): Promise<PlatformActionDataResult<FounderLegalAcceptanceEvent[]>> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { data, error } = await ctx.userSupabase.rpc('platform_list_legal_acceptance_events', {
+    p_bundle_version: input?.bundleVersion ?? null,
+    p_limit: Math.max(1, Math.min(input?.limit ?? 50, 200)),
+    p_offset: Math.max(0, input?.offset ?? 0),
+  });
+  if (error) return { ok: false, error: error.message };
+  return {
+    ok: true,
+    data: Array.isArray(data) ? (data as FounderLegalAcceptanceEvent[]) : [],
+  };
 }

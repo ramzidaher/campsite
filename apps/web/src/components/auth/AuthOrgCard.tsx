@@ -22,6 +22,11 @@ export function AuthOrgCard({ org }: { org: AuthOrgDisplay }) {
   if (pathname === '/login' || pathname.startsWith('/forgot-password')) {
     return null;
   }
+  // On default-domain registration, generic org chrome adds noise.
+  // Keep the card only when register is org-scoped (slug present).
+  if (pathname.startsWith('/register') && !org.slug) {
+    return null;
+  }
   const hideChange = pathname.startsWith('/register');
   const initials = orgInitials(org.displayName);
 

@@ -11,5 +11,6 @@ export function relTime(iso: string | null): string {
   const days = Math.floor(h / 24);
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  // Keep fallback date format deterministic across SSR + hydration.
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(d);
 }
