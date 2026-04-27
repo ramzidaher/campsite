@@ -16,6 +16,7 @@ import { TaxDocumentsClient } from '@/components/hr/TaxDocumentsClient';
 import { UkTaxDetailsClient } from '@/components/hr/UkTaxDetailsClient';
 import { TrainingRecordsClient } from '@/components/hr/TrainingRecordsClient';
 import { GraphExperience } from '@/components/genz/GraphExperience';
+import { PersonalDetailsCard } from '@/components/profile/PersonalDetailsCard';
 import { ProfileUiModeSync } from '@/components/profile/ProfileUiModeSync';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -148,6 +149,23 @@ function profileTabClass(active: boolean) {
     : `${base} border-transparent text-[#6b6b6b] hover:border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_22%,#e8e8e8)] hover:bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_6%,#faf9f6)]`;
 }
 
+function formatRoleLabel(roleKey: string | null | undefined): string {
+  const role = String(roleKey ?? '').trim();
+  if (!role) return '—';
+  const map: Record<string, string> = {
+    org_admin: 'Org admin',
+    super_admin: 'Org admin',
+    manager: 'Manager',
+    coordinator: 'Coordinator',
+    administrator: 'Administrator',
+    duty_manager: 'Duty manager',
+    csa: 'CSA',
+    society_leader: 'Society leader',
+    unassigned: 'Pending role',
+  };
+  return map[role] ?? role.replace(/_/g, ' ');
+}
+
 export default async function MyProfilePage({
   searchParams,
 }: {
@@ -187,6 +205,8 @@ export default async function MyProfilePage({
             typeof shellBundle.profile_role === 'string'
               ? shellBundle.profile_role
               : null,
+          pronouns: null,
+          show_pronouns: false,
           reports_to_user_id: null,
           ui_mode:
             typeof shellBundle.ui_mode === 'string' ? shellBundle.ui_mode : null,
@@ -200,7 +220,7 @@ export default async function MyProfilePage({
     'profile_lookup',
     supabase
       .from('profiles')
-      .select('org_id, status, full_name, preferred_name, email, avatar_url, role, reports_to_user_id, ui_mode')
+      .select('org_id, status, full_name, preferred_name, email, avatar_url, role, pronouns, show_pronouns, reports_to_user_id, ui_mode')
       .eq('id', user.id)
       .maybeSingle(),
     300
@@ -611,7 +631,9 @@ export default async function MyProfilePage({
 
   const emailDisplay = (profile.email as string | null)?.trim() || user.email || '—';
   const profileDisplayName = getDisplayName(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
-  const roleLabel = (profile.role as string | null) ?? '—';
+  const roleLabel = formatRoleLabel(profile.role as string | null);
+  const pronounsValue = String((profile as { pronouns?: string | null }).pronouns ?? '').trim();
+  const visiblePronouns = pronounsValue || null;
   const onboardingActive = (onboardingCountRes.count ?? 0) > 0;
 
   const probationItems = (
@@ -676,9 +698,17 @@ export default async function MyProfilePage({
   const ownRoleLabels = Array.from(
     new Set(
       ((ownRolesRes.data ?? []) as { label?: string | null; key?: string | null }[])
-        .map((r) => r.label || r.key || null)
+        .map((r) => formatRoleLabel(r.label || r.key || null))
         .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
     )
+  );
+  const roleChipLabels = Array.from(
+    new Map(
+      [roleLabel, ...ownRoleLabels]
+        .map((label) => String(label).trim())
+        .filter((label) => label.length > 0 && label !== '—')
+        .map((label) => [label.toLowerCase(), label] as const)
+    ).values()
   );
   const ownTrainingRows = (ownTrainingRowsRes.data ?? []) as {
     id: string;
@@ -702,6 +732,7 @@ export default async function MyProfilePage({
         { label: 'Name', value: profileDisplayName },
         { label: 'Work email', value: emailDisplay },
         { label: 'Role', value: roleLabel },
+        { label: 'Pronouns', value: visiblePronouns ?? 'Hidden' },
         { label: 'Department', value: deptNames.length ? deptNames.join(', ') : '—' },
         { label: 'Account ID', value: user.id },
         { label: 'Phone', value: '—' },
@@ -948,14 +979,18 @@ export default async function MyProfilePage({
                 <p className="mt-1 text-[13.5px] text-[#6b6b6b]">
                   {deptNames.length ? deptNames.join(', ') : '—'} <span className="text-[#d4d4d4]">·</span> {emailDisplay}
                 </p>
+                {visiblePronouns ? (
+                  <p className="mt-1 text-[12px] text-[#9b9b9b]">{visiblePronouns}</p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_30%,#e8e8e8)] bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_8%,#faf9f6)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
-                    {roleLabel}
-                  </span>
-                  {(ownRoleLabels.length ? ownRoleLabels : ['Manager']).slice(0, 2).map((role) => (
+                  {(roleChipLabels.length ? roleChipLabels : [roleLabel]).slice(0, 2).map((role, idx) => (
                     <span
                       key={`hero-role-${role}`}
-                      className="rounded-full border border-[#e8e8e8] bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]"
+                      className={
+                        idx === 0
+                          ? 'rounded-full border border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_30%,#e8e8e8)] bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_8%,#faf9f6)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]'
+                          : 'rounded-full border border-[#e8e8e8] bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]'
+                      }
                     >
                       {role}
                     </span>
@@ -1011,40 +1046,14 @@ export default async function MyProfilePage({
               className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8"
             >
               <div className="min-w-0 space-y-4 lg:col-span-8">
-                <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
-                  <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
-                    <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Personal details</span>
-                    <Link href="/settings#profile" className="text-[12px] text-[var(--org-brand-primary,#0f6e56)] hover:underline">
-                      Request change
-                    </Link>
-                  </div>
-                  <div className="p-4">
-                    <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
-                      <div>
-                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Full name</dt>
-                        <dd className="text-[#121212]">{profileDisplayName}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Work email</dt>
-                        <dd className="text-[#121212]">{emailDisplay}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Department</dt>
-                        <dd className="text-[#121212]">{deptNames.length ? deptNames.join(', ') : '—'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Phone</dt>
-                        <dd className="text-[#6b6b6b] italic">Not provided</dd>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Emergency contact</dt>
-                        <dd className="text-[#6b6b6b] italic">
-                          Not stored in CampSite yet. Ask your HR team if they keep this elsewhere.
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-                </div>
+                <PersonalDetailsCard
+                  fullName={String(profile.full_name ?? '')}
+                  preferredName={(profile.preferred_name as string | null) ?? null}
+                  email={emailDisplay}
+                  department={deptNames.length ? deptNames.join(', ') : '—'}
+                  pronouns={(profile.pronouns as string | null) ?? null}
+                  showPronouns={Boolean(profile.show_pronouns)}
+                />
 
                 <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
                   <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
@@ -1144,19 +1153,19 @@ export default async function MyProfilePage({
                   <div className="grid gap-3 p-4 sm:grid-cols-2">
                     <Link href="/leave" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
                       <span>Book annual leave</span>
-                      <span aria-hidden>→</span>
+                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
                     </Link>
                     <Link href="/rota" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
                       <span>View rota</span>
-                      <span aria-hidden>→</span>
+                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
                     </Link>
                     <Link href="/performance" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
                       <span>Start performance review</span>
-                      <span aria-hidden>→</span>
+                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
                     </Link>
                     <Link href="?tab=other" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
                       <span>View payslips</span>
-                      <span aria-hidden>→</span>
+                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
                     </Link>
                   </div>
                 </div>
@@ -1215,7 +1224,7 @@ export default async function MyProfilePage({
                     <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Access &amp; roles</span>
                   </div>
                   <div className="flex flex-wrap gap-2 px-4 py-3">
-                    {(ownRoleLabels.length ? ownRoleLabels : [roleLabel]).map((role) => (
+                    {(roleChipLabels.length ? roleChipLabels : [roleLabel]).map((role) => (
                       <span
                         key={role}
                         className="rounded-full border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1 text-[12px] text-[#6b6b6b]"

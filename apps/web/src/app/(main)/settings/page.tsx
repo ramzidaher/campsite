@@ -27,10 +27,29 @@ export default async function SettingsPage({
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'full_name,avatar_url,role,accent_preset,color_scheme,celebration_mode,celebration_auto_enabled,ui_mode,dnd_enabled,dnd_start,dnd_end,shift_reminder_before_minutes,rota_open_slot_alerts_enabled,org_id'
+      'full_name,preferred_name,pronouns,show_pronouns,avatar_url,role,accent_preset,color_scheme,celebration_mode,celebration_auto_enabled,ui_mode,dnd_enabled,dnd_start,dnd_end,shift_reminder_before_minutes,rota_open_slot_alerts_enabled,org_id'
     )
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
+
+  const initialProfile = {
+    full_name: profile?.full_name ?? user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Member',
+    preferred_name: profile?.preferred_name ?? null,
+    pronouns: profile?.pronouns ?? null,
+    show_pronouns: profile?.show_pronouns ?? false,
+    avatar_url: profile?.avatar_url ?? null,
+    role: profile?.role ?? 'unassigned',
+    accent_preset: profile?.accent_preset ?? 'midnight',
+    color_scheme: profile?.color_scheme ?? 'system',
+    celebration_mode: profile?.celebration_mode ?? null,
+    celebration_auto_enabled: profile?.celebration_auto_enabled ?? true,
+    ui_mode: profile?.ui_mode ?? 'classic',
+    dnd_enabled: profile?.dnd_enabled ?? false,
+    dnd_start: profile?.dnd_start ?? null,
+    dnd_end: profile?.dnd_end ?? null,
+    shift_reminder_before_minutes: profile?.shift_reminder_before_minutes ?? null,
+    rota_open_slot_alerts_enabled: profile?.rota_open_slot_alerts_enabled ?? false,
+  };
 
   let tenantOrgs: LoginOrgOption[] | null = null;
   const { data: memRows, error: memErr } = await supabase
@@ -77,25 +96,7 @@ export default async function SettingsPage({
         googleFlashTone={googleFlashTone}
         tenantOrgs={tenantOrgs}
         currentOrgId={profile?.org_id ?? null}
-        initial={
-            profile
-              ? {
-                  full_name: profile.full_name,
-                  avatar_url: profile.avatar_url,
-                  role: profile.role,
-                  accent_preset: profile.accent_preset,
-                  color_scheme: profile.color_scheme,
-                  celebration_mode: profile.celebration_mode,
-                  celebration_auto_enabled: profile.celebration_auto_enabled,
-                  ui_mode: profile.ui_mode,
-                  dnd_enabled: profile.dnd_enabled,
-                  dnd_start: profile.dnd_start,
-                  dnd_end: profile.dnd_end,
-                  shift_reminder_before_minutes: profile.shift_reminder_before_minutes,
-                  rota_open_slot_alerts_enabled: profile.rota_open_slot_alerts_enabled,
-                }
-              : null
-          }
+        initial={initialProfile}
         initialBroadcastChannels={[]}
         canManageDiscounts={false}
         celebrationModeOptions={getCelebrationModeOptions(orgCelebrationOverrides)}
