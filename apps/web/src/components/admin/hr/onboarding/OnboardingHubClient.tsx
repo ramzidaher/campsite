@@ -45,6 +45,17 @@ type TemplateTask = {
   due_offset_days: number;
   sort_order: number;
 };
+type HiringReadinessRow = {
+  job_application_id: string;
+  contract_assigned: boolean;
+  rtw_required: boolean;
+  rtw_complete: boolean;
+  payroll_bank_complete: boolean;
+  payroll_tax_complete: boolean;
+  policy_ack_complete: boolean;
+  it_access_complete: boolean;
+  start_confirmed_at: string | null;
+};
 
 function statusBadge(s: string) {
   const base = 'rounded-full px-2 py-0.5 text-[11px] font-medium';
@@ -66,6 +77,7 @@ export function OnboardingHubClient({
   members,
   selectedTemplateId,
   selectedTemplateTasks,
+  readinessRows,
 }: {
   orgId: string;
   canTemplates: boolean;
@@ -76,6 +88,7 @@ export function OnboardingHubClient({
   members: Member[];
   selectedTemplateId: string | null;
   selectedTemplateTasks: TemplateTask[];
+  readinessRows: HiringReadinessRow[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -254,6 +267,45 @@ export function OnboardingHubClient({
     router.refresh();
   }
 
+  async function confirmStart(applicationId: string) {
+    setBusy(true);
+    setMsg(null);
+    const { error } = await withMinimumDelay(
+      supabase.rpc('hiring_confirm_start', { p_job_application_id: applicationId })
+    );
+    setBusy(false);
+    if (error) {
+      setMsg({ type: 'error', text: error.message });
+      return;
+    }
+    setMsg({ type: 'success', text: 'Start confirmed.' });
+    router.refresh();
+  }
+
+  async function markPrestartChecksComplete(applicationId: string) {
+    setBusy(true);
+    setMsg(null);
+    const { error } = await withMinimumDelay(
+      supabase
+        .from('hiring_start_readiness')
+        .update({
+          rtw_complete: true,
+          payroll_bank_complete: true,
+          payroll_tax_complete: true,
+          policy_ack_complete: true,
+          it_access_complete: true,
+        })
+        .eq('job_application_id', applicationId)
+    );
+    setBusy(false);
+    if (error) {
+      setMsg({ type: 'error', text: error.message });
+      return;
+    }
+    setMsg({ type: 'success', text: 'Pre-start checks marked complete.' });
+    router.refresh();
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -395,6 +447,62 @@ export function OnboardingHubClient({
       {/* Runs tab */}
       {tab === 'runs' && canRuns ? (
         <div className="space-y-6">
+          {readinessRows.length > 0 ? (
+            <section className="rounded-2xl border border-[#e8e8e8] bg-white p-5">
+              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Pre-start readiness</h2>
+              <ul className="mt-3 space-y-2">
+                {readinessRows.slice(0, 8).map((r) => {
+                  const ready =
+                    r.contract_assigned &&
+                    (!r.rtw_required || r.rtw_complete) &&
+                    r.payroll_bank_complete &&
+                    r.payroll_tax_complete &&
+                    r.policy_ack_complete;
+                  return (
+                    <li key={r.job_application_id} className="rounded-lg border border-[#ececec] bg-[#faf9f6] p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[12px] font-semibold text-[#121212]">Application {r.job_application_id.slice(0, 8)}</p>
+                          <p className="text-[12px] text-[#6b6b6b]">
+                            Contract {r.contract_assigned ? 'yes' : 'no'} · RTW{' '}
+                            {r.rtw_required ? (r.rtw_complete ? 'done' : 'pending') : 'not required'} · Payroll bank{' '}
+                            {r.payroll_bank_complete ? 'done' : 'pending'} · Payroll tax {r.payroll_tax_complete ? 'done' : 'pending'} · Policy{' '}
+                            {r.policy_ack_complete ? 'done' : 'pending'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {r.start_confirmed_at ? (
+                            <span className="rounded-full bg-[#dcfce7] px-2 py-0.5 text-[11px] font-medium text-[#166534]">Started</span>
+                          ) : (
+                            <>
+                              {!ready ? (
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void markPrestartChecksComplete(r.job_application_id)}
+                                  className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#121212] disabled:opacity-40"
+                                >
+                                  Mark checks complete
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                disabled={busy || !ready}
+                                onClick={() => void confirmStart(r.job_application_id)}
+                                className="rounded-lg bg-[#121212] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40"
+                              >
+                                Confirm start
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ) : null}
           {activeRuns.length > 0 ? (
             <section>
               <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Active</h2>

@@ -15,8 +15,12 @@ const MODE: Record<JobApplicationMode, string> = {
 
 const APP_STAGE: Record<JobApplicationStage, string> = {
   applied: 'Applied',
+  screened: 'Screened',
+  assessed: 'Assessed',
   shortlisted: 'Shortlisted',
   interview_scheduled: 'Interview scheduled',
+  checks_cleared: 'Checks cleared',
+  offer_approved: 'Offer approved',
   offer_sent: 'Offer sent',
   hired: 'Hired',
   rejected: 'Rejected',

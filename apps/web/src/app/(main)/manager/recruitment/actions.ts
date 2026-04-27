@@ -18,6 +18,12 @@ export async function createRecruitmentRequest(form: {
   jobTitle: string;
   gradeLevel: string;
   salaryBand: string;
+  businessCase: string;
+  headcountType: string;
+  costCenter: string;
+  budgetApproved: boolean;
+  targetStartWindow: string;
+  hiringOwnerUserId?: string;
   reasonForHire: string;
   startDateNeeded: string;
   contractType: string;
@@ -125,10 +131,19 @@ export async function createRecruitmentRequest(form: {
   const jobTitle = form.jobTitle?.trim() ?? '';
   const gradeLevel = form.gradeLevel?.trim() ?? '';
   const salaryBand = form.salaryBand?.trim() ?? '';
+  const businessCase = form.businessCase?.trim() ?? '';
+  const headcountType = form.headcountType?.trim() ?? '';
+  const costCenter = form.costCenter?.trim() ?? '';
+  const targetStartWindow = form.targetStartWindow?.trim() ?? '';
+  const hiringOwnerUserId = form.hiringOwnerUserId?.trim() || user.id;
   const idealCandidateProfile = form.idealCandidateProfile?.trim() ?? '';
   if (!jobTitle) return { ok: false, error: 'Job title is required.' };
   if (!gradeLevel) return { ok: false, error: 'Grade / level is required.' };
   if (!salaryBand) return { ok: false, error: 'Salary band is required.' };
+  if (!businessCase) return { ok: false, error: 'Business case is required.' };
+  if (!['new', 'backfill'].includes(headcountType)) return { ok: false, error: 'Headcount type is required.' };
+  if (!costCenter) return { ok: false, error: 'Cost center is required.' };
+  if (!targetStartWindow) return { ok: false, error: 'Target start window is required.' };
   if (!idealCandidateProfile) return { ok: false, error: 'Ideal candidate profile is required.' };
 
   if (!isRecruitmentHireReason(form.reasonForHire)) return { ok: false, error: 'Invalid reason for hire.' };
@@ -163,6 +178,12 @@ export async function createRecruitmentRequest(form: {
       job_title: jobTitle,
       grade_level: gradeLevel,
       salary_band: salaryBand,
+      business_case: businessCase,
+      headcount_type: headcountType,
+      cost_center: costCenter,
+      budget_approved: Boolean(form.budgetApproved),
+      target_start_window: targetStartWindow,
+      hiring_owner_user_id: hiringOwnerUserId,
       reason_for_hire: form.reasonForHire,
       start_date_needed: startDateNeeded,
       contract_type: form.contractType,

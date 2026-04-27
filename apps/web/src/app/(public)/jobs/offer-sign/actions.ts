@@ -175,6 +175,41 @@ export async function submitOfferSignature(
 
   if (u2) return { ok: false, error: u2.message };
 
+  // Keep a first-class contract assignment row and initialize readiness.
+  const { data: hrRecord } = await admin
+    .from('employee_hr_records')
+    .select('user_id')
+    .eq('org_id', orgId)
+    .eq('hired_from_application_id', appId)
+    .maybeSingle();
+
+  await admin
+    .from('recruitment_contract_assignments')
+    .upsert(
+      {
+        org_id: orgId,
+        job_application_id: appId,
+        application_offer_id: offerId,
+        assigned_to_user_id: (hrRecord?.user_id as string | null) ?? null,
+        contract_signed_on: signedAt.toISOString(),
+        contract_document_url: pdfPath,
+        assigned_by: null,
+      },
+      { onConflict: 'job_application_id' }
+    );
+
+  await admin
+    .from('hiring_start_readiness')
+    .upsert(
+      {
+        org_id: orgId,
+        job_application_id: appId,
+        offer_id: offerId,
+        contract_assigned: true,
+      },
+      { onConflict: 'job_application_id' }
+    );
+
   const { data: members } = await admin
     .from('profiles')
     .select('id, email')

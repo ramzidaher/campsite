@@ -118,6 +118,21 @@ export default async function OnboardingHubPage({
       )
     : [];
 
+  const readinessRows = await withServerPerf(
+    '/admin/hr/onboarding',
+    'hiring_readiness_lookup',
+    supabase
+      .from('hiring_start_readiness')
+      .select(
+        'job_application_id, contract_assigned, rtw_required, rtw_complete, payroll_bank_complete, payroll_tax_complete, policy_ack_complete, it_access_complete, start_confirmed_at'
+      )
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(100)
+      .then(({ data }) => data ?? []),
+    300
+  );
+
   const enrichedRuns = (runs ?? []).map((r) => ({
     id: r.id as string,
     user_id: r.user_id as string,
@@ -158,6 +173,17 @@ export default async function OnboardingHubPage({
         assignee_type: t.assignee_type as string,
         due_offset_days: Number(t.due_offset_days ?? 0),
         sort_order: Number(t.sort_order ?? 0),
+      }))}
+      readinessRows={readinessRows.map((r) => ({
+        job_application_id: String(r.job_application_id),
+        contract_assigned: Boolean(r.contract_assigned),
+        rtw_required: Boolean(r.rtw_required),
+        rtw_complete: Boolean(r.rtw_complete),
+        payroll_bank_complete: Boolean(r.payroll_bank_complete),
+        payroll_tax_complete: Boolean(r.payroll_tax_complete),
+        policy_ack_complete: Boolean(r.policy_ack_complete),
+        it_access_complete: Boolean(r.it_access_complete),
+        start_confirmed_at: (r.start_confirmed_at as string | null) ?? null,
       }))}
     />
   );

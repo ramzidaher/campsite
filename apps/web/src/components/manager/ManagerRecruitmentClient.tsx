@@ -86,6 +86,12 @@ export function ManagerRecruitmentClient({
         jobTitle: String(fd.get('jobTitle') ?? ''),
         gradeLevel: String(fd.get('gradeLevel') ?? ''),
         salaryBand: String(fd.get('salaryBand') ?? ''),
+        businessCase: String(fd.get('businessCase') ?? ''),
+        headcountType: String(fd.get('headcountType') ?? ''),
+        costCenter: String(fd.get('costCenter') ?? ''),
+        budgetApproved: String(fd.get('budgetApproved') ?? '') === 'on',
+        targetStartWindow: String(fd.get('targetStartWindow') ?? ''),
+        hiringOwnerUserId: '',
         reasonForHire: String(fd.get('reasonForHire') ?? ''),
         startDateNeeded: String(fd.get('startDateNeeded') ?? ''),
         contractType: String(fd.get('contractType') ?? ''),
@@ -202,6 +208,40 @@ export function ManagerRecruitmentClient({
                 <input id="salaryBand" name="salaryBand" required className={fieldClass} autoComplete="off" />
               </div>
               <div>
+                <label className={labelClass} htmlFor="headcountType">
+                  Headcount type
+                </label>
+                <select id="headcountType" name="headcountType" required className={fieldClass} defaultValue="new">
+                  <option value="new">New headcount</option>
+                  <option value="backfill">Backfill</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="costCenter">
+                  Cost center
+                </label>
+                <input id="costCenter" name="costCenter" required className={fieldClass} autoComplete="off" />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="targetStartWindow">
+                  Target start window
+                </label>
+                <input
+                  id="targetStartWindow"
+                  name="targetStartWindow"
+                  required
+                  className={fieldClass}
+                  autoComplete="off"
+                  placeholder="e.g. Q4 2026 / within 45 days"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="inline-flex items-center gap-2 text-[12px] font-medium text-[#505050]">
+                  <input id="budgetApproved" name="budgetApproved" type="checkbox" className="h-4 w-4" />
+                  Budget approved
+                </label>
+              </div>
+              <div>
                 <label className={labelClass} htmlFor="reasonForHire">
                   Reason for hire
                 </label>
@@ -243,6 +283,19 @@ export function ManagerRecruitmentClient({
                   ))}
                 </select>
               </div>
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="businessCase">
+                Business case
+              </label>
+              <textarea
+                id="businessCase"
+                name="businessCase"
+                required
+                rows={3}
+                className={fieldClass}
+                placeholder="Business justification, expected impact, and urgency context…"
+              />
             </div>
             <div>
               <label className={labelClass} htmlFor="idealCandidateProfile">

@@ -62,16 +62,24 @@ function StageColumn({
   const { setNodeRef, isOver } = useDroppable({ id: stage });
   const tone: Record<JobApplicationStage, string> = {
     applied: 'bg-white',
+    screened: 'bg-white',
+    assessed: 'bg-white',
     shortlisted: 'bg-white',
     interview_scheduled: 'bg-white',
+    checks_cleared: 'bg-white',
+    offer_approved: 'bg-white',
     offer_sent: 'bg-white',
     hired: 'bg-white',
     rejected: 'bg-white',
   };
   const accent: Record<JobApplicationStage, string> = {
     applied: 'bg-[#9b9b9b]',
+    screened: 'bg-[#0ea5e9]',
+    assessed: 'bg-[#7c3aed]',
     shortlisted: 'bg-[#0f766e]',
     interview_scheduled: 'bg-[#2563eb]',
+    checks_cleared: 'bg-[#16a34a]',
+    offer_approved: 'bg-[#d97706]',
     offer_sent: 'bg-[#b45309]',
     hired: 'bg-[#15803d]',
     rejected: 'bg-[#6b7280]',
