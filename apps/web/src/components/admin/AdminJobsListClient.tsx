@@ -18,6 +18,7 @@ export type AdminJobListRow = {
   salary_band: string;
   contract_type: string;
   published_at: string | null;
+  applications_close_at: string | null;
   posted_year: number | null;
   department_id: string;
   departments: { name: string } | { name: string }[] | null;
@@ -26,6 +27,17 @@ export type AdminJobListRow = {
 export type DeptFilterOption = { id: string; name: string };
 
 type ListScope = 'active' | 'archived' | 'all';
+
+function formatStableShortDate(iso: string): string {
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(dt);
+}
 
 export function AdminJobsListClient({
   rows,
@@ -210,6 +222,7 @@ export function AdminJobsListClient({
                 <th className="px-4 py-3">Department</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Posted</th>
+                <th className="px-4 py-3">End date</th>
                 <th className="px-4 py-3">Tags</th>
                 <th className="px-4 py-3">Public link</th>
               </tr>
@@ -224,7 +237,7 @@ export function AdminJobsListClient({
                   <tr key={r.id} className="transition-colors hover:bg-[#f5f4f1]">
                     <td className="px-4 py-3 font-medium">
                       <Link
-                        href={`/hr/jobs/${r.id}/edit`}
+                        href={`/hr/jobs/${r.id}/applications`}
                         className="text-[#008B60] underline decoration-[#008B60]/25 hover:decoration-[#008B60]"
                       >
                         {r.title}
@@ -238,12 +251,11 @@ export function AdminJobsListClient({
                     </td>
                     <td className="px-4 py-3 text-[#505050]">
                       {r.published_at
-                        ? new Date(r.published_at).toLocaleDateString(undefined, {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })
+                        ? formatStableShortDate(r.published_at)
                         : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-[#505050]">
+                      {r.applications_close_at ? formatStableShortDate(r.applications_close_at) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">

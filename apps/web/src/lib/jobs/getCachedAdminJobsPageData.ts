@@ -48,7 +48,7 @@ export const getCachedAdminJobsPageData = cache(async (orgId: string): Promise<A
     supabase
       .from('job_listings')
       .select(
-        'id, title, slug, status, grade_level, salary_band, contract_type, published_at, posted_year, department_id, departments(name)'
+        'id, title, slug, status, grade_level, salary_band, contract_type, published_at, applications_close_at, posted_year, department_id, departments(name)'
       )
       .eq('org_id', orgId)
       .order('created_at', { ascending: false })

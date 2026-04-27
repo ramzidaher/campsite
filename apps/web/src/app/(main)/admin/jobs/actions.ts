@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 
 import { generateDraftJobSlug, generatePublishedJobSlug } from '@/lib/jobs/jobListingSlug';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   combinationModeHasChannel,
   isJobApplicationMode,
@@ -17,6 +18,40 @@ import { revalidatePath } from 'next/cache';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export type JobActionState = { ok: true } | { ok: false; error: string };
+
+async function autoMoveRecruitmentRequestToInProgress(opts: {
+  recruitmentRequestId: string | null | undefined;
+  actorUserId: string;
+  orgId: string;
+}) {
+  const rid = String(opts.recruitmentRequestId ?? '').trim();
+  if (!rid) return;
+  const admin = createServiceRoleClient();
+  const { data: req } = await admin
+    .from('recruitment_requests')
+    .select('id, status')
+    .eq('id', rid)
+    .eq('org_id', opts.orgId)
+    .maybeSingle();
+  if (!req) return;
+  const st = String((req as any).status ?? '');
+  if (st !== 'approved') return;
+
+  await admin
+    .from('recruitment_requests')
+    .update({ status: 'in_progress', archived_at: null })
+    .eq('id', rid)
+    .eq('org_id', opts.orgId);
+
+  await admin.from('recruitment_request_status_events').insert({
+    request_id: rid,
+    org_id: opts.orgId,
+    from_status: st,
+    to_status: 'in_progress',
+    changed_by: opts.actorUserId,
+    note: 'Auto: job posted',
+  });
+}
 
 function revalidateJobs(jobId?: string) {
   revalidatePath('/admin/jobs');
@@ -309,6 +344,11 @@ export async function publishJobListing(jobId: string): Promise<JobActionState> 
       .eq('status', 'draft');
 
     if (!upErr) {
+      await autoMoveRecruitmentRequestToInProgress({
+        recruitmentRequestId: row.recruitment_request_id as string | null | undefined,
+        actorUserId: user.id,
+        orgId,
+      });
       revalidateJobs(id);
       return { ok: true };
     }

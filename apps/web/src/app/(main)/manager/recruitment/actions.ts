@@ -179,12 +179,7 @@ export async function createRecruitmentRequest(form: {
   const idealCandidateProfile = form.idealCandidateProfile?.trim() ?? '';
   if (!jobTitle) return { ok: false, error: 'Job title is required.' };
   if (!gradeLevel) return { ok: false, error: 'Grade / level is required.' };
-  if (!salaryBand) return { ok: false, error: 'Salary band is required.' };
-  if (!businessCase) return { ok: false, error: 'Business case is required.' };
   if (!['new', 'backfill'].includes(headcountType)) return { ok: false, error: 'Headcount type is required.' };
-  if (!costCenter) return { ok: false, error: 'Cost center is required.' };
-  if (!targetStartWindow) return { ok: false, error: 'Target start window is required.' };
-  if (!idealCandidateProfile) return { ok: false, error: 'Ideal candidate profile is required.' };
 
   if (!isRecruitmentHireReason(form.reasonForHire)) return { ok: false, error: 'Invalid reason for hire.' };
   if (!isRecruitmentContractType(form.contractType)) return { ok: false, error: 'Invalid contract type.' };

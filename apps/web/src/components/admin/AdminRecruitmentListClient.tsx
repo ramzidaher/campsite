@@ -69,6 +69,26 @@ function renderKeyDates(row: AdminRecruitmentListRow): string {
   return `Advert ${fmtDateOnly(row.advert_release_date)}-${fmtDateOnly(row.advert_closing_date)} · Shortlist ${shortlistLabel} · Interviews ${interviewLabel} · Start ${fmtDateOnly(row.start_date_needed)}`;
 }
 
+function keyDateItems(row: AdminRecruitmentListRow): string[] {
+  const shortlistDates = parseDateArray(row.shortlisting_dates);
+  const interviewDates = parseInterviewDates(row.interview_schedule);
+  const shortlistLabel =
+    shortlistDates.length > 1
+      ? `${fmtDateOnly(shortlistDates[0])} (+${shortlistDates.length - 1})`
+      : fmtDateOnly(shortlistDates[0]);
+  const interviewLabel =
+    interviewDates.length > 1
+      ? `${fmtDateOnly(interviewDates[0])} (+${interviewDates.length - 1})`
+      : fmtDateOnly(interviewDates[0]);
+
+  return [
+    `Advert ${fmtDateOnly(row.advert_release_date)}-${fmtDateOnly(row.advert_closing_date)}`,
+    `Shortlist ${shortlistLabel}`,
+    `Interviews ${interviewLabel}`,
+    `Start ${fmtDateOnly(row.start_date_needed)}`,
+  ];
+}
+
 function deptName(d: AdminRecruitmentListRow['departments']): string {
   return (Array.isArray(d) ? d[0]?.name : d?.name) ?? '—';
 }
@@ -77,6 +97,7 @@ function submitterName(p: AdminRecruitmentListRow['submitter']): string {
 }
 
 const STATUS_OPTIONS = ['all', 'pending_review', 'approved', 'in_progress', 'filled', 'rejected'] as const;
+const SHEET_STATUS_OPTIONS = ['approved', 'rejected', 'in_progress', 'filled'] as const;
 
 function hiringHubStatusDotClass(status: string): string {
   switch (status) {
@@ -115,6 +136,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
   const [filter, setFilter] = useState<'open' | 'archived'>('open');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortPreset, setSortPreset] = useState('date-desc');
+  const [sheetStatuses, setSheetStatuses] = useState<Record<string, (typeof SHEET_STATUS_OPTIONS)[number]>>({});
 
   const preset = SORT_PRESETS.find((p) => p.value === sortPreset) ?? SORT_PRESETS[0];
   const sort = preset.sort;
@@ -177,26 +199,9 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
         </header>
       )}
 
-      <section aria-label="Request counts" className="mb-6">
-        {inHiringHub ? null : (
+      {inHiringHub ? null : (
+        <section aria-label="Request counts" className="mb-6">
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Queue</h2>
-        )}
-        {inHiringHub ? (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {queueCells.map((cell) => (
-              <div
-                key={cell.label}
-                className="rounded-xl border border-[#e8e8e8] bg-white px-5 py-4 text-left shadow-sm"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">{cell.labelUpper}</p>
-                <p className="mt-2 text-[30px] font-bold leading-none tracking-tight text-[#121212] tabular-nums">
-                  {cell.value}
-                </p>
-                <p className="mt-1 text-[12px] text-[#6b6b6b]">{cell.hint}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
           <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
             <div className="grid divide-y divide-[#f0f0f0] sm:grid-cols-4 sm:divide-x sm:divide-y-0">
               {queueCells.map((cell) => (
@@ -210,8 +215,8 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
               ))}
             </div>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <div
         className={[
@@ -319,48 +324,92 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
           <p className="mt-1 text-[13px] text-[#9b9b9b]">Try changing status or switching between New and Archive.</p>
         </div>
       ) : inHiringHub ? (
-        <div className="flex flex-col gap-3">
-          {sorted.map((r) => (
-            <Link
-              key={r.id}
-              href={`/hr/hiring/requests/${r.id}`}
-              prefetch={false}
-              className="group flex items-start gap-3 rounded-xl border border-[#e8e8e8] bg-white px-5 py-4 shadow-sm transition-shadow hover:shadow-[0_6px_24px_rgba(0,0,0,0.06)]"
-            >
-              <div
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${hiringHubStatusDotClass(r.status)}`}
-                title={recruitmentStatusLabel(r.status)}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[15px] font-semibold text-[#121212]">{r.job_title}</span>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${hiringHubStatusChipClass(r.status)}`}
-                  >
-                    {recruitmentStatusLabel(r.status)}
-                  </span>
-                  {r.urgency === 'high' ? (
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${URGENCY_STYLE.high}`}>
-                      High urgency
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-[12px] text-[#6b6b6b]">
-                  {deptName(r.departments)}
-                  {submitterName(r.submitter) !== '—' ? ` · ${submitterName(r.submitter)}` : ''}
-                  {' · '}
-                  {fmtDate(r.created_at)}
-                </p>
-                <p className="mt-1 text-[12px] text-[#6b6b6b]">{renderKeyDates(r)}</p>
-              </div>
-              <span
-                className="shrink-0 pt-0.5 text-[16px] font-medium text-[#9b9b9b] transition-colors group-hover:text-[#121212]"
-                aria-hidden
-              >
-                →
-              </span>
-            </Link>
-          ))}
+        <div className="overflow-x-auto rounded-xl border border-[#e8e8e8] bg-white shadow-sm">
+          <table className="min-w-full table-fixed border-collapse">
+            <thead>
+              <tr className="border-b border-[#ececec] bg-[#faf9f6]">
+                <th className="w-[28%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[#7d7d7d]">
+                  Job Title
+                </th>
+                <th className="w-[38%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[#7d7d7d]">
+                  Key Dates
+                </th>
+                <th className="w-[20%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[#7d7d7d]">
+                  Status
+                </th>
+                <th className="w-[14%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[#7d7d7d]">
+                  Owner
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((r, i) => {
+                const selectedStatus =
+                  sheetStatuses[r.id] ??
+                  (SHEET_STATUS_OPTIONS.includes(r.status as (typeof SHEET_STATUS_OPTIONS)[number])
+                    ? (r.status as (typeof SHEET_STATUS_OPTIONS)[number])
+                    : 'in_progress');
+
+                return (
+                  <tr key={r.id} className={i < sorted.length - 1 ? 'border-b border-[#f0efe9]' : ''}>
+                    <td className="px-4 py-3 align-top">
+                      <Link
+                        href={`/hr/hiring/requests/${r.id}`}
+                        prefetch={false}
+                        className="group inline-flex min-w-0 items-start gap-2 text-[#121212] hover:text-black"
+                      >
+                        <span
+                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${hiringHubStatusDotClass(r.status)}`}
+                          title={recruitmentStatusLabel(r.status)}
+                        />
+                        <span className="min-w-0">
+                          <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+                            <span className="truncate text-[14px] font-semibold">{r.job_title}</span>
+                            {r.urgency === 'high' ? (
+                              <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${URGENCY_STYLE.high}`}>
+                                High urgency
+                              </span>
+                            ) : null}
+                          </span>
+                        </span>
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 align-top text-[12px] text-[#5c5c5c]">
+                      <p className="leading-relaxed">Requested {fmtDate(r.created_at)}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5 leading-relaxed">
+                        {keyDateItems(r).map((item) => (
+                          <span key={item} className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px] text-[#5c5c5c]">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <select
+                        aria-label={`Status for ${r.job_title}`}
+                        value={selectedStatus}
+                        onChange={(e) =>
+                          setSheetStatuses((prev) => ({
+                            ...prev,
+                            [r.id]: e.target.value as (typeof SHEET_STATUS_OPTIONS)[number],
+                          }))
+                        }
+                        className={`h-9 min-w-[10.5rem] rounded-full border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium capitalize focus:border-[#121212] focus:outline-none ${hiringHubStatusChipClass(selectedStatus)}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {SHEET_STATUS_OPTIONS.map((status) => (
+                          <option key={status} value={status}>
+                            {recruitmentStatusLabel(status)}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 align-top text-[13px] text-[#121212]">{submitterName(r.submitter)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">

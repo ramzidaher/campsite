@@ -175,6 +175,42 @@ export async function submitOfferSignature(
 
   if (u2) return { ok: false, error: u2.message };
 
+  // Auto-update recruitment request status to filled when offer is accepted.
+  try {
+    const { data: listing } = await admin
+      .from('job_listings')
+      .select('id, org_id, recruitment_request_id, created_by')
+      .eq('id', listingId)
+      .maybeSingle();
+    const rid = String((listing as any)?.recruitment_request_id ?? '').trim();
+    if (rid) {
+      const { data: req } = await admin
+        .from('recruitment_requests')
+        .select('id, status')
+        .eq('id', rid)
+        .eq('org_id', orgId)
+        .maybeSingle();
+      const prev = String((req as any)?.status ?? '').trim();
+      if (prev && prev !== 'filled') {
+        await admin
+          .from('recruitment_requests')
+          .update({ status: 'filled', archived_at: new Date().toISOString() })
+          .eq('id', rid)
+          .eq('org_id', orgId);
+        await admin.from('recruitment_request_status_events').insert({
+          request_id: rid,
+          org_id: orgId,
+          from_status: prev,
+          to_status: 'filled',
+          changed_by: (listing as any)?.created_by ?? (ja.id as string),
+          note: 'Auto: offer accepted (signed)',
+        });
+      }
+    }
+  } catch {
+    // best-effort
+  }
+
   // Keep a first-class contract assignment row and initialize readiness.
   const { data: hrRecord } = await admin
     .from('employee_hr_records')

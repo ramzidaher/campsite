@@ -236,8 +236,10 @@ export function ResourcesListClient({
       let q = supabase.from('staff_resource_folders').select(selectCols).eq('org_id', orgId);
       if (folderHierarchyOk) {
         const wantArchivedFolders = mode === 'match_view' && archiveOnly;
-        if (wantArchivedFolders) q = q.not('archived_at', 'is', null);
-        else q = q.is('archived_at', null);
+        // Supabase query builder types get overly strict when conditionally
+        // adding filters based on a dynamic select list.
+        if (wantArchivedFolders) q = (q as any).not('archived_at', 'is', null);
+        else q = (q as any).is('archived_at', null);
       }
       q = q.order('sort_order', { ascending: true }).order('name', { ascending: true });
       const { data, error } = await q;

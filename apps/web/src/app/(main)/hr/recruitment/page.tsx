@@ -33,7 +33,7 @@ export default async function HrRecruitmentPage() {
     const { data: rows } = await supabase
       .from('recruitment_requests')
       .select(
-        'id, job_title, status, urgency, archived_at, created_at, department_id, departments(name), submitter:profiles!recruitment_requests_created_by_fkey(full_name)'
+        'id, job_title, status, urgency, archived_at, created_at, department_id, start_date_needed, advert_release_date, advert_closing_date, shortlisting_dates, interview_schedule, departments(name), submitter:profiles!recruitment_requests_created_by_fkey(full_name)'
       )
       .eq('org_id', orgId)
       .order('created_at', { ascending: false });

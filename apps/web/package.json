@@ -12,6 +12,7 @@
     "test:a11y": "jest --config jest.config.cjs --testPathPatterns=accessibility"
   },
   "dependencies": {
+    "@alloc/quick-lru": "^5.2.0",
     "@campsite/api": "*",
     "@campsite/theme": "*",
     "@campsite/types": "*",
@@ -37,11 +38,12 @@
     "chrono-node": "^2.9.0",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
+    "fast-equals": "^5.4.0",
     "gsap": "^3.15.0",
     "html5-qrcode": "^2.3.8",
     "jose": "^6.2.2",
     "lucide-react": "^1.7.0",
-    "next": "^15.1.6",
+    "next": "15.5.14",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
