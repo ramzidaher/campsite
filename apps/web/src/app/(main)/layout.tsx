@@ -126,7 +126,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ? (rawOrgBrandTokens as Record<string, string>)
       : null;
   const userAvatarUrl    = str('profile_avatar_url');
-  const userRoleLabel    = profileRole ? roleLabel(profileRole) : '';
   const deptLine         = str('dept_name');
 
   const userName = hasProfile
@@ -168,6 +167,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     permissionKeys.includes('one_on_one.view_own') || permissionKeys.includes('hr.view_records');
   const showMemberSearch =
     permissionKeys.includes('hr.view_records') || permissionKeys.includes('hr.view_direct_reports');
+  const managesPeople = permissionKeys.some(
+    (k) =>
+      k === 'recruitment.create_request' ||
+      k === 'approvals.members.review' ||
+      k === 'leave.approve_direct_reports' ||
+      k === 'hr.view_direct_reports'
+  );
+  const userRoleLabel = managesPeople
+    ? 'Manager'
+    : profileRole === 'coordinator'
+      ? 'Department'
+      : profileRole
+        ? roleLabel(profileRole)
+        : '';
   const hasAdminAreaAccess = permissionKeys.some(
     (k) =>
       k.startsWith('members.') ||
@@ -181,9 +194,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const canApproveRecruitment = permissionKeys.includes('recruitment.approve_request');
   const showPerformanceNav    = permissionKeys.includes('performance.review_direct_reports');
 
-  const managerNavItems = getMainShellManagerNavItemsByPermissions(permissionKeys, {
-    pendingApprovalCount,
-  });
+  const managerNavItems = managesPeople
+    ? getMainShellManagerNavItemsByPermissions(permissionKeys, {
+        pendingApprovalCount,
+      })
+    : null;
 
   const adminNavItemsRaw = getMainShellAdminNavItemsByPermissions(permissionKeys);
   const hrNavItemsRaw    = getMainShellHrNavItemsByPermissions(permissionKeys);
