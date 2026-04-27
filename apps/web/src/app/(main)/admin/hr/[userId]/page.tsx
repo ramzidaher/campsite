@@ -53,7 +53,62 @@ export default async function EmployeeHRFilePage({
 
   const canViewAll = permissionKeys.includes('hr.view_records');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
-  if (!canViewAll && !canViewTeam) redirect('/hr/records');
+  const limitedProfileView = !canViewAll && !canViewTeam;
+  if (limitedProfileView) {
+    const [{ data: targetProfile }, { data: targetDepts }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('full_name, preferred_name, pronouns, show_pronouns, email, status')
+        .eq('id', userId)
+        .eq('org_id', orgId)
+        .maybeSingle(),
+      supabase
+        .from('user_departments')
+        .select('departments(name)')
+        .eq('user_id', userId),
+    ]);
+    if (!targetProfile || targetProfile.status !== 'active') redirect('/hr/records');
+    const deptNames: string[] = [];
+    for (const row of targetDepts ?? []) {
+      const raw = row.departments as { name: string } | { name: string }[] | null;
+      const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      for (const d of arr) if (d?.name) deptNames.push(d.name);
+    }
+    const pronouns = Boolean(targetProfile.show_pronouns) && String(targetProfile.pronouns ?? '').trim()
+      ? String(targetProfile.pronouns).trim()
+      : '—';
+    return (
+      <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
+        <div className="rounded-2xl border border-[#e8e8e8] bg-white p-6">
+          <h1 className="font-authSerif text-[26px] leading-tight text-[#121212]">
+            {getDisplayName(targetProfile.full_name as string, null)}
+          </h1>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Full name</p>
+              <p className="text-[14px] text-[#121212]">{targetProfile.full_name}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Preferred name</p>
+              <p className="text-[14px] text-[#121212]">{targetProfile.preferred_name ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pronouns</p>
+              <p className="text-[14px] text-[#121212]">{pronouns}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Work email</p>
+              <p className="text-[14px] text-[#121212]">{targetProfile.email ?? '—'}</p>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Department</p>
+              <p className="text-[14px] text-[#121212]">{deptNames.length ? deptNames.join(', ') : '—'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const canManageLeaveOrg = permissionKeys.includes('leave.manage_org');
   const canManage = permissionKeys.includes('hr.manage_records');

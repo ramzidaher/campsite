@@ -131,20 +131,20 @@ export function ShellCommandMenu({
         .limit(5);
       bQuery = bQuery.eq('org_id', orgId!);
 
-      let mQuery = supabase
+      const mQuery = supabase
         .from('profiles')
-        .select('id, full_name, email, avatar_url')
+        .select('id, full_name, preferred_name, pronouns, show_pronouns, email, avatar_url')
         .eq('status', 'active')
         .or(`full_name.ilike.%${term}%,email.ilike.%${term}%`)
         .order('full_name', { ascending: true })
         .limit(5);
-      mQuery = mQuery.eq('org_id', orgId!);
+      const scopedMQuery = mQuery.eq('org_id', orgId!);
 
       const resQuery = supabase.rpc('search_staff_resources', { q: term, limit_n: 5 });
 
       const [bRes, mRes, resRes] = await Promise.all([
         bQuery,
-        showMemberSearch ? mQuery : Promise.resolve({ data: [] as never[] }),
+        scopedMQuery,
         resQuery,
       ]);
       if (cancelled) return;
@@ -163,23 +163,21 @@ export function ShellCommandMenu({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, searchActive, term, supabase, showMemberSearch, orgId]);
+  }, [open, searchActive, term, supabase, orgId]);
 
   const searchHitRows: SearchHitRow[] = useMemo(() => {
     if (!searchActive) return [];
     const rows: SearchHitRow[] = [];
-    if (showMemberSearch) {
-      for (const m of memberHits) {
-        rows.push({
-          kind: 'person',
-          id: m.id,
-          label: m.full_name || 'Unnamed member',
-          sub: m.email ?? undefined,
-          href: `/hr/records/${m.id}`,
-          avatarUrl: m.avatar_url,
-          initials: initialsFromName(m.full_name),
-        });
-      }
+    for (const m of memberHits) {
+      rows.push({
+        kind: 'person',
+        id: m.id,
+        label: m.full_name || 'Unnamed member',
+        sub: m.email ?? undefined,
+        href: `/hr/records/${m.id}`,
+        avatarUrl: m.avatar_url,
+        initials: initialsFromName(m.full_name),
+      });
     }
     for (const r of resourceHits) {
       rows.push({
@@ -200,7 +198,7 @@ export function ShellCommandMenu({
       });
     }
     return rows;
-  }, [searchActive, showMemberSearch, memberHits, resourceHits, broadcastHits]);
+  }, [searchActive, memberHits, resourceHits, broadcastHits]);
 
   const flatRows: FlatRow[] = useMemo(() => {
     const rows: FlatRow[] = [];
