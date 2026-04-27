@@ -48,6 +48,7 @@ export function DashboardHome({
   const isAdmin = variant === 'admin';
   const composeHref = canCompose ? '/broadcasts?tab=feed&compose=1' : '/broadcasts';
   const pendingHref = isAdmin ? '/admin/pending' : '/pending-approvals';
+  const recentBroadcasts = data.recentBroadcasts ?? [];
   const showUnreadBroadcastKpi = data.showBroadcastUnreadCount !== false;
   const showBroadcastTotal = data.broadcastTotal !== undefined;
   const showMemberTotal = data.memberActiveTotal !== undefined;
@@ -265,12 +266,12 @@ export function DashboardHome({
             </Link>
           </div>
           <div className="flex flex-col gap-2.5">
-            {data.recentBroadcasts.length === 0 ? (
+            {recentBroadcasts.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[#d8d8d8] bg-white px-6 py-12 text-center text-sm text-[#9b9b9b]">
                 No broadcasts yet. Check back soon.
               </div>
             ) : (
-              data.recentBroadcasts.map((b) => {
+              recentBroadcasts.map((b) => {
                 const deptName = b.departments?.name ?? 'General';
                 const channelName = b.broadcast_channels?.name ?? '';
                 const teamName = b.department_teams?.name ?? '';
