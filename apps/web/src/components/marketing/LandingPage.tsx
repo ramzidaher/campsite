@@ -19,7 +19,7 @@ function Navigation() {
           <span className="v5-nav-link v5-nav-talk">Let&apos;s talk</span>
         </div>
         <div className="v5-nav-right">
-          <Link href="/login" className="v5-btn-fun">Enter Camp -&gt;</Link>
+          <Link href="/login" className="v5-btn-fun">Enter Camp</Link>
         </div>
       </nav>
     </header>
@@ -75,6 +75,38 @@ function BottomLeftTagline() {
 }
 
 function HeroSection() {
+  const [scrollY, setScrollY] = useState(0);
+  const [parallaxEnabled, setParallaxEnabled] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateReducedMotion = () => setParallaxEnabled(!media.matches);
+    updateReducedMotion();
+
+    let rafId = 0;
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        // Keep motion bounded so cards do not drift too far.
+        setScrollY(Math.min(window.scrollY, 420));
+        rafId = 0;
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    media.addEventListener('change', updateReducedMotion);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      media.removeEventListener('change', updateReducedMotion);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  const parallax = parallaxEnabled ? scrollY : 0;
+
   return (
     <section className="v5-hero-shell">
       <div className="v5-hero">
@@ -93,7 +125,10 @@ function HeroSection() {
           </div>
         </div>
         <div className="v5-hero-right">
-          <div className="v5-ui-card v5-card-announcement">
+          <div
+            className="v5-ui-card v5-card-announcement"
+            style={{ transform: `translate3d(${parallax * -0.03}px, ${parallax * -0.12}px, 0)` }}
+          >
             <div className="v5-card-tag">Announcement</div>
             <div className="v5-card-title">New shift policy posted</div>
             <div className="v5-card-meta">Posted by Ops · All front-of-house staff</div>
@@ -106,7 +141,10 @@ function HeroSection() {
             </div>
           </div>
 
-          <div className="v5-ui-card v5-card-rota">
+          <div
+            className="v5-ui-card v5-card-rota"
+            style={{ transform: `translate3d(${parallax * 0.04}px, ${parallax * -0.18}px, 0)` }}
+          >
             <div className="v5-card-tag">Today&apos;s rota</div>
             <div className="v5-rota-row"><span>Katie L.</span><span>09:00-17:00</span></div>
             <div className="v5-rota-row"><span>Marcus B.</span><span>12:00-20:00</span></div>
@@ -114,7 +152,10 @@ function HeroSection() {
             <div className="v5-rota-row"><span>Owen R.</span><span>14:00-22:00</span></div>
           </div>
 
-          <div className="v5-ui-card v5-card-approval">
+          <div
+            className="v5-ui-card v5-card-approval"
+            style={{ transform: `translate3d(${parallax * -0.05}px, ${parallax * -0.08}px, 0)` }}
+          >
             <div className="v5-card-row">
               <div>
                 <div className="v5-card-title">Holiday request</div>
@@ -231,228 +272,58 @@ function StatementSection() {
   );
 }
 
-function ProjectsMarquee() {
-  return (
-    <div className="overflow-hidden py-8">
-      <div className="animate-marquee flex whitespace-nowrap">
-        <span className="font-grot mx-8 text-[clamp(4rem,15vw,12rem)]">CAMPSITE MODULES</span>
-        <span className="font-grot mx-8 text-[clamp(4rem,15vw,12rem)]">CAMPSITE MODULES</span>
-        <span className="font-grot mx-8 text-[clamp(4rem,15vw,12rem)]">CAMPSITE MODULES</span>
-        <span className="font-grot mx-8 text-[clamp(4rem,15vw,12rem)]">CAMPSITE MODULES</span>
-      </div>
-    </div>
-  );
-}
-
-function ProjectsSection() {
-  const features: FeatureSpotlight[] = [
-    {
-      title: 'Broadcasts',
-      subtitle: 'Company-wide updates that people actually read.',
-      bullets: ['Audience targeting by team/location', 'Read visibility and follow-through'],
-      gradient: 'linear-gradient(145deg, #d8d9ff 0%, #c9d6ff 40%, #f0f3ff 100%)',
-      kind: 'broadcasts',
-    },
-    {
-      title: 'Rota & Attendance',
-      subtitle: 'Clear scheduling with fewer last-minute surprises.',
-      bullets: ['Shift planning and swap handling', 'Attendance view in one place'],
-      gradient: 'linear-gradient(145deg, #fff0d3 0%, #ffe0aa 44%, #fff5e4 100%)',
-      kind: 'rota',
-    },
-    {
-      title: 'Recruitment',
-      subtitle: 'Move from applicants to offers without tool-hopping.',
-      bullets: ['Pipeline stages and interview flow', 'Hiring visibility for managers and HR'],
-      gradient: 'linear-gradient(145deg, #d9f1e5 0%, #bee6d2 44%, #eefaf3 100%)',
-      kind: 'recruitment',
-    },
-    {
-      title: 'People Ops',
-      subtitle: 'Run reviews and records with shared context.',
-      bullets: ['Centralized people information', 'Performance cycle tracking'],
-      gradient: 'linear-gradient(145deg, #f2def8 0%, #e9cdf6 42%, #f9effd 100%)',
-      kind: 'peopleOps',
-    },
+function ProblemSection() {
+  const issues = [
+    { quote: 'Can you re-send the rota? I cannot find it.', source: 'WhatsApp group' },
+    { quote: 'Who approved Marcus’s holiday?', source: 'Someone’s inbox' },
+    { quote: 'The new starter has not been set up yet.', source: 'Slack, probably' },
+    { quote: 'Did anyone tell the team about the policy change?', source: 'A spreadsheet' },
+    { quote: 'We had three applicants this week. I think.', source: 'Email thread' },
   ];
 
   return (
-    <section className="px-4 py-16 md:px-8">
+    <section className="problem-section px-4 py-16 md:px-8 md:py-20">
       <div className="mx-auto max-w-7xl">
-        <p className="font-mono mb-12 text-xs tracking-wider">SELECTED FEATURES</p>
-        <ProjectsMarquee />
-        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2">
-          {features.map((feature) => (
-            <FeatureSpotlightCard key={feature.title} feature={feature} />
+        <p className="font-mono mb-10 text-xs tracking-wider text-[color:var(--lp-text-muted)]">SOUND FAMILIAR?</p>
+
+        <div className="problem-chaos">
+          {issues.map((item, index) => (
+            <div key={item.quote} className="problem-line">
+              <span className="problem-index">{String(index + 1).padStart(2, '0')}</span>
+              <p className="problem-quote">{item.quote}</p>
+              <span className="problem-source">{item.source}</span>
+            </div>
           ))}
+        </div>
+
+        <div className="problem-pivot">
+          <article className="problem-panel problem-panel-left">
+            <p className="font-mono problem-eyebrow">The problem</p>
+            <h3 className="problem-heading">Your team runs on tools that were never built for teams.</h3>
+            <p className="problem-body">
+              Most ops work lives in the gaps between apps, inboxes, and group chats. Nothing is tracked, nothing
+              is owned, and as the team grows the operational drag compounds.
+            </p>
+            <div className="problem-actions">
+              <Link href="/register" className="v5-btn-primary">Start your workspace</Link>
+            </div>
+            <Link href="#contact" className="problem-secondary-link">Book a demo</Link>
+          </article>
+
+          <article className="problem-panel problem-panel-right">
+            <div>
+              <p className="font-mono problem-eyebrow problem-eyebrow-fix">The fix</p>
+              <h3 className="problem-heading problem-heading-fix">One place for everything your team actually needs.</h3>
+              <p className="problem-body problem-body-fix">
+                Announcements, rota, HR, hiring, and approvals in a single workspace your whole team can use from
+                day one.
+              </p>
+            </div>
+            <Link href="/login" className="v5-btn-fun problem-enter-btn">Enter Camp</Link>
+          </article>
         </div>
       </div>
     </section>
-  );
-}
-
-type FeatureSpotlight = {
-  title: string;
-  subtitle: string;
-  bullets: string[];
-  gradient: string;
-  kind: 'broadcasts' | 'rota' | 'recruitment' | 'peopleOps';
-};
-
-function FeatureMiniMockup({ kind }: { kind: FeatureSpotlight['kind'] }) {
-  if (kind === 'broadcasts') {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="mb-2 flex items-center justify-between text-[10px] font-semibold text-black/55">
-          <span>Broadcasts</span>
-          <span>3 unread</span>
-        </div>
-        <div className="space-y-2">
-          {[
-            ['Q4 update published', '52/58 read'],
-            ['Policy reminder', '44/58 read'],
-            ['Team social invite', '31/58 read'],
-          ].map(([title, read]) => (
-            <div key={title as string} className="rounded-lg border border-black/10 bg-white/70 px-3 py-2">
-              <p className="text-[11px] font-medium">{title as string}</p>
-              <p className="mt-1 text-[10px] text-black/55">{read as string}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 space-y-1">
-          <div className="h-1.5 rounded-full bg-black/10">
-            <div className="h-full w-[88%] rounded-full bg-black/35" />
-          </div>
-          <div className="h-1.5 rounded-full bg-black/10">
-            <div className="h-full w-[74%] rounded-full bg-black/25" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-  if (kind === 'rota') {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="mb-2 text-[10px] font-semibold text-black/55">This week rota</div>
-        <div className="grid grid-cols-6 gap-1.5">
-          <div />
-          {['M', 'T', 'W', 'T', 'F'].map((d, i) => (
-            <div key={`${d}-${i}`} className="text-center text-[10px] font-semibold text-black/55">{d}</div>
-          ))}
-          {[
-            ['AM', [1, 1, 0, 1, 1]],
-            ['PM', [1, 0, 1, 1, 1]],
-            ['EV', [0, 1, 1, 0, 1]],
-          ].map(([label, row]) => (
-            <div key={label as string} className="contents">
-              <div className="flex items-center text-[10px] font-medium text-black/50">{label as string}</div>
-              {(row as number[]).map((on, i) => (
-                <div key={i} className={`h-6 rounded-md ${on ? 'bg-black/25' : 'border border-dashed border-black/25 bg-white/40'}`} />
-              ))}
-            </div>
-          ))}
-        </div>
-        <div className="mt-auto pt-3 text-[10px] text-black/55">2 swaps pending approval</div>
-      </div>
-    );
-  }
-  if (kind === 'recruitment') {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="mb-2 text-[10px] font-semibold text-black/55">Hiring pipeline</div>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            ['Applied', 12],
-            ['Interview', 4],
-            ['Offer', 1],
-          ].map(([label, count]) => (
-            <div key={label as string} className="rounded-lg border border-black/10 bg-white/55 p-2">
-              <p className="text-[10px] font-semibold text-black/60">{label as string}</p>
-              <p className="font-grot mt-1 text-xl leading-none">{count as number}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 space-y-1.5">
-          {['Sarah Morrow', 'James Harlow', 'Priya Singh'].map((name) => (
-            <div key={name} className="rounded-md border border-black/10 bg-white/65 px-2.5 py-1.5 text-[10px]">
-              {name}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="flex h-full flex-col">
-      <div className="mb-2 text-[10px] font-semibold text-black/55">People ops status</div>
-      <div className="space-y-2.5">
-        {[
-          ['Profiles complete', '84%'],
-          ['Reviews in progress', '12'],
-          ['Onboarding tasks', '7'],
-        ].map(([label, value]) => (
-          <div key={label as string} className="flex items-center justify-between rounded-lg border border-black/10 bg-white/55 px-3 py-2">
-            <span className="text-[11px] text-black/65">{label as string}</span>
-            <span className="text-[11px] font-semibold">{value as string}</span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-auto grid grid-cols-3 gap-1.5 pt-3">
-        <div className="rounded-md bg-black/15 px-2 py-1 text-center text-[10px]">HR</div>
-        <div className="rounded-md bg-black/15 px-2 py-1 text-center text-[10px]">Ops</div>
-        <div className="rounded-md bg-black/15 px-2 py-1 text-center text-[10px]">Mgr</div>
-      </div>
-    </div>
-  );
-}
-
-function FeatureSpotlightCard({ feature }: { feature: FeatureSpotlight }) {
-  const [badgePos, setBadgePos] = useState({ x: 52, y: 24 });
-  const [isActive, setIsActive] = useState(false);
-
-  const handleMove = (event: React.MouseEvent<HTMLElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 100;
-    const y = ((event.clientY - rect.top) / rect.height) * 100;
-    setBadgePos({
-      x: Math.max(16, Math.min(84, x)),
-      y: Math.max(12, Math.min(80, y)),
-    });
-    setIsActive(true);
-  };
-
-  const resetBadge = () => {
-    setIsActive(false);
-    setBadgePos({ x: 52, y: 24 });
-  };
-
-  return (
-    <article
-      className="project-card group relative aspect-[5/4] overflow-hidden rounded-2xl border p-4 md:p-5"
-      style={{ borderColor: 'var(--lp-border)', background: feature.gradient }}
-      onMouseMove={handleMove}
-      onMouseEnter={() => setIsActive(true)}
-      onMouseLeave={resetBadge}
-    >
-      <div className="absolute inset-0 p-4 md:p-5">
-        <div
-          className={`h-full rounded-xl border border-black/10 bg-white/40 p-4 md:p-5 transition-all duration-500 ${isActive ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-85'}`}
-        >
-          <FeatureMiniMockup kind={feature.kind} />
-        </div>
-      </div>
-
-      <div
-        className={`pointer-events-none absolute z-[3] rounded-xl bg-[#1e33ff] px-4 py-2 font-mono text-[12px] tracking-[0.12em] text-white shadow-lg transition-all duration-500 ${isActive ? 'opacity-100' : 'opacity-0'}`}
-        style={{
-          left: `${badgePos.x}%`,
-          top: `${badgePos.y}%`,
-          transform: 'translate(-50%, -50%) rotate(-6deg)',
-        }}
-      >
-        {feature.title.toUpperCase()}
-      </div>
-    </article>
   );
 }
 
@@ -577,7 +448,7 @@ export function LandingPage() {
       <main className="min-h-screen">
         <HeroSection />
         <StatementSection />
-        <ProjectsSection />
+        <ProblemSection />
         <CTASection />
         <Footer />
       </main>
@@ -592,6 +463,11 @@ export function LandingPage() {
           --lp-text-muted: var(--campsite-text-muted);
           --lp-border: var(--campsite-border);
           --lp-accent: #121212;
+          --problem-panel-left-bg: linear-gradient(180deg, #f7f4ef 0%, #f1ece5 100%);
+          --problem-panel-right-bg: linear-gradient(180deg, #f5ede7 0%, #f0e5dc 100%);
+          --problem-fix-eyebrow: #a24d2a;
+          --problem-fix-heading: #2b2019;
+          --problem-fix-body: rgba(43, 32, 25, 0.76);
         }
         body.dark .landing-page {
           --lp-background: #121212;
@@ -601,6 +477,11 @@ export function LandingPage() {
           --lp-text-muted: #b0b0b0;
           --lp-border: #2a2a2a;
           --lp-accent: #faf9f6;
+          --problem-panel-left-bg: linear-gradient(180deg, #121110 0%, #100f0e 100%);
+          --problem-panel-right-bg: linear-gradient(180deg, #1f1713 0%, #1a1310 100%);
+          --problem-fix-eyebrow: #e7a788;
+          --problem-fix-heading: #f7e8dd;
+          --problem-fix-body: rgba(247, 232, 221, 0.76);
         }
         .landing-page .font-grot {
           font-family: var(--font-auth-serif), Georgia, ui-serif, serif;
@@ -723,12 +604,12 @@ export function LandingPage() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: 9px 16px;
+          padding: 9px 18px;
           color: #fff;
           background: #e8622a;
           border: 1px solid rgba(255, 255, 255, 0.14);
-          font-weight: 700;
-          letter-spacing: 0.04em;
+          font-weight: 600;
+          letter-spacing: 0.03em;
           text-transform: uppercase;
           box-shadow: 0 0 0 2px rgba(232, 98, 42, 0.2);
         }
@@ -848,6 +729,124 @@ export function LandingPage() {
           font-size: 13px;
           color: rgba(240, 235, 227, 0.4);
         }
+        .landing-page .problem-chaos {
+          border-top: 1px solid rgba(255, 255, 255, 0.14);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+          margin-bottom: 32px;
+        }
+        .landing-page .problem-line {
+          display: grid;
+          grid-template-columns: 36px minmax(0, 1fr) auto;
+          gap: 14px;
+          align-items: baseline;
+          padding: 16px 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .landing-page .problem-line:first-child {
+          border-top: 0;
+        }
+        .landing-page .problem-index {
+          font-size: 11px;
+          letter-spacing: 0.08em;
+          color: var(--lp-text-muted);
+          opacity: 0.8;
+        }
+        .landing-page .problem-quote {
+          font-family: var(--font-auth-serif), Georgia, ui-serif, serif;
+          font-size: clamp(22px, 2.4vw, 34px);
+          font-style: italic;
+          line-height: 1.25;
+          color: color-mix(in srgb, var(--lp-foreground) 70%, transparent);
+          transition: color 0.25s ease;
+        }
+        .landing-page .problem-line:hover .problem-quote {
+          color: var(--lp-foreground);
+        }
+        .landing-page .problem-source {
+          font-size: 11px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--lp-text-muted);
+          opacity: 0.7;
+          white-space: nowrap;
+          transition: opacity 0.25s ease, color 0.25s ease;
+        }
+        .landing-page .problem-line:hover .problem-source {
+          opacity: 0.95;
+          color: color-mix(in srgb, var(--lp-foreground) 60%, var(--lp-text-muted));
+        }
+        .landing-page .problem-pivot {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1px;
+          background: var(--lp-border);
+          border: 1px solid var(--lp-border);
+        }
+        .landing-page .problem-panel {
+          padding: 36px 32px;
+        }
+        .landing-page .problem-panel-left {
+          background: var(--problem-panel-left-bg);
+        }
+        .landing-page .problem-panel-right {
+          background: var(--problem-panel-right-bg);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: 22px;
+        }
+        .landing-page .problem-eyebrow {
+          margin-bottom: 16px;
+          color: var(--lp-text-muted);
+        }
+        .landing-page .problem-heading {
+          font-family: var(--font-auth-serif), Georgia, ui-serif, serif;
+          font-size: clamp(1.8rem, 3.3vw, 2.6rem);
+          line-height: 1.1;
+          letter-spacing: -0.02em;
+          margin-bottom: 12px;
+          color: var(--lp-foreground);
+        }
+        .landing-page .problem-body {
+          max-width: 38ch;
+          line-height: 1.65;
+          color: var(--lp-text-secondary);
+        }
+        .landing-page .problem-eyebrow-fix {
+          color: var(--problem-fix-eyebrow);
+        }
+        .landing-page .problem-heading-fix {
+          color: var(--problem-fix-heading);
+        }
+        .landing-page .problem-body-fix {
+          color: var(--problem-fix-body);
+          max-width: 40ch;
+        }
+        .landing-page .problem-actions {
+          margin-top: 22px;
+          display: flex;
+          align-items: center;
+        }
+        .landing-page .problem-secondary-link {
+          display: inline-flex;
+          width: fit-content;
+          margin-top: 14px;
+          font-size: 13px;
+          letter-spacing: 0.03em;
+          color: var(--lp-text-secondary);
+          text-decoration: underline;
+          text-underline-offset: 4px;
+          text-decoration-thickness: 1px;
+          transition: color 0.2s ease, opacity 0.2s ease;
+        }
+        .landing-page .problem-secondary-link:hover {
+          color: var(--lp-foreground);
+          opacity: 1;
+        }
+        .landing-page .problem-enter-btn {
+          width: 100%;
+          justify-content: center;
+        }
         .landing-page .v5-bottom-bar {
           position: fixed;
           left: 0;
@@ -879,6 +878,7 @@ export function LandingPage() {
           padding: 12px 14px;
           box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
           backdrop-filter: blur(4px);
+          will-change: transform;
         }
         .landing-page .v5-card-announcement {
           top: 0;
@@ -1104,6 +1104,17 @@ export function LandingPage() {
           .landing-page .v5-btn-primary,
           .landing-page .v5-btn-secondary {
             width: 100%;
+          }
+          .landing-page .problem-line {
+            grid-template-columns: 30px 1fr;
+            gap: 10px;
+          }
+          .landing-page .problem-source {
+            grid-column: 2;
+            margin-top: 4px;
+          }
+          .landing-page .problem-pivot {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
