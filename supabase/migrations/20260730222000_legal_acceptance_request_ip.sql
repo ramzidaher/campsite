@@ -136,6 +136,12 @@ grant execute on function public.record_my_legal_acceptance(
   jsonb
 ) to authenticated;
 
+drop function if exists public.platform_list_legal_acceptance_events(
+  text,
+  integer,
+  integer
+);
+
 create or replace function public.platform_list_legal_acceptance_events(
   p_bundle_version text default null,
   p_limit integer default 50,

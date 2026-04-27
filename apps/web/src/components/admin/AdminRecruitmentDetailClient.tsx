@@ -25,6 +25,26 @@ export type RecruitmentDetail = {
   contract_type: string;
   ideal_candidate_profile: string;
   specific_requirements: string | null;
+  business_case: string | null;
+  headcount_type: string | null;
+  cost_center: string | null;
+  budget_approved: boolean | null;
+  target_start_window: string | null;
+  number_of_positions: number | null;
+  regrade_status: string | null;
+  approval_status: string | null;
+  role_profile_link: string | null;
+  advertisement_link: string | null;
+  advert_release_date: string | null;
+  advert_closing_date: string | null;
+  shortlisting_dates: unknown;
+  interview_schedule: unknown;
+  eligibility: string | null;
+  pay_rate: string | null;
+  contract_length_detail: string | null;
+  additional_advertising_channels: string | null;
+  interview_panel_details: string | null;
+  needs_advert_copy_help: boolean | null;
   status: string;
   urgency: string;
   archived_at: string | null;
@@ -71,6 +91,32 @@ function fmtDate(iso: string) {
   return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+function fmtDateOnly(iso: string | null | undefined) {
+  if (!iso) return 'TBC';
+  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function parseDateArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((v) => String(v ?? '').trim()).filter(Boolean);
+}
+
+function parseInterviewSchedule(value: unknown): Array<{ date: string; startTime: string; endTime: string; notes: string }> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((row) => ({
+      date: String((row as { date?: unknown } | null)?.date ?? '').trim(),
+      startTime: String((row as { startTime?: unknown } | null)?.startTime ?? '').trim(),
+      endTime: String((row as { endTime?: unknown } | null)?.endTime ?? '').trim(),
+      notes: String((row as { notes?: unknown } | null)?.notes ?? '').trim(),
+    }))
+    .filter((row) => row.date || row.startTime || row.endTime || row.notes);
+}
+
 function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
@@ -97,6 +143,8 @@ export function AdminRecruitmentDetailClient({
 
   const d = req.departments;
   const deptName = (Array.isArray(d) ? d[0]?.name : d?.name) ?? '—';
+  const shortlistingDates = parseDateArray(req.shortlisting_dates);
+  const interviewSchedule = parseInterviewSchedule(req.interview_schedule);
   const sub = req.submitter;
   const submitterName = ((Array.isArray(sub) ? sub[0]?.full_name : sub?.full_name) ?? '').trim() || '—';
 
@@ -179,6 +227,26 @@ export function AdminRecruitmentDetailClient({
               <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Start date needed</dt>
               <dd className="mt-1.5 leading-relaxed text-[#121212]">{fmtDate(req.start_date_needed)}</dd>
             </div>
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Positions</dt>
+              <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.number_of_positions ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Headcount type</dt>
+              <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.headcount_type ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Cost center</dt>
+              <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.cost_center ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Budget approved</dt>
+              <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.budget_approved ? 'Yes' : 'No'}</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Target start window</dt>
+              <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.target_start_window ?? '—'}</dd>
+            </div>
           </dl>
 
           <div className="mt-8 border-t border-[#f0f0f0] pt-8">
@@ -192,6 +260,98 @@ export function AdminRecruitmentDetailClient({
               <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[#121212]">{req.specific_requirements}</p>
             </div>
           ) : null}
+
+          {req.business_case?.trim() ? (
+            <div className="mt-8 border-t border-[#f0f0f0] pt-8">
+              <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Business case</h3>
+              <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[#121212]">{req.business_case}</p>
+            </div>
+          ) : null}
+
+          <div className="mt-8 border-t border-[#f0f0f0] pt-8">
+            <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Key dates</h3>
+            <dl className="grid gap-4 text-[14px] sm:grid-cols-2">
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Advert release</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">{fmtDateOnly(req.advert_release_date)}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Advert close</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">{fmtDateOnly(req.advert_closing_date)}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Shortlisting dates</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">
+                  {shortlistingDates.length ? shortlistingDates.map((dte) => fmtDateOnly(dte)).join(', ') : 'TBC'}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Interview schedule</dt>
+                <dd className="mt-1.5 space-y-1 leading-relaxed text-[#121212]">
+                  {interviewSchedule.length ? (
+                    interviewSchedule.map((entry, idx) => (
+                      <p key={`${entry.date}-${entry.startTime}-${idx}`}>
+                        {fmtDateOnly(entry.date)} · {entry.startTime || 'TBC'}-{entry.endTime || 'TBC'}
+                        {entry.notes ? ` · ${entry.notes}` : ''}
+                      </p>
+                    ))
+                  ) : (
+                    <p>TBC</p>
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="mt-8 border-t border-[#f0f0f0] pt-8">
+            <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Governance and publishing</h3>
+            <dl className="grid gap-4 text-[14px] sm:grid-cols-2">
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Re-grade status</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.regrade_status ?? '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Approval status</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.approval_status ?? '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Eligible applicants</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.eligibility ?? '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pay rate</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.pay_rate ?? '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Contract length</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.contract_length_detail ?? '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Advert copy help</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212]">{req.needs_advert_copy_help ? 'Requested' : 'Not requested'}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Role profile link</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212] break-words">{req.role_profile_link ?? '—'}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Advertisement link</dt>
+                <dd className="mt-1.5 leading-relaxed text-[#121212] break-words">{req.advertisement_link ?? '—'}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Additional channels</dt>
+                <dd className="mt-1.5 whitespace-pre-wrap leading-relaxed text-[#121212]">
+                  {req.additional_advertising_channels ?? '—'}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Interview panel details</dt>
+                <dd className="mt-1.5 whitespace-pre-wrap leading-relaxed text-[#121212]">
+                  {req.interview_panel_details ?? '—'}
+                </dd>
+              </div>
+            </dl>
+          </div>
         </div>
 
         {/* Sidebar */}

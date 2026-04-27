@@ -14,6 +14,11 @@ export type AdminRecruitmentListRow = {
   archived_at: string | null;
   created_at: string;
   department_id: string;
+  start_date_needed: string;
+  advert_release_date: string | null;
+  advert_closing_date: string | null;
+  shortlisting_dates: unknown;
+  interview_schedule: unknown;
   departments: { name: string } | { name: string }[] | null;
   submitter: { full_name: string } | { full_name: string }[] | null;
 };
@@ -27,6 +32,41 @@ const URGENCY_STYLE = recruitmentUrgencyChips;
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtDateOnly(iso: string | null | undefined): string {
+  if (!iso) return 'TBC';
+  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function parseDateArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((v) => String(v ?? '').trim()).filter(Boolean);
+}
+
+function parseInterviewDates(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => String((entry as { date?: unknown } | null)?.date ?? '').trim())
+    .filter(Boolean);
+}
+
+function renderKeyDates(row: AdminRecruitmentListRow): string {
+  const shortlistDates = parseDateArray(row.shortlisting_dates);
+  const interviewDates = parseInterviewDates(row.interview_schedule);
+  const shortlistLabel =
+    shortlistDates.length > 1
+      ? `${fmtDateOnly(shortlistDates[0])} (+${shortlistDates.length - 1})`
+      : fmtDateOnly(shortlistDates[0]);
+  const interviewLabel =
+    interviewDates.length > 1
+      ? `${fmtDateOnly(interviewDates[0])} (+${interviewDates.length - 1})`
+      : fmtDateOnly(interviewDates[0]);
+  return `Advert ${fmtDateOnly(row.advert_release_date)}-${fmtDateOnly(row.advert_closing_date)} · Shortlist ${shortlistLabel} · Interviews ${interviewLabel} · Start ${fmtDateOnly(row.start_date_needed)}`;
 }
 
 function deptName(d: AdminRecruitmentListRow['departments']): string {
@@ -311,6 +351,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                   {' · '}
                   {fmtDate(r.created_at)}
                 </p>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">{renderKeyDates(r)}</p>
               </div>
               <span
                 className="shrink-0 pt-0.5 text-[16px] font-medium text-[#9b9b9b] transition-colors group-hover:text-[#121212]"
@@ -359,6 +400,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                   {' · '}
                   {fmtDate(r.created_at)}
                 </p>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">{renderKeyDates(r)}</p>
               </div>
               <span
                 className="shrink-0 pt-0.5 text-[18px] font-medium text-[#9b9b9b] transition-colors group-hover:text-[#121212]"

@@ -29,6 +29,31 @@ export type ManagerRecruitmentRow = {
   departments: { name: string } | { name: string }[] | null;
 };
 
+type InterviewScheduleInput = {
+  date: string;
+  startTime: string;
+  endTime: string;
+  notes: string;
+};
+
+const REGRADE_OPTIONS = [
+  { value: 'requested_or_will_request', label: 'I have or will request role re-grading with HR Manager' },
+  { value: 'not_applicable', label: 'Re-grading is not applicable (direct replacement, no role changes)' },
+  { value: 'not_sure', label: 'Not sure (please reach out to HR Manager)' },
+] as const;
+
+const APPROVAL_OPTIONS = [
+  { value: 'budget_and_hr_group', label: 'Approved by Budget Holder and HR Group' },
+  { value: 'budget_only', label: 'Approved by Budget Holder, but not HR Group' },
+  { value: 'not_approved', label: 'Not approved yet' },
+] as const;
+
+const ELIGIBILITY_OPTIONS = [
+  { value: 'internal_staff_only', label: 'Internal staff only (DM recruitment only)' },
+  { value: 'internal_and_external', label: 'Internal and external candidates' },
+  { value: 'sussex_or_bsms_students_only', label: 'Sussex or BSMS students only' },
+] as const;
+
 export function ManagerRecruitmentClient({
   managedDepartments,
   initialRequests,
@@ -47,6 +72,10 @@ export function ManagerRecruitmentClient({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [shortlistingDates, setShortlistingDates] = useState<string[]>(['']);
+  const [interviewSchedule, setInterviewSchedule] = useState<InterviewScheduleInput[]>([
+    { date: '', startTime: '', endTime: '', notes: '' },
+  ]);
   const [showArchived, setShowArchived] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'urgency' | 'status'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -98,12 +127,38 @@ export function ManagerRecruitmentClient({
         idealCandidateProfile: String(fd.get('idealCandidateProfile') ?? ''),
         specificRequirements: String(fd.get('specificRequirements') ?? ''),
         urgency: String(fd.get('urgency') ?? ''),
+        numberOfPositions: String(fd.get('numberOfPositions') ?? ''),
+        regradeStatus: String(fd.get('regradeStatus') ?? ''),
+        approvalStatus: String(fd.get('approvalStatus') ?? ''),
+        roleProfileLink: String(fd.get('roleProfileLink') ?? ''),
+        advertisementLink: String(fd.get('advertisementLink') ?? ''),
+        advertReleaseDate: String(fd.get('advertReleaseDate') ?? ''),
+        advertClosingDate: String(fd.get('advertClosingDate') ?? ''),
+        shortlistingDates: JSON.stringify(shortlistingDates.map((d) => d.trim()).filter(Boolean)),
+        interviewSchedule: JSON.stringify(
+          interviewSchedule
+            .map((row) => ({
+              date: row.date.trim(),
+              startTime: row.startTime.trim(),
+              endTime: row.endTime.trim(),
+              notes: row.notes.trim(),
+            }))
+            .filter((row) => row.date || row.startTime || row.endTime || row.notes)
+        ),
+        eligibility: String(fd.get('eligibility') ?? ''),
+        payRate: String(fd.get('payRate') ?? ''),
+        contractLengthDetail: String(fd.get('contractLengthDetail') ?? ''),
+        additionalAdvertisingChannels: String(fd.get('additionalAdvertisingChannels') ?? ''),
+        interviewPanelDetails: String(fd.get('interviewPanelDetails') ?? ''),
+        needsAdvertCopyHelp: String(fd.get('needsAdvertCopyHelp') ?? '') === 'on',
       });
       if (!res.ok) {
         setError(res.error);
         return;
       }
       (e.target as HTMLFormElement).reset();
+      setShortlistingDates(['']);
+      setInterviewSchedule([{ date: '', startTime: '', endTime: '', notes: '' }]);
       setSuccess('Recruitment request submitted. HR has been notified in-app and by email.');
       router.refresh();
     });
@@ -209,11 +264,41 @@ export function ManagerRecruitmentClient({
               </div>
               <div>
                 <label className={labelClass} htmlFor="headcountType">
-                  Headcount type
+                  Is this a new role or direct replacement?
                 </label>
                 <select id="headcountType" name="headcountType" required className={fieldClass} defaultValue="new">
-                  <option value="new">New headcount</option>
-                  <option value="backfill">Backfill</option>
+                  <option value="new">New</option>
+                  <option value="backfill">Direct replacement</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="numberOfPositions">
+                  Number of positions
+                </label>
+                <input id="numberOfPositions" name="numberOfPositions" type="number" min={1} required className={fieldClass} defaultValue={1} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="regradeStatus">
+                  Re-grading confirmation
+                </label>
+                <select id="regradeStatus" name="regradeStatus" required className={fieldClass} defaultValue={REGRADE_OPTIONS[0].value}>
+                  {REGRADE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="approvalStatus">
+                  Approval status
+                </label>
+                <select id="approvalStatus" name="approvalStatus" required className={fieldClass} defaultValue={APPROVAL_OPTIONS[0].value}>
+                  {APPROVAL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -235,10 +320,41 @@ export function ManagerRecruitmentClient({
                   placeholder="e.g. Q4 2026 / within 45 days"
                 />
               </div>
+              <div>
+                <label className={labelClass} htmlFor="roleProfileLink">
+                  Role profile link
+                </label>
+                <input
+                  id="roleProfileLink"
+                  name="roleProfileLink"
+                  required
+                  className={fieldClass}
+                  autoComplete="off"
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="advertisementLink">
+                  Advertisement link
+                </label>
+                <input
+                  id="advertisementLink"
+                  name="advertisementLink"
+                  className={fieldClass}
+                  autoComplete="off"
+                  placeholder="https://... (leave blank only if advert help needed)"
+                />
+              </div>
               <div className="sm:col-span-2">
                 <label className="inline-flex items-center gap-2 text-[12px] font-medium text-[#505050]">
                   <input id="budgetApproved" name="budgetApproved" type="checkbox" className="h-4 w-4" />
                   Budget approved
+                </label>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="inline-flex items-center gap-2 text-[12px] font-medium text-[#505050]">
+                  <input id="needsAdvertCopyHelp" name="needsAdvertCopyHelp" type="checkbox" className="h-4 w-4" />
+                  I need HR help writing the advertisement copy
                 </label>
               </div>
               <div>
@@ -283,6 +399,156 @@ export function ManagerRecruitmentClient({
                   ))}
                 </select>
               </div>
+              <div>
+                <label className={labelClass} htmlFor="advertReleaseDate">
+                  Advertisement release date
+                </label>
+                <input id="advertReleaseDate" name="advertReleaseDate" type="date" required className={fieldClass} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="advertClosingDate">
+                  Advertisement closing date
+                </label>
+                <input id="advertClosingDate" name="advertClosingDate" type="date" required className={fieldClass} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="eligibility">
+                  Eligible applicants
+                </label>
+                <select id="eligibility" name="eligibility" required className={fieldClass} defaultValue={ELIGIBILITY_OPTIONS[1].value}>
+                  {ELIGIBILITY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="payRate">
+                  Pay rate / grade
+                </label>
+                <input id="payRate" name="payRate" required className={fieldClass} autoComplete="off" placeholder="CSA / DM / Grade X" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="contractLengthDetail">
+                  Contract length / permanent detail
+                </label>
+                <input
+                  id="contractLengthDetail"
+                  name="contractLengthDetail"
+                  required
+                  className={fieldClass}
+                  autoComplete="off"
+                  placeholder="e.g. 12 months fixed term / permanent"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className={labelClass}>Shortlisting date(s)</label>
+              {shortlistingDates.map((value, idx) => (
+                <div key={`shortlisting-${idx}`} className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    required={idx === 0}
+                    value={value}
+                    onChange={(e) => {
+                      const next = [...shortlistingDates];
+                      next[idx] = e.target.value;
+                      setShortlistingDates(next);
+                    }}
+                    className={fieldClass}
+                  />
+                  {shortlistingDates.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setShortlistingDates(shortlistingDates.filter((_, i) => i !== idx))}
+                      className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px] text-[#505050] hover:bg-[#fafafa]"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShortlistingDates((prev) => [...prev, ''])}
+                className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px] text-[#505050] hover:bg-[#fafafa]"
+              >
+                + Add shortlisting date
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <label className={labelClass}>Interview date(s) and times</label>
+              {interviewSchedule.map((row, idx) => (
+                <div key={`interview-${idx}`} className="rounded-lg border border-[#e8e8e8] bg-[#fafafa] p-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <input
+                      type="date"
+                      required={idx === 0}
+                      value={row.date}
+                      onChange={(e) => {
+                        const next = [...interviewSchedule];
+                        next[idx] = { ...next[idx], date: e.target.value };
+                        setInterviewSchedule(next);
+                      }}
+                      className={fieldClass}
+                    />
+                    <input
+                      type="time"
+                      required={idx === 0}
+                      value={row.startTime}
+                      onChange={(e) => {
+                        const next = [...interviewSchedule];
+                        next[idx] = { ...next[idx], startTime: e.target.value };
+                        setInterviewSchedule(next);
+                      }}
+                      className={fieldClass}
+                    />
+                    <input
+                      type="time"
+                      required={idx === 0}
+                      value={row.endTime}
+                      onChange={(e) => {
+                        const next = [...interviewSchedule];
+                        next[idx] = { ...next[idx], endTime: e.target.value };
+                        setInterviewSchedule(next);
+                      }}
+                      className={fieldClass}
+                    />
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={row.notes}
+                    onChange={(e) => {
+                      const next = [...interviewSchedule];
+                      next[idx] = { ...next[idx], notes: e.target.value };
+                      setInterviewSchedule(next);
+                    }}
+                    className={`${fieldClass} mt-3`}
+                    placeholder="Optional notes (location, panel split, etc.)"
+                  />
+                  {interviewSchedule.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setInterviewSchedule(interviewSchedule.filter((_, i) => i !== idx))}
+                      className="mt-3 rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px] text-[#505050] hover:bg-white"
+                    >
+                      Remove interview slot
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setInterviewSchedule((prev) => [...prev, { date: '', startTime: '', endTime: '', notes: '' }])
+                }
+                className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px] text-[#505050] hover:bg-[#fafafa]"
+              >
+                + Add interview slot
+              </button>
             </div>
             <div>
               <label className={labelClass} htmlFor="businessCase">
@@ -320,6 +586,31 @@ export function ManagerRecruitmentClient({
                 rows={3}
                 className={fieldClass}
                 placeholder="Certifications, schedule constraints, compliance notes…"
+              />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="additionalAdvertisingChannels">
+                Additional advertising channels <span className="font-normal text-[#9b9b9b]">(optional)</span>
+              </label>
+              <textarea
+                id="additionalAdvertisingChannels"
+                name="additionalAdvertisingChannels"
+                rows={3}
+                className={fieldClass}
+                placeholder="Any extra websites/channels besides default channels..."
+              />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="interviewPanelDetails">
+                Shortlisting/interview panel details
+              </label>
+              <textarea
+                id="interviewPanelDetails"
+                name="interviewPanelDetails"
+                required
+                rows={3}
+                className={fieldClass}
+                placeholder="List panel members and rationale for suitability..."
               />
             </div>
             <div className="pt-1">
