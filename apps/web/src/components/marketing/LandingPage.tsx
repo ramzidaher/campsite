@@ -8,11 +8,13 @@ import { ProblemSection } from '@/components/landing/ProblemSection';
 import { CTASection } from '@/components/landing/CTASection';
 import { Footer } from '@/components/landing/Footer';
 import { CookieBanner } from '@/components/landing/CookieBanner';
+import { OfflineBanner } from '@/components/landing/OfflineBanner';
 
 export function LandingPage() {
   return (
     <div className="landing-page min-h-screen bg-[color:var(--lp-background)] text-[color:var(--lp-foreground)]">
       <Navigation />
+      <OfflineBanner />
       <BottomBar />
       <main className="min-h-screen pb-[calc(var(--bottom-bar-height)+10px)]">
         <HeroSection />
@@ -48,6 +50,7 @@ export function LandingPage() {
           --lp-hero-card-meta: rgba(36, 29, 24, 0.68);
           --lp-hero-card-label: rgba(36, 29, 24, 0.56);
           --lp-hero-row: rgba(31, 25, 21, 0.12);
+          cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M4 24L13.5 5.5L17.2 13.2L21.1 9.6L24 24Z' fill='%23241d18'/%3E%3Ccircle cx='18.8' cy='8' r='2.3' fill='%23e8622a'/%3E%3C/svg%3E") 4 4, auto;
         }
         body.dark .landing-page {
           --lp-background: #121212;
@@ -98,6 +101,12 @@ export function LandingPage() {
           white-space: nowrap;
           width: 1px;
         }
+        .landing-page a,
+        .landing-page button,
+        .landing-page input,
+        .landing-page [role='button'] {
+          cursor: pointer;
+        }
         .landing-page a { transition: opacity 0.2s ease; }
         .landing-page a:hover { opacity: 0.7; }
         @keyframes cta-smoke-rise {
@@ -112,6 +121,19 @@ export function LandingPage() {
         }
         .landing-page .cta-smoke-wisp-delay-1 { animation-delay: 0.7s; }
         .landing-page .cta-smoke-wisp-delay-2 { animation-delay: 1.4s; }
+        .landing-page .landing-offline-banner {
+          position: sticky;
+          top: 64px;
+          z-index: 45;
+          border-top: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
+          border-bottom: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
+          background: color-mix(in srgb, #f59e0b 16%, var(--lp-background));
+          color: color-mix(in srgb, var(--lp-foreground) 92%, #f59e0b 8%);
+          padding: 9px 14px;
+          text-align: center;
+          font-size: 13px;
+          line-height: 1.35;
+        }
         .landing-page .cookie-banner {
           backdrop-filter: blur(14px);
           background: color-mix(in srgb, #0f0e0d 82%, transparent);
@@ -333,6 +355,7 @@ export function LandingPage() {
           .landing-page .v5-nav,
           .landing-page .v5-hero { padding-left: 18px; padding-right: 18px; }
           .landing-page .v5-nav { height: 58px; padding-left: 14px; padding-right: 14px; overflow: hidden; gap: 8px; }
+          .landing-page .landing-offline-banner { top: 58px; font-size: 12px; }
           .landing-page .v5-nav-middle { display: none; }
           .landing-page .v5-nav-right { margin-left: auto; min-width: 0; }
           .landing-page .v5-logo { font-size: 18px; }

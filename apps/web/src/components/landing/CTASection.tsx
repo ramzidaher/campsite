@@ -16,7 +16,7 @@ export function CTASection() {
   return (
     <section id="contact" className="px-4 py-20 md:px-8 md:py-32">
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="font-grot relative mx-auto max-w-[15ch] text-[clamp(2.2rem,7.2vw,4.6rem)] leading-[0.96]">
+        <h2 className="font-grot relative mx-auto text-[clamp(2.2rem,6.2vw,4.6rem)] leading-[0.96] whitespace-nowrap">
           Ready when your team is.
         </h2>
         <div className="mt-3 flex justify-center">

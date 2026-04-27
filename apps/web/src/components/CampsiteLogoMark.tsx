@@ -8,15 +8,15 @@ type CampsiteLogoMarkProps = {
 
 export function CampsiteLogoMark({ className }: CampsiteLogoMarkProps) {
   return (
-    <span className={className}>
-      <img
-        src={CAMPSITE_LOGO_SRC}
-        alt=""
-        className="h-full w-full object-contain p-[3px]"
-        width={1024}
-        height={1024}
-        draggable={false}
-      />
-    </span>
+    <span
+      className={className}
+      aria-hidden="true"
+      style={{
+        backgroundImage: `url("${CAMPSITE_LOGO_SRC}")`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        backgroundSize: 'calc(100% - 6px) calc(100% - 6px)',
+      }}
+    />
   );
 }
