@@ -72,7 +72,7 @@ const SORT_PRESETS: { value: string; sort: SortKey; dir: 'asc' | 'desc'; label: 
 
 export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentListRow[] }) {
   const inHiringHub = useInHiringHub();
-  const [filter, setFilter] = useState<'open' | 'archived' | 'all'>('open');
+  const [filter, setFilter] = useState<'open' | 'archived'>('open');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortPreset, setSortPreset] = useState('date-desc');
 
@@ -88,7 +88,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
   const filtered = useMemo(() => {
     let r = rows;
     if (filter === 'open') r = r.filter((x) => !x.archived_at);
-    else if (filter === 'archived') r = r.filter((x) => x.archived_at);
+    else r = r.filter((x) => x.archived_at);
     if (statusFilter !== 'all') r = r.filter((x) => x.status === statusFilter);
     return r;
   }, [rows, filter, statusFilter]);
@@ -182,7 +182,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
         <div className={`flex flex-wrap items-center gap-2 ${inHiringHub ? '' : 'gap-3'}`}>
           {inHiringHub ? (
             <div className="flex flex-wrap gap-2">
-              {(['open', 'archived', 'all'] as const).map((f) => (
+              {(['open', 'archived'] as const).map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -196,13 +196,13 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                       : 'border border-[#e8e8e8] bg-white text-[#121212] hover:bg-[#faf9f6]',
                   ].join(' ')}
                 >
-                  {f === 'all' ? 'All records' : f === 'open' ? 'Open' : 'Archived'}
+                  {f === 'open' ? 'New' : 'Archive'}
                 </button>
               ))}
             </div>
           ) : (
             <div className="flex gap-1 rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-1">
-              {(['open', 'archived', 'all'] as const).map((f) => (
+              {(['open', 'archived'] as const).map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -212,7 +212,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                     filter === f ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]',
                   ].join(' ')}
                 >
-                  {f === 'all' ? 'All records' : f === 'open' ? 'Open' : 'Archived'}
+                  {f === 'open' ? 'New' : 'Archive'}
                 </button>
               ))}
             </div>
@@ -276,7 +276,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
       {sorted.length === 0 ? (
         <div className={`border border-[#e8e8e8] bg-white px-6 py-12 text-center ${inHiringHub ? 'rounded-xl' : 'rounded-2xl'}`}>
           <p className="text-[14px] font-medium text-[#121212]">No requests match these filters</p>
-          <p className="mt-1 text-[13px] text-[#9b9b9b]">Try &ldquo;All records&rdquo; or a different status.</p>
+          <p className="mt-1 text-[13px] text-[#9b9b9b]">Try changing status or switching between New and Archive.</p>
         </div>
       ) : inHiringHub ? (
         <div className="flex flex-col gap-3">
