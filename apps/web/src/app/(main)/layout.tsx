@@ -87,6 +87,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const hasProfileFlag = b['has_profile'];
   const hasProfile = hasProfileFlag === true;
   const profileSetupRequired = hasProfileFlag === false;
+  const shellDegraded = b['shell_degraded'] === true;
   const emailLocal     = str('email')?.split('@')[0]?.trim() ?? '';
   const profileRole    = str('profile_role')?.trim() || null;
   const currentOrgId   = str('org_id');
@@ -285,6 +286,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userRoleLabel={userRoleLabel}
           hasTenantProfile={hasTenantProfile}
           profileSetupRequired={profileSetupRequired}
+          shellDegraded={shellDegraded}
           deptLine={deptLine}
           profileRole={profileRole}
           initialShellBadgeCounts={initialShellBadgeCounts}

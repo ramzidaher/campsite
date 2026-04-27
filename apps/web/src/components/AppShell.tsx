@@ -166,6 +166,7 @@ export function AppShell({
   userRoleLabel,
   hasTenantProfile,
   profileSetupRequired = false,
+  shellDegraded = false,
   deptLine,
   profileRole,
   unreadBroadcasts,
@@ -211,6 +212,8 @@ export function AppShell({
   hasTenantProfile: boolean;
   /** True only when shell bundle explicitly confirms registration is incomplete. */
   profileSetupRequired?: boolean;
+  /** True when shell RPC guardrails returned degraded data (usually transient timeout). */
+  shellDegraded?: boolean;
   deptLine: string | null;
   profileRole: string | null;
   unreadBroadcasts: number;
@@ -1167,6 +1170,8 @@ export function AppShell({
                           {userRoleLabel}
                           {deptLine ? ` · ${deptLine}` : ''}
                         </>
+                      ) : shellDegraded ? (
+                        'Reconnecting workspace...'
                       ) : profileSetupRequired ? (
                         'Finish registration'
                       ) : (
