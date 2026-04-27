@@ -50,12 +50,12 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
 
   const orgId = profile.org_id as string;
 
-  const [{ data: orgRow }, { data: job, error }, { data: sqRows }, canHrSettings] = await Promise.all([
+  const [{ data: orgRow }, { data: job, error }, { data: sqRows }, { data: formSets }, canHrSettings] = await Promise.all([
     supabase.from('organisations').select('slug').eq('id', orgId).single(),
     supabase
       .from('job_listings')
       .select(
-        'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, allow_application_questions, recruitment_request_id, diversity_target_pct, diversity_included_codes, applications_close_at'
+        'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, allow_application_questions, recruitment_request_id, diversity_target_pct, diversity_included_codes, applications_close_at, application_question_set_id'
       )
       .eq('id', id)
       .eq('org_id', orgId)
@@ -65,6 +65,11 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
       .select('id, sort_order, question_type, prompt, help_text, required, options, max_length')
       .eq('job_listing_id', id)
       .order('sort_order', { ascending: true }),
+    supabase
+      .from('org_application_question_sets')
+      .select('id, name')
+      .eq('org_id', orgId)
+      .order('name', { ascending: true }),
     viewerHasPermission('hr.view_records'),
   ]);
 
@@ -119,6 +124,7 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
       publicMetrics={publicMetrics}
       eqCategoryOptions={eqCategoryOptions}
       initialScreeningQuestions={initialScreeningQuestions}
+      applicationFormOptions={(formSets ?? []) as { id: string; name: string | null }[]}
     />
   );
 }

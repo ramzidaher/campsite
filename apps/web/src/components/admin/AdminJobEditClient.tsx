@@ -2,6 +2,7 @@
 
 import {
   archiveJobListing,
+  loadOrgApplicationQuestionSetAsPersist,
   publishJobListing,
   replaceJobScreeningQuestions,
   unarchiveJobListing,
@@ -45,6 +46,7 @@ export type JobEditRow = {
   diversity_target_pct: number | null;
   diversity_included_codes: string[] | null;
   applications_close_at: string | null;
+  application_question_set_id: string | null;
 };
 
 export type JobPublicMetrics = {
@@ -60,6 +62,7 @@ export function AdminJobEditClient({
   publicMetrics,
   eqCategoryOptions = [],
   initialScreeningQuestions = [],
+  applicationFormOptions = [],
 }: {
   job: JobEditRow;
   orgSlug: string;
@@ -69,6 +72,7 @@ export function AdminJobEditClient({
   /** From org HR metric settings — used for diversity target codes. */
   eqCategoryOptions?: { code: string; label: string }[];
   initialScreeningQuestions?: JobScreeningQuestionPersist[];
+  applicationFormOptions?: { id: string; name: string | null }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -99,6 +103,9 @@ export function AdminJobEditClient({
   );
   const [screeningQuestions, setScreeningQuestions] =
     useState<JobScreeningQuestionPersist[]>(initialScreeningQuestions);
+  const [applicationQuestionSetId, setApplicationQuestionSetId] = useState(
+    job.application_question_set_id ?? '',
+  );
 
   useEffect(() => {
     setApplicationsCloseAtInput(formatDatetimeLocalValue(job.applications_close_at));
@@ -149,6 +156,7 @@ export function AdminJobEditClient({
           tp === '' || !Number.isFinite(targetNum) ? null : targetNum,
         diversityIncludedCodes: diversityCodes,
         applicationsCloseAt: applicationsCloseAtInput.trim() || null,
+        applicationQuestionSetId: applicationQuestionSetId.trim() || null,
       });
       if (!res.ok) {
         setMsg({ type: 'err', text: res.error });
@@ -164,6 +172,27 @@ export function AdminJobEditClient({
       }
       setMsg({ type: 'ok', text: 'Saved.' });
       router.refresh();
+    });
+  }
+
+  function loadQuestionsFromSelectedApplicationForm() {
+    const setId = applicationQuestionSetId.trim();
+    if (!setId) {
+      setMsg({ type: 'err', text: 'Choose an application form first.' });
+      return;
+    }
+    setMsg(null);
+    startTransition(async () => {
+      const res = await loadOrgApplicationQuestionSetAsPersist(setId);
+      if (!res.ok) {
+        setMsg({ type: 'err', text: res.error });
+        return;
+      }
+      setScreeningQuestions(res.questions);
+      setMsg({
+        type: 'ok',
+        text: `Loaded ${res.questions.length} question${res.questions.length === 1 ? '' : 's'} from selected form.`,
+      });
     });
   }
 
@@ -517,6 +546,42 @@ export function AdminJobEditClient({
           ) : null}
           {!isArchived ? (
             <div className="mt-6 border-t border-[#f0f0f0] pt-6">
+              <label className={labelClass} htmlFor="application_form">
+                Application form for this advert
+              </label>
+              <p className="mb-2 text-[12px] text-[#9b9b9b]">
+                Select a reusable application form, then load its questions into this role.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  id="application_form"
+                  className={fieldClass}
+                  value={applicationQuestionSetId}
+                  onChange={(e) => setApplicationQuestionSetId(e.target.value)}
+                >
+                  <option value="">No linked form</option>
+                  {applicationFormOptions.map((form) => (
+                    <option key={form.id} value={form.id}>
+                      {String(form.name ?? '').trim() || 'Untitled form'}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={pending || !applicationQuestionSetId}
+                  onClick={loadQuestionsFromSelectedApplicationForm}
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6] disabled:opacity-60"
+                >
+                  Load questions from form
+                </button>
+              </div>
+              <p className="mt-2 text-[12px] text-[#9b9b9b]">
+                Save draft after loading to apply this form to the advert and applicant-facing flow.
+              </p>
+            </div>
+          ) : null}
+          {!isArchived ? (
+            <div className="mt-2">
               <label className={labelClass} htmlFor="applications_close_at">
                 Stop accepting applications (optional)
               </label>

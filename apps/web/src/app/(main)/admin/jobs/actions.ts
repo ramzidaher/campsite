@@ -191,6 +191,7 @@ export async function updateJobListing(
     diversityIncludedCodes: string[];
     /** ISO or datetime-local string; empty clears. */
     applicationsCloseAt: string | null;
+    applicationQuestionSetId: string | null;
   }
 ): Promise<JobActionState> {
   const id = jobId?.trim();
@@ -246,6 +247,19 @@ export async function updateJobListing(
     return { ok: false, error: 'Not allowed.' };
   }
 
+  const setId = fields.applicationQuestionSetId?.trim() || null;
+  if (setId) {
+    const { data: setRow, error: setErr } = await supabase
+      .from('org_application_question_sets')
+      .select('id')
+      .eq('id', setId)
+      .eq('org_id', profile.org_id as string)
+      .maybeSingle();
+    if (setErr || !setRow) {
+      return { ok: false, error: 'Selected application form is invalid for this organisation.' };
+    }
+  }
+
   const { error } = await supabase
     .from('job_listings')
     .update({
@@ -264,6 +278,7 @@ export async function updateJobListing(
       diversity_target_pct: fields.diversityTargetPct,
       diversity_included_codes: fields.diversityIncludedCodes,
       applications_close_at: applicationsCloseAt,
+      application_question_set_id: setId,
     })
     .eq('id', id)
     .eq('org_id', profile.org_id as string);
