@@ -13,6 +13,31 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export type CreateRecruitmentRequestState = { ok: true; id: string } | { ok: false; error: string };
 
+const RECRUITMENT_REGRADE_STATUS = ['requested_or_will_request', 'not_applicable', 'not_sure'] as const;
+const RECRUITMENT_APPROVAL_STATUS = ['budget_and_hr_group', 'budget_only', 'not_approved'] as const;
+const RECRUITMENT_ELIGIBILITY = [
+  'internal_staff_only',
+  'internal_and_external',
+  'sussex_or_bsms_students_only',
+] as const;
+
+type InterviewScheduleEntry = {
+  date: string;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+};
+
+function isValidDateOnly(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const dt = new Date(`${value}T12:00:00.000Z`);
+  return !Number.isNaN(dt.getTime());
+}
+
+function isValidTime(value: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
 export async function createRecruitmentRequest(form: {
   departmentId: string;
   jobTitle: string;
@@ -30,6 +55,21 @@ export async function createRecruitmentRequest(form: {
   idealCandidateProfile: string;
   specificRequirements: string;
   urgency: string;
+  numberOfPositions: string;
+  regradeStatus: string;
+  approvalStatus: string;
+  roleProfileLink: string;
+  advertisementLink: string;
+  advertReleaseDate: string;
+  advertClosingDate: string;
+  shortlistingDates: string;
+  interviewSchedule: string;
+  eligibility: string;
+  payRate: string;
+  contractLengthDetail: string;
+  additionalAdvertisingChannels: string;
+  interviewPanelDetails: string;
+  needsAdvertCopyHelp: boolean;
 }): Promise<CreateRecruitmentRequestState> {
   const supabase = await createClient();
   const user = await getAuthUser();
@@ -157,6 +197,85 @@ export async function createRecruitmentRequest(form: {
   const startDateNeeded = startRaw.slice(0, 10);
 
   const specificRequirements = form.specificRequirements?.trim() || null;
+  const numberOfPositionsRaw = form.numberOfPositions?.trim() ?? '';
+  const numberOfPositions = Number.parseInt(numberOfPositionsRaw, 10);
+  if (!Number.isInteger(numberOfPositions) || numberOfPositions <= 0) {
+    return { ok: false, error: 'Number of positions must be at least 1.' };
+  }
+  if (!RECRUITMENT_REGRADE_STATUS.includes(form.regradeStatus as (typeof RECRUITMENT_REGRADE_STATUS)[number])) {
+    return { ok: false, error: 'Invalid re-grade status.' };
+  }
+  if (!RECRUITMENT_APPROVAL_STATUS.includes(form.approvalStatus as (typeof RECRUITMENT_APPROVAL_STATUS)[number])) {
+    return { ok: false, error: 'Invalid approval status.' };
+  }
+  if (!RECRUITMENT_ELIGIBILITY.includes(form.eligibility as (typeof RECRUITMENT_ELIGIBILITY)[number])) {
+    return { ok: false, error: 'Invalid eligibility selection.' };
+  }
+
+  const roleProfileLink = form.roleProfileLink?.trim() ?? '';
+  if (!roleProfileLink) return { ok: false, error: 'Role profile link is required.' };
+
+  const advertisementLink = form.advertisementLink?.trim() ?? '';
+  if (!advertisementLink && !form.needsAdvertCopyHelp) {
+    return { ok: false, error: 'Advertisement link is required unless advert help is requested.' };
+  }
+
+  const advertReleaseDate = form.advertReleaseDate?.trim() ?? '';
+  const advertClosingDate = form.advertClosingDate?.trim() ?? '';
+  if (!isValidDateOnly(advertReleaseDate)) return { ok: false, error: 'Invalid advert release date.' };
+  if (!isValidDateOnly(advertClosingDate)) return { ok: false, error: 'Invalid advert closing date.' };
+  if (advertReleaseDate > advertClosingDate) {
+    return { ok: false, error: 'Advert closing date must be on or after advert release date.' };
+  }
+
+  let shortlistingDates: string[] = [];
+  try {
+    const parsed = JSON.parse(form.shortlistingDates ?? '[]');
+    if (!Array.isArray(parsed)) return { ok: false, error: 'Shortlisting dates payload is invalid.' };
+    shortlistingDates = parsed.map((v) => String(v).trim()).filter(Boolean);
+  } catch {
+    return { ok: false, error: 'Shortlisting dates payload is invalid.' };
+  }
+  if (!shortlistingDates.length) return { ok: false, error: 'At least one shortlisting date is required.' };
+  if (!shortlistingDates.every((v) => isValidDateOnly(v))) {
+    return { ok: false, error: 'Shortlisting dates must be valid dates.' };
+  }
+
+  let interviewSchedule: InterviewScheduleEntry[] = [];
+  try {
+    const parsed = JSON.parse(form.interviewSchedule ?? '[]');
+    if (!Array.isArray(parsed)) return { ok: false, error: 'Interview schedule payload is invalid.' };
+    interviewSchedule = parsed
+      .map((entry) => ({
+        date: String(entry?.date ?? '').trim(),
+        startTime: String(entry?.startTime ?? '').trim(),
+        endTime: String(entry?.endTime ?? '').trim(),
+        notes: String(entry?.notes ?? '').trim(),
+      }))
+      .filter((entry) => entry.date || entry.startTime || entry.endTime || entry.notes);
+  } catch {
+    return { ok: false, error: 'Interview schedule payload is invalid.' };
+  }
+  if (!interviewSchedule.length) return { ok: false, error: 'At least one interview date is required.' };
+  for (const entry of interviewSchedule) {
+    if (!isValidDateOnly(entry.date)) return { ok: false, error: 'Interview date is invalid.' };
+    if (!isValidTime(entry.startTime) || !isValidTime(entry.endTime)) {
+      return { ok: false, error: 'Interview times must use HH:mm format.' };
+    }
+    if (entry.endTime <= entry.startTime) {
+      return { ok: false, error: 'Interview end time must be after start time.' };
+    }
+  }
+
+  const payRate = form.payRate?.trim() ?? '';
+  if (!payRate) return { ok: false, error: 'Pay rate is required.' };
+
+  const contractLengthDetail = form.contractLengthDetail?.trim() ?? '';
+  if (!contractLengthDetail) return { ok: false, error: 'Contract length details are required.' };
+
+  const additionalAdvertisingChannels = form.additionalAdvertisingChannels?.trim() ?? '';
+  const interviewPanelDetails = form.interviewPanelDetails?.trim() ?? '';
+  if (!interviewPanelDetails) return { ok: false, error: 'Interview panel details are required.' };
 
   const orgId = profile.org_id as string;
 
@@ -190,6 +309,21 @@ export async function createRecruitmentRequest(form: {
       ideal_candidate_profile: idealCandidateProfile,
       specific_requirements: specificRequirements,
       urgency: form.urgency,
+      number_of_positions: numberOfPositions,
+      regrade_status: form.regradeStatus,
+      approval_status: form.approvalStatus,
+      role_profile_link: roleProfileLink,
+      advertisement_link: advertisementLink || null,
+      advert_release_date: advertReleaseDate,
+      advert_closing_date: advertClosingDate,
+      shortlisting_dates: shortlistingDates,
+      interview_schedule: interviewSchedule,
+      eligibility: form.eligibility,
+      pay_rate: payRate,
+      contract_length_detail: contractLengthDetail,
+      additional_advertising_channels: additionalAdvertisingChannels || null,
+      interview_panel_details: interviewPanelDetails,
+      needs_advert_copy_help: Boolean(form.needsAdvertCopyHelp),
     })
     .select('id')
     .single();

@@ -1170,7 +1170,7 @@ export function AppShell({
                       ) : profileSetupRequired ? (
                         'Finish registration'
                       ) : (
-                        'Member account'
+                        'Account'
                       )}
                     </div>
                   </div>
