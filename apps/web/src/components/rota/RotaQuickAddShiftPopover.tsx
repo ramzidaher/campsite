@@ -1,5 +1,6 @@
 'use client';
 
+import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import { createClient } from '@/lib/supabase/client';
 import { friendlyDbError } from '@/lib/rota/friendlyDbError';
 import {
@@ -193,21 +194,28 @@ export function RotaQuickAddShiftPopover({
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from('rota_shifts').insert({
-      org_id: orgId,
-      rota_id: rotaId || null,
-      dept_id: deptId || null,
-      user_id: userId || null,
-      role_label: title.trim() || null,
-      notes: null,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-      source: 'manual',
-    });
+    const { data: shiftRow, error } = await supabase
+      .from('rota_shifts')
+      .insert({
+        org_id: orgId,
+        rota_id: rotaId || null,
+        dept_id: deptId || null,
+        user_id: userId || null,
+        role_label: title.trim() || null,
+        notes: null,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        source: 'manual',
+      })
+      .select('id')
+      .single();
     setSaving(false);
     if (error) {
       setMsg(friendlyDbError(error.message));
       return;
+    }
+    if (shiftRow?.id) {
+      queueEntityCalendarSync({ type: 'shift', id: shiftRow.id as string, action: 'upsert' });
     }
     await Promise.resolve(onCreated());
     onClose();

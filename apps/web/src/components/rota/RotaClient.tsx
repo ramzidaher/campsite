@@ -10,6 +10,7 @@ import {
   type ProfileRole,
 } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
+import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import {
   addWeeks,
   endOfWeekExclusive,
@@ -471,6 +472,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
         window.alert(friendlyDbError(error.message));
         return;
       }
+      queueEntityCalendarSync({ type: 'shift', id: shiftId, action: 'upsert' });
       await load({ silent: true });
     },
     [supabase, load],
@@ -1591,22 +1593,26 @@ function ShiftEditor({
         setMsg(friendlyDbError(error.message));
         return;
       }
+      queueEntityCalendarSync({ type: 'shift', id: editingShift.id, action: 'upsert' });
     } else {
-    const { error } = await supabase.from('rota_shifts').insert({
-      org_id: profile.org_id,
+      const { data: newShift, error } = await supabase.from('rota_shifts').insert({
+        org_id: profile.org_id,
         rota_id: rotaId || null,
-      dept_id: deptId || null,
+        dept_id: deptId || null,
         user_id: assignee,
-      role_label: roleLabel || null,
-      notes: notes || null,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-      source: 'manual',
-    });
-    if (error) {
+        role_label: roleLabel || null,
+        notes: notes || null,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        source: 'manual',
+      }).select('id').single();
+      if (error) {
         setMsg(friendlyDbError(error.message));
-      return;
-    }
+        return;
+      }
+      if (newShift?.id) {
+        queueEntityCalendarSync({ type: 'shift', id: newShift.id, action: 'upsert' });
+      }
     }
     onDismiss();
     onSaved();
@@ -1616,6 +1622,8 @@ function ShiftEditor({
     if (!editingShift) return;
     if (!window.confirm('Delete this shift? This cannot be undone.')) return;
     setMsg(null);
+    // Sync deletion before removing from DB so providers can look up stored event ids.
+    queueEntityCalendarSync({ type: 'shift', id: editingShift.id, action: 'delete' });
     const { error } = await supabase.from('rota_shifts').delete().eq('id', editingShift.id);
     if (error) {
       setMsg(friendlyDbError(error.message));

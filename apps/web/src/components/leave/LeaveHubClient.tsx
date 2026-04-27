@@ -1,6 +1,7 @@
 'use client';
 
 import { useShellRefresh } from '@/hooks/useShellRefresh';
+import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import {
   calendarYmdInTimeZone,
   currentLeaveYearKeyForOrgCalendar,
@@ -843,6 +844,7 @@ export function LeaveHubClient({
 
   async function cancelRequest(id: string) {
     setBusy(true);
+    queueEntityCalendarSync({ type: 'leave', id, action: 'delete' });
     const { error } = await supabase.rpc('leave_request_cancel', { p_request_id: id });
     setBusy(false);
     if (error) setMsg(error.message); else await load();
@@ -1034,6 +1036,10 @@ export function LeaveHubClient({
       setMsg(error.message);
       return;
     }
+    if (approvalModal.source === 'leave') {
+      const action = approvalModal.approve ? 'upsert' : 'delete';
+      queueEntityCalendarSync({ type: 'leave', id: approvalModal.id, action });
+    }
     setApprovalModal(null);
     setApprovalNote('');
     await load();
@@ -1072,7 +1078,16 @@ export function LeaveHubClient({
               p_note: note,
             });
       if (error) failures.push(error.message);
-      else success += 1;
+      else {
+        success += 1;
+        if (row.kind === 'leave') {
+          queueEntityCalendarSync({
+            type: 'leave',
+            id: row.leave.id,
+            action: approve ? 'upsert' : 'delete',
+          });
+        }
+      }
     }
     setBusy(false);
     setSelectedApprovalKeys([]);

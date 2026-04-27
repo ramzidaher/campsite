@@ -6,6 +6,12 @@ import {
   patchInterviewEventsBooked,
   patchInterviewEventsCompleted,
 } from '@/lib/interviews/calendarTokens';
+import {
+  createInterviewSlotOutlookEventsForPanelists,
+  deleteInterviewOutlookCalendarEvents,
+  patchInterviewOutlookEventsBooked,
+  patchInterviewOutlookEventsCompleted,
+} from '@/lib/microsoft/microsoftTokens';
 import { sendInterviewScheduledEmail } from '@/lib/recruitment/sendInterviewScheduledEmail';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
@@ -185,6 +191,26 @@ export async function createInterviewSlot(fields: {
     );
   }
 
+  // Outlook Calendar sync (best-effort, parallel to Google)
+  try {
+    const outlookEvents = await createInterviewSlotOutlookEventsForPanelists({
+      admin,
+      panelistUserIds: panelists,
+      timeZone,
+      startsAtIso: startsIso,
+      endsAtIso: endsIso,
+      subject: summary,
+      content: description,
+    });
+    if (outlookEvents.length) {
+      await admin.from('interview_slot_outlook_events').insert(
+        outlookEvents.map((e) => ({ slot_id: slotId, profile_id: e.profileId, event_id: e.eventId }))
+      );
+    }
+  } catch (e) {
+    console.error('[interviews] outlook insert', e);
+  }
+
   const warnings: string[] = [];
   if (createdEvents.length < panelists.length) {
     warnings.push(
@@ -280,6 +306,23 @@ export async function bulkCreateInterviewSlots(fields: {
             events.map((e) => ({ slot_id: slot.id as string, profile_id: e.profileId, event_id: e.eventId, calendar_id: 'primary' }))
           );
         }
+        // Outlook sync per slot
+        try {
+          const outlookEvents = await createInterviewSlotOutlookEventsForPanelists({
+            admin,
+            panelistUserIds: panelists,
+            timeZone,
+            startsAtIso: slotData.startsAtIso,
+            endsAtIso: slotData.endsAtIso,
+            subject: summary,
+            content: description,
+          });
+          if (outlookEvents.length) {
+            await admin.from('interview_slot_outlook_events').insert(
+              outlookEvents.map((e) => ({ slot_id: slot.id as string, profile_id: e.profileId, event_id: e.eventId }))
+            );
+          }
+        } catch { /* per-slot Outlook failure is non-fatal */ }
       } catch { /* per-slot failure is non-fatal */ }
     }
     const expectedEvents = inserted.length * panelists.length;
@@ -326,16 +369,36 @@ export async function completeInterviewSlot(slotId: string): Promise<InterviewAc
     /* skip calendar */
   }
 
+  const completedSummary = `[Done] ${(slot.title as string)?.trim() || 'Interview'}`;
+
   if (admin && evs?.length) {
     const events = (evs as Array<{ profile_id: string; event_id: string }>).map((e) => ({
       profileId: e.profile_id,
       eventId: e.event_id,
     }));
-    const summary = `[Done] ${(slot.title as string)?.trim() || 'Interview'}`;
     try {
-      await patchInterviewEventsCompleted({ admin, events, summary });
+      await patchInterviewEventsCompleted({ admin, events, summary: completedSummary });
     } catch (e) {
       console.error('[interviews] complete patch', e);
+    }
+  }
+
+  // Outlook: patch completed
+  if (admin) {
+    const { data: outlookEvs } = await admin
+      .from('interview_slot_outlook_events')
+      .select('profile_id, event_id')
+      .eq('slot_id', id);
+    if (outlookEvs?.length) {
+      const events = (outlookEvs as Array<{ profile_id: string; event_id: string }>).map((e) => ({
+        profileId: e.profile_id,
+        eventId: e.event_id,
+      }));
+      try {
+        await patchInterviewOutlookEventsCompleted({ admin, events, subject: completedSummary });
+      } catch (e) {
+        console.error('[interviews] outlook complete patch', e);
+      }
     }
   }
 
@@ -391,6 +454,25 @@ export async function cancelAvailableInterviewSlot(slotId: string): Promise<Inte
       await deleteInterviewCalendarEvents({ admin, events });
     } catch (e) {
       console.error('[interviews] cancel delete', e);
+    }
+  }
+
+  // Outlook: delete events on cancel
+  if (admin) {
+    const { data: outlookEvs } = await supabase
+      .from('interview_slot_outlook_events')
+      .select('profile_id, event_id')
+      .eq('slot_id', id);
+    if (outlookEvs?.length) {
+      const events = (outlookEvs as Array<{ profile_id: string; event_id: string }>).map((e) => ({
+        profileId: e.profile_id,
+        eventId: e.event_id,
+      }));
+      try {
+        await deleteInterviewOutlookCalendarEvents({ admin, events });
+      } catch (e) {
+        console.error('[interviews] outlook cancel delete', e);
+      }
     }
   }
 
@@ -551,6 +633,32 @@ export async function bookInterviewForApplication(opts: {
       });
     } catch (e) {
       console.error('[interviews] book patch calendars', e);
+    }
+  }
+
+  // Outlook: patch booked
+  const { data: outlookEvs } = await admin
+    .from('interview_slot_outlook_events')
+    .select('profile_id, event_id')
+    .eq('slot_id', slotId);
+  if (outlookEvs?.length) {
+    const events = (outlookEvs as Array<{ profile_id: string; event_id: string }>).map((e) => ({
+      profileId: e.profile_id,
+      eventId: e.event_id,
+    }));
+    try {
+      await patchInterviewOutlookEventsBooked({
+        admin,
+        events,
+        timeZone,
+        startsAtIso: startsAt.toISOString(),
+        endsAtIso: endsAt.toISOString(),
+        subject: summary,
+        content: desc,
+        candidateEmail: candEmail,
+      });
+    } catch (e) {
+      console.error('[interviews] outlook book patch', e);
     }
   }
 

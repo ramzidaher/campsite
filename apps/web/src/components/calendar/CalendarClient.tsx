@@ -2,6 +2,7 @@
 
 import { canManageCalendarManualEvents, type ProfileRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
+import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import {
   addDays,
   addMonths,
@@ -39,7 +40,7 @@ type CalItem = {
   start: Date;
   end: Date | null;
   allDay: boolean;
-  source: 'rota' | 'broadcast' | 'manual' | 'one_on_one';
+  source: 'rota' | 'broadcast' | 'manual' | 'one_on_one' | 'outlook' | 'google';
   googleEventId: string | null;
   broadcastId: string | null;
 };
@@ -77,6 +78,8 @@ function mapOneOnOneMeetingToCalItem(m: OneOnOneCalMeetingRow, profileId: string
 
 function calendarSourceLabel(source: CalItem['source']): string {
   if (source === 'one_on_one') return '1:1';
+  if (source === 'google') return 'Google';
+  if (source === 'outlook') return 'Outlook';
   return source;
 }
 
@@ -93,6 +96,12 @@ function sourceChipClass(source: CalItem['source'], todayCell: boolean): string 
   if (source === 'one_on_one') {
     return 'bg-[#0284c7]/18 text-[#0369a1]';
   }
+  if (source === 'google') {
+    return 'bg-[#1a73e8]/18 text-[#185abc]';
+  }
+  if (source === 'outlook') {
+    return 'bg-[#0078d4]/18 text-[#005a9e]';
+  }
   return 'bg-[#7C3AED]/18 text-[#6d28d9]';
 }
 
@@ -100,6 +109,8 @@ function sourceLegendDotClass(source: CalItem['source']): string {
   if (source === 'rota') return 'bg-[#059669]';
   if (source === 'broadcast') return 'bg-[#44403c]';
   if (source === 'one_on_one') return 'bg-[#0284c7]';
+  if (source === 'google') return 'bg-[#1a73e8]';
+  if (source === 'outlook') return 'bg-[#0078d4]';
   return 'bg-[#7C3AED]';
 }
 
@@ -107,6 +118,8 @@ function gridItemClass(source: CalItem['source']): string {
   if (source === 'rota') return 'bg-[#059669]/25 text-[#065f46] border-[#059669]/40';
   if (source === 'broadcast') return 'bg-[#44403c]/20 text-[#292524] border-[#44403c]/35';
   if (source === 'one_on_one') return 'bg-[#0284c7]/22 text-[#0c4a6e] border-[#0284c7]/45';
+  if (source === 'google') return 'bg-[#1a73e8]/18 text-[#174ea6] border-[#1a73e8]/35';
+  if (source === 'outlook') return 'bg-[#0078d4]/20 text-[#003966] border-[#0078d4]/40';
   return 'bg-[#7C3AED]/25 text-[#5b21b6] border-[#7C3AED]/40';
 }
 
@@ -211,10 +224,10 @@ export function CalendarClient({
       const from = range.from.toISOString();
       const to = range.to.toISOString();
 
-      const [shRes, evRes, ooRes] = await Promise.all([
+      const [shRes, evRes, ooRes, googleLinksRes, googleRes, outlookRes] = await Promise.all([
         supabase
           .from('rota_shifts')
-          .select('id, start_time, end_time, role_label, notes, dept_id, rotas(title,kind)')
+          .select('id, start_time, end_time, role_label, notes, dept_id, google_event_id, rotas(title,kind)')
           .eq('org_id', profile.org_id)
           .gte('start_time', from)
           .lt('start_time', to)
@@ -232,13 +245,34 @@ export function CalendarClient({
         canViewAllOneOnOneCheckins
           ? supabase.rpc('one_on_one_meetings_for_calendar', { p_from: from, p_to: to })
           : Promise.resolve({ data: [] as unknown[], error: null }),
+        supabase
+          .from('calendar_event_google_events')
+          .select('calendar_event_id, event_id')
+          .eq('profile_id', profile.id),
+        fetch(`/api/google/calendar/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
+          .then((r) =>
+            r.ok
+              ? (r.json() as Promise<{ events: Array<{ id: string; subject: string; start: string; end: string; allDay: boolean; bodyPreview: string }> }>)
+              : { events: [] },
+          )
+          .catch(() => ({ events: [] })),
+        fetch(`/api/microsoft/calendar/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
+          .then((r) => r.ok ? r.json() as Promise<{ events: Array<{ id: string; subject: string; start: string; end: string; allDay: boolean; bodyPreview: string }> }> : { events: [] })
+          .catch(() => ({ events: [] })),
       ]);
 
       if (shRes.error) console.error(shRes.error);
       if (evRes.error) console.error(evRes.error);
       if (ooRes.error) console.error(ooRes.error);
+      if (googleLinksRes.error) console.error(googleLinksRes.error);
 
       const dm = new Map(departments.map((d) => [d.id, d.name]));
+      const googleEventMap = new Map(
+        (googleLinksRes.data ?? []).map((row) => [
+          row.calendar_event_id as string,
+          row.event_id as string,
+        ]),
+      );
       const shiftItems: CalItem[] = (shRes.data ?? []).map((r) => {
         const start = new Date(r.start_time as string);
         const end = new Date(r.end_time as string);
@@ -260,7 +294,7 @@ export function CalendarClient({
           end,
           allDay: false,
           source: 'rota' as const,
-          googleEventId: null,
+          googleEventId: (r.google_event_id as string | null) ?? null,
           broadcastId: null,
         };
       });
@@ -277,7 +311,8 @@ export function CalendarClient({
           end: r.end_time ? new Date(r.end_time as string) : null,
           allDay: !!(r.all_day as boolean),
           source: src === 'broadcast' ? 'broadcast' : 'manual',
-          googleEventId: (r.google_event_id as string | null) ?? null,
+          googleEventId:
+            googleEventMap.get(r.id as string) ?? ((r.google_event_id as string | null) ?? null),
           broadcastId: (r.broadcast_id as string | null) ?? null,
         };
       });
@@ -289,7 +324,43 @@ export function CalendarClient({
         ooItems = rows.map((m) => mapOneOnOneMeetingToCalItem(m, profile.id));
       }
 
-      const merged = [...shiftItems, ...eventItems, ...ooItems].sort(
+      const internalGoogleEventIds = new Set(
+        [...shiftItems, ...eventItems]
+          .map((item) => item.googleEventId)
+          .filter((eventId): eventId is string => Boolean(eventId)),
+      );
+
+      const googleItems: CalItem[] = (googleRes.events ?? [])
+        .filter((e) => !internalGoogleEventIds.has(e.id))
+        .map((e) => ({
+          key: `google-${e.id}`,
+          kind: 'event' as const,
+          id: e.id,
+          title: e.subject,
+          description: e.bodyPreview || null,
+          start: new Date(e.start),
+          end: new Date(e.end),
+          allDay: e.allDay,
+          source: 'google' as const,
+          googleEventId: e.id,
+          broadcastId: null,
+        }));
+
+      const outlookItems: CalItem[] = (outlookRes.events ?? []).map((e) => ({
+        key: `outlook-${e.id}`,
+        kind: 'event' as const,
+        id: e.id,
+        title: e.subject,
+        description: e.bodyPreview || null,
+        start: new Date(e.start),
+        end: new Date(e.end),
+        allDay: e.allDay,
+        source: 'outlook' as const,
+        googleEventId: null,
+        broadcastId: null,
+      }));
+
+      const merged = [...shiftItems, ...eventItems, ...ooItems, ...googleItems, ...outlookItems].sort(
         (a, b) => a.start.getTime() - b.start.getTime(),
       );
       setItems(merged);
@@ -436,15 +507,12 @@ export function CalendarClient({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
+          <a
+            href="/api/google/oauth/start?type=calendar"
             className="rounded-lg border border-[#d8d8d8] bg-white px-3.5 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
-            onClick={() => {
-              window.alert('Google Calendar sync is coming soon.');
-            }}
           >
             Sync Google Calendar
-          </button>
+          </a>
           {canManage ? (
             <button
               type="button"
@@ -525,6 +593,18 @@ export function CalendarClient({
                 className={`inline-block h-2 w-2 shrink-0 rounded-full ${sourceLegendDotClass('one_on_one')}`}
               />
               1:1
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`inline-block h-2 w-2 shrink-0 rounded-full ${sourceLegendDotClass('google')}`}
+              />
+              Google
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`inline-block h-2 w-2 shrink-0 rounded-full ${sourceLegendDotClass('outlook')}`}
+              />
+              Outlook
             </span>
           </div>
 
@@ -786,6 +866,7 @@ function DetailModal({
   async function deleteEvent() {
     if (!confirm('Delete this event? Attendees will be notified.')) return;
     setBusy(true);
+    queueEntityCalendarSync({ type: 'calendar-event', id: item.id, action: 'delete' });
     const { error } = await supabase.from('calendar_events').delete().eq('id', item.id);
     setBusy(false);
     if (!error) onDeleted();
@@ -853,6 +934,10 @@ function DetailModal({
           >
             Open 1:1 check-in
           </Link>
+        ) : item.source === 'google' ? (
+          <p className="mt-3 text-sm text-[#6b6b6b]">Already in your Google Calendar</p>
+        ) : item.source === 'outlook' ? (
+          <p className="mt-3 text-sm text-[#6b6b6b]">Already in your Outlook Calendar</p>
         ) : item.googleEventId ? (
           <p className="mt-3 text-sm text-[#6b6b6b]">Synced to Google Calendar</p>
         ) : (

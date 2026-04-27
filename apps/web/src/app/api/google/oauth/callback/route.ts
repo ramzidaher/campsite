@@ -1,7 +1,10 @@
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import {
+  appendGoogleAuthParam,
+  buildGoogleOAuthRedirectUri,
+  parseGoogleOAuthState,
+} from '@/lib/google/googleOAuth';
 import { encryptGoogleTokenIfConfigured, isGoogleTokenCryptoConfigured } from '@/lib/google/googleTokenCrypto';
 
 /** Exchanges Google OAuth code and stores tokens in `google_connections`. */
@@ -16,35 +19,20 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
+  const state = searchParams.get('state');
+  const oauthState = parseGoogleOAuthState(state);
+  const fallbackReturnTo = new URL('/settings', req.url).toString();
+  const returnTo = oauthState?.returnTo ?? fallbackReturnTo;
   const err = searchParams.get('error');
   if (err) {
-    return NextResponse.redirect(new URL(`/settings?google_error=${encodeURIComponent(err)}`, req.url));
+    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', err));
   }
 
   const code = searchParams.get('code');
-  const state = searchParams.get('state');
-  const jar = await cookies();
-  const expected = jar.get('google_oauth_state')?.value;
-  const metaRaw = jar.get('google_oauth_meta')?.value;
-  jar.delete('google_oauth_state');
-  jar.delete('google_oauth_meta');
-
-  if (!code || !state || !expected || state !== expected || !metaRaw) {
-    return NextResponse.redirect(new URL('/settings?google_error=invalid_state', req.url));
+  if (!code || !oauthState) {
+    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', 'invalid_state'));
   }
-
-  let meta: { type: 'sheets' | 'calendar'; uid: string };
-  try {
-    meta = JSON.parse(Buffer.from(metaRaw, 'base64url').toString('utf8')) as {
-      type: 'sheets' | 'calendar';
-      uid: string;
-    };
-  } catch {
-    return NextResponse.redirect(new URL('/settings?google_error=bad_meta', req.url));
-  }
-
-  const origin = new URL(req.url).origin;
-  const redirectUri = `${origin}/api/google/oauth/callback`;
+  const redirectUri = buildGoogleOAuthRedirectUri(req);
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -60,9 +48,7 @@ export async function GET(req: Request) {
 
   if (!tokenRes.ok) {
     const t = await tokenRes.text();
-    return NextResponse.redirect(
-      new URL(`/settings?google_error=${encodeURIComponent('token ' + t.slice(0, 80))}`, req.url)
-    );
+    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', `token ${t.slice(0, 80)}`));
   }
 
   const tokens = (await tokenRes.json()) as {
@@ -72,20 +58,12 @@ export async function GET(req: Request) {
   };
 
   if (!tokens.access_token) {
-    return NextResponse.redirect(new URL('/settings?google_error=no_access_token', req.url));
-  }
-
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user || user.id !== meta.uid) {
-    return NextResponse.redirect(new URL('/settings?google_error=session', req.url));
+    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', 'no_access_token'));
   }
 
   const refreshToken = tokens.refresh_token;
   if (!refreshToken) {
-    return NextResponse.redirect(
-      new URL('/settings?google_error=' + encodeURIComponent('no_refresh_token_re_consent'), req.url)
-    );
+    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', 'no_refresh_token_re_consent'));
   }
 
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
@@ -102,11 +80,17 @@ export async function GET(req: Request) {
   const encryptedAccess = encryptGoogleTokenIfConfigured(tokens.access_token);
   const encryptedRefresh = encryptGoogleTokenIfConfigured(refreshToken);
   const encryptedMode = isGoogleTokenCryptoConfigured();
+  let admin;
+  try {
+    admin = createServiceRoleClient();
+  } catch {
+    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', 'service_role_missing'));
+  }
 
-  const { error } = await supabase.from('google_connections').upsert(
+  const { error } = await admin.from('google_connections').upsert(
     {
-      user_id: user.id,
-      type: meta.type,
+      user_id: oauthState.uid,
+      type: oauthState.type,
       access_token: encryptedMode ? null : tokens.access_token,
       refresh_token: encryptedMode ? null : refreshToken,
       access_token_encrypted: encryptedAccess.ciphertext,
@@ -122,10 +106,8 @@ export async function GET(req: Request) {
   );
 
   if (error) {
-    return NextResponse.redirect(
-      new URL(`/settings?google_error=${encodeURIComponent(error.message)}`, req.url)
-    );
+    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', error.message));
   }
 
-  return NextResponse.redirect(new URL('/settings?google_connected=1', req.url));
+  return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_connected', '1'));
 }

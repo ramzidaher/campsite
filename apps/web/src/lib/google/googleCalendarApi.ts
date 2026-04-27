@@ -3,10 +3,14 @@
  * Caller supplies a valid OAuth access token (calendar.events scope).
  */
 
-export type CalendarEventTime = {
-  dateTime: string;
-  timeZone: string;
-};
+export type CalendarEventTime =
+  | {
+      dateTime: string;
+      timeZone: string;
+    }
+  | {
+      date: string;
+    };
 
 export type CreateCalendarEventInput = {
   summary: string;

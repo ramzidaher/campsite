@@ -1,6 +1,7 @@
 'use client';
 
 import { canManageCalendarManualEvents, type ProfileRole } from '@campsite/types';
+import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -168,6 +169,10 @@ export function ManualEventForm({
         setMsg(attErr.message);
         return;
       }
+    }
+
+    if (evId) {
+      queueEntityCalendarSync({ type: 'calendar-event', id: evId, action: 'upsert' });
     }
 
     onOpenChange(false);
