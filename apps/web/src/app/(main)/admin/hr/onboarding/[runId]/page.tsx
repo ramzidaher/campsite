@@ -1,5 +1,6 @@
 import { OnboardingRunClient } from '@/components/admin/hr/onboarding/OnboardingRunClient';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
@@ -7,20 +8,6 @@ import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 const ONBOARDING_COMPLETERS_TIMEOUT_MS = 1200;
-
-async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: unknown): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  try {
-    return await Promise.race<T>([
-      Promise.resolve(promise),
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => resolve(fallback as T), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
 
 export default async function OnboardingRunPage({ params }: { params: Promise<{ runId: string }> }) {
   const pathStartedAtMs = Date.now();
@@ -103,7 +90,7 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
         350
       ),
       ONBOARDING_COMPLETERS_TIMEOUT_MS,
-      { data: [], error: null }
+      { data: [], error: null } as any
     );
     for (const c of completers ?? []) {
       completerNames[c.id as string] = getDisplayName(c.full_name as string, (c.preferred_name as string | null) ?? null);

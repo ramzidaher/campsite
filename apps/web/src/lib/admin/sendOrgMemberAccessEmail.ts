@@ -47,7 +47,7 @@ export async function sendOrgMemberAccessEmail(
   const { error: otpError } = await admin.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: redirectTo,
+      emailRedirectTo: withForceSetPasswordParam(redirectTo),
       shouldCreateUser: false,
     },
   });

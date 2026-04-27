@@ -4,23 +4,10 @@ import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
 import { normalizeUiMode } from '@/lib/uiMode';
 
 const HR_DASH_STATS_TIMEOUT_MS = 1200;
-
-async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: unknown): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  try {
-    return await Promise.race<T>([
-      Promise.resolve(promise),
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => resolve(fallback as T), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
 
 /**
  * Shared server page for the HR employee directory (canonical URL `/hr/people`).

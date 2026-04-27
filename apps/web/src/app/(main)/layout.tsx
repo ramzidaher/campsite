@@ -85,13 +85,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
 
   const hasProfileFlag = b['has_profile'];
-  const hasProfile = hasProfileFlag === true;
-  const profileSetupRequired = hasProfileFlag === false;
+  const hasProfileState: true | false | 'unknown' =
+    hasProfileFlag === true ? true : hasProfileFlag === false ? false : 'unknown';
+  const hasProfile = hasProfileState === true;
+  const profileSetupRequired = hasProfileState === false;
   const emailLocal     = str('email')?.split('@')[0]?.trim() ?? '';
   const profileRole    = str('profile_role')?.trim() || null;
   const currentOrgId   = str('org_id');
   const initialCelebrationMode = normalizeCelebrationMode(str('celebration_mode'));
   const initialUiMode = normalizeUiMode(str('ui_mode'));
+  const shellDegraded = Boolean(b['shell_degraded']);
+  const shellDegradedReason = str('shell_degraded_reason');
+  const shellDataFreshness =
+    str('shell_data_freshness') === 'fresh' ||
+    str('shell_data_freshness') === 'stale' ||
+    str('shell_data_freshness') === 'unknown'
+      ? (str('shell_data_freshness') as 'fresh' | 'stale' | 'unknown')
+      : shellDegraded
+        ? 'stale'
+        : 'unknown';
+  const shellLastSuccessAt =
+    typeof b['shell_last_success_at'] === 'number'
+      ? (b['shell_last_success_at'] as number)
+      : null;
   const initialCelebrationAutoEnabled =
     typeof b['celebration_auto_enabled'] === 'boolean' ? Boolean(b['celebration_auto_enabled']) : true;
   const rawCelebration = b['org_celebration_mode_overrides'];
@@ -285,8 +301,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userRoleLabel={userRoleLabel}
           hasTenantProfile={hasTenantProfile}
           profileSetupRequired={profileSetupRequired}
+          profileState={hasProfileState}
           deptLine={deptLine}
           profileRole={profileRole}
+          shellDegraded={shellDegraded}
+          shellDegradedReason={shellDegradedReason}
+          shellDataFreshness={shellDataFreshness}
+          shellLastSuccessAt={shellLastSuccessAt}
           initialShellBadgeCounts={initialShellBadgeCounts}
           unreadBroadcasts={unreadBroadcasts}
           pendingBroadcastApprovals={pendingBroadcastApprovals}

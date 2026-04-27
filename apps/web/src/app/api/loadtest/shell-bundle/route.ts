@@ -31,6 +31,9 @@ const META_KEYS = new Set([
   'shell_response_cache_age_ms',
   'shell_cache_status',
   'shell_degraded',
+  'shell_degraded_reason',
+  'shell_data_freshness',
+  'shell_last_success_at',
   'shell_guardrail_reasons',
 ]);
 
@@ -156,6 +159,16 @@ export async function GET(req: Request) {
       shell_response_cache_age_ms: bundle.shell_response_cache_age_ms ?? null,
       shell_cache_status: bundle.shell_cache_status ?? 'unknown',
       shell_degraded: Boolean(bundle.shell_degraded),
+      shell_degraded_reason:
+        typeof bundle.shell_degraded_reason === 'string' ? bundle.shell_degraded_reason : null,
+      shell_data_freshness:
+        bundle.shell_data_freshness === 'fresh' ||
+        bundle.shell_data_freshness === 'stale' ||
+        bundle.shell_data_freshness === 'unknown'
+          ? bundle.shell_data_freshness
+          : 'unknown',
+      shell_last_success_at:
+        typeof bundle.shell_last_success_at === 'number' ? bundle.shell_last_success_at : null,
       shell_guardrail_reasons: Array.isArray(bundle.shell_guardrail_reasons)
         ? bundle.shell_guardrail_reasons
         : [],

@@ -29,26 +29,41 @@ export default async function DashboardPage() {
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile, error: profileError } = await withServerPerf(
-    '/dashboard',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('id, org_id, role, full_name, status')
-      .eq('id', user.id)
-      .maybeSingle(),
-    1500
-  );
-
-  if (profileError || !profile?.org_id) {
-    if (await isPlatformFounder(supabase, user.id)) {
-      redirect('/founders');
-    }
-    redirect('/login');
-  }
-  if (profile.status !== 'active') redirect('/pending');
-
   const shellBundle = await withServerPerf('/dashboard', 'shell_bundle_cached', getCachedMainShellLayoutBundle(), 1500);
+  const shellOrgId = typeof shellBundle.org_id === 'string' ? shellBundle.org_id : null;
+  const shellRole = typeof shellBundle.profile_role === 'string' ? shellBundle.profile_role : null;
+  const shellFullName = typeof shellBundle.profile_full_name === 'string' ? shellBundle.profile_full_name : null;
+  const shellHasProfile = shellBundle.has_profile === true;
+
+  let orgId = shellOrgId;
+  let role = shellRole;
+  let fullName = shellFullName;
+
+  if (!orgId || !role || !shellHasProfile) {
+    const { data: profile, error: profileError } = await withServerPerf(
+      '/dashboard',
+      'profile_lookup',
+      supabase
+        .from('profiles')
+        .select('id, org_id, role, full_name, status')
+        .eq('id', user.id)
+        .maybeSingle(),
+      1500
+    );
+
+    if (profileError || !profile?.org_id) {
+      if (await isPlatformFounder(supabase, user.id)) {
+        redirect('/founders');
+      }
+      redirect('/login');
+    }
+    if (profile.status !== 'active') redirect('/pending');
+
+    orgId = profile.org_id as string;
+    role = profile.role as string;
+    fullName = profile.full_name as string | null;
+  }
+
   const shellPermissionKeys: PermissionKey[] = Array.isArray(shellBundle.permission_keys)
     ? (shellBundle.permission_keys.map((k) => String(k)) as PermissionKey[])
     : [];
@@ -61,13 +76,12 @@ export default async function DashboardPage() {
       : await withServerPerf(
           '/dashboard',
           'get_my_permissions',
-          getMyPermissions(profile.org_id as string),
+          getMyPermissions(orgId as string),
           1500
         );
   // #region agent log
   fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'run1',hypothesisId:'H4',location:'dashboard/page.tsx:permissionSource',message:'Dashboard permission source resolved',data:{usedShellPermissions:shellPermissionKeys.length>0,permissionCount:permissionKeys.length},timestamp:Date.now()})}).catch(()=>{});
   // #endregion
-  const role = profile.role as string;
   const initialBroadcastUnread = canViewDashboardUnreadBroadcastKpi(role)
     ? broadcastUnreadFromShellBundle(shellBundle)
     : undefined;
@@ -89,9 +103,9 @@ export default async function DashboardPage() {
     loadDashboardHomeGuarded(
       supabase,
       user.id,
-      profile.org_id as string,
+      orgId as string,
       {
-        full_name: profile.full_name as string | null,
+        full_name: fullName ?? null,
         role,
       },
       { initialBroadcastUnread, initialPendingApprovals, manualRefresh }

@@ -33,6 +33,7 @@ type ShellCacheEntry = {
   value: ShellBundle;
   cachedAt: number;
   expiresAt: number;
+  lastSuccessAt: number | null;
 };
 
 const shellResponseCache = new Map<string, ShellCacheEntry>();
@@ -51,12 +52,16 @@ function nextShellExpiry(value: ShellBundle, now: number): number {
 function withShellCacheMeta(
   value: ShellBundle,
   status: 'hit' | 'miss' | 'coalesced',
-  cachedAt: number
+  cachedAt: number,
+  freshness: 'fresh' | 'stale' | 'unknown',
+  lastSuccessAt: number | null
 ): ShellBundle {
   return {
     ...value,
     shell_response_cache_status: status,
     shell_response_cache_age_ms: Math.max(0, Date.now() - cachedAt),
+    shell_data_freshness: freshness,
+    shell_last_success_at: lastSuccessAt,
   };
 }
 
@@ -94,7 +99,10 @@ async function awaitWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Prom
 export function getStaleOrDefaultShellBundle(viewerKey: string): ShellBundle {
   const cached = shellResponseCache.get(viewerKey);
   if (cached) {
-    return withShellDegradedMeta(withShellCacheMeta(cached.value, 'hit', cached.cachedAt), 'app_timeout_fallback');
+    return withShellDegradedMeta(
+      withShellCacheMeta(cached.value, 'hit', cached.cachedAt, 'stale', cached.lastSuccessAt),
+      'app_timeout_fallback'
+    );
   }
   return {
     shell_response_cache_status: 'unknown',
@@ -103,6 +111,9 @@ export function getStaleOrDefaultShellBundle(viewerKey: string): ShellBundle {
     shell_degraded: true,
     shell_degraded_reason: 'app_timeout_fallback',
     shell_guardrail_reasons: ['app_timeout_fallback'],
+    shell_data_freshness: 'unknown',
+    shell_last_success_at: null,
+    has_profile: null,
   };
 }
 
@@ -133,14 +144,14 @@ export async function getMainShellLayoutBundleForViewer(
   const now = Date.now();
   const cached = shellResponseCache.get(viewerKey);
   if (cached && cached.expiresAt > now) {
-    return withShellCacheMeta(cached.value, 'hit', cached.cachedAt);
+    return withShellCacheMeta(cached.value, 'hit', cached.cachedAt, 'fresh', cached.lastSuccessAt);
   }
 
   const inFlight = shellInFlight.get(viewerKey);
   if (inFlight) {
     try {
       const { value } = await awaitWithTimeout(inFlight, SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS);
-      return withShellCacheMeta(value, 'coalesced', Date.now());
+      return withShellCacheMeta(value, 'coalesced', Date.now(), 'fresh', Date.now());
     } catch {
       // If an in-flight request hangs or fails, release coalescing so future requests can recover.
       shellInFlight.delete(viewerKey);
@@ -181,6 +192,7 @@ export async function getMainShellLayoutBundleForViewer(
         value: merged,
         cachedAt,
         expiresAt: nextShellExpiry(merged, cachedAt),
+        lastSuccessAt: cachedAt,
       });
       return merged;
     }
@@ -221,6 +233,7 @@ export async function getMainShellLayoutBundleForViewer(
       value: merged,
       cachedAt,
       expiresAt: nextShellExpiry(merged, cachedAt),
+      lastSuccessAt: cachedAt,
     });
     return merged;
   })();
@@ -228,7 +241,7 @@ export async function getMainShellLayoutBundleForViewer(
   shellInFlight.set(viewerKey, fetchPromise);
   try {
     const { value } = await awaitWithTimeout(fetchPromise, SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS);
-    return withShellCacheMeta(value, 'miss', Date.now());
+    return withShellCacheMeta(value, 'miss', Date.now(), 'fresh', Date.now());
   } catch {
     return getStaleOrDefaultShellBundle(viewerKey);
   } finally {

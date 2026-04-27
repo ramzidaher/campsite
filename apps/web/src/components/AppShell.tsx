@@ -166,6 +166,7 @@ export function AppShell({
   userRoleLabel,
   hasTenantProfile,
   profileSetupRequired = false,
+  profileState = 'unknown',
   deptLine,
   profileRole,
   unreadBroadcasts,
@@ -196,6 +197,10 @@ export function AppShell({
   orgCelebrationOverrides = [],
   initialShellBadgeCounts,
   initialUiMode = 'classic',
+  shellDegraded = false,
+  shellDegradedReason = null,
+  shellDataFreshness = 'unknown',
+  shellLastSuccessAt = null,
 }: {
   children: React.ReactNode;
   orgName: string;
@@ -211,6 +216,8 @@ export function AppShell({
   hasTenantProfile: boolean;
   /** True only when shell bundle explicitly confirms registration is incomplete. */
   profileSetupRequired?: boolean;
+  /** Tri-state profile hint from layout. */
+  profileState?: true | false | 'unknown';
   deptLine: string | null;
   profileRole: string | null;
   unreadBroadcasts: number;
@@ -251,6 +258,10 @@ export function AppShell({
   /** Hydrated from merged server shell bundle — avoids duplicate badge RPC right after load. */
   initialShellBadgeCounts?: ShellBadgeCounts;
   initialUiMode?: UiMode;
+  shellDegraded?: boolean;
+  shellDegradedReason?: string | null;
+  shellDataFreshness?: 'fresh' | 'stale' | 'unknown';
+  shellLastSuccessAt?: number | null;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [desktopNavOpen, setDesktopNavOpen] = useState(false);
@@ -432,6 +443,11 @@ export function AppShell({
   const orgInitials = useMemo(() => initials(orgName), [orgName]);
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
   const showUserAvatar = Boolean(safeUserAvatar) && !userAvatarFailed;
+  const shouldShowDegradedBanner = shellDegraded || shellDataFreshness === 'stale';
+  const degradedLastUpdated =
+    typeof shellLastSuccessAt === 'number'
+      ? Math.max(0, Math.round((Date.now() - shellLastSuccessAt) / 1000))
+      : null;
 
   const paletteSections = useMemo(
     () =>
@@ -1169,6 +1185,8 @@ export function AppShell({
                         </>
                       ) : profileSetupRequired ? (
                         'Finish registration'
+                      ) : profileState === 'unknown' ? (
+                        'Refreshing workspace...'
                       ) : (
                         'Account'
                       )}
@@ -1297,6 +1315,26 @@ export function AppShell({
             playUiSound('menu_open');
           }}
         />
+        {shouldShowDegradedBanner ? (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[12px] text-amber-900 sm:px-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">Refreshing workspace data...</span>
+              {degradedLastUpdated !== null ? (
+                <span className="text-amber-800/80">Last updated {degradedLastUpdated}s ago</span>
+              ) : null}
+              {shellDegradedReason ? (
+                <span className="text-amber-800/80">({shellDegradedReason})</span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="ml-auto rounded border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : null}
         <main id="main-content" tabIndex={-1} className="workspace-fluid flex-1 overflow-x-hidden overflow-y-auto">
           {children}
         </main>

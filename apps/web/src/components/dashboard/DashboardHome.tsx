@@ -56,6 +56,11 @@ export function DashboardHome({
     statTileCount <= 2 ? 'lg:grid-cols-2' : statTileCount === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4';
 
   const statScope = data.dashboardStatScope;
+  const isStale = data.dashboardDataFreshness === 'stale';
+  const lastUpdatedSeconds =
+    typeof data.dashboardLastSuccessAt === 'number'
+      ? Math.max(0, Math.round((Date.now() - data.dashboardLastSuccessAt) / 1000))
+      : null;
   const broadcastSentSubline =
     statScope === 'dept' ? 'Sent in your department(s)' : 'Sent in your organisation';
   const memberFootnote = (
@@ -87,6 +92,12 @@ export function DashboardHome({
     <div className="w-full px-5 py-7 sm:px-[28px]">
       {variant === 'dashboard' ? <DashboardCampfireAmbient /> : null}
       {variant === 'dashboard' ? <h1 className="sr-only">Dashboard</h1> : null}
+      {isStale ? (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+          Refreshing dashboard data...
+          {lastUpdatedSeconds !== null ? ` Last updated ${lastUpdatedSeconds}s ago.` : ''}
+        </div>
+      ) : null}
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="font-authSerif text-[28px] leading-tight tracking-tight text-[#121212]">

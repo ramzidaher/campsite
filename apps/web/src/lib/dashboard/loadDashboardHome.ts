@@ -86,6 +86,8 @@ export type DashboardHomeModel = {
   calendarTodayD: number;
   /** When false, stat row uses a neutral broadcasts link instead of unread count (society_leader). */
   showBroadcastUnreadCount?: boolean;
+  dashboardDataFreshness?: 'fresh' | 'stale' | 'unknown';
+  dashboardLastSuccessAt?: number | null;
 };
 
 type DashboardCacheEntry = {
@@ -206,7 +208,7 @@ export async function loadDashboardHome(
         'fetch_dashboard_stat_counts',
         resolveWithTimeout(
           fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
-          10000,
+          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
           null,
           'fetch_dashboard_stat_counts',
         ),
@@ -250,16 +252,21 @@ export async function loadDashboardHome(
       withServerPerf(
         '/dashboard',
         'recent_broadcasts',
-        supabase
-          .from('broadcasts')
-          .select(
-            'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
-          )
-          .eq('org_id', orgId)
-          .eq('status', 'sent')
-          .order('sent_at', { ascending: false })
-          .limit(3)
-          .abortSignal(options?.abortSignal ?? new AbortController().signal),
+        resolveWithTimeout(
+          supabase
+            .from('broadcasts')
+            .select(
+              'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
+            )
+            .eq('org_id', orgId)
+            .eq('status', 'sent')
+            .order('sent_at', { ascending: false })
+            .limit(3)
+            .abortSignal(options?.abortSignal ?? new AbortController().signal),
+          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          { data: [], error: null } as any,
+          'recent_broadcasts',
+        ),
         2300
       ),
       withServerPerf(
@@ -411,6 +418,8 @@ export async function loadDashboardHome(
     calendarTodayY: calToday.y,
     calendarTodayM: calToday.m - 1,
     calendarTodayD: calToday.d,
+    dashboardDataFreshness: 'fresh',
+    dashboardLastSuccessAt: Date.now(),
   };
 }
 
@@ -440,7 +449,11 @@ export async function loadDashboardHomeGuarded(
     // Fresh cache hit.
     if (now < entry.expiresAt) {
       if (manualRefresh) entry.lastManualRefreshAt = now;
-      return entry.value;
+      return {
+        ...entry.value,
+        dashboardDataFreshness: 'fresh',
+        dashboardLastSuccessAt: entry.fetchedAt || null,
+      };
     }
 
     // Stale-while-revalidate: return stale value and refresh in background.
@@ -479,13 +492,22 @@ export async function loadDashboardHomeGuarded(
         })();
       }
       if (manualRefresh) entry.lastManualRefreshAt = now;
-      return entry.value;
+      return {
+        ...entry.value,
+        dashboardDataFreshness: 'stale',
+        dashboardLastSuccessAt: entry.fetchedAt || null,
+      };
     }
 
     // Hard-expired but in-flight exists: dedupe.
     if (entry.inFlight) {
       if (manualRefresh) entry.lastManualRefreshAt = now;
-      return entry.inFlight;
+      const inFlightValue = await entry.inFlight;
+      return {
+        ...inFlightValue,
+        dashboardDataFreshness: 'fresh',
+        dashboardLastSuccessAt: Date.now(),
+      };
     }
   }
 
