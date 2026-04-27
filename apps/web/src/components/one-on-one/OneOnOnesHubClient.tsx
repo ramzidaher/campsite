@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import { createClient } from '@/lib/supabase/client';
 
 export type OneOnOneMeetingRow = {
@@ -81,8 +82,10 @@ export function OneOnOnesHubClient({
     }
     setShowNew(false);
     const id = data as string;
-    if (id) window.location.href = `/one-on-ones/${id}`;
-    else await refresh();
+    if (id) {
+      queueEntityCalendarSync({ type: 'one-on-one', id, action: 'upsert' });
+      window.location.href = `/one-on-ones/${id}`;
+    } else await refresh();
   };
 
   const scheduleSidebar = canManage && directReports.length > 0;

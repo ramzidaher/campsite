@@ -29,6 +29,7 @@ import {
   BROADCAST_LAST_VIEWED_ID_KEY,
   parseBroadcastFeedNavigation,
 } from '@/lib/broadcasts/parseBroadcastFeedNavigation';
+import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import type { FeedRow } from '@/lib/broadcasts/feedTypes';
 import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { SHELL_BADGE_COUNTS_QUERY_KEY } from '@/hooks/useShellBadgeCounts';
@@ -235,7 +236,7 @@ export function BroadcastDetailView({
     if (!parsedRange) return;
     setCalendarBusy(true);
     setCalendarMsg(null);
-    const { error } = await supabase.from('calendar_events').insert({
+    const { data: evRow, error } = await supabase.from('calendar_events').insert({
       org_id: initial.org_id,
       title: displayTitle,
       description: initial.body?.slice(0, 2000) ?? '',
@@ -245,11 +246,14 @@ export function BroadcastDetailView({
       source: 'broadcast',
       broadcast_id: initial.id,
       created_by: userId,
-    });
+    }).select('id').single();
     setCalendarBusy(false);
     if (error) {
       setCalendarMsg(error.message);
       return;
+    }
+    if (evRow?.id) {
+      queueEntityCalendarSync({ type: 'calendar-event', id: evRow.id, action: 'upsert' });
     }
     setCalendarMsg('Added to your organisation calendar.');
   }
