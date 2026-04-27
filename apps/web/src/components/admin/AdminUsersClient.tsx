@@ -93,6 +93,7 @@ function formatStableShortDate(input: string): string {
 export function AdminUsersClient({
   currentUserId,
   canEditRoles,
+  canDeleteUsers,
   assignableRoles,
   roleFilterOptions,
   managerChoices,
@@ -105,6 +106,7 @@ export function AdminUsersClient({
 }: {
   currentUserId: string;
   canEditRoles: boolean;
+  canDeleteUsers: boolean;
   assignableRoles: { id: string; key: string; label: string; is_system?: boolean }[];
   /** All tenant roles for URL filter (may include roles you cannot assign). */
   roleFilterOptions: { key: string; label: string }[];
@@ -520,6 +522,33 @@ export function AdminUsersClient({
     router.refresh();
   }
 
+  async function deleteUser(r: UserRow) {
+    if (!canDeleteUsers || r.id === currentUserId || r.status !== 'inactive') return;
+    const ok = confirm(
+      `Delete ${r.full_name} permanently? This removes their sign-in account and cannot be undone.`
+    );
+    if (!ok) return;
+    setBusy(r.id);
+    setMsg(null);
+    const res = await fetch('/api/admin/members/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: r.id }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    setBusy(null);
+    if (!res.ok) {
+      setMsg(data.error ?? 'Could not delete user');
+      return;
+    }
+    setSelected((s) => {
+      const n = new Set(s);
+      n.delete(r.id);
+      return n;
+    });
+    router.refresh();
+  }
+
   function pillClass(active: boolean) {
     return [
       'rounded-full border px-3 py-1.5 text-[12.5px] transition-colors',
@@ -840,6 +869,16 @@ export function AdminUsersClient({
                           disabled={busy === r.id}
                         >
                           Remove from org
+                        </button>
+                      ) : null}
+                      {canDeleteUsers && r.id !== currentUserId && r.status === 'inactive' ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-[#fecaca] bg-[#fef2f2] px-2 py-1 text-[11.5px] font-medium text-[#b91c1c] hover:bg-[#fee2e2] disabled:opacity-50"
+                          onClick={() => void deleteUser(r)}
+                          disabled={busy === r.id}
+                        >
+                          Delete user
                         </button>
                       ) : null}
                     </div>

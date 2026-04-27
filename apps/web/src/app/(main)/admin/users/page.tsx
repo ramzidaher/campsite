@@ -11,6 +11,7 @@ type AdminUsersSearchParams = { status?: string; role?: string; dept?: string; q
 type AdminUsersPagePayload = {
   currentUserId: string;
   canEditRoles: boolean;
+  canDeleteUsers: boolean;
   canOpenHrFile: boolean;
   assignableRoles: { id: string; key: string; label: string; is_system: boolean }[];
   roleFilterOptions: { key: string; label: string }[];
@@ -74,6 +75,7 @@ async function buildAdminUsersPayload(
   sp: AdminUsersSearchParams,
 ): Promise<AdminUsersPagePayload | null> {
   const canEditRoles = permissionKeys.includes('members.edit_roles');
+  const canDeleteUsers = permissionKeys.includes('members.remove');
   const canOpenHrFile = permissionKeys.includes('hr.view_records') || permissionKeys.includes('hr.view_direct_reports');
   const canViewMembers = permissionKeys.includes('members.view');
   if (!canViewMembers) return null;
@@ -219,6 +221,7 @@ async function buildAdminUsersPayload(
   return {
     currentUserId: userId,
     canEditRoles: Boolean(canEditRoles),
+    canDeleteUsers: Boolean(canDeleteUsers),
     canOpenHrFile,
     assignableRoles,
     roleFilterOptions: [...fromOrgRoles, ...missingFromCatalog].sort((a, b) => a.label.localeCompare(b.label)),
@@ -356,6 +359,7 @@ export default async function AdminUsersPage({
     <AdminUsersClient
       currentUserId={payload.currentUserId}
       canEditRoles={payload.canEditRoles}
+      canDeleteUsers={payload.canDeleteUsers}
       assignableRoles={payload.assignableRoles}
       roleFilterOptions={payload.roleFilterOptions}
       managerChoices={payload.managerChoices}
