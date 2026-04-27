@@ -93,7 +93,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
 
     const { data: memRows, error: memErr } = await supabase
       .from('user_org_memberships')
-      .select('org_id, organisations(name, slug)');
+      .select('org_id, status, organisations(name, slug)');
 
     const { data: prof } = await supabase.from('profiles').select('org_id').eq('id', uid).maybeSingle();
 
@@ -108,7 +108,9 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       return slug || undefined;
     }
 
-    if (memErr || !memRows?.length) {
+    const activeMembershipRows = (memRows ?? []).filter((r) => (r.status as string | null) === 'active');
+
+    if (memErr || !activeMembershipRows.length) {
       const fallbackSlug = await resolveProfileOrgSlug(prof?.org_id);
       setLoading(false);
       setSigningIn(true);
@@ -116,7 +118,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       return;
     }
 
-    const orgs: LoginOrgOption[] = memRows
+    const orgs: LoginOrgOption[] = activeMembershipRows
       .map((r) => {
         const o = r.organisations as { name?: string; slug?: string } | null;
         return {
@@ -134,15 +136,6 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       setLoading(false);
       setSigningIn(true);
       void redirectToMemberApp(orgs[0]!.slug || undefined);
-      return;
-    }
-
-    const activeOk = Boolean(prof?.org_id && orgs.some((o) => o.org_id === prof.org_id));
-    if (activeOk) {
-      const activeOrg = orgs.find((o) => o.org_id === prof?.org_id);
-      setLoading(false);
-      setSigningIn(true);
-      void redirectToMemberApp(activeOrg?.slug || undefined);
       return;
     }
 

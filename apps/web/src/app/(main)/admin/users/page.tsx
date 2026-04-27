@@ -363,7 +363,6 @@ export default async function AdminUsersPage({
       departments={payload.departments}
       defaultFilters={payload.defaultFilters}
       orgName={payload.orgName}
-      orgSlug={payload.orgSlug}
       totalMemberCount={payload.totalMemberCount}
       canOpenHrFile={payload.canOpenHrFile}
     />

@@ -162,21 +162,9 @@ export async function POST(req: NextRequest) {
     }
     const id = typeof existingId === 'string' ? existingId : null;
     if (!id || !UUID_RE.test(id)) {
-      if (!redirectTo) {
-        return NextResponse.json(
-          {
-            error:
-              'That email is not registered yet. Set NEXT_PUBLIC_SITE_URL (e.g. http://localhost:3000) so invite emails can link back to this app, or share the self-signup link instead.',
-          },
-          { status: 400 }
-        );
-      }
       return NextResponse.json(
-        {
-          error:
-            'That email looks registered, but we could not look it up in Auth. Check Supabase → Authentication → Users.',
-        },
-        { status: 500 }
+        { error: 'We could not complete the access setup for that email. Please try again shortly.' },
+        { status: 400 }
       );
     }
     targetUserId = id;
@@ -205,6 +193,19 @@ export async function POST(req: NextRequest) {
     const status = lower.includes('another organisation') ? 409 : 500;
     return NextResponse.json({ error: rpcErr.message || 'Could not finish setting up this member.' }, { status });
   }
+
+  await admin.from('org_membership_audit_events').insert({
+    org_id: orgId,
+    actor_user_id: user.id,
+    target_user_id: targetUserId,
+    event_type: 'membership_provisioned',
+    source: 'admin_invite_member',
+    payload: {
+      access_email_channel: accessEmailChannel,
+      role: roleRow.key,
+      department_count: deptArray.length,
+    },
+  });
 
   return NextResponse.json({
     ok: true,

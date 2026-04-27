@@ -49,6 +49,7 @@ export function AuthCallbackClient() {
 
       const next = safeNextPath(full.searchParams.get('next'));
       const forceSetPassword = full.searchParams.get('force_set_password') === '1';
+      const joinRequestId = full.searchParams.get('join_request');
       const token_hash = full.searchParams.get('token_hash');
       const typeInQuery = full.searchParams.get('type');
       const code = full.searchParams.get('code');
@@ -97,6 +98,14 @@ export function AuthCallbackClient() {
       }
 
       await syncRegistrationAvatarToProfileIfEmpty(supabase, user);
+
+      if (joinRequestId) {
+        await fetch('/api/auth/complete-org-join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ join_request_id: joinRequestId }),
+        });
+      }
 
       const meta = user.user_metadata as Record<string, unknown> | undefined;
       const mustSetPassword = meta?.must_set_password === true;

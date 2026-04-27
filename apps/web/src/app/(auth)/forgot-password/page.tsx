@@ -62,7 +62,9 @@ export default function ForgotPasswordPage() {
         ← Back to sign in
       </Link>
       <h2 className="auth-title">Reset your password</h2>
-      <p className="auth-sub mb-8">Enter your email and we&apos;ll send you a reset link</p>
+      <p className="auth-sub mb-8">
+        Enter your account email and we&apos;ll send a reset link. This password applies across all linked organisations.
+      </p>
       <form onSubmit={(e) => void onSubmit(e)}>
         <div className="mb-6">
           <label className="auth-label" htmlFor="forgot-email">

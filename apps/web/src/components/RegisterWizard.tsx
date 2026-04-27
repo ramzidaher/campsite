@@ -20,7 +20,6 @@ const JOIN_STEP_LABELS = [
   'Account',
   'Organisation',
   'Profile (optional)',
-  'Teams',
   'Review',
 ] as const;
 const CREATE_ORG_STEP_LABELS = ['Account', 'Organisation', 'Profile (optional)'] as const;
@@ -117,9 +116,11 @@ function StepProgress({ step, labels }: { step: number; labels: readonly string[
 
 export function RegisterWizard({
   initialOrgSlug,
+  initialInviteToken,
   initialLegalBundleVersion = FALLBACK_LEGAL_SETTINGS.bundle_version,
 }: {
   initialOrgSlug: string | null;
+  initialInviteToken?: string | null;
   /** From `platform_legal_settings` (server); must match signup metadata for stored acceptance. */
   initialLegalBundleVersion?: string;
 }) {
@@ -156,7 +157,9 @@ export function RegisterWizard({
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [legalConsent, setLegalConsent] = useState(false);
+  const inviteToken = (initialInviteToken ?? '').trim();
 
   const strength = passwordStrength(password);
   const strengthVis = passwordStrengthScore(password);
@@ -303,17 +306,9 @@ export function RegisterWizard({
     }
   }
 
-  function toggleDept(id: string) {
-    setSelectedDeptIds((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-  }
-
   async function submit() {
     setError(null);
+    setInfo(null);
     if (!legalConsent) {
       setError(
         'You must agree to the Terms of service, Privacy policy, and Data processing information.'
@@ -378,12 +373,59 @@ export function RegisterWizard({
         },
       });
       if (signErr || !data.user) {
+        const signMsg = (signErr?.message ?? '').toLowerCase();
+        const alreadyRegistered =
+          signMsg.includes('already') ||
+          signMsg.includes('registered') ||
+          signMsg.includes('exists') ||
+          signMsg.includes('duplicate');
+        if (alreadyRegistered) {
+          const { error: signInErr } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (signInErr) {
+            setLoading(false);
+            setError(
+              'This email already has an account. Sign in first, then retry creating your organisation from this form.'
+            );
+            return;
+          }
+          const res = await fetch('/api/auth/create-org-for-existing-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              org_name: nameTrim,
+              org_slug: workspaceSlugNormalized,
+              org_logo_url: newOrgLogoUrl.trim() || null,
+              legal_bundle_version: initialLegalBundleVersion,
+              legal_host: window.location.host,
+              legal_path: window.location.pathname,
+              legal_user_agent: navigator.userAgent,
+              full_name: fullName,
+            }),
+          });
+          const fallbackBody = (await res.json().catch(() => ({}))) as { error?: string };
+          if (!res.ok) {
+            setLoading(false);
+            setError(fallbackBody.error ?? 'Could not create organisation for existing account.');
+            return;
+          }
+          setLoading(false);
+          router.replace('/');
+          router.refresh();
+          return;
+        }
         setLoading(false);
         setError(signErr?.message ?? 'Could not create account.');
         return;
       }
       signUpData = data;
     } else {
+      if (!inviteToken) {
+        setError('Your sign-up link is missing a valid invite token. Ask an admin for a new link.');
+        return;
+      }
       if (!orgId) {
         setError('We could not match your organisation from this sign-up link. Ask your admin for a fresh link.');
         return;
@@ -392,8 +434,14 @@ export function RegisterWizard({
         setError('Organisation mismatch. Please use the original sign-up link from your organisation.');
         return;
       }
-      if (selectedDeptIds.size === 0) {
-        setError('Select at least one department, society, or club.');
+      const fallbackDeptIds =
+        selectedDeptIds.size > 0
+          ? [...selectedDeptIds]
+          : depts[0]?.id
+            ? [depts[0].id]
+            : [];
+      if (fallbackDeptIds.length === 0) {
+        setError('No default department is configured for this organisation yet. Ask an admin to set one up.');
         return;
       }
 
@@ -401,7 +449,8 @@ export function RegisterWizard({
       const joinMeta: Record<string, string> = {
         full_name: fullName,
         register_org_id: orgId,
-        register_dept_ids: JSON.stringify([...selectedDeptIds]),
+        register_invite_token: inviteToken,
+        register_dept_ids: JSON.stringify(fallbackDeptIds),
         register_legal_bundle_version: initialLegalBundleVersion,
         register_legal_host: window.location.host,
         register_legal_path: window.location.pathname,
@@ -416,6 +465,68 @@ export function RegisterWizard({
         },
       });
       if (signErr || !data.user) {
+        const signMsg = (signErr?.message ?? '').toLowerCase();
+        const alreadyRegistered =
+          signMsg.includes('already') ||
+          signMsg.includes('registered') ||
+          signMsg.includes('exists') ||
+          signMsg.includes('duplicate');
+        if (alreadyRegistered) {
+          const { error: signInErr } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (!signInErr) {
+            const joinNowRes = await fetch('/api/auth/join-org-for-existing-account', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                full_name: fullName,
+                org_slug: initialOrgSlug,
+                department_ids: [],
+                invite_token: inviteToken,
+              }),
+            });
+            const joinNowBody = (await joinNowRes.json().catch(() => ({}))) as {
+              error?: string;
+              status?: 'active' | 'pending_approval';
+            };
+            if (!joinNowRes.ok) {
+              setLoading(false);
+              setError(joinNowBody.error ?? 'Could not join this organisation right now.');
+              return;
+            }
+            setLoading(false);
+            if (joinNowBody.status === 'active') {
+              router.replace('/');
+              router.refresh();
+              return;
+            }
+            setInfo(
+              'Registration submitted for approval. Your account is linked to this organisation, and an admin must approve access before you can switch into it.'
+            );
+            return;
+          }
+
+          const res = await fetch('/api/auth/register-existing-membership', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              full_name: fullName,
+              org_slug: initialOrgSlug,
+              department_ids: [],
+              invite_token: inviteToken,
+            }),
+          });
+          const body = (await res.json().catch(() => ({}))) as { message?: string };
+          setLoading(false);
+          setInfo(
+            body.message ??
+              'We sent a sign-in link so you can finish joining this organisation. If you know your password, sign in and submit again to continue instantly.'
+          );
+          return;
+        }
         setLoading(false);
         setError(signErr?.message ?? 'Could not create account.');
         return;
@@ -542,14 +653,6 @@ export function RegisterWizard({
     router.refresh();
   }
 
-  const groupedDepts = useMemo(() => {
-    const g: Record<string, Dept[]> = { department: [], society: [], club: [] };
-    depts.forEach((d) => {
-      g[d.type].push(d);
-    });
-    return g;
-  }, [depts]);
-
   const orgName = orgs.find((o) => o.id === orgId)?.name;
 
   return (
@@ -575,6 +678,11 @@ export function RegisterWizard({
 
       {error ? (
         <p className="mb-6 rounded-[10px] bg-red-500/10 px-3 py-2 text-sm text-[#b91c1c]">{error}</p>
+      ) : null}
+      {info ? (
+        <p className="mb-6 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] px-3 py-2 text-sm text-[#121212]">
+          {info}
+        </p>
       ) : null}
 
       {step === 1 ? (
@@ -697,6 +805,7 @@ export function RegisterWizard({
             className="auth-btn-primary"
             onClick={() => {
               setError(null);
+                setInfo(null);
               if (!fullName.trim() || !email.trim()) {
                 setError('Please fill in all required fields.');
                 return;
@@ -893,7 +1002,12 @@ export function RegisterWizard({
               className="auth-btn-primary flex-[2]"
               onClick={() => {
                 setError(null);
+                setInfo(null);
                 if (inviteFlow) {
+                  if (!inviteToken) {
+                    setError('Your sign-up link is missing a valid invite token. Ask your admin for a new link.');
+                    return;
+                  }
                   if (!orgId) {
                     setError(
                       'We could not match your organisation from this sign-up link. Ask your admin for a fresh link.'
@@ -1012,6 +1126,7 @@ export function RegisterWizard({
               className="auth-btn-primary flex-[2]"
               onClick={() => {
                 setError(null);
+                setInfo(null);
                 if (inviteFlow) {
                   setStep(4);
                   return;
@@ -1037,73 +1152,6 @@ export function RegisterWizard({
       ) : null}
 
       {step === 4 && inviteFlow ? (
-        <div>
-          <h2 className="auth-title">Select teams</h2>
-          <p className="auth-sub mb-6">
-            Choose every department, society, or club you belong to. After you&apos;re in Campsite, choose
-            which broadcast channels to follow in Settings or from any post.
-          </p>
-          {(['department', 'society', 'club'] as const).map((t) =>
-            groupedDepts[t].length ? (
-              <div key={t} className="mb-6">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#9b9b9b]">
-                  {t === 'department' ? 'Departments' : t === 'society' ? 'Societies' : 'Clubs'}
-                </p>
-                <div className="flex flex-col gap-2.5">
-                  {groupedDepts[t].map((d) => {
-                    const selected = selectedDeptIds.has(d.id);
-                    return (
-                      <div
-                        key={d.id}
-                        className={[
-                          'overflow-hidden rounded-xl border transition-colors',
-                          selected ? 'border-[#121212]' : 'border-[#d8d8d8]',
-                        ].join(' ')}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => toggleDept(d.id)}
-                          className="flex w-full items-center justify-between bg-white px-4 py-3.5 text-left transition-colors hover:bg-[#f5f4f1]"
-                        >
-                          <span className="flex items-center gap-2.5 text-sm font-medium text-[#121212]">
-                            <span
-                              className={[
-                                'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-[10px]',
-                                selected
-                                  ? 'border-[#121212] bg-[#121212] text-white'
-                                  : 'border-[#d8d8d8] bg-[#faf9f6]',
-                              ].join(' ')}
-                            >
-                              {selected ? '✓' : ''}
-                            </span>
-                            {d.name}
-                          </span>
-                          <span className="text-xs text-[#9b9b9b]">{selected ? 'Joined' : 'Not joined'}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null
-          )}
-          <div className="mt-2 flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(3)}>
-              ← Back
-            </button>
-            <button
-              type="button"
-              className="auth-btn-primary flex-[2]"
-              onClick={() => selectedDeptIds.size > 0 && setStep(5)}
-              disabled={selectedDeptIds.size === 0}
-            >
-              Continue →
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {step === 5 && inviteFlow ? (
         <div>
           <h2 className="auth-title">Review & submit</h2>
           <p className="auth-sub mb-6">
@@ -1137,21 +1185,8 @@ export function RegisterWizard({
               )}
             </div>
           </div>
-          <div className="mb-6 rounded-xl bg-[#f5f4f1] p-4">
-            <p className="mb-3 text-[13px] font-medium text-[#9b9b9b]">Selected teams</p>
-            <div className="flex flex-wrap gap-1.5">
-              {[...selectedDeptIds].map((id) => {
-                const name = depts.find((d) => d.id === id)?.name;
-                return name ? (
-                  <span
-                    key={id}
-                    className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 text-xs text-[#121212]"
-                  >
-                    {name}
-                  </span>
-                ) : null;
-              })}
-            </div>
+          <div className="mb-6 rounded-xl bg-[#f5f4f1] p-4 text-[13px] leading-relaxed text-[#6b6b6b]">
+            Teams will be assigned by your organisation admin during approval.
           </div>
           <div className="mb-6 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] p-4 text-[13px] leading-relaxed text-[#6b6b6b]">
             <strong className="mb-1 block text-[#121212]">What happens next?</strong>A manager in your
@@ -1159,7 +1194,7 @@ export function RegisterWizard({
             usually within one working day.
           </div>
           <div className="flex gap-3">
-            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(4)}>
+            <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(3)}>
               ← Back
             </button>
             <button

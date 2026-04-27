@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { createClient } from '@/lib/supabase/client';
+import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
 import { useCampfireAmbientPreferences } from '@/lib/sound/useCampfireAmbientPreferences';
 import { useUiSound, useUiSoundPreferences } from '@/lib/sound/useUiSound';
 import {
@@ -529,6 +530,25 @@ export function ProfileSettings({
     const { error } = await supabase.rpc('set_my_active_org', { p_org_id: orgId });
     setTenantSwitching(null);
     if (error) { setFeedback(error.message, 'error'); return; }
+    const selectedOrg = tenantOrgs?.find((o) => o.org_id === orgId);
+    const selectedSlug = selectedOrg?.slug?.trim();
+    if (selectedSlug && !tenantHostMatchesOrg(selectedSlug, window.location.host)) {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      const refreshToken = data.session?.refresh_token;
+      const orgOrigin = tenantSubdomainOriginForHost(selectedSlug, window.location.host);
+      const callbackUrl = new URL('/auth/callback', orgOrigin);
+      callbackUrl.searchParams.set('next', '/settings#account');
+      if (accessToken && refreshToken) {
+        callbackUrl.hash = new URLSearchParams({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          type: 'magiclink',
+        }).toString();
+      }
+      window.location.assign(callbackUrl.toString());
+      return;
+    }
     setFeedback('Switched workspace.', 'success');
     router.refresh();
   }
@@ -1216,7 +1236,9 @@ export function ProfileSettings({
         {activeTab === 'security' && (
           <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
             <h2 className={sectionTitle}>Security</h2>
-            <p className={sectionDesc}>Update your password. Use a strong, unique password.</p>
+            <p className={sectionDesc}>
+              Update your password. This account password is shared across all organisations linked to your email.
+            </p>
             <div className="space-y-4">
               {/* New password */}
               <label className={fieldLabel}>

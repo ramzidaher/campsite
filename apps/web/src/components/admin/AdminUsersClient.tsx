@@ -3,7 +3,6 @@
 import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewModal';
 import { MemberPermissionOverridesPanel } from '@/components/admin/MemberPermissionOverridesPanel';
 import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
@@ -79,6 +78,18 @@ function initials(name: string) {
   return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
 }
 
+function formatStableShortDate(input: string): string {
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return '-';
+  // Keep SSR and client rendering identical by fixing locale/time zone.
+  return d.toLocaleDateString('en-GB', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 export function AdminUsersClient({
   currentUserId,
   canEditRoles,
@@ -89,7 +100,6 @@ export function AdminUsersClient({
   departments,
   defaultFilters,
   orgName,
-  orgSlug,
   totalMemberCount,
   canOpenHrFile,
 }: {
@@ -103,7 +113,6 @@ export function AdminUsersClient({
   departments: { id: string; name: string; type: string; is_archived: boolean }[];
   defaultFilters: { q?: string; dept?: string; status?: string; role?: string };
   orgName: string;
-  orgSlug: string;
   totalMemberCount: number;
   /** When true, quick-view can link to `/hr/records/{id}` */
   canOpenHrFile: boolean;
@@ -235,8 +244,6 @@ export function AdminUsersClient({
   const slice = filteredRows.slice(page * PAGE, page * PAGE + PAGE);
   const pages = Math.max(1, Math.ceil(filteredRows.length / PAGE));
 
-  const inviteHref = `/register?org=${encodeURIComponent(orgSlug)}`;
-
   function toggleAll() {
     if (selected.size === slice.length) setSelected(new Set());
     else setSelected(new Set(slice.map((r) => r.id)));
@@ -367,14 +374,16 @@ export function AdminUsersClient({
       setBusy(null);
       return;
     }
-    await supabase.from('user_departments').delete().eq('user_id', edit.id);
-    for (const did of editDepts) {
-      const { error: e2 } = await supabase.from('user_departments').insert({ user_id: edit.id, dept_id: did });
-      if (e2) {
-        setMsg(e2.message);
-        setBusy(null);
-        return;
-      }
+    const deptRes = await fetch('/api/admin/members/update-departments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: edit.id, department_ids: [...editDepts] }),
+    });
+    const deptData = (await deptRes.json().catch(() => ({}))) as { error?: string };
+    if (!deptRes.ok) {
+      setMsg(deptData.error ?? 'Could not update departments');
+      setBusy(null);
+      return;
     }
     setEdit(null);
     setBusy(null);
@@ -434,6 +443,21 @@ export function AdminUsersClient({
       );
     }
     router.refresh();
+  }
+
+  async function openSelfSignupLink() {
+    setBusy('self-signup-link');
+    setMsg(null);
+    setSuccessMsg(null);
+    const res = await fetch('/api/admin/self-signup-link', { method: 'POST' });
+    const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
+    setBusy(null);
+    if (!res.ok || !data.url) {
+      setMsg(data.error ?? 'Could not generate signup link.');
+      return;
+    }
+    window.open(data.url, '_blank', 'noopener,noreferrer');
+    setSuccessMsg('Generated a signed self-signup link and opened it in a new tab.');
   }
 
   async function resendAccessEmail(r: UserRow) {
@@ -545,12 +569,14 @@ export function AdminUsersClient({
           >
             + Invite by email
           </button>
-          <Link
-            href={inviteHref}
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+          <button
+            type="button"
+            onClick={() => void openSelfSignupLink()}
+            disabled={busy === 'self-signup-link'}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
           >
-            Open self-signup link
-          </Link>
+            {busy === 'self-signup-link' ? 'Generating link...' : 'Open self-signup link'}
+          </button>
         </div>
       </div>
 
@@ -763,11 +789,7 @@ export function AdminUsersClient({
                   </td>
                   <td className="px-3 py-3 align-middle">{statusBadge(r.status)}</td>
                   <td className="px-3 py-3 align-middle text-[13px] text-[#6b6b6b]">
-                    {new Date(r.created_at).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
+                    {formatStableShortDate(r.created_at)}
                   </td>
                   <td className="px-3 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
                     <div className="flex flex-wrap gap-1.5">
@@ -905,11 +927,7 @@ export function AdminUsersClient({
             <div>
               <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Joined</dt>
               <dd className="mt-0.5 text-[#121212]">
-                {new Date(memberPreview.created_at).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {formatStableShortDate(memberPreview.created_at)}
               </dd>
             </div>
           </dl>
