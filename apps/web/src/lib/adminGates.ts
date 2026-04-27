@@ -399,7 +399,9 @@ export function getMainShellManagerNavItemsByPermissions(
   const canViewTeams = p.includes('teams.view');
   const canReviewMembers = p.includes('approvals.members.review');
   const canViewReports = p.includes('reports.view');
-  if (!canManageWorkspace && !canViewDepts && !canViewTeams && !canReviewMembers && !canViewReports) return null;
+  const canViewOrgChart = p.includes('org_chart.view');
+  if (!canManageWorkspace && !canViewDepts && !canViewTeams && !canReviewMembers && !canViewReports && !canViewOrgChart)
+    return null;
 
   if (canManageWorkspace) items.push({ href: '/manager', label: 'Overview', icon: 'home', exact: true });
   if (
@@ -443,7 +445,7 @@ export function getMainShellManagerNavItemsByPermissions(
     items.push({ href: '/manager/teams', label: 'Teams', icon: 'teams', section: 'Your departments' });
   if (canViewReports)
     items.push({ href: '/reports', label: 'Reports', icon: 'reports', section: 'Reporting' });
-  if (canManageWorkspace || canViewDepts || canViewTeams)
+  if (canManageWorkspace || canViewDepts || canViewTeams || canViewOrgChart)
     items.push({ href: '/manager/org-chart', label: 'Live org chart', icon: 'orgChart', section: 'People' });
   return items;
 }

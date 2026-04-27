@@ -58,7 +58,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       runId: runRow.id,
       reportId: id,
       orgId: viewer.orgId,
-      durationMs: Date.now() - requestStartedAt,
+      requestDurationMs: Date.now() - requestStartedAt,
       totalRows: result.totalRows,
       ...result.diagnostics,
     });

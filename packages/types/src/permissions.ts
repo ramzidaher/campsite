@@ -158,6 +158,8 @@ export const PERMISSION_KEYS = [
   'one_on_one.view_all_checkins',
   'one_on_one.manage_direct_reports',
   'one_on_one.manage_templates',
+  // Org chart
+  'org_chart.view',
   // Reporting
   'reports.view',
   'reports.manage',

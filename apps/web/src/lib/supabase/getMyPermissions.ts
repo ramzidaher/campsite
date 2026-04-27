@@ -3,7 +3,7 @@ import type { PermissionKey } from '@campsite/types';
 import { createClient } from './server';
 
 type PermissionsRpcClient = {
-  rpc: (fn: string, params: { p_org_id: string }) => Promise<{ data: unknown }>;
+  rpc: (fn: string, params: { p_org_id: string }) => PromiseLike<{ data: unknown }>;
 };
 
 /**
@@ -14,8 +14,8 @@ type PermissionsRpcClient = {
  * again (e.g. for access control) now get a free cache hit.
  */
 export const getMyPermissions = cache(async (orgId: string, client?: PermissionsRpcClient): Promise<PermissionKey[]> => {
-  const supabase = client ?? (await createClient());
-  const { data } = await supabase.rpc('get_my_permissions', { p_org_id: orgId });
+  const rpcClient = client ?? ((await createClient()) as unknown as PermissionsRpcClient);
+  const { data } = await rpcClient.rpc('get_my_permissions', { p_org_id: orgId });
   if (!Array.isArray(data)) return [];
   return data.map((p) =>
     String((p as { permission_key?: string }).permission_key ?? '')

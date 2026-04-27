@@ -81,7 +81,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     console.warn('[reports.export] blocked_empty_pdf', {
       reportId: id,
       orgId: viewer.orgId,
-      durationMs: Date.now() - requestStartedAt,
+      requestDurationMs: Date.now() - requestStartedAt,
       ...result.diagnostics,
     });
     return NextResponse.json(
@@ -97,7 +97,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     reportId: id,
     orgId: viewer.orgId,
     format,
-    durationMs: Date.now() - requestStartedAt,
+    requestDurationMs: Date.now() - requestStartedAt,
     totalRows: result.totalRows,
     ...result.diagnostics,
   });

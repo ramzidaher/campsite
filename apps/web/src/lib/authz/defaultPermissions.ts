@@ -146,6 +146,7 @@ export const DEFAULT_PERMISSION_SEED: DefaultPermissionSeed[] = [
   { key: 'one_on_one.view_all_checkins', label: 'View all 1:1 check-ins', description: 'View all scheduled and in-progress 1:1 check-ins across the organisation calendar.', is_founder_only: false },
   { key: 'one_on_one.manage_direct_reports', label: 'Manage 1:1s with direct reports', description: 'Schedule and complete 1:1 meetings with people who report to you.', is_founder_only: false },
   { key: 'one_on_one.manage_templates', label: 'Manage 1:1 templates and org settings', description: 'Edit org 1:1 cadence defaults and meeting templates.', is_founder_only: false },
+  { key: 'org_chart.view', label: 'View org chart', description: 'View the live organisation chart with hierarchy and working presence.', is_founder_only: false },
   { key: 'reports.view', label: 'View reports', description: 'Access report builder, run reports, and view saved reports.', is_founder_only: false },
   { key: 'reports.manage', label: 'Manage reports', description: 'Manage shared reports, schedules, and cross-domain reporting.', is_founder_only: false },
   { key: 'founder.platform.manage', label: 'Founder platform access', description: 'Platform-global founder controls.', is_founder_only: true },

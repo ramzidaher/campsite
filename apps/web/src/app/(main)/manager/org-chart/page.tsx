@@ -18,7 +18,7 @@ export default async function ManagerOrgChartPage() {
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
   const permissionKeys = await getMyPermissions(profile.org_id as string);
-  const canView = ['leave.approve_direct_reports', 'leave.manage_org', 'hr.view_records', 'reports.view'].some((k) =>
+  const canView = ['org_chart.view', 'leave.approve_direct_reports', 'leave.manage_org', 'hr.view_records', 'reports.view'].some((k) =>
     permissionKeys.includes(k as (typeof permissionKeys)[number])
   );
   if (!canView) redirect('/manager');

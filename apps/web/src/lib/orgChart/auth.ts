@@ -1,6 +1,7 @@
 import { createSupabaseForApiRequest, getUserFromApiRequest } from '@/lib/supabase/apiRouteAuth';
 
 const ORG_CHART_VIEW_PERMISSIONS = [
+  'org_chart.view',
   'leave.approve_direct_reports',
   'leave.manage_org',
   'hr.view_records',

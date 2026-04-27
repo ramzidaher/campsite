@@ -28,6 +28,7 @@ export type ReportsViewer = {
 
 type ReportsAuthProfile = { org_id: string | null; status: string | null; department_id: string | null };
 type ReportsAuthSupabase = {
+  rpc: (fn: string, params: { p_org_id: string }) => PromiseLike<{ data: unknown }>;
   from: (table: 'profiles') => {
     select: (columns: string) => {
       eq: (column: 'id', value: string) => {
@@ -66,7 +67,7 @@ export async function getReportsViewer(): Promise<ReportsViewer | null> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  return buildReportsViewer(user.id, supabase);
+  return buildReportsViewer(user.id, supabase as unknown as ReportsAuthSupabase);
 }
 
 export async function getReportsViewerFromRequest(req: Request): Promise<ReportsViewer | null> {
@@ -74,7 +75,7 @@ export async function getReportsViewerFromRequest(req: Request): Promise<Reports
   if (!user) return null;
   const supabase = await createSupabaseForApiRequest(req);
   if (!supabase) return null;
-  const direct = await buildReportsViewer(user.id, supabase);
+  const direct = await buildReportsViewer(user.id, supabase as unknown as ReportsAuthSupabase);
   if (direct) return direct;
 
   // Fallback: derive org + permissions from the shell structural RPC when
