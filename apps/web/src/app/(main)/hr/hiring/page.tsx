@@ -15,8 +15,8 @@ export default async function HiringHubIndexPage() {
     redirect('/hr/hiring/requests');
   }
   if (p.includes('jobs.view')) redirect('/hr/hiring/jobs');
+  if (p.includes('applications.view')) redirect('/hr/hiring/application-forms');
   if (p.includes('applications.view')) redirect('/hr/hiring/applications');
-  if (p.includes('interviews.view') || p.includes('interviews.book_slot')) redirect('/hr/hiring/interviews');
   if (p.includes('offers.view')) redirect('/hr/hiring/templates');
 
   redirect('/hr');

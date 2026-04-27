@@ -67,10 +67,11 @@ export default async function HiringWorkspaceLayout({ children }: { children: Re
     });
   }
   if (p.includes('jobs.view')) items.push({ href: '/hr/hiring/jobs', label: 'Job listings' });
-  if (p.includes('interviews.view') || p.includes('interviews.book_slot')) {
-    items.push({ href: '/hr/hiring/interviews', label: 'Interview schedule' });
+  if (p.includes('jobs.view') || p.includes('applications.view')) {
+    items.push({ href: '/hr/hiring/application-forms', label: 'Application forms' });
   }
   if (p.includes('offers.view')) items.push({ href: '/hr/hiring/templates', label: 'Offer templates' });
+  if (p.includes('offers.view')) items.push({ href: '/hr/hiring/contract-templates', label: 'Contract templates' });
 
   return (
     <HiringHubProvider>

@@ -3,6 +3,7 @@
 import { GenerateOfferModal } from '@/app/(main)/admin/jobs/[id]/applications/GenerateOfferModal';
 import {
   bookInterviewForApplication,
+  bulkCreateInterviewSlots,
   listAvailableInterviewSlotsForJob,
   type InterviewSlotRow,
 } from '@/app/(main)/admin/interviews/actions';
@@ -47,6 +48,13 @@ type StageDialogState = {
 };
 
 type TrackerView = 'all' | 'active' | 'rejected' | 'offer' | 'hired';
+type PanelProfile = { id: string; full_name: string | null; email: string | null };
+type RequestedInterviewRow = {
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  notes?: string;
+};
 type QuickActionId =
   | 'applied'
   | 'draft_interview'
@@ -133,10 +141,13 @@ export function JobPipelineClient({
   canMoveStage,
   canBookInterviewSlot,
   canManageInterviews,
+  canCreateInterviewSlot,
   canAddInternalNotes,
   canNotifyCandidate,
   canManageOffers,
   canScoreScreening,
+  panelProfiles,
+  requestedInterviewSchedule,
 }: {
   jobListingId: string;
   jobTitle: string;
@@ -144,10 +155,13 @@ export function JobPipelineClient({
   canMoveStage: boolean;
   canBookInterviewSlot: boolean;
   canManageInterviews: boolean;
+  canCreateInterviewSlot: boolean;
   canAddInternalNotes: boolean;
   canNotifyCandidate: boolean;
   canManageOffers: boolean;
   canScoreScreening: boolean;
+  panelProfiles: PanelProfile[];
+  requestedInterviewSchedule: RequestedInterviewRow[];
 }) {
   const router = useRouter();
   const [applications, setApplications] = useState(initialApplications);
@@ -228,8 +242,18 @@ export function JobPipelineClient({
   const [notify, setNotify] = useState(false);
   const [messageBody, setMessageBody] = useState('');
   const [interviewSlots, setInterviewSlots] = useState<InterviewSlotRow[]>([]);
+  const [jobAvailableSlots, setJobAvailableSlots] = useState<InterviewSlotRow[]>([]);
   const [interviewSlotId, setInterviewSlotId] = useState('');
   const [interviewJoining, setInterviewJoining] = useState('');
+  const [slotDate, setSlotDate] = useState('');
+  const [slotStart, setSlotStart] = useState('09:00');
+  const [slotEnd, setSlotEnd] = useState('14:00');
+  const [slotMinutes, setSlotMinutes] = useState('45');
+  const [breakMinutes, setBreakMinutes] = useState('15');
+  const [slotCount, setSlotCount] = useState('1');
+  const [slotLocation, setSlotLocation] = useState('');
+  const [slotNotes, setSlotNotes] = useState('');
+  const [slotPanel, setSlotPanel] = useState<Record<string, boolean>>({});
   const [pending, startTransition] = useTransition();
 
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -256,6 +280,122 @@ export function JobPipelineClient({
       cancel = true;
     };
   }, [stageDialog, jobListingId]);
+
+  useEffect(() => {
+    let cancel = false;
+    void listAvailableInterviewSlotsForJob(jobListingId).then((r) => {
+      if (cancel) return;
+      if (r.ok) setJobAvailableSlots(r.slots);
+      else setJobAvailableSlots([]);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [jobListingId]);
+
+  const requestedSlotHints = useMemo(() => {
+    const toNum = (value: string | undefined, fallback: number) => {
+      const n = Number.parseInt((value ?? '').trim(), 10);
+      return Number.isFinite(n) && n > 0 ? n : fallback;
+    };
+    return (requestedInterviewSchedule ?? []).map((row) => {
+      const note = String(row.notes ?? '');
+      const slotMatch = /Slot length:\s*(\d+)\s*minutes/i.exec(note);
+      const breakMatch = /Break:\s*(\d+)\s*minutes/i.exec(note);
+      return {
+        date: String(row.date ?? ''),
+        startTime: String(row.startTime ?? ''),
+        endTime: String(row.endTime ?? ''),
+        slotMinutes: toNum(slotMatch?.[1], 45),
+        breakMinutes: toNum(breakMatch?.[1], 15),
+        notes: note
+          .split('|')
+          .map((s) => s.trim())
+          .filter((s) => !/^Slot length:/i.test(s) && !/^Break:/i.test(s))
+          .join(' | '),
+      };
+    });
+  }, [requestedInterviewSchedule]);
+
+  const selectedPanelIds = useMemo(
+    () => Object.keys(slotPanel).filter((id) => slotPanel[id]),
+    [slotPanel]
+  );
+
+  function generateSlotsForSession() {
+    if (!slotDate || !slotStart || !slotEnd) {
+      return { error: 'Choose date, start time, and end time.', slots: [] as Array<{ startsAtIso: string; endsAtIso: string }> };
+    }
+    const start = new Date(`${slotDate}T${slotStart}:00`);
+    const end = new Date(`${slotDate}T${slotEnd}:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      return { error: 'Invalid start/end time range.', slots: [] as Array<{ startsAtIso: string; endsAtIso: string }> };
+    }
+    const duration = Number.parseInt(slotMinutes, 10);
+    const gap = Number.parseInt(breakMinutes, 10);
+    const requestedCount = Math.max(1, Number.parseInt(slotCount, 10) || 1);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return { error: 'Slot duration must be greater than 0.', slots: [] as Array<{ startsAtIso: string; endsAtIso: string }> };
+    }
+    const slots: Array<{ startsAtIso: string; endsAtIso: string }> = [];
+    let cursor = start.getTime();
+    while (cursor + duration * 60_000 <= end.getTime() && slots.length < requestedCount) {
+      const startsAt = new Date(cursor);
+      const endsAt = new Date(cursor + duration * 60_000);
+      slots.push({ startsAtIso: startsAt.toISOString(), endsAtIso: endsAt.toISOString() });
+      cursor = endsAt.getTime() + Math.max(0, gap) * 60_000;
+    }
+    if (slots.length === 0) {
+      return { error: 'No slots fit this time window. Increase range or reduce slot/gap length.', slots };
+    }
+    return { error: '', slots };
+  }
+
+  function createSlotsForJob() {
+    if (!canCreateInterviewSlot) return;
+    if (selectedPanelIds.length === 0) {
+      alert('Select at least one panel member.');
+      return;
+    }
+    const generated = generateSlotsForSession();
+    if (generated.error) {
+      alert(generated.error);
+      return;
+    }
+    const titleBits = ['Interview'];
+    if (slotLocation.trim()) titleBits.push(`Location: ${slotLocation.trim()}`);
+    if (slotNotes.trim()) titleBits.push(`Notes: ${slotNotes.trim()}`);
+    const title = titleBits.join(' | ');
+    startTransition(async () => {
+      const res = await bulkCreateInterviewSlots({
+        jobListingId,
+        title,
+        slots: generated.slots,
+        panelistProfileIds: selectedPanelIds,
+      });
+      if (!res.ok) {
+        alert(res.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function prefillFromRequested(row: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    slotMinutes: number;
+    breakMinutes: number;
+    notes: string;
+  }) {
+    setSlotDate(row.date || '');
+    setSlotStart(row.startTime || '09:00');
+    setSlotEnd(row.endTime || '14:00');
+    setSlotMinutes(String(row.slotMinutes || 45));
+    setBreakMinutes(String(row.breakMinutes || 15));
+    setSlotNotes(row.notes || '');
+  }
 
   const openDetail = useCallback(
     (id: string) => {
@@ -468,6 +608,173 @@ export function JobPipelineClient({
           </a>
         </div>
       </div>
+
+      <section className="rounded-xl border border-[#d8d8d8] bg-white p-4 sm:p-5">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-authSerif text-[19px] leading-tight text-[#121212]">Interview sessions for this role</h2>
+            <p className="mt-1 text-[12px] text-[#6b6b6b]">
+              Create interview slots directly for this job. These slots are used when moving candidates to Interview.
+            </p>
+          </div>
+          <span className="rounded-full border border-[#d8d8d8] bg-[#faf9f6] px-2.5 py-1 text-[11px] text-[#6b6b6b]">
+            Available slots: {jobAvailableSlots.length}
+          </span>
+        </div>
+
+        {requestedSlotHints.length > 0 ? (
+          <div className="mb-4 rounded-lg border border-[#e8e8e8] bg-[#f7fbf8] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">
+              Requested by manager in recruitment request
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {requestedSlotHints.map((row, idx) => (
+                <button
+                  key={`${row.date}-${row.startTime}-${idx}`}
+                  type="button"
+                  onClick={() => prefillFromRequested(row)}
+                  className="rounded-full border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] text-[#121212] transition-colors hover:bg-[#f5f4f1]"
+                >
+                  {row.date || 'Date TBC'} • {row.startTime || '-'} to {row.endTime || '-'} • {row.slotMinutes}m / {row.breakMinutes}m
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="text-[12px] font-medium text-[#505050]">
+            Date
+            <input
+              type="date"
+              value={slotDate}
+              onChange={(e) => setSlotDate(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[12px] font-medium text-[#505050]">
+              Start time
+              <input
+                type="time"
+                value={slotStart}
+                onChange={(e) => setSlotStart(e.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+              />
+            </label>
+            <label className="text-[12px] font-medium text-[#505050]">
+              End time
+              <input
+                type="time"
+                value={slotEnd}
+                onChange={(e) => setSlotEnd(e.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+              />
+            </label>
+          </div>
+          <label className="text-[12px] font-medium text-[#505050]">
+            Duration of session
+            <select
+              value={slotMinutes}
+              onChange={(e) => setSlotMinutes(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            >
+              <option value="15">15 mins</option>
+              <option value="30">30 mins</option>
+              <option value="45">45 mins</option>
+              <option value="60">60 mins</option>
+            </select>
+          </label>
+          <label className="text-[12px] font-medium text-[#505050]">
+            Gap between sessions
+            <select
+              value={breakMinutes}
+              onChange={(e) => setBreakMinutes(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            >
+              <option value="0">No gap</option>
+              <option value="10">10 mins</option>
+              <option value="15">15 mins</option>
+              <option value="20">20 mins</option>
+            </select>
+          </label>
+          <label className="text-[12px] font-medium text-[#505050]">
+            Number of back to back interview sessions
+            <input
+              type="number"
+              min={1}
+              value={slotCount}
+              onChange={(e) => setSlotCount(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            />
+          </label>
+          <label className="text-[12px] font-medium text-[#505050]">
+            Location
+            <input
+              value={slotLocation}
+              onChange={(e) => setSlotLocation(e.target.value)}
+              placeholder="Interview location or call details"
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            />
+          </label>
+        </div>
+
+        <label className="mt-3 block text-[12px] font-medium text-[#505050]">
+          Notes
+          <textarea
+            value={slotNotes}
+            onChange={(e) => setSlotNotes(e.target.value)}
+            rows={2}
+            className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+          />
+        </label>
+
+        <div className="mt-3">
+          <p className="mb-1 text-[12px] font-medium text-[#505050]">Panel members</p>
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-[#e8e8e8]">
+            {panelProfiles.length === 0 ? (
+              <p className="p-3 text-[12px] text-[#9b9b9b]">No active staff profiles found.</p>
+            ) : (
+              <ul className="divide-y divide-[#f0f0f0]">
+                {panelProfiles.map((profile) => (
+                  <li key={profile.id} className="px-3 py-2">
+                    <label className="flex cursor-pointer items-center gap-2 text-[12px]">
+                      <input
+                        type="checkbox"
+                        checked={!!slotPanel[profile.id]}
+                        onChange={() =>
+                          setSlotPanel((prev) => ({
+                            ...prev,
+                            [profile.id]: !prev[profile.id],
+                          }))
+                        }
+                      />
+                      <span className="font-medium text-[#121212]">{profile.full_name?.trim() || '-'}</span>
+                      <span className="text-[#9b9b9b]">{profile.email ?? ''}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={createSlotsForJob}
+            disabled={!canCreateInterviewSlot || pending}
+            className="inline-flex h-9 items-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-white disabled:opacity-50"
+          >
+            {pending ? 'Saving…' : 'Save interview session'}
+          </button>
+          {!canCreateInterviewSlot ? (
+            <span className="text-[12px] text-[#9b9b9b]">
+              You can view sessions, but only users with interview slot creation access can create them.
+            </span>
+          ) : null}
+        </div>
+      </section>
 
       {totalApplications === 0 ? (
         <div className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-4 text-[13px] text-[#6b6b6b]">
@@ -712,11 +1019,7 @@ export function JobPipelineClient({
                 </label>
                 {interviewSlots.length === 0 ? (
                   <p className="text-[13px] text-amber-900">
-                    No available slots for this job.{' '}
-                    <a href="/hr/interviews" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-                      Create interview slots
-                    </a>
-                    .
+                    No available slots for this job. Create interview sessions in this job page first.
                   </p>
                 ) : null}
                 <label className="block text-[12px] font-medium text-[#505050]">
