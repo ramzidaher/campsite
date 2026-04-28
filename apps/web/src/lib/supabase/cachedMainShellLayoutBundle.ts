@@ -44,6 +44,10 @@ function isMissingProfileBundle(value: ShellBundle): boolean {
 }
 
 function nextShellExpiry(value: ShellBundle, now: number): number {
+  // Degraded bundles (permission timeout, RPC timeout) must not be cached — the user
+  // navigating away caused Vercel to keep running a slow/cancelled request, and caching
+  // that degraded result for 10s would lock them in member-mode on every subsequent page.
+  if (value.shell_degraded) return now;
   // Profile bootstrap can complete seconds after auth. Keep "no profile" cache very short
   // so users don't get stuck on stale "Finish setup" UI after registration succeeds.
   return now + (isMissingProfileBundle(value) ? SHELL_RESPONSE_CACHE_NO_PROFILE_TTL_MS : SHELL_RESPONSE_CACHE_TTL_MS);
