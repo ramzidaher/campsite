@@ -61,6 +61,35 @@ Output:
 - `reports/incident/incident-<timestamp>/incident-summary.json`
 - `reports/incident/incident-<timestamp>/supabase-inspect/*.json` (auto-captured outliers/calls/blocking/index-stats)
 
+## 3.1) Signed-in production route thrash
+
+Use this when the issue shows up from real navigation between HR, hiring, performance, and profile routes.
+
+Default single-user James repro:
+
+```bash
+npm run probe:prod:routes -- --emails james.hann@camp-site.co.uk
+```
+
+Small multi-user fan-out:
+
+```bash
+npm run probe:prod:routes -- --maxUsers 6 --concurrency 3 --iterationsPerUser 12
+```
+
+Artifacts are written under `reports/incident/prod-route-thrash-<timestamp>/`:
+
+- `events.jsonl`: one event stream for logins, page requests, and shell snapshots
+- `page-requests.csv`: route-by-route timings and statuses
+- `shell-snapshots.csv`: shell cache/degraded/auth metadata beside the page run
+- `summary.json` / `summary.md`: aggregated findings, top slow routes, and Vercel request IDs
+
+Requirements:
+
+- `.env` must contain `NEXT_PUBLIC_SUPABASE_URL`
+- `.env` must contain one public Supabase key
+- the users CSV must include `username,password`
+
 ## 4) Production-grade acceptance gates
 
 Do not treat issue as fixed unless all pass under repeatable load:

@@ -47,7 +47,8 @@
     "loadtest:k6:shell": "k6 run load-tests/k6-shell-rpc.js",
     "loadtest:k6:shell:50": "k6 run --vus 50 --duration 5m load-tests/k6-shell-rpc.js",
     "loadtest:k6:shell:100": "k6 run --vus 100 --duration 5m load-tests/k6-shell-rpc.js",
-    "loadtest:k6:shell:200": "k6 run --vus 200 --duration 5m load-tests/k6-shell-rpc.js"
+    "loadtest:k6:shell:200": "k6 run --vus 200 --duration 5m load-tests/k6-shell-rpc.js",
+    "probe:prod:routes": "node scripts/prod-route-thrash.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
