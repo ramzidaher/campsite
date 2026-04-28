@@ -1,9 +1,10 @@
 import { OrgChartClient } from '@/components/admin/hr/OrgChartClient';
 import type { HRDirectoryRow } from '@/components/admin/hr/HRDirectoryClient';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 function AccessMessage({ message }: { message: string }) {
   return (
@@ -18,25 +19,19 @@ function AccessMessage({ message }: { message: string }) {
 
 export default async function HROrgChartPage() {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
+  const bundle = await withServerPerf(
     '/admin/hr/org-chart',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
     300
   );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
 
-  if (!profile?.org_id || profile.status !== 'active') {
+  const supabase = await createClient();
+  if (shellBundleProfileStatus(bundle) !== 'active') {
     return <AccessMessage message="Your account needs an active organisation membership to view the org chart." />;
   }
-  const orgId = profile.org_id as string;
 
   const [rowsRes, orgRes] = await Promise.all([
     withServerPerf('/admin/hr/org-chart', 'org_chart_directory_list', supabase.rpc('org_chart_directory_list'), 450),

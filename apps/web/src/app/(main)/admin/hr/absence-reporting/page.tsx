@@ -1,9 +1,9 @@
 import { BradfordReportClient } from '@/components/admin/hr/BradfordReportClient';
 import type { BradfordReportRow } from '@/components/admin/hr/BradfordReportClient';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { redirect } from 'next/navigation';
 
 function mapReportRows(raw: unknown): BradfordReportRow[] {
@@ -64,25 +64,17 @@ function mapHighAbsenceRows(raw: unknown): Array<{
 
 export default async function AbsenceReportingPage() {
   const pathStartedAtMs = Date.now();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
+  const bundle = await withServerPerf(
+    '/admin/hr/absence-reporting',
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
   const supabase = await createClient();
-  const { data: profile } = await withServerPerf(
-    '/admin/hr/absence-reporting',
-    'profile_lookup',
-    supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle(),
-    300
-  );
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-  const permissionKeys = await withServerPerf(
-    '/admin/hr/absence-reporting',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
-  );
   const canViewAll =
     permissionKeys.includes('hr.view_records') || permissionKeys.includes('leave.manage_org');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');

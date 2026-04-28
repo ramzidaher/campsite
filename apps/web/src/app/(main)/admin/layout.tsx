@@ -1,22 +1,24 @@
-import { createClient } from '@/lib/supabase/server';
-import { viewerHasAnyAdminAccess } from '@/lib/authz/serverGuards';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 /** Org tenant admin routes; nav lives in the main shell under “Admin”. */
 export default async function OrgAdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, status, org_id')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const hasAdminAccess = await viewerHasAnyAdminAccess();
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  const hasAdminAccess = permissionKeys.some(
+    (key) =>
+      key.startsWith('members.') ||
+      key.startsWith('roles.') ||
+      key.startsWith('recruitment.') ||
+      key.startsWith('jobs.') ||
+      key.startsWith('applications.') ||
+      key.startsWith('offers.') ||
+      key.startsWith('interviews.')
+  );
   if (!hasAdminAccess) redirect('/broadcasts');
 
   return <div className="min-w-0">{children}</div>;

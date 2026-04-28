@@ -19,6 +19,10 @@ const SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS = Number.parseInt(
   process.env.CAMPSITE_SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS ?? '4000',
   10
 );
+const SHELL_PERMISSION_RECOVERY_TIMEOUT_MS = Number.parseInt(
+  process.env.CAMPSITE_SHELL_PERMISSION_RECOVERY_TIMEOUT_MS ?? '650',
+  10
+);
 
 type ShellBundle = Record<string, unknown>;
 type ShellRpcOptions = {
@@ -38,9 +42,74 @@ type ShellCacheEntry = {
 
 const shellResponseCache = new Map<string, ShellCacheEntry>();
 const shellInFlight = new Map<string, Promise<ShellBundle>>();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isMissingProfileBundle(value: ShellBundle): boolean {
   return value.has_profile === false;
+}
+
+function shellBundleOrgId(value: ShellBundle): string | null {
+  const orgId = value.org_id;
+  return typeof orgId === 'string' && orgId.trim() ? orgId.trim() : null;
+}
+
+function shellBundleProfileStatus(value: ShellBundle): string | null {
+  return typeof value.profile_status === 'string' ? value.profile_status : null;
+}
+
+function shellBundleProfileRole(value: ShellBundle): string | null {
+  return typeof value.profile_role === 'string' ? value.profile_role : null;
+}
+
+function shellBundlePermissionKeys(value: ShellBundle): string[] {
+  const raw = value.permission_keys;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) => {
+      if (typeof entry === 'string') return entry.trim();
+      if (entry && typeof entry === 'object') {
+        return String((entry as { permission_key?: unknown }).permission_key ?? '').trim();
+      }
+      return '';
+    })
+    .filter(Boolean);
+}
+
+function mergeShellGuardrailReasons(value: ShellBundle, reasons: string[]): string[] {
+  const existing = Array.isArray(value.shell_guardrail_reasons)
+    ? value.shell_guardrail_reasons.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  return [...new Set([...existing, ...reasons])];
+}
+
+function shouldRecoverPermissionKeys(value: ShellBundle): boolean {
+  if (value.has_profile !== true) return false;
+  if (shellBundleProfileStatus(value) !== 'active') return false;
+  if (!shellBundleOrgId(value)) return false;
+  if (shellBundleProfileRole(value) === 'unassigned') return false;
+  return shellBundlePermissionKeys(value).length === 0;
+}
+
+function permissionRecoveryRpc(
+  value: ShellBundle,
+  rpcOptions?: ShellRpcOptions
+):
+  | { rpcName: 'get_my_permissions'; rpcArgs: { p_org_id: string } }
+  | { rpcName: 'get_permissions_for_user'; rpcArgs: { p_user_id: string; p_org_id: string } }
+  | null {
+  const orgId = shellBundleOrgId(value);
+  if (!orgId) return null;
+
+  const explicitUserId =
+    rpcOptions?.bundleRpcArgs?.['p_user_id'] ?? rpcOptions?.structuralRpcArgs?.['p_user_id'];
+  if (typeof explicitUserId === 'string' && UUID_RE.test(explicitUserId)) {
+    return {
+      rpcName: 'get_permissions_for_user',
+      rpcArgs: { p_user_id: explicitUserId, p_org_id: orgId },
+    };
+  }
+
+  return { rpcName: 'get_my_permissions', rpcArgs: { p_org_id: orgId } };
 }
 
 function nextShellExpiry(value: ShellBundle, now: number): number {
@@ -98,6 +167,83 @@ async function awaitWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Prom
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+async function resolveWithTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs: number,
+  fallback: T
+): Promise<{ value: T; timedOut: boolean }> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let timedOut = false;
+  try {
+    const value = await Promise.race([
+      Promise.resolve(promise),
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => {
+          timedOut = true;
+          resolve(fallback);
+        }, timeoutMs);
+      }),
+    ]);
+    return { value, timedOut };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function recoverPermissionKeysIfNeeded(
+  supabase: Pick<SupabaseClient, 'rpc'>,
+  value: ShellBundle,
+  rpcOptions?: ShellRpcOptions
+): Promise<ShellBundle> {
+  if (!shouldRecoverPermissionKeys(value)) return value;
+
+  const recovery = permissionRecoveryRpc(value, rpcOptions);
+  if (!recovery) {
+    return withShellDegradedMeta(
+      {
+        ...value,
+        shell_guardrail_reasons: mergeShellGuardrailReasons(value, ['permission_keys_empty']),
+      },
+      'permission_keys_empty'
+    );
+  }
+
+  const recoveredWrapped = await resolveWithTimeout(
+    supabase.rpc(recovery.rpcName, recovery.rpcArgs as never) as PromiseLike<{ data: unknown; error: unknown }>,
+    SHELL_PERMISSION_RECOVERY_TIMEOUT_MS,
+    { data: [], error: null } as { data: unknown; error: unknown }
+  );
+  const recovered = recoveredWrapped.value;
+  if (recovered.error) {
+    return withShellDegradedMeta(
+      {
+        ...value,
+        shell_guardrail_reasons: mergeShellGuardrailReasons(value, ['permission_keys_recovery_error']),
+      },
+      'permission_keys_recovery_error'
+    );
+  }
+
+  const recoveredKeys = shellBundlePermissionKeys({ permission_keys: recovered.data });
+  if (recoveredKeys.length > 0) {
+    return {
+      ...value,
+      permission_keys: recoveredKeys,
+      shell_guardrail_reasons: mergeShellGuardrailReasons(value, ['permission_keys_recovered']),
+    };
+  }
+
+  return withShellDegradedMeta(
+    {
+      ...value,
+      shell_guardrail_reasons: mergeShellGuardrailReasons(value, [
+        recoveredWrapped.timedOut ? 'permission_keys_recovery_timeout' : 'permission_keys_empty',
+      ]),
+    },
+    recoveredWrapped.timedOut ? 'permission_keys_recovery_timeout' : 'permission_keys_empty'
+  );
 }
 
 export function getStaleOrDefaultShellBundle(viewerKey: string): ShellBundle {
@@ -176,20 +322,23 @@ export async function getMainShellLayoutBundleForViewer(
         result.data && typeof result.data === 'object'
           ? (result.data as Record<string, unknown>)
           : {};
+      const recoveredPayload = await recoverPermissionKeysIfNeeded(supabase, payload, rpcOptions);
       const reasons = wrapped.timedOut ? ['timeout'] : [];
       const merged = {
-        ...payload,
-        shell_degraded: wrapped.timedOut || Boolean(payload.shell_degraded),
+        ...recoveredPayload,
+        shell_degraded: wrapped.timedOut || Boolean(recoveredPayload.shell_degraded),
         shell_guardrail_reasons: [
           ...new Set([
-            ...(Array.isArray(payload.shell_guardrail_reasons)
-              ? payload.shell_guardrail_reasons.filter((x): x is string => typeof x === 'string')
+            ...(Array.isArray(recoveredPayload.shell_guardrail_reasons)
+              ? recoveredPayload.shell_guardrail_reasons.filter((x): x is string => typeof x === 'string')
               : []),
             ...reasons,
           ]),
         ],
         shell_cache_status:
-          typeof payload.shell_cache_status === 'string' ? payload.shell_cache_status : 'single-rpc',
+          typeof recoveredPayload.shell_cache_status === 'string'
+            ? recoveredPayload.shell_cache_status
+            : 'single-rpc',
       };
       const cachedAt = Date.now();
       shellResponseCache.set(viewerKey, {
@@ -225,21 +374,34 @@ export async function getMainShellLayoutBundleForViewer(
       ...(badge.error ? ['badge_rpc_error'] : []),
       ...badgeWrapped.meta.reasons,
     ];
-    const merged = {
+    const merged = await recoverPermissionKeysIfNeeded(
+      supabase,
+      {
+        ...s,
+        ...b,
+        shell_degraded: structuralWrapped.timedOut || Boolean(badge.error) || badgeWrapped.meta.degraded,
+        shell_guardrail_reasons: [...new Set(reasons)],
+        shell_cache_status: badgeWrapped.meta.cacheStatus,
+      },
+      rpcOptions
+    );
+    const finalBundle = {
       ...s,
       ...b,
-      shell_degraded: isDegraded,
-      shell_guardrail_reasons: [...new Set(reasons)],
-      shell_cache_status: badgeWrapped.meta.cacheStatus,
+      ...merged,
+      shell_degraded: isDegraded || Boolean(merged.shell_degraded),
+      shell_guardrail_reasons: mergeShellGuardrailReasons(merged, reasons),
+      shell_cache_status:
+        typeof merged.shell_cache_status === 'string' ? merged.shell_cache_status : badgeWrapped.meta.cacheStatus,
     };
     const cachedAt = Date.now();
     shellResponseCache.set(viewerKey, {
-      value: merged,
+      value: finalBundle,
       cachedAt,
-      expiresAt: nextShellExpiry(merged, cachedAt),
+      expiresAt: nextShellExpiry(finalBundle, cachedAt),
       lastSuccessAt: cachedAt,
     });
-    return merged;
+    return finalBundle;
   })();
 
   shellInFlight.set(viewerKey, fetchPromise);

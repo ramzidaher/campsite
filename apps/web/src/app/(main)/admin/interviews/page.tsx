@@ -1,32 +1,22 @@
 import { InterviewScheduleClient } from '@/app/(main)/admin/interviews/InterviewScheduleClient';
-import { viewerHasPermission } from '@/lib/authz/serverGuards';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminInterviewsPage() {
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const [canViewInterviews, canBookInterviewSlot] = await Promise.all([
-    viewerHasPermission('interviews.view'),
-    viewerHasPermission('interviews.book_slot'),
-  ]);
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  const canViewInterviews = permissionKeys.includes('interviews.view');
+  const canBookInterviewSlot = permissionKeys.includes('interviews.book_slot');
   if (!canViewInterviews && !canBookInterviewSlot) redirect('/broadcasts');
+  const canCreateSlot = permissionKeys.includes('interviews.create_slot');
+  const canCompleteSlot = permissionKeys.includes('interviews.complete_slot');
 
-  const orgId = profile.org_id as string;
-  const [canCreateSlot, canCompleteSlot] = await Promise.all([
-    viewerHasPermission('interviews.create_slot'),
-    viewerHasPermission('interviews.complete_slot'),
-  ]);
+  const supabase = await createClient();
   const fromPast = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const [{ data: jobs }, { data: profiles }, { data: slots }] = await Promise.all([

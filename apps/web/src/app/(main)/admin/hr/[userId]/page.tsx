@@ -9,11 +9,12 @@ import { MedicalNotesClient } from '@/components/hr/MedicalNotesClient';
 import { TaxDocumentsClient } from '@/components/hr/TaxDocumentsClient';
 import { UkTaxDetailsClient } from '@/components/hr/UkTaxDetailsClient';
 import { currentLeaveYearKeyForOrgCalendar, currentLeaveYearKeyUtc } from '@/lib/datetime';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { normalizeUiMode } from '@/lib/uiMode';
 import { withServerPerf, warnIfSlowServerPath } from '@/lib/perf/serverPerf';
 import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
@@ -27,29 +28,22 @@ export default async function EmployeeHRFilePage({
 }) {
   const pathStartedAtMs = Date.now();
   const { userId } = await params;
+  const bundle = await withServerPerf(
+    '/admin/hr/[userId]',
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  const viewerUiMode =
+    typeof bundle.ui_mode === 'string' ? normalizeUiMode(bundle.ui_mode) : normalizeUiMode(null);
+
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status, ui_mode')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-  const viewerUiMode = normalizeUiMode((profile.ui_mode as string | null) ?? null);
-
-  // Single RPC for all permissions — replaces 28 individual has_permission calls.
-  // React cache() means this is a free cache hit if the shell layout already called it.
-  const permissionKeys = await withServerPerf(
-    '/admin/hr/[userId]',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    350
-  );
 
   const canViewAll = permissionKeys.includes('hr.view_records');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');

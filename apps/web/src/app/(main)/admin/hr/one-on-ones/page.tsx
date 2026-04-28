@@ -1,36 +1,23 @@
 import { HrOneOnOneComplianceClient } from '@/components/one-on-one/HrOneOnOneComplianceClient';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function HrOneOnOnesPage() {
   const pathStartedAtMs = Date.now();
+  const bundle = await withServerPerf(
+    '/admin/hr/one-on-ones',
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
   const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
-    '/admin/hr/one-on-ones',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
-    300
-  );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const orgId = profile.org_id as string;
-
-  const permissionKeys = await withServerPerf(
-    '/admin/hr/one-on-ones',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
-  );
   if (!permissionKeys.includes('hr.view_records')) redirect('/broadcasts');
 
   const { data: rowsRaw, error } = await withServerPerf(

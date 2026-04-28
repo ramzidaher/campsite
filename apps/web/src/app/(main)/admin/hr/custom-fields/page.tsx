@@ -1,35 +1,23 @@
 import { CustomHrFieldDefinitionsClient } from '@/components/hr/CustomHrFieldDefinitionsClient';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { redirect } from 'next/navigation';
 
 export default async function AdminHrCustomFieldsPage() {
   const pathStartedAtMs = Date.now();
+  const bundle = await withServerPerf(
+    '/admin/hr/custom-fields',
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
   const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
-    '/admin/hr/custom-fields',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
-    300
-  );
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const orgId = profile.org_id as string;
-
-  const permissionKeys = await withServerPerf(
-    '/admin/hr/custom-fields',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
-  );
   const canView       = permissionKeys.includes('hr.custom_fields.view');
   const canManageDefs = permissionKeys.includes('hr.custom_fields.manage_definitions');
   if (!canView && !canManageDefs) redirect('/admin');

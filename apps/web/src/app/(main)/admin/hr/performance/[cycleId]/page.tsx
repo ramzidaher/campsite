@@ -1,40 +1,27 @@
 import { PerformanceCycleDetailClient } from '@/components/admin/hr/performance/PerformanceCycleDetailClient';
 import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 const PERF_CYCLE_MEMBERS_TIMEOUT_MS = 1200;
 
 export default async function PerformanceCycleDetailPage({ params }: { params: Promise<{ cycleId: string }> }) {
   const pathStartedAtMs = Date.now();
   const { cycleId } = await params;
+  const bundle = await withServerPerf(
+    '/admin/hr/performance/[cycleId]',
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
   const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
-    '/admin/hr/performance/[cycleId]',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
-    300
-  );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const orgId = profile.org_id as string;
-
-  const permissionKeys = await withServerPerf(
-    '/admin/hr/performance/[cycleId]',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
-  );
 
   if (!permissionKeys.includes('performance.manage_cycles')) redirect('/hr/performance');
 

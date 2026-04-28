@@ -1,22 +1,18 @@
 import { HrMetricAlertsSettingsClient } from '@/components/hr/HrMetricAlertsSettingsClient';
-import { viewerHasPermission } from '@/lib/authz/serverGuards';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function HrMetricAlertsPage() {
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!permissionKeys.includes('hr.view_records')) redirect('/broadcasts');
+
   const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('hr.view_records'))) redirect('/broadcasts');
 
   const { data: raw, error } = await supabase.rpc('org_hr_metric_settings_get');
   if (error) redirect('/broadcasts');

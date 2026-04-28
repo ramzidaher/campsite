@@ -1,8 +1,8 @@
 import { HRDirectoryClient } from '@/components/admin/hr/HRDirectoryClient';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
 import { normalizeUiMode } from '@/lib/uiMode';
@@ -15,29 +15,14 @@ export default async function HRDirectoryPage({
   searchParams?: Promise<{ q?: string | string[] }>;
 }) {
   const pathStartedAtMs = Date.now();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
+  const bundle = await withServerPerf('/admin/hr', 'shell_bundle_for_access', getCachedMainShellLayoutBundle(), 300);
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
   const supabase = await createClient();
-
-  const { data: profile } = await withServerPerf(
-    '/admin/hr',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status, ui_mode')
-      .eq('id', user.id)
-      .maybeSingle(),
-    300
-  );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-
-  // Use the cached permissions — layout already called getMyPermissions(orgId),
-  // so this is a free cache hit with no DB round trip.
-  const permissionKeys = await withServerPerf('/admin/hr', 'get_my_permissions', getMyPermissions(orgId), 300);
+  const initialUiMode =
+    typeof bundle.ui_mode === 'string' ? normalizeUiMode(bundle.ui_mode) : normalizeUiMode(null);
 
   const canViewAll = permissionKeys.includes('hr.view_records');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
@@ -81,7 +66,7 @@ export default async function HRDirectoryPage({
       initialRows={(rows ?? []) as Parameters<typeof HRDirectoryClient>[0]['initialRows']}
       dashStats={(dashStats ?? null) as Record<string, unknown> | null}
       initialQuery={initialQuery}
-      initialUiMode={normalizeUiMode(profile.ui_mode)}
+      initialUiMode={initialUiMode}
     />
   );
   warnIfSlowServerPath('/admin/hr', pathStartedAtMs);

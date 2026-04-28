@@ -1,36 +1,23 @@
 import { PerformanceCyclesClient } from '@/components/admin/hr/performance/PerformanceCyclesClient';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function PerformanceCyclesPage() {
   const pathStartedAtMs = Date.now();
+  const bundle = await withServerPerf(
+    '/admin/hr/performance',
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
   const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
-    '/admin/hr/performance',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
-    300
-  );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const orgId = profile.org_id as string;
-
-  const permissionKeys = await withServerPerf(
-    '/admin/hr/performance',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
-  );
   const canManage = permissionKeys.includes('performance.manage_cycles');
   const canView   = permissionKeys.includes('performance.view_reports');
 

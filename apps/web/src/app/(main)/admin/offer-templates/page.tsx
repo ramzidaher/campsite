@@ -1,9 +1,9 @@
 import { HideInHiringHub } from '@/app/(main)/hr/hiring/HideInHiringHub';
-import { viewerHasPermission } from '@/lib/authz/serverGuards';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 /** Common recruitment / HR document types — use as template names (pill shortcuts below). */
 const SUGGESTED_TEMPLATE_TYPES = [
@@ -17,20 +17,14 @@ const SUGGESTED_TEMPLATE_TYPES = [
 ] as const;
 
 export default async function OfferTemplatesPage() {
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!permissionKeys.includes('offers.view')) redirect('/broadcasts');
+
   const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('offers.view'))) redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
 
   const { data: rows } = await supabase
     .from('offer_letter_templates')
