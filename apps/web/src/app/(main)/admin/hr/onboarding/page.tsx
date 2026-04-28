@@ -1,4 +1,5 @@
 import { OnboardingHubClient } from '@/components/admin/hr/onboarding/OnboardingHubClient';
+import { getCachedOnboardingHubSharedData, getCachedOnboardingTemplateTasks } from '@/lib/hr/getCachedOnboardingHubData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
@@ -46,33 +47,18 @@ export default async function OnboardingHubPage({
     runsQuery = runsQuery.eq('user_id', user.id);
   }
 
-  const [templatesRes, runsRes, membersRes] = await Promise.all([
+  const [sharedData, runsRes] = await Promise.all([
     withServerPerf(
       '/admin/hr/onboarding',
-      'templates_lookup',
-      supabase
-        .from('onboarding_templates')
-        .select('id, name, description, is_default, is_archived, created_at')
-        .eq('org_id', orgId)
-        .order('name'),
-      350
+      'shared_bundle_cached',
+      getCachedOnboardingHubSharedData(orgId),
+      500
     ),
     withServerPerf('/admin/hr/onboarding', 'runs_lookup', runsQuery, 450),
-    withServerPerf(
-      '/admin/hr/onboarding',
-      'active_members_lookup',
-      supabase
-        .from('profiles')
-        .select('id, full_name, preferred_name, email')
-        .eq('org_id', orgId)
-        .eq('status', 'active')
-        .order('full_name'),
-      400
-    ),
   ]);
 
-  const templates = templatesRes.data ?? [];
-  const members = membersRes.data ?? [];
+  const templates = sharedData.templates ?? [];
+  const members = sharedData.members ?? [];
   const runs = runsRes.data ?? [];
 
   // resolve names
@@ -96,32 +82,12 @@ export default async function OnboardingHubPage({
   const templateTasks = validSelectedTemplateId
     ? await withServerPerf(
         '/admin/hr/onboarding',
-        'template_tasks_lookup',
-        supabase
-          .from('onboarding_template_tasks')
-          .select('id, template_id, title, category, assignee_type, due_offset_days, sort_order')
-          .eq('org_id', orgId)
-          .eq('template_id', validSelectedTemplateId)
-          .order('sort_order')
-          .then(({ data }) => data ?? []),
+        'template_tasks_cached',
+        getCachedOnboardingTemplateTasks(orgId, validSelectedTemplateId),
         350
       )
     : [];
-
-  const readinessRows = await withServerPerf(
-    '/admin/hr/onboarding',
-    'hiring_readiness_lookup',
-    supabase
-      .from('hiring_start_readiness')
-      .select(
-        'job_application_id, contract_assigned, rtw_required, rtw_complete, payroll_bank_complete, payroll_tax_complete, policy_ack_complete, it_access_complete, start_confirmed_at'
-      )
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(100)
-      .then(({ data }) => data ?? []),
-    300
-  );
+  const readinessRows = sharedData.readinessRows ?? [];
 
   const enrichedRuns = (runs ?? []).map((r) => ({
     id: r.id as string,

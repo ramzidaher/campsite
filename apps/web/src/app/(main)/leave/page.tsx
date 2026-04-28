@@ -1,26 +1,23 @@
 import { LeaveHubClient } from '@/components/leave/LeaveHubClient';
 import { currentLeaveYearKeyForOrgCalendar, currentLeaveYearKeyUtc } from '@/lib/datetime';
+import {
+  parseShellPermissionKeys,
+  shellBundleOrgId,
+  shellBundleProfileStatus,
+} from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function LeavePage() {
-  const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-
-  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: orgId });
-  const keys = ((perms ?? []) as Array<{ permission_key?: string }>).map((p) => String(p.permission_key ?? ''));
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const keys = parseShellPermissionKeys(bundle);
 
   const canView =
     keys.includes('leave.view_own') ||
@@ -32,6 +29,7 @@ export default async function LeavePage() {
   const canApprove = keys.includes('leave.approve_direct_reports') || keys.includes('leave.manage_org');
   const canManage = keys.includes('leave.manage_org');
 
+  const supabase = await createClient();
   const [{ data: leaveSettings }, { data: orgRow }, { data: holidayPeriods }] = await Promise.all([
     supabase
       .from('org_leave_settings')

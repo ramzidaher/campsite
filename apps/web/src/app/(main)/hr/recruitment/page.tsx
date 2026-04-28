@@ -1,8 +1,11 @@
 import { AdminRecruitmentListClient } from '@/components/admin/AdminRecruitmentListClient';
 import { ManagerRecruitmentClient } from '@/components/manager/ManagerRecruitmentClient';
+import { getCachedRecruitmentQueuePageData } from '@/lib/recruitment/getCachedRecruitmentQueuePageData';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { withServerPerf } from '@/lib/perf/serverPerf';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { redirect } from 'next/navigation';
 
 export default async function HrRecruitmentPage() {
@@ -12,9 +15,7 @@ export default async function HrRecruitmentPage() {
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const permissionKeys = parseShellPermissionKeys(bundle);
@@ -30,13 +31,12 @@ export default async function HrRecruitmentPage() {
 
   const canViewQueue = Boolean(canViewRecruitment || canApproveRequest || canManageRecruitment);
   if (canViewQueue) {
-    const { data: rows } = await supabase
-      .from('recruitment_requests')
-      .select(
-        'id, job_title, status, urgency, archived_at, created_at, department_id, departments(name), submitter:profiles!recruitment_requests_created_by_fkey(full_name)'
-      )
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false });
+    const rows = await withServerPerf(
+      '/hr/recruitment',
+      'recruitment_queue_bundle_cached',
+      getCachedRecruitmentQueuePageData(orgId),
+      700
+    );
     return <AdminRecruitmentListClient rows={(rows ?? []) as Parameters<typeof AdminRecruitmentListClient>[0]['rows']} />;
   }
 

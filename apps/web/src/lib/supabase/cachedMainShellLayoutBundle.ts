@@ -5,6 +5,7 @@ import {
   resolveBadgeWithGuardrails,
   resolveStructuralWithTimeout,
 } from '@/lib/shell/shellRpcGuardrails';
+import { getAuthUser } from './getAuthUser';
 import { createClient } from './server';
 
 const SHELL_RESPONSE_CACHE_TTL_MS = Number.parseInt(
@@ -273,9 +274,7 @@ export function getStaleOrDefaultShellBundle(viewerKey: string): ShellBundle {
  */
 export const getCachedMainShellLayoutBundle = cache(async (): Promise<Record<string, unknown>> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const viewerKey = user?.id ?? 'anonymous';
   return getMainShellLayoutBundleForViewer(supabase, viewerKey);
 });

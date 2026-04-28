@@ -74,10 +74,12 @@ async function main({ config, env, runtime }) {
     concurrency: config.concurrency,
     maxUsers: config.maxUsers,
     iterationsPerUser: config.iterationsPerUser,
+    tabsPerUser: config.tabsPerUser,
     pageTimeoutMs: config.pageTimeoutMs,
     shellTimeoutMs: config.shellTimeoutMs,
     minThinkMs: config.minThinkMs,
     maxThinkMs: config.maxThinkMs,
+    tabStartJitterMs: config.tabStartJitterMs,
     slowMs: config.slowMs,
     shellEvery: config.shellEvery,
     seed: config.seed,
@@ -97,6 +99,7 @@ async function main({ config, env, runtime }) {
       concurrency: config.concurrency,
       maxUsers: config.maxUsers,
       iterationsPerUser: config.iterationsPerUser,
+      tabsPerUser: config.tabsPerUser,
       shellEvery: config.shellEvery,
       seed: config.seed,
     },
@@ -183,9 +186,32 @@ async function runUserFlow({ user, workerIndex, config, env, runtime, selectedRo
     return;
   }
 
+  const tabCount = Math.max(1, config.tabsPerUser);
+  const stepCounts = distributeIterations(config.iterationsPerUser, tabCount);
+  await Promise.all(
+    stepCounts.map((stepCount, tabOffset) =>
+      runUserTabFlow({
+        session,
+        workerIndex,
+        tabIndex: tabOffset + 1,
+        stepCount,
+        config,
+        runtime,
+        selectedRoutes,
+      })
+    )
+  );
+}
+
+async function runUserTabFlow({ session, workerIndex, tabIndex, stepCount, config, runtime, selectedRoutes }) {
+  if (stepCount <= 0) return;
+  if (config.tabStartJitterMs > 0 && tabIndex > 1) {
+    await sleep(randomInt(0, config.tabStartJitterMs, runtime.rand));
+  }
+
   const routeQueue = [];
   let previousLabel = '';
-  for (let stepIndex = 0; stepIndex < config.iterationsPerUser; stepIndex += 1) {
+  for (let stepIndex = 0; stepIndex < stepCount; stepIndex += 1) {
     if (routeQueue.length === 0) {
       routeQueue.push(...shuffle([...selectedRoutes], runtime.rand));
     }
@@ -201,6 +227,7 @@ async function runUserFlow({ user, workerIndex, config, env, runtime, selectedRo
       session,
       route: nextRoute,
       workerIndex,
+      tabIndex,
       stepIndex,
       timeoutMs: config.pageTimeoutMs,
       runtime,
@@ -210,6 +237,7 @@ async function runUserFlow({ user, workerIndex, config, env, runtime, selectedRo
       await captureShellSnapshot({
         session,
         workerIndex,
+        tabIndex,
         stepIndex,
         timeoutMs: config.shellTimeoutMs,
         runtime,
@@ -217,7 +245,7 @@ async function runUserFlow({ user, workerIndex, config, env, runtime, selectedRo
       });
     }
 
-    if (stepIndex + 1 < config.iterationsPerUser) {
+    if (stepIndex + 1 < stepCount) {
       await sleep(randomInt(config.minThinkMs, config.maxThinkMs, runtime.rand));
     }
   }
@@ -324,7 +352,7 @@ async function resolveLanding(session, baseUrl, timeoutMs) {
   };
 }
 
-async function requestPage({ session, route, workerIndex, stepIndex, timeoutMs, runtime }) {
+async function requestPage({ session, route, workerIndex, tabIndex, stepIndex, timeoutMs, runtime }) {
   const targetUrl = resolveRouteUrl(session, route.target);
   const startedAt = Date.now();
   const hops = [];
@@ -385,6 +413,7 @@ async function requestPage({ session, route, workerIndex, stepIndex, timeoutMs, 
 
   const pageEvent = runtime.emit('page', {
     workerIndex,
+    tabIndex,
     stepIndex,
     userEmail: session.userEmail,
     userId: session.userId,
@@ -406,7 +435,7 @@ async function requestPage({ session, route, workerIndex, stepIndex, timeoutMs, 
   return pageEvent;
 }
 
-async function captureShellSnapshot({ session, workerIndex, stepIndex, timeoutMs, runtime, afterPageEventId }) {
+async function captureShellSnapshot({ session, workerIndex, tabIndex, stepIndex, timeoutMs, runtime, afterPageEventId }) {
   const shellUrl = new URL('/api/loadtest/shell-bundle', session.appOrigin).href;
   const startedAt = Date.now();
   let status = 0;
@@ -442,6 +471,7 @@ async function captureShellSnapshot({ session, workerIndex, stepIndex, timeoutMs
 
   runtime.emit('shell', {
     workerIndex,
+    tabIndex,
     stepIndex,
     afterPageEventId,
     userEmail: session.userEmail,
@@ -511,6 +541,7 @@ function summarizeRun({ events, config, users, selectedRoutes }) {
     if (page.totalDurationMs < config.slowMs) return false;
     return Boolean(shellByPage.get(page.id)?.shellDegraded);
   }).length;
+  const timeline = summarizeTimeline({ pageEvents, shellEvents, slowMs: config.slowMs });
 
   return {
     run: {
@@ -525,6 +556,8 @@ function summarizeRun({ events, config, users, selectedRoutes }) {
       selectedUsers: users.map((user) => user.email),
       selectedRoutes: selectedRoutes.map((route) => route.label),
       seed: config.seed,
+      tabsPerUser: config.tabsPerUser,
+      tabStartJitterMs: config.tabStartJitterMs,
     },
     logins: {
       attempts: loginEvents.length,
@@ -582,6 +615,7 @@ function summarizeRun({ events, config, users, selectedRoutes }) {
           afterPageEventId: event.afterPageEventId,
         })),
     },
+    timeline,
   };
 }
 
@@ -596,6 +630,8 @@ function renderSummaryMarkdown(summary) {
   lines.push(`- Base URL: ${summary.run.baseUrl}`);
   lines.push(`- Users CSV: ${summary.run.usersCsv}`);
   lines.push(`- Seed: ${summary.run.seed}`);
+  lines.push(`- Tabs per user: ${summary.run.tabsPerUser}`);
+  lines.push(`- Tab start jitter ms: ${summary.run.tabStartJitterMs}`);
   lines.push(`- Selected users: ${summary.run.selectedUsers.join(', ')}`);
   lines.push(`- Selected routes: ${summary.run.selectedRoutes.join(', ')}`);
   lines.push('');
@@ -639,6 +675,19 @@ function renderSummaryMarkdown(summary) {
       `- ${item.userEmail} shell ${item.status} in ${item.durationMs}ms degraded=${String(item.shellDegraded)} cache=${item.cacheStatus}/${item.cacheMode} vercel=${item.vercelId ?? 'n/a'}`
     );
   }
+  lines.push('');
+  lines.push('## Failure Onset');
+  lines.push(`- First slow page: ${renderIncident(summary.timeline.firstSlowPage)}`);
+  lines.push(`- First degraded shell: ${renderIncident(summary.timeline.firstDegradedShell)}`);
+  lines.push(`- First page timeout: ${renderIncident(summary.timeline.firstPageTimeout)}`);
+  lines.push(`- First shell timeout: ${renderIncident(summary.timeline.firstShellTimeout)}`);
+  lines.push('');
+  lines.push('### Timeline buckets (10s)');
+  for (const bucket of summary.timeline.buckets) {
+    lines.push(
+      `- ${bucket.windowLabel}: pages=${bucket.pages} slowPages=${bucket.slowPages} pageTimeouts=${bucket.pageTimeouts} degradedShells=${bucket.degradedShells} shellTimeouts=${bucket.shellTimeouts}`
+    );
+  }
   return lines.join('\n');
 }
 
@@ -649,6 +698,7 @@ function buildPageCsvRows(events) {
       timestamp: event.timestamp,
       userEmail: event.userEmail,
       userId: event.userId,
+      tabIndex: String(event.tabIndex ?? ''),
       routeLabel: event.routeLabel,
       routeTarget: event.routeTarget,
       finalStatus: String(event.finalStatus),
@@ -670,6 +720,7 @@ function buildShellCsvRows(events) {
       timestamp: event.timestamp,
       userEmail: event.userEmail,
       userId: event.userId,
+      tabIndex: String(event.tabIndex ?? ''),
       status: String(event.status),
       durationMs: String(event.durationMs),
       timedOut: String(event.timedOut),
@@ -739,10 +790,12 @@ function buildConfig(args) {
     maxUsers: Number.parseInt(String(args.maxUsers ?? String(defaultMaxUsers)), 10),
     concurrency: Number.parseInt(String(args.concurrency ?? '1'), 10),
     iterationsPerUser: Number.parseInt(String(args.iterationsPerUser ?? '16'), 10),
+    tabsPerUser: Number.parseInt(String(args.tabsPerUser ?? '1'), 10),
     pageTimeoutMs: Number.parseInt(String(args.pageTimeoutMs ?? '12000'), 10),
     shellTimeoutMs: Number.parseInt(String(args.shellTimeoutMs ?? '8000'), 10),
     minThinkMs: Number.parseInt(String(args.minThinkMs ?? '100'), 10),
     maxThinkMs: Number.parseInt(String(args.maxThinkMs ?? '450'), 10),
+    tabStartJitterMs: Number.parseInt(String(args.tabStartJitterMs ?? '250'), 10),
     slowMs: Number.parseInt(String(args.slowMs ?? '1200'), 10),
     shellEvery: Number.parseInt(String(args.shellEvery ?? '1'), 10),
     seed: Number.parseInt(String(args.seed ?? `${Math.floor(now.getTime() % 2147483647)}`), 10),
@@ -866,10 +919,12 @@ Options:
   --maxUsers <n>              Default: 1
   --concurrency <n>           Default: 1
   --iterationsPerUser <n>     Default: 16
+  --tabsPerUser <n>           Default: 1
   --pageTimeoutMs <n>         Default: 12000
   --shellTimeoutMs <n>        Default: 8000
   --minThinkMs <n>            Default: 100
   --maxThinkMs <n>            Default: 450
+  --tabStartJitterMs <n>      Default: 250
   --slowMs <n>                Default: 1200
   --shellEvery <n>            Default: 1
   --seed <n>                  Default: current timestamp-derived value
@@ -878,6 +933,7 @@ Options:
 Examples:
   npm run probe:prod:routes -- --emails james.hann@camp-site.co.uk
   npm run probe:prod:routes -- --maxUsers 6 --concurrency 3 --iterationsPerUser 12
+  npm run probe:prod:routes -- --emails james.hann@camp-site.co.uk,lindsay.horler@camp-site.co.uk --tabsPerUser 3 --iterationsPerUser 18
   npm run probe:prod:routes -- --emails james.hann@camp-site.co.uk --routesFile scripts/prod-routes.txt
 `);
 }
@@ -1037,6 +1093,106 @@ function percentile(values, p) {
   return sorted[index];
 }
 
+function distributeIterations(totalIterations, bucketCount) {
+  const safeBuckets = Math.max(1, bucketCount);
+  const safeTotal = Math.max(0, totalIterations);
+  const base = Math.floor(safeTotal / safeBuckets);
+  const remainder = safeTotal % safeBuckets;
+  return Array.from({ length: safeBuckets }, (_, index) => base + (index < remainder ? 1 : 0));
+}
+
+function summarizeTimeline({ pageEvents, shellEvents, slowMs }) {
+  const bucketSizeMs = 10_000;
+  const startedAtMs = minimumTimestampMs([...pageEvents, ...shellEvents]);
+  const firstSlowPage = findFirstBy(pageEvents, (event) => event.totalDurationMs >= slowMs, startedAtMs, (event) => ({
+    userEmail: event.userEmail,
+    routeLabel: event.routeLabel,
+    tabIndex: event.tabIndex ?? null,
+    status: event.finalStatus,
+    durationMs: event.totalDurationMs,
+  }));
+  const firstDegradedShell = findFirstBy(shellEvents, (event) => event.shellDegraded, startedAtMs, (event) => ({
+    userEmail: event.userEmail,
+    tabIndex: event.tabIndex ?? null,
+    status: event.status,
+    durationMs: event.durationMs,
+  }));
+  const firstPageTimeout = findFirstBy(pageEvents, (event) => event.timedOut, startedAtMs, (event) => ({
+    userEmail: event.userEmail,
+    routeLabel: event.routeLabel,
+    tabIndex: event.tabIndex ?? null,
+    status: event.finalStatus,
+    durationMs: event.totalDurationMs,
+  }));
+  const firstShellTimeout = findFirstBy(shellEvents, (event) => event.timedOut, startedAtMs, (event) => ({
+    userEmail: event.userEmail,
+    tabIndex: event.tabIndex ?? null,
+    status: event.status,
+    durationMs: event.durationMs,
+  }));
+
+  const bucketMap = new Map();
+  for (const event of pageEvents) {
+    const bucket = getTimelineBucket(bucketMap, event.timestamp, startedAtMs, bucketSizeMs);
+    bucket.pages += 1;
+    if (event.totalDurationMs >= slowMs) bucket.slowPages += 1;
+    if (event.timedOut) bucket.pageTimeouts += 1;
+  }
+  for (const event of shellEvents) {
+    const bucket = getTimelineBucket(bucketMap, event.timestamp, startedAtMs, bucketSizeMs);
+    if (event.shellDegraded) bucket.degradedShells += 1;
+    if (event.timedOut) bucket.shellTimeouts += 1;
+  }
+
+  return {
+    firstSlowPage,
+    firstDegradedShell,
+    firstPageTimeout,
+    firstShellTimeout,
+    buckets: Array.from(bucketMap.values()).sort((a, b) => a.windowStartMs - b.windowStartMs),
+  };
+}
+
+function minimumTimestampMs(events) {
+  const values = events
+    .map((event) => Date.parse(event.timestamp))
+    .filter((value) => Number.isFinite(value));
+  return values.length ? Math.min(...values) : 0;
+}
+
+function findFirstBy(events, predicate, startedAtMs, mapFn) {
+  const match = events
+    .filter(predicate)
+    .slice()
+    .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))[0];
+  if (!match) return null;
+  return {
+    offsetMs: Math.max(0, Date.parse(match.timestamp) - startedAtMs),
+    ...mapFn(match),
+  };
+}
+
+function getTimelineBucket(bucketMap, timestamp, startedAtMs, bucketSizeMs) {
+  const eventMs = Date.parse(timestamp);
+  const offsetMs = Math.max(0, eventMs - startedAtMs);
+  const bucketIndex = Math.floor(offsetMs / bucketSizeMs);
+  if (bucketMap.has(bucketIndex)) {
+    return bucketMap.get(bucketIndex);
+  }
+  const windowStartMs = bucketIndex * bucketSizeMs;
+  const bucket = {
+    windowStartMs,
+    windowLabel: `${Math.floor(windowStartMs / 1000)}-${Math.floor((windowStartMs + bucketSizeMs) / 1000)}s`,
+    pages: 0,
+    slowPages: 0,
+    pageTimeouts: 0,
+    degradedShells: 0,
+    shellTimeouts: 0,
+  };
+  bucketMap.set(bucketIndex, bucket);
+  return bucket;
+}
+
 function countBy(items, keyFn) {
   const out = {};
   for (const item of items) {
@@ -1102,15 +1258,25 @@ function printProgress(event) {
   }
   if (event.type === 'page') {
     console.log(
-      `page user=${event.userEmail} route=${event.routeLabel} status=${event.finalStatus} ms=${event.totalDurationMs} url=${event.finalPath || event.finalUrl}`
+      `page user=${event.userEmail} tab=${event.tabIndex ?? 'n/a'} route=${event.routeLabel} status=${event.finalStatus} ms=${event.totalDurationMs} url=${event.finalPath || event.finalUrl}`
     );
     return;
   }
   if (event.type === 'shell') {
     console.log(
-      `shell user=${event.userEmail} status=${event.status} ms=${event.durationMs} degraded=${String(event.shellDegraded)} cache=${event.shellResponseCacheStatus ?? 'unknown'}`
+      `shell user=${event.userEmail} tab=${event.tabIndex ?? 'n/a'} status=${event.status} ms=${event.durationMs} degraded=${String(event.shellDegraded)} cache=${event.shellResponseCacheStatus ?? 'unknown'}`
     );
   }
+}
+
+function renderIncident(incident) {
+  if (!incident) return 'none';
+  const parts = [`+${incident.offsetMs}ms`, incident.userEmail];
+  if (incident.tabIndex != null) parts.push(`tab=${incident.tabIndex}`);
+  if (incident.routeLabel) parts.push(`route=${incident.routeLabel}`);
+  if (incident.status != null) parts.push(`status=${incident.status}`);
+  if (incident.durationMs != null) parts.push(`ms=${incident.durationMs}`);
+  return parts.join(' ');
 }
 
 function writeCsv(filePath, rows) {
