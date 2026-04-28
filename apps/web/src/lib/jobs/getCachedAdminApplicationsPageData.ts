@@ -22,7 +22,7 @@ export type AdminApplicationsListRow = {
   submitted_at: string | null;
   job_listing_id: string | null;
   department_id: string | null;
-  job_listings: { title?: string; slug?: string; status?: string } | { title?: string; slug?: string; status?: string }[] | null;
+  job_listings: { title?: string } | { title?: string }[] | null;
   departments: { name?: string } | { name?: string }[] | null;
 };
 
@@ -69,7 +69,7 @@ export const getCachedAdminApplicationsPageData = cache(async (orgId: string): P
               submitted_at,
               job_listing_id,
               department_id,
-              job_listings ( title, slug, status ),
+              job_listings ( title ),
               departments ( name )
             `
           )

@@ -74,7 +74,7 @@ export default async function AdminApplicationsPage({
             submitted_at,
             job_listing_id,
             department_id,
-            job_listings ( title, slug, status ),
+            job_listings ( title ),
             departments ( name )
           `
       )

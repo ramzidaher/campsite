@@ -7,12 +7,14 @@ import {
 } from '@/lib/broadcasts/channelCopy';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { createClient } from '@/lib/supabase/client';
+import { Camera } from 'lucide-react';
 import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
 import { useCampfireAmbientPreferences } from '@/lib/sound/useCampfireAmbientPreferences';
 import { useUiSound, useUiSoundPreferences } from '@/lib/sound/useUiSound';
+import { uploadUserAvatar } from '@/lib/storage/uploadUserAvatar';
 import {
   CELEBRATION_MODE_OPTIONS,
   normalizeCelebrationMode,
@@ -35,6 +37,9 @@ import {
 
 type Profile = {
   full_name: string;
+  preferred_name?: string | null;
+  pronouns?: string | null;
+  show_pronouns?: boolean | null;
   avatar_url: string | null;
   role: string;
   accent_preset: string;
@@ -142,6 +147,119 @@ const SHELL_MODE_AUTO_STORAGE_KEY = 'campsite_shell_mode_auto_enabled';
 const LEGACY_PRIDE_MODE_STORAGE_KEY = 'campsite_pride_mode';
 const SHELL_ICON_STYLE_STORAGE_KEY = 'campsite_shell_icon_style';
 type ShellIconStyle = 'classic' | 'white';
+type AvatarStyle =
+  | 'initials'
+  | 'glass'
+  | 'icons'
+  | 'identicon'
+  | 'rings'
+  | 'shapes'
+  | 'thumbs'
+  | 'adventurer'
+  | 'adventurer-neutral'
+  | 'avataaars'
+  | 'avataaars-neutral'
+  | 'big-ears'
+  | 'big-ears-neutral'
+  | 'big-smile'
+  | 'bottts'
+  | 'bottts-neutral'
+  | 'croodles'
+  | 'croodles-neutral'
+  | 'dylan'
+  | 'fun-emoji'
+  | 'lorelei'
+  | 'lorelei-neutral'
+  | 'micah'
+  | 'miniavs'
+  | 'notionists'
+  | 'notionists-neutral'
+  | 'open-peeps'
+  | 'personas'
+  | 'pixel-art'
+  | 'pixel-art-neutral'
+  | 'toon-head';
+
+type AvatarStyleItem = { id: AvatarStyle; label: string };
+type AvatarStyleGroup = { label: string; styles: AvatarStyleItem[] };
+type AvatarPreset = { label: string; query: string };
+
+const AVATAR_STYLE_GROUPS: AvatarStyleGroup[] = [
+  {
+    label: 'Minimalist',
+    styles: [
+      { id: 'glass', label: 'Glass' },
+      { id: 'icons', label: 'Icons' },
+      { id: 'identicon', label: 'Identicon' },
+      { id: 'initials', label: 'Initials' },
+      { id: 'rings', label: 'Rings' },
+      { id: 'shapes', label: 'Shapes' },
+      { id: 'thumbs', label: 'Thumbs' },
+    ],
+  },
+  {
+    label: 'Characters',
+    styles: [
+      { id: 'adventurer', label: 'Adventurer' },
+      { id: 'adventurer-neutral', label: 'Adventurer Neutral' },
+      { id: 'avataaars', label: 'Avataaars' },
+      { id: 'avataaars-neutral', label: 'Avataaars Neutral' },
+      { id: 'big-ears', label: 'Big Ears' },
+      { id: 'big-ears-neutral', label: 'Big Ears Neutral' },
+      { id: 'big-smile', label: 'Big Smile' },
+      { id: 'bottts', label: 'Bottts' },
+      { id: 'bottts-neutral', label: 'Bottts Neutral' },
+      { id: 'croodles', label: 'Croodles' },
+      { id: 'croodles-neutral', label: 'Croodles Neutral' },
+      { id: 'dylan', label: 'Dylan' },
+      { id: 'fun-emoji', label: 'Fun Emoji' },
+      { id: 'lorelei', label: 'Lorelei' },
+      { id: 'lorelei-neutral', label: 'Lorelei Neutral' },
+      { id: 'micah', label: 'Micah' },
+      { id: 'miniavs', label: 'Miniavs' },
+      { id: 'notionists', label: 'Notionists' },
+      { id: 'notionists-neutral', label: 'Notionists Neutral' },
+      { id: 'open-peeps', label: 'Open Peeps' },
+      { id: 'personas', label: 'Personas' },
+      { id: 'pixel-art', label: 'Pixel Art' },
+      { id: 'pixel-art-neutral', label: 'Pixel Art Neutral' },
+      { id: 'toon-head', label: 'Toon Head' },
+    ],
+  },
+];
+
+const RINGS_PRESETS: AvatarPreset[] = [
+  { label: 'Soft', query: 'ringOne=quarter&ringTwo=quarter&ringThree=quarter&ringFour=quarter&ringFive=eighth' },
+  { label: 'Classic', query: 'ringOne=half&ringTwo=quarter&ringThree=quarter&ringFour=quarter&ringFive=full' },
+  { label: 'Balanced', query: 'ringOne=half&ringTwo=half&ringThree=quarter&ringFour=half&ringFive=half' },
+  { label: 'Open', query: 'ringOne=eighth&ringTwo=eighth&ringThree=eighth&ringFour=eighth&ringFive=eighth' },
+  { label: 'Dense', query: 'ringOne=full&ringTwo=full&ringThree=half&ringFour=full&ringFive=full' },
+  { label: 'Mixed', query: 'ringOne=quarter&ringTwo=half&ringThree=full&ringFour=half&ringFive=quarter' },
+];
+
+function dicebearAvatarUrl(style: AvatarStyle, seed: string, presetQuery = ''): string {
+  const s = encodeURIComponent(seed.trim() || 'member');
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${s}${presetQuery ? `&${presetQuery}` : ''}`;
+}
+
+function dicebearAvatarPath(raw: string | null | undefined): { style: AvatarStyle; query: string } | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  try {
+    const u = new URL(t);
+    if (u.hostname !== 'api.dicebear.com') return null;
+    const match = u.pathname.match(/^\/9\.x\/([^/]+)\/svg$/);
+    if (!match) return null;
+    const style = decodeURIComponent(match[1]!) as AvatarStyle;
+    const styles = AVATAR_STYLE_GROUPS.flatMap((group) => group.styles.map((styleItem) => styleItem.id));
+    if (!styles.includes(style)) return null;
+    return { style, query: u.searchParams.toString() };
+  } catch {
+    return null;
+  }
+}
+
+type AvatarSource = 'upload' | 'avatar';
 
 export type BroadcastChannelPref = {
   channel_id: string;
@@ -155,6 +273,8 @@ export function ProfileSettings({
   initial,
   googleFlash,
   googleFlashTone,
+  outlookFlash,
+  outlookFlashTone,
   tenantOrgs,
   currentOrgId,
   initialBroadcastChannels = [],
@@ -164,6 +284,8 @@ export function ProfileSettings({
   initial: Profile | null;
   googleFlash?: string | null;
   googleFlashTone?: 'success' | 'error' | null;
+  outlookFlash?: string | null;
+  outlookFlashTone?: 'success' | 'error' | null;
   tenantOrgs?: LoginOrgOption[] | null;
   currentOrgId?: string | null;
   initialBroadcastChannels?: BroadcastChannelPref[];
@@ -185,6 +307,9 @@ export function ProfileSettings({
 
   const [profile, setProfile] = useState<Profile | null>(initial);
   const [fullName, setFullName] = useState(initial?.full_name ?? '');
+  const [preferredName, setPreferredName] = useState(initial?.preferred_name ?? '');
+  const [pronouns, setPronouns] = useState(initial?.pronouns ?? '');
+  const [showPronouns, setShowPronouns] = useState(initial?.show_pronouns ?? false);
   const [avatarUrl, setAvatarUrl] = useState(initial?.avatar_url ?? '');
   const [accent, setAccent] = useState<string>(initial?.accent_preset ?? 'midnight');
   const [scheme, setScheme] = useState<string>(initial?.color_scheme ?? 'system');
@@ -223,6 +348,10 @@ export function ProfileSettings({
   const { uiMode, updateUiMode } = useUiModePreference(initial?.ui_mode);
   const [tenantSwitching, setTenantSwitching] = useState<string | null>(null);
   const [avatarPreviewFailed, setAvatarPreviewFailed] = useState(false);
+  const [avatarStyle, setAvatarStyle] = useState<AvatarStyle>('initials');
+  const [avatarVariantQuery, setAvatarVariantQuery] = useState('');
+  const [avatarSource, setAvatarSource] = useState<AvatarSource>('upload');
+  const avatarUploadRef = useRef<HTMLInputElement | null>(null);
   const [channelPrefs, setChannelPrefs] = useState<BroadcastChannelPref[]>(initialBroadcastChannels);
   const [channelBusyId, setChannelBusyId] = useState<string | null>(null);
   const [channelsLoading, setChannelsLoading] = useState(false);
@@ -242,11 +371,31 @@ export function ProfileSettings({
   const playUiSound = useUiSound();
 
   const safeAvatar = useMemo(() => safeHttpImageUrl(avatarUrl), [avatarUrl]);
+  const dicebearAvatar = useMemo(
+    () => dicebearAvatarUrl(avatarStyle, preferredName.trim() || fullName.trim() || 'Member', avatarVariantQuery),
+    [avatarStyle, avatarVariantQuery, preferredName, fullName]
+  );
+  const dicebearSeed = preferredName.trim() || fullName.trim() || 'Member';
 
-  useEffect(() => { setAvatarPreviewFailed(false); }, [safeAvatar]);
+  useEffect(() => { setAvatarPreviewFailed(false); }, [safeAvatar, avatarStyle, avatarVariantQuery, avatarSource]);
 
   useEffect(() => {
     setProfile(initial);
+    setFullName(initial?.full_name ?? '');
+    setPreferredName(initial?.preferred_name ?? '');
+    setPronouns(initial?.pronouns ?? '');
+    setShowPronouns(initial?.show_pronouns ?? false);
+    setAvatarUrl(initial?.avatar_url ?? '');
+    const parsedAvatar = dicebearAvatarPath(initial?.avatar_url ?? '');
+    if (parsedAvatar) {
+      setAvatarStyle(parsedAvatar.style);
+      setAvatarVariantQuery(parsedAvatar.query);
+      setAvatarSource('avatar');
+    } else {
+      setAvatarStyle('initials');
+      setAvatarVariantQuery('');
+      setAvatarSource('upload');
+    }
     const m = initial?.shift_reminder_before_minutes;
     setShiftReminder(m == null ? 'off' : m);
     setOpenSlotAlertsEnabled(initial?.rota_open_slot_alerts_enabled ?? false);
@@ -293,13 +442,14 @@ export function ProfileSettings({
   }, []);
 
   useEffect(() => {
-    setMsg(googleFlash ?? null);
-    if (googleFlashTone === 'success') setMsgTone('success');
-    else if (googleFlashTone === 'error') setMsgTone('error');
-    else if (googleFlash != null) setMsgTone('neutral');
-    // If there's a Google flash, navigate to integrations tab
-    if (googleFlash != null) setActiveTab('integrations');
-  }, [googleFlash, googleFlashTone]);
+    const flash = outlookFlash ?? googleFlash ?? null;
+    const tone = outlookFlash != null ? outlookFlashTone : googleFlashTone;
+    setMsg(flash);
+    if (tone === 'success') setMsgTone('success');
+    else if (tone === 'error') setMsgTone('error');
+    else if (flash != null) setMsgTone('neutral');
+    if (flash != null) setActiveTab('integrations');
+  }, [googleFlash, googleFlashTone, outlookFlash, outlookFlashTone]);
 
   useEffect(() => {
     const prefs = loadAccessibilityPreferences();
@@ -351,6 +501,31 @@ export function ProfileSettings({
     }
     window.dispatchEvent(new CustomEvent('campsite:shell-icon-style-change'));
   }
+
+  const avatarStyleOptions = useMemo(
+    () => AVATAR_STYLE_GROUPS.flatMap((group) => group.styles.filter((style) => style.id !== 'initials')),
+    []
+  );
+  const avatarVariantChoices = useMemo(() => {
+    if (avatarStyle === 'rings') {
+      return RINGS_PRESETS.map((preset) => ({
+        key: preset.query,
+        label: preset.label,
+        imageUrl: dicebearAvatarUrl('rings', dicebearSeed, preset.query),
+        query: preset.query,
+      }));
+    }
+
+    return Array.from({ length: 8 }, (_, index) => {
+      const seed = `${dicebearSeed}-${avatarStyle}-${index + 1}`;
+      return {
+        key: seed,
+        label: `Style ${index + 1}`,
+        imageUrl: dicebearAvatarUrl(avatarStyle, seed),
+        query: '',
+      };
+    });
+  }, [avatarStyle, dicebearSeed]);
 
   const channelsByDept = useMemo(() => {
     const m = new Map<string, BroadcastChannelPref[]>();
@@ -475,6 +650,53 @@ export function ProfileSettings({
     if (error) { setChannelPrefs(snapshot); setFeedback(error.message, 'error'); }
   }
 
+  async function uploadAvatarFile(file: File) {
+    setLoading(true);
+    setMsg(null);
+    const supabase = createClient();
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) {
+      setLoading(false);
+      return;
+    }
+    const up = await uploadUserAvatar(supabase, u.user.id, file);
+    if (!up.ok) {
+      setLoading(false);
+      setFeedback(up.message, 'error');
+      return;
+    }
+    setAvatarUrl(up.publicUrl);
+    setAvatarStyle('initials');
+    setAvatarVariantQuery('');
+    setAvatarSource('upload');
+    const { error } = await supabase.from('profiles').update({ avatar_url: up.publicUrl }).eq('id', u.user.id);
+    setLoading(false);
+    if (error) {
+      setFeedback(error.message, 'error');
+      return;
+    }
+    setFeedback('Profile photo updated.', 'success');
+    router.refresh();
+  }
+
+  function selectAvatarStyle(style: AvatarStyle, query = '') {
+    setAvatarStyle(style);
+    setAvatarSource('avatar');
+    setAvatarVariantQuery(query);
+    setAvatarUrl(style === 'initials' ? '' : dicebearAvatarUrl(style, dicebearSeed, query));
+  }
+
+  function selectAvatarFamily(style: AvatarStyle) {
+    if (style === 'rings') {
+      selectAvatarStyle('rings', RINGS_PRESETS[0]?.query ?? '');
+      return;
+    }
+    setAvatarStyle(style);
+    setAvatarSource('avatar');
+    setAvatarVariantQuery('');
+    setAvatarUrl(dicebearAvatarUrl(style, `${dicebearSeed}-${style}-1`));
+  }
+
   async function saveProfile() {
     setLoading(true);
     setMsg(null);
@@ -485,6 +707,9 @@ export function ProfileSettings({
       .from('profiles')
       .update({
         full_name: fullName,
+        preferred_name: preferredName.trim() || null,
+        pronouns: pronouns.trim().slice(0, 80) || null,
+        show_pronouns: showPronouns,
         avatar_url: avatarUrl || null,
         accent_preset: accent,
         color_scheme: scheme,
@@ -642,7 +867,7 @@ export function ProfileSettings({
             <p className={sectionDesc}>Your public name, avatar, and role within the organisation.</p>
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
               <div className="flex shrink-0 justify-center sm:justify-start">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#d8d8d8] bg-[#faf9f6] text-[22px] font-semibold text-[#6b6b6b] shadow-sm">
+                <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#d8d8d8] bg-[#faf9f6] text-[22px] font-semibold text-[#6b6b6b] shadow-sm">
                   {safeAvatar && !avatarPreviewFailed ? (
                     <img
                       src={safeAvatar}
@@ -650,9 +875,19 @@ export function ProfileSettings({
                       className="h-full w-full object-cover"
                       onError={() => setAvatarPreviewFailed(true)}
                     />
+                  ) : avatarSource === 'avatar' && avatarStyle !== 'initials' && !avatarPreviewFailed ? (
+                    <img
+                      src={dicebearAvatar}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={() => setAvatarPreviewFailed(true)}
+                    />
                   ) : (
                     <span aria-hidden>{initials(fullName || 'Member')}</span>
                   )}
+                  <div className="absolute right-1.5 bottom-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d8d8d8] bg-white text-[#121212] shadow-sm">
+                    <Camera className="h-3.5 w-3.5" aria-hidden />
+                  </div>
                 </div>
               </div>
               <div className="min-w-0 flex-1 space-y-4">
@@ -666,14 +901,135 @@ export function ProfileSettings({
                   />
                 </label>
                 <label className={fieldLabel}>
-                  Avatar URL
+                  Preferred name
                   <input
                     className={inputClass}
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    placeholder="https://..."
+                    value={preferredName}
+                    onChange={(e) => setPreferredName(e.target.value)}
+                    autoComplete="nickname"
+                    placeholder="What should people call you?"
                   />
                 </label>
+                <label className={fieldLabel}>
+                  Pronouns
+                  <input
+                    className={inputClass}
+                    value={pronouns}
+                    onChange={(e) => setPronouns(e.target.value)}
+                    autoComplete="off"
+                    placeholder="e.g. she/her, they/them"
+                    maxLength={80}
+                  />
+                </label>
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                    checked={showPronouns}
+                    onChange={(e) => setShowPronouns(e.target.checked)}
+                  />
+                  <span className="text-[12.5px] leading-snug text-[#6b6b6b]">
+                    Display my pronouns on my profile
+                  </span>
+                </label>
+                <input
+                  ref={avatarUploadRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (file) void uploadAvatarFile(file);
+                  }}
+                />
+                <div className="overflow-hidden rounded-3xl border border-[#d8d8d8] bg-gradient-to-b from-[#fcfbf8] to-white p-4 shadow-sm">
+                  <div>
+                    <p className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">
+                      Profile image
+                    </p>
+                    <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                      Keep it simple: upload your own photo or pick an avatar family and choose a variation.
+                    </p>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      className={avatarSource === 'upload' ? btnPrimary : btnSecondary}
+                      onClick={() => {
+                        setAvatarSource('upload');
+                        avatarUploadRef.current?.click();
+                      }}
+                    >
+                      Upload
+                    </button>
+                    <button
+                      type="button"
+                      className={avatarSource === 'avatar' ? btnPrimary : btnSecondary}
+                      onClick={() => {
+                        setAvatarSource('avatar');
+                        if (avatarStyle === 'initials') {
+                          selectAvatarFamily(avatarStyleOptions[0]?.id ?? 'big-ears');
+                        }
+                      }}
+                    >
+                      Avatar
+                    </button>
+                  </div>
+
+                  {avatarSource === 'avatar' ? (
+                    <div className="mt-4 space-y-4">
+                      <label className={fieldLabel}>
+                        Avatar family
+                        <select
+                          className={selectClass}
+                          value={avatarStyle === 'initials' ? (avatarStyleOptions[0]?.id ?? 'big-ears') : avatarStyle}
+                          onChange={(e) => selectAvatarFamily(e.target.value as AvatarStyle)}
+                        >
+                          {avatarStyleOptions.map((style) => (
+                            <option key={style.id} value={style.id}>
+                              {style.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        {avatarVariantChoices.map((variant) => {
+                          const isSelected =
+                            avatarStyle === 'rings'
+                              ? avatarVariantQuery === variant.query
+                              : avatarUrl === variant.imageUrl;
+                          return (
+                            <button
+                              key={variant.key}
+                              type="button"
+                              className={`overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-0.5 hover:shadow-sm ${
+                                isSelected ? 'border-[#121212] ring-1 ring-[#121212]' : 'border-[#d8d8d8] hover:border-[#c4b59f]'
+                              }`}
+                              onClick={() => {
+                                if (avatarStyle === 'rings') selectAvatarStyle('rings', variant.query);
+                                else {
+                                  setAvatarSource('avatar');
+                                  setAvatarVariantQuery('');
+                                  setAvatarUrl(variant.imageUrl);
+                                }
+                              }}
+                            >
+                              <div className="aspect-square bg-[#faf9f6] p-2">
+                                <img src={variant.imageUrl} alt="" className="h-full w-full rounded-xl object-cover" />
+                              </div>
+                              <div className="border-t border-[#ece8e0] px-3 py-2 text-left">
+                                <p className="text-[12px] font-medium text-[#121212]">{variant.label}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
                 <div className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5">
                   <p className="text-[12.5px] leading-relaxed text-[#6b6b6b]">
                     <span className="font-medium text-[#121212]">{profileRoleDisplay(profile.role)}</span>
@@ -1197,10 +1553,21 @@ export function ProfileSettings({
                   <div>
                     <p className="text-[13px] font-medium text-[#121212]">Google Calendar</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                      HR can place interview slots on your calendar when you&apos;re on a panel.
+                      Sync interview slots, rota shifts and calendar events to your Google Calendar.
                     </p>
                   </div>
                   <a href="/api/google/oauth/start?type=calendar" className={btnSecondary}>
+                    Connect
+                  </a>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3.5">
+                  <div>
+                    <p className="text-[13px] font-medium text-[#121212]">Outlook Calendar</p>
+                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                      Sync interview slots, rota shifts and calendar events to your Outlook.
+                    </p>
+                  </div>
+                  <a href="/api/microsoft/oauth/start" className={btnSecondary}>
                     Connect
                   </a>
                 </div>

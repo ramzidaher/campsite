@@ -31,7 +31,7 @@ export default async function HRDirectoryPage({
   const { rows, dashStats } = await withServerPerf(
     '/admin/hr',
     'hr_directory_bundle_cached',
-    getCachedHrDirectoryPageData(orgId, user.id, canViewAll, canViewAll),
+    getCachedHrDirectoryPageData(orgId, user.id, canViewAll, false),
     800
   );
 

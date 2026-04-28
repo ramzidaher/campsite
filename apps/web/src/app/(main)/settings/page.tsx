@@ -8,7 +8,12 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ google_connected?: string; google_error?: string }>;
+  searchParams: Promise<{
+    google_connected?: string;
+    google_error?: string;
+    outlook_connected?: string;
+    outlook_error?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const googleFlash =
@@ -19,6 +24,14 @@ export default async function SettingsPage({
         : null;
   const googleFlashTone =
     sp.google_connected === '1' ? ('success' as const) : sp.google_error ? ('error' as const) : null;
+  const outlookFlash =
+    sp.outlook_connected === '1'
+      ? 'Outlook Calendar connected.'
+      : sp.outlook_error
+        ? `Outlook: ${sp.outlook_error}`
+        : null;
+  const outlookFlashTone =
+    sp.outlook_connected === '1' ? ('success' as const) : sp.outlook_error ? ('error' as const) : null;
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) {
@@ -94,6 +107,8 @@ export default async function SettingsPage({
       <ProfileSettings
         googleFlash={googleFlash}
         googleFlashTone={googleFlashTone}
+        outlookFlash={outlookFlash}
+        outlookFlashTone={outlookFlashTone}
         tenantOrgs={tenantOrgs}
         currentOrgId={profile?.org_id ?? null}
         initial={initialProfile}

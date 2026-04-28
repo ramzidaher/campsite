@@ -1,5 +1,4 @@
 import { HRDirectoryClient } from '@/components/admin/hr/HRDirectoryClient';
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { getCachedHrDirectoryPageData } from '@/lib/hr/getCachedHrDirectoryPageData';
@@ -42,7 +41,7 @@ export async function HrDirectoryPage({
   const { rows, dashStats } = await withServerPerf(
     perfPath,
     'hr_directory_bundle_cached',
-    getCachedHrDirectoryPageData(orgId, user.id, canViewAll, canViewAll),
+    getCachedHrDirectoryPageData(orgId, user.id, canViewAll, false),
     800
   );
 

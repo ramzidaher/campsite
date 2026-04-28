@@ -2,7 +2,7 @@ import { OrgChartClient } from '@/components/admin/hr/OrgChartClient';
 import type { HRDirectoryRow } from '@/components/admin/hr/HRDirectoryClient';
 import { getCachedOrgChartPageData } from '@/lib/hr/getCachedOrgChartPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { shellBundleOrgId, shellBundleOrgName, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
 
@@ -42,7 +42,7 @@ export default async function HROrgChartPage() {
   } catch {
     return <AccessMessage message="You do not have access to this org chart right now." />;
   }
-  const chartTitle = `${pageData.orgName} Chart`;
+  const chartTitle = `${shellBundleOrgName(bundle) ?? 'Organisation'} Chart`;
 
   const view = (
     <div style={{ height: 'calc(100dvh - 60px)', background: '#0a0a0c' }}>

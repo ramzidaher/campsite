@@ -60,3 +60,9 @@ export function shellBundleUiMode(data: unknown): string | null {
   const v = b['ui_mode'];
   return typeof v === 'string' && v.trim() ? v.trim() : null;
 }
+
+export function shellBundleOrgName(data: unknown): string | null {
+  const b = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  const v = b['org_name'];
+  return typeof v === 'string' && v.trim() ? v.trim() : null;
+}
