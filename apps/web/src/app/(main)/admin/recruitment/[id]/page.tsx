@@ -84,6 +84,7 @@ export default async function AdminRecruitmentDetailPage({ params }: { params: P
     supabase
       .from('job_listings')
       .select('id, status, slug, created_at')
+      .eq('org_id', orgId)
       .eq('recruitment_request_id', id)
       .order('created_at', { ascending: false }),
   ]);

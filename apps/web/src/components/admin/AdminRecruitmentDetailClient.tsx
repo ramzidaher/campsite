@@ -159,13 +159,18 @@ export function AdminRecruitmentDetailClient({
     });
   }
 
-  function openOrCreateListing() {
+  function createListingAndOpenEditor() {
     setListingErr(null);
     startTransition(async () => {
-      if (jobListing?.id) { router.push(`/hr/jobs/${jobListing.id}/edit`); return; }
       const res = await createJobListingFromRequest(req.id);
       if (!res.ok) { setListingErr(res.error); return; }
-      router.push(`/hr/jobs/${res.jobId}/edit`);
+      const jobId = String(res.jobId ?? '').trim();
+      if (!jobId) {
+        setListingErr('Job listing was created but no editor id was returned. Please refresh and try again.');
+        router.refresh();
+        return;
+      }
+      router.push(`/hr/jobs/${jobId}/edit`);
     });
   }
 
@@ -383,14 +388,23 @@ export function AdminRecruitmentDetailClient({
                   ) : null}
                 </div>
               ) : null}
-              <button
-                type="button"
-                disabled={pending}
-                onClick={openOrCreateListing}
-                className="mt-6 w-full rounded-full bg-[#121212] py-3 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
-              >
-                {pending ? 'Opening…' : jobListing ? 'Open job editor' : 'Create job listing'}
-              </button>
+              {jobListing?.id ? (
+                <Link
+                  href={`/hr/jobs/${jobListing.id}/edit`}
+                  className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#121212] py-3 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+                >
+                  Open job editor
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={createListingAndOpenEditor}
+                  className="mt-6 w-full rounded-full bg-[#121212] py-3 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
+                >
+                  {pending ? 'Opening…' : 'Create job listing'}
+                </button>
+              )}
             </div>
           ) : null}
 

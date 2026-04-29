@@ -72,6 +72,86 @@ async function requireOrgPermission(permissionKey: string) {
   return { supabase, user, profile, orgId: profile.org_id as string };
 }
 
+async function requireOrgPermissionOrPanelForJob(permissionKey: string, jobListingId: string) {
+  const base = await requireOrgPermission(permissionKey);
+  if (base.profile && base.orgId) {
+    return { ...base, isPanelist: false };
+  }
+  if (!base.user) return { ...base, isPanelist: false };
+
+  const supabase = base.supabase;
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, org_id, status, full_name')
+    .eq('id', base.user.id)
+    .maybeSingle();
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { supabase, user: base.user, profile: null as null, orgId: null as null, isPanelist: false };
+  }
+
+  const { data: panelRow } = await supabase
+    .from('job_listing_panelists')
+    .select('id')
+    .eq('org_id', profile.org_id)
+    .eq('job_listing_id', jobListingId)
+    .eq('profile_id', base.user.id)
+    .maybeSingle();
+  if (!panelRow?.id) {
+    return { supabase, user: base.user, profile: null as null, orgId: null as null, isPanelist: false };
+  }
+
+  return {
+    supabase,
+    user: base.user,
+    profile,
+    orgId: profile.org_id as string,
+    isPanelist: true,
+  };
+}
+
+async function autoMoveRecruitmentRequestToFilled(opts: {
+  orgId: string;
+  jobListingId: string;
+  actorUserId: string;
+}) {
+  const admin = createServiceRoleClient();
+  const { data: listing } = await admin
+    .from('job_listings')
+    .select('id, recruitment_request_id')
+    .eq('id', opts.jobListingId)
+    .eq('org_id', opts.orgId)
+    .maybeSingle();
+  const rid = String((listing as { recruitment_request_id?: string | null } | null)?.recruitment_request_id ?? '').trim();
+  if (!rid) return;
+
+  const { data: req } = await admin
+    .from('recruitment_requests')
+    .select('id, status')
+    .eq('id', rid)
+    .eq('org_id', opts.orgId)
+    .maybeSingle();
+  if (!req?.id) return;
+
+  const prev = String((req as { status?: string | null }).status ?? '').trim();
+  if (prev === 'filled') return;
+  if (prev !== 'in_progress' && prev !== 'approved') return;
+
+  await admin
+    .from('recruitment_requests')
+    .update({ status: 'filled', archived_at: new Date().toISOString() })
+    .eq('id', rid)
+    .eq('org_id', opts.orgId);
+
+  await admin.from('recruitment_request_status_events').insert({
+    request_id: rid,
+    org_id: opts.orgId,
+    from_status: prev,
+    to_status: 'filled',
+    changed_by: opts.actorUserId,
+    note: 'Auto: candidate moved to offer sent',
+  });
+}
+
 export async function updateJobApplicationStage(
   applicationId: string,
   newStage: string,
@@ -85,10 +165,31 @@ export async function updateJobApplicationStage(
   if (!id) return { ok: false, error: 'Missing application.' };
   if (!isJobApplicationStage(newStage)) return { ok: false, error: 'Invalid stage.' };
 
-  const { supabase, profile, orgId, user } = await requireOrgPermission('applications.move_stage');
+  const { supabase, profile, orgId, user } = await requireOrgPermissionOrPanelForJob(
+    'applications.move_stage',
+    opts.jobListingId
+  );
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
-  const notify = opts.notifyCandidate && opts.messageBody.trim().length > 0;
+  let resolvedMessageBody = opts.messageBody.trim();
+  if (opts.notifyCandidate && !resolvedMessageBody) {
+    const defaultField =
+      newStage === 'offer_sent'
+        ? 'success_email_body'
+        : newStage === 'rejected'
+          ? 'rejection_email_body'
+          : null;
+    if (defaultField) {
+      const { data: jobDefaults } = await supabase
+        .from('job_listings')
+        .select(defaultField)
+        .eq('id', opts.jobListingId)
+        .eq('org_id', orgId)
+        .maybeSingle();
+      resolvedMessageBody = String((jobDefaults as Record<string, unknown> | null)?.[defaultField] ?? '').trim();
+    }
+  }
+  const notify = opts.notifyCandidate && resolvedMessageBody.length > 0;
   if (opts.notifyCandidate) {
     const { data: canNotify } = await supabase.rpc('has_permission', {
       p_user_id: user.id,
@@ -100,7 +201,7 @@ export async function updateJobApplicationStage(
       return { ok: false, error: 'You do not have permission to notify candidates.' };
     }
   }
-  if (opts.notifyCandidate && !opts.messageBody.trim()) {
+  if (opts.notifyCandidate && !resolvedMessageBody) {
     return { ok: false, error: 'Add a message for the candidate or turn off email notification.' };
   }
 
@@ -146,7 +247,7 @@ export async function updateJobApplicationStage(
   }
 
   if (notify) {
-    const body = opts.messageBody.trim();
+    const body = resolvedMessageBody;
     const { error: insErr } = await supabase.from('job_application_messages').insert({
       org_id: orgId,
       job_application_id: id,
@@ -175,10 +276,25 @@ export async function updateJobApplicationStage(
     });
   }
 
+  if (newStage === 'offer_sent') {
+    try {
+      await autoMoveRecruitmentRequestToFilled({
+        orgId,
+        jobListingId: opts.jobListingId,
+        actorUserId: user.id,
+      });
+    } catch {
+      // Non-fatal (best-effort status sync)
+    }
+  }
+
   revalidatePath(`/admin/jobs/${opts.jobListingId}/applications`);
   revalidatePath('/admin/applications');
   revalidatePath(`/hr/jobs/${opts.jobListingId}/applications`);
   revalidatePath('/hr/applications');
+  revalidatePath('/admin/recruitment');
+  revalidatePath('/hr/hiring/requests');
+  revalidatePath('/hr/hiring');
   return { ok: true };
 }
 
@@ -342,7 +458,7 @@ export async function loadJobApplicationDetail(
   const id = applicationId?.trim();
   if (!id) return { error: 'Missing application.' };
 
-  const { supabase, profile, orgId } = await requireOrgPermission('applications.view');
+  const { supabase, profile, orgId } = await requireOrgPermissionOrPanelForJob('applications.view', jobListingId);
   if (!profile || !orgId) return { error: 'Not allowed.' };
 
   const { data: application, error: appErr } = await supabase
@@ -507,7 +623,10 @@ export async function upsertJobApplicationScreeningScore(
     return { ok: false, error: 'Score must be between 1 and 5.' };
   }
 
-  const { supabase, profile, orgId, user } = await requireOrgPermission('applications.view');
+  const { supabase, profile, orgId, user } = await requireOrgPermissionOrPanelForJob(
+    'applications.view',
+    jobListingId
+  );
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const [{ data: canScore }, { data: canManage }] = await Promise.all([

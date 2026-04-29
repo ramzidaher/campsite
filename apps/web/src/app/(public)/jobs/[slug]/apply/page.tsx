@@ -141,6 +141,10 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
                   prompt: string;
                   help_text: string | null;
                   required: boolean;
+                    is_page_break?: boolean | null;
+                    scoring_enabled?: boolean | null;
+                    initially_hidden?: boolean | null;
+                    locked?: boolean | null;
                   options: unknown;
                   max_length: number | null;
                   sort_order: number;

@@ -51,7 +51,7 @@ export default async function HiringWorkspaceLayout({ children }: { children: Re
           ) : null}
         </div>
         <HiringHubTabNav items={items} />
-        <div className="mt-6 min-w-0">{children}</div>
+        <div className="mt-2 min-w-0">{children}</div>
       </div>
     </HiringHubProvider>
   );

@@ -48,6 +48,35 @@ async function requireOrgPermission(permissionKey: string) {
   return { supabase, user, profile, orgId: profile.org_id as string };
 }
 
+async function requireOrgPermissionOrPanelForJob(permissionKey: string, jobListingId: string) {
+  const base = await requireOrgPermission(permissionKey);
+  if (base.profile && base.orgId) return { ...base, isPanelist: false };
+  if (!base.user) return { ...base, isPanelist: false };
+
+  const { data: profile } = await base.supabase
+    .from('profiles')
+    .select('id, org_id, status')
+    .eq('id', base.user.id)
+    .maybeSingle();
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { supabase: base.supabase, user: base.user, profile: null as null, orgId: null as null, isPanelist: false };
+  }
+
+  const { data: panelRow } = await base.supabase
+    .from('job_listing_panelists')
+    .select('id')
+    .eq('org_id', profile.org_id)
+    .eq('job_listing_id', jobListingId)
+    .eq('profile_id', base.user.id)
+    .maybeSingle();
+
+  if (!panelRow?.id) {
+    return { supabase: base.supabase, user: base.user, profile: null as null, orgId: null as null, isPanelist: false };
+  }
+
+  return { supabase: base.supabase, user: base.user, profile, orgId: profile.org_id as string, isPanelist: true };
+}
+
 export type InterviewSlotRow = {
   id: string;
   job_listing_id: string;
@@ -57,13 +86,97 @@ export type InterviewSlotRow = {
   status: string;
 };
 
+export type InterviewSessionRow = InterviewSlotRow & {
+  panel_names: string[];
+  booked_count: number;
+  booked_applications: Array<{
+    id: string;
+    candidate_name: string;
+    candidate_email: string;
+  }>;
+};
+
+async function upsertJobPanelAssignmentsAndNotify(opts: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  orgId: string;
+  actorUserId: string;
+  jobListingId: string;
+  panelistProfileIds: string[];
+}) {
+  const panelIds = [...new Set(opts.panelistProfileIds.map((v) => v.trim()).filter(Boolean))];
+  if (!panelIds.length) return;
+
+  const { data: existingRows } = await opts.supabase
+    .from('job_listing_panelists')
+    .select('profile_id')
+    .eq('org_id', opts.orgId)
+    .eq('job_listing_id', opts.jobListingId)
+    .in('profile_id', panelIds);
+  const existing = new Set((existingRows ?? []).map((r) => String(r.profile_id)));
+  const newlyAdded = panelIds.filter((id) => !existing.has(id));
+  if (!newlyAdded.length) return;
+
+  let admin;
+  try {
+    admin = createServiceRoleClient();
+  } catch {
+    return;
+  }
+
+  const { data: jobRow } = await admin
+    .from('job_listings')
+    .select('id, title, recruitment_request_id, recruitment_requests(status)')
+    .eq('id', opts.jobListingId)
+    .eq('org_id', opts.orgId)
+    .maybeSingle();
+  if (!jobRow?.id) return;
+
+  const requestRel = (jobRow as { recruitment_requests?: { status?: string } | Array<{ status?: string }> | null })
+    .recruitment_requests;
+  const request = Array.isArray(requestRel) ? requestRel[0] : requestRel;
+  const requestId = String((jobRow as { recruitment_request_id?: string | null }).recruitment_request_id ?? '').trim();
+  const requestStatus = String(request?.status ?? 'in_progress').trim() || 'in_progress';
+  const jobTitle = String((jobRow as { title?: string | null }).title ?? '').trim() || 'Job role';
+
+  await admin.from('job_listing_panelists').insert(
+    newlyAdded.map((profileId) => ({
+      org_id: opts.orgId,
+      job_listing_id: opts.jobListingId,
+      profile_id: profileId,
+      assigned_by: opts.actorUserId,
+    }))
+  );
+
+  if (!requestId) return;
+
+  const { data: actorProfile } = await opts.supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', opts.actorUserId)
+    .maybeSingle();
+  const actorName = String(actorProfile?.full_name ?? '').trim() || null;
+
+  await admin.from('recruitment_notifications').insert(
+    newlyAdded.map((profileId) => ({
+      org_id: opts.orgId,
+      recipient_id: profileId,
+      request_id: requestId,
+      kind: 'panel_assignment',
+      old_status: null,
+      new_status: requestStatus,
+      job_title: jobTitle,
+      actor_name: actorName,
+    }))
+  );
+}
+
 export async function listAvailableInterviewSlotsForJob(jobListingId: string): Promise<
   { ok: true; slots: InterviewSlotRow[] } | { ok: false; error: string }
 > {
   const jid = jobListingId?.trim();
   if (!jid) return { ok: false, error: 'Missing job.' };
 
-  const { supabase, orgId } = await requireOrgPermission('interviews.book_slot');
+  const { supabase, orgId } = await requireOrgPermissionOrPanelForJob('interviews.book_slot', jid);
   if (!orgId) return { ok: false, error: 'Not allowed.' };
 
   const { data, error } = await supabase
@@ -76,6 +189,156 @@ export async function listAvailableInterviewSlotsForJob(jobListingId: string): P
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, slots: (data ?? []) as InterviewSlotRow[] };
+}
+
+export async function listInterviewSessionsForJob(jobListingId: string): Promise<
+  { ok: true; sessions: InterviewSessionRow[] } | { ok: false; error: string }
+> {
+  const jid = jobListingId?.trim();
+  if (!jid) return { ok: false, error: 'Missing job.' };
+  const { supabase, orgId } = await requireOrgPermissionOrPanelForJob('interviews.book_slot', jid);
+  if (!orgId) return { ok: false, error: 'Not allowed.' };
+
+  const { data, error } = await supabase
+    .from('interview_slots')
+    .select(
+      'id, job_listing_id, title, starts_at, ends_at, status, interview_slot_panelists(profile_id, profiles(full_name)), job_applications(id, candidate_name, candidate_email)'
+    )
+    .eq('org_id', orgId)
+    .eq('job_listing_id', jid)
+    .order('starts_at', { ascending: true })
+    .limit(50);
+  if (error) return { ok: false, error: error.message };
+
+  const sessions: InterviewSessionRow[] = (data ?? []).map((row) => {
+    const raw = row as {
+      id: string;
+      job_listing_id: string;
+      title: string;
+      starts_at: string;
+      ends_at: string;
+      status: string;
+      interview_slot_panelists?: Array<{ profiles?: { full_name?: string | null } | Array<{ full_name?: string | null }> | null }> | null;
+      job_applications?: Array<{ id: string; candidate_name: string | null; candidate_email: string | null }> | null;
+    };
+    const panel = (raw.interview_slot_panelists ?? [])
+      .map((p) => relOne(p.profiles as { full_name?: string | null } | Array<{ full_name?: string | null }> | null)?.full_name ?? null)
+      .map((name) => String(name ?? '').trim())
+      .filter(Boolean);
+    const bookedApps = (raw.job_applications ?? []).map((app) => ({
+      id: String(app.id),
+      candidate_name: String(app.candidate_name ?? '').trim() || 'Applicant',
+      candidate_email: String(app.candidate_email ?? '').trim(),
+    }));
+    const bookedCount = bookedApps.length;
+    return {
+      id: raw.id,
+      job_listing_id: raw.job_listing_id,
+      title: raw.title,
+      starts_at: raw.starts_at,
+      ends_at: raw.ends_at,
+      status: raw.status,
+      panel_names: panel,
+      booked_count: Number.isFinite(bookedCount) ? bookedCount : 0,
+      booked_applications: bookedApps,
+    };
+  });
+
+  return { ok: true, sessions };
+}
+
+export async function reassignInterviewSlotBooking(opts: {
+  jobListingId: string;
+  slotId: string;
+  applicationId: string | null;
+}): Promise<InterviewActionResult> {
+  const jobId = opts.jobListingId?.trim();
+  const slotId = opts.slotId?.trim();
+  const applicationId = opts.applicationId?.trim() || null;
+  if (!jobId || !slotId) return { ok: false, error: 'Missing slot data.' };
+
+  const { supabase, orgId } = await requireOrgPermission('interviews.manage');
+  if (!orgId) return { ok: false, error: 'Not allowed.' };
+
+  const { data: slot } = await supabase
+    .from('interview_slots')
+    .select('id')
+    .eq('id', slotId)
+    .eq('org_id', orgId)
+    .eq('job_listing_id', jobId)
+    .maybeSingle();
+  if (!slot?.id) return { ok: false, error: 'Interview slot not found.' };
+
+  const { data: currentBookedApp } = await supabase
+    .from('job_applications')
+    .select('id')
+    .eq('org_id', orgId)
+    .eq('job_listing_id', jobId)
+    .eq('interview_slot_id', slotId)
+    .maybeSingle();
+
+  if (!applicationId) {
+    if (currentBookedApp?.id) {
+      await supabase
+        .from('job_applications')
+        .update({ interview_slot_id: null, interview_joining_instructions: null })
+        .eq('id', currentBookedApp.id)
+        .eq('org_id', orgId);
+    }
+    await supabase
+      .from('interview_slots')
+      .update({ status: 'available', updated_at: new Date().toISOString() })
+      .eq('id', slotId)
+      .eq('org_id', orgId);
+  } else {
+    const { data: targetApp } = await supabase
+      .from('job_applications')
+      .select('id, interview_slot_id')
+      .eq('id', applicationId)
+      .eq('org_id', orgId)
+      .eq('job_listing_id', jobId)
+      .maybeSingle();
+    if (!targetApp?.id) return { ok: false, error: 'Applicant not found for this role.' };
+
+    const previousSlotId = String(targetApp.interview_slot_id ?? '').trim();
+    if (currentBookedApp?.id && currentBookedApp.id !== targetApp.id) {
+      await supabase
+        .from('job_applications')
+        .update({ interview_slot_id: null, interview_joining_instructions: null })
+        .eq('id', currentBookedApp.id)
+        .eq('org_id', orgId);
+    }
+    if (previousSlotId && previousSlotId !== slotId) {
+      await supabase
+        .from('interview_slots')
+        .update({ status: 'available', updated_at: new Date().toISOString() })
+        .eq('id', previousSlotId)
+        .eq('org_id', orgId);
+    }
+
+    await supabase
+      .from('job_applications')
+      .update({ interview_slot_id: slotId })
+      .eq('id', targetApp.id)
+      .eq('org_id', orgId);
+
+    await supabase
+      .from('interview_slots')
+      .update({ status: 'booked', updated_at: new Date().toISOString() })
+      .eq('id', slotId)
+      .eq('org_id', orgId);
+
+    await supabase.rpc('set_job_application_stage', {
+      p_application_id: targetApp.id,
+      p_new_stage: 'interview_scheduled',
+    });
+  }
+
+  revalidatePath(`/admin/jobs/${jobId}/applications`);
+  revalidatePath(`/hr/jobs/${jobId}/applications`);
+  revalidatePath('/admin/interviews');
+  revalidatePath('/hr/interviews');
+  return { ok: true };
 }
 
 export async function createInterviewSlot(fields: {
@@ -149,6 +412,14 @@ export async function createInterviewSlot(fields: {
     await supabase.from('interview_slots').delete().eq('id', slotId);
     return { ok: false, error: panErr.message };
   }
+
+  await upsertJobPanelAssignmentsAndNotify({
+    supabase,
+    orgId,
+    actorUserId: user.id,
+    jobListingId: jobId,
+    panelistProfileIds: panelists,
+  });
 
   const jobTitle = (job.title as string)?.trim() || 'Role';
   const startsIso = start.toISOString();
@@ -275,6 +546,14 @@ export async function bulkCreateInterviewSlots(fields: {
     await supabase.from('interview_slots').delete().in('id', inserted.map((s) => s.id as string));
     return { ok: false, error: panErr.message };
   }
+
+  await upsertJobPanelAssignmentsAndNotify({
+    supabase,
+    orgId,
+    actorUserId: user.id,
+    jobListingId: jobId,
+    panelistProfileIds: panelists,
+  });
 
   // Try Google Calendar sync (best-effort, non-blocking)
   const warnings: string[] = [];
@@ -495,7 +774,10 @@ export async function bookInterviewForApplication(opts: {
   const jobListingId = opts.jobListingId?.trim();
   if (!appId || !slotId || !jobListingId) return { ok: false, error: 'Missing data.' };
 
-  const { supabase, profile, orgId, user } = await requireOrgPermission('interviews.book_slot');
+  const { supabase, profile, orgId, user } = await requireOrgPermissionOrPanelForJob(
+    'interviews.book_slot',
+    jobListingId
+  );
   if (!profile || !orgId || !user) return { ok: false, error: 'Not allowed.' };
 
   const joining = opts.joiningInstructions?.trim() ?? '';

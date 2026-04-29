@@ -1,9 +1,15 @@
 'use client';
 
 import { GenerateOfferModal } from '@/app/(main)/admin/jobs/[id]/applications/GenerateOfferModal';
+import { JobEditorTabNav } from '@/components/admin/JobEditorTabNav';
+import { useTopPageFeedback } from '@/lib/ui/useTopPageFeedback';
 import {
   bookInterviewForApplication,
+  bulkCreateInterviewSlots,
+  listInterviewSessionsForJob,
   listAvailableInterviewSlotsForJob,
+  reassignInterviewSlotBooking,
+  type InterviewSessionRow,
   type InterviewSlotRow,
 } from '@/app/(main)/admin/interviews/actions';
 import {
@@ -24,15 +30,6 @@ import {
   type JobApplicationStage,
   isJobApplicationStage,
 } from '@campsite/types';
-import {
-  DndContext,
-  PointerSensor,
-  closestCorners,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 
@@ -50,181 +47,97 @@ export type PipelineApplicationRow = {
   screening_scorer_count: number;
 };
 
-function StageColumn({
-  stage,
-  apps,
-  renderCard,
-}: {
-  stage: JobApplicationStage;
-  apps: PipelineApplicationRow[];
-  renderCard: (app: PipelineApplicationRow) => React.ReactNode;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: stage });
-  const tone: Record<JobApplicationStage, string> = {
-    applied: 'bg-white',
-    screened: 'bg-white',
-    assessed: 'bg-white',
-    shortlisted: 'bg-white',
-    interview_scheduled: 'bg-white',
-    checks_cleared: 'bg-white',
-    offer_approved: 'bg-white',
-    offer_sent: 'bg-white',
-    hired: 'bg-white',
-    rejected: 'bg-white',
-  };
-  const accent: Record<JobApplicationStage, string> = {
-    applied: 'bg-[#9b9b9b]',
-    screened: 'bg-[#0ea5e9]',
-    assessed: 'bg-[#7c3aed]',
-    shortlisted: 'bg-[#0f766e]',
-    interview_scheduled: 'bg-[#2563eb]',
-    checks_cleared: 'bg-[#16a34a]',
-    offer_approved: 'bg-[#d97706]',
-    offer_sent: 'bg-[#b45309]',
-    hired: 'bg-[#15803d]',
-    rejected: 'bg-[#6b7280]',
-  };
-  return (
-    <div
-      ref={setNodeRef}
-      className={[
-        'flex min-h-[430px] flex-1 flex-col rounded-xl border p-3 min-w-[240px]',
-        tone[stage],
-        isOver ? 'border-[#121212] ring-2 ring-[#121212]/10' : 'border-[#d8d8d8]',
-      ].join(' ')}
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]">
-          {jobApplicationStageLabel(stage)}
-        </h3>
-        <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-[#f5f4f1] px-1.5 py-0.5 text-[10px] font-medium text-[#6b6b6b]">
-          {apps.length}
-        </span>
-      </div>
-      <div className={`mt-2 h-1 w-full rounded-full ${accent[stage]} opacity-80`} />
-      <div className="mt-3 flex flex-1 flex-col gap-2">
-        {apps.length > 0 ? (
-          apps.map((app) => renderCard(app))
-        ) : (
-          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-[#e8e8e8] bg-[#faf9f6] px-3 text-center text-[12px] text-[#9b9b9b]">
-            Drop candidates here
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PipelineCard({
-  app,
-  onOpenDetail,
-  onRequestStageChange,
-  canMoveStage,
-  canBookInterviewSlot,
-}: {
-  app: PipelineApplicationRow;
-  onOpenDetail: () => void;
-  onRequestStageChange: (next: JobApplicationStage) => void;
-  canMoveStage: boolean;
-  canBookInterviewSlot: boolean;
-}) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: app.id });
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px,${transform.y}px,0)`, zIndex: isDragging ? 10 : undefined }
-    : undefined;
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={[
-        'rounded-lg border border-[#e4e4e4] bg-white p-3',
-        isDragging ? 'opacity-80' : '',
-      ].join(' ')}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <button
-          type="button"
-          className="mt-0.5 cursor-grab touch-none text-[#b0b0b0] hover:text-[#808080]"
-          aria-label="Drag to change stage"
-          {...(canMoveStage ? listeners : {})}
-          {...(canMoveStage ? attributes : {})}
-          disabled={!canMoveStage}
-        >
-          ⠿
-        </button>
-        <button
-          type="button"
-          onClick={onOpenDetail}
-          className="min-w-0 flex-1 text-left"
-        >
-          <p className="truncate text-[13px] font-medium text-[#121212]">{app.candidate_name}</p>
-          <p className="truncate text-[12px] text-[#6b6b6b]">{app.candidate_email}</p>
-          <p className="mt-1 text-[11px] text-[#9b9b9b]">
-            {app.submitted_at
-              ? new Date(app.submitted_at).toLocaleDateString(undefined, {
-                  day: 'numeric',
-                  month: 'short',
-                })
-              : '—'}
-          </p>
-          {app.screening_overall_avg != null ? (
-            <p className="mt-1 text-[11px] text-[#0f766e]">
-              Application Q avg {app.screening_overall_avg.toFixed(1)}
-              {app.screening_scorer_count > 0 ? ` · ${app.screening_scorer_count} scorer(s)` : null}
-            </p>
-          ) : null}
-          {app.offer_letter_status ? (
-            <p
-              className={[
-                'mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                app.offer_letter_status === 'signed'
-                  ? 'border-emerald-200 bg-emerald-50 text-[#0f5132]'
-                  : app.offer_letter_status === 'declined'
-                    ? 'border-red-200 bg-red-50 text-[#b91c1c]'
-                    : app.offer_letter_status === 'superseded'
-                      ? 'border-slate-200 bg-slate-50 text-slate-700'
-                      : 'border-amber-200 bg-amber-50 text-[#b45309]',
-              ].join(' ')}
-            >
-              Offer:{' '}
-              {app.offer_letter_status === 'sent'
-                ? 'Sent (awaiting sign)'
-                : app.offer_letter_status === 'signed'
-                  ? 'Signed'
-                  : app.offer_letter_status === 'declined'
-                    ? 'Declined'
-                    : 'Superseded'}
-            </p>
-          ) : null}
-        </button>
-      </div>
-      <label className="mt-2 block text-[10px] font-medium uppercase tracking-wide text-[#9b9b9b]">
-        Stage
-      </label>
-      <select
-        className="mt-0.5 w-full rounded-md border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
-        value={app.stage}
-        disabled={!canMoveStage}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (isJobApplicationStage(v) && v !== app.stage) onRequestStageChange(v);
-        }}
-      >
-        {JOB_APPLICATION_STAGES.filter((s) => s !== 'interview_scheduled' || canBookInterviewSlot).map((s) => (
-          <option key={s} value={s}>
-            {jobApplicationStageLabel(s)}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
 type StageDialogState = {
   applicationId: string;
   toStage: JobApplicationStage;
 };
+
+type TrackerView = 'all' | 'active' | 'rejected' | 'offer' | 'hired';
+type PanelProfile = { id: string; full_name: string | null; email: string | null };
+type RequestedInterviewRow = {
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  notes?: string;
+};
+type QuickActionId =
+  | 'applied'
+  | 'draft_interview'
+  | 'interview'
+  | 'draft_reject'
+  | 'reject'
+  | 'draft_offer'
+  | 'offer';
+
+const QUICK_ACTION_OPTIONS: Array<{
+  id: QuickActionId;
+  label: string;
+  stage: JobApplicationStage;
+  draft: boolean;
+}> = [
+  { id: 'applied', label: 'Applied', stage: 'applied', draft: false },
+  { id: 'draft_interview', label: 'Draft Interview', stage: 'shortlisted', draft: true },
+  { id: 'interview', label: 'Interview', stage: 'interview_scheduled', draft: false },
+  { id: 'draft_reject', label: 'Draft Reject', stage: 'assessed', draft: true },
+  { id: 'reject', label: 'Reject', stage: 'rejected', draft: false },
+  { id: 'draft_offer', label: 'Draft Offer', stage: 'offer_approved', draft: true },
+  { id: 'offer', label: 'Offer', stage: 'offer_sent', draft: false },
+];
+
+function stageBadgeClass(stage: JobApplicationStage): string {
+  switch (stage) {
+    case 'applied':
+      return 'bg-[#f3f4f6] text-[#4b5563]';
+    case 'screened':
+      return 'bg-[#e0f2fe] text-[#0369a1]';
+    case 'assessed':
+      return 'bg-[#ede9fe] text-[#6d28d9]';
+    case 'shortlisted':
+      return 'bg-[#d1fae5] text-[#065f46]';
+    case 'interview_scheduled':
+      return 'bg-[#dbeafe] text-[#1d4ed8]';
+    case 'checks_cleared':
+      return 'bg-[#dcfce7] text-[#166534]';
+    case 'offer_approved':
+    case 'offer_sent':
+      return 'bg-[#fef3c7] text-[#92400e]';
+    case 'hired':
+      return 'bg-[#dcfce7] text-[#166534]';
+    case 'rejected':
+      return 'bg-[#fee2e2] text-[#991b1b]';
+    default:
+      return 'bg-[#f3f4f6] text-[#4b5563]';
+  }
+}
+
+function formatStableShortDate(iso: string): string {
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(dt);
+}
+
+function parseBulkCommandToStage(command: string): JobApplicationStage | null {
+  const c = command.toLowerCase();
+  if (c.includes('draft interview')) return 'shortlisted';
+  if (c.includes('offer approved')) return 'offer_approved';
+  if (c.includes('draft offer')) return 'offer_approved';
+  if (c.includes('offer sent') || c.includes('make offer')) return 'offer_sent';
+  if (c.includes('checks cleared') || c.includes('clear checks')) return 'checks_cleared';
+  if (c.includes('shortlist')) return 'shortlisted';
+  if (c.includes('draft reject')) return 'assessed';
+  if (c.includes('reject')) return 'rejected';
+  if (c.includes('hire')) return 'hired';
+  if (c.includes('screen')) return 'screened';
+  if (c.includes('assess')) return 'assessed';
+  if (c.includes('applied')) return 'applied';
+  if (c.includes('interview')) return 'interview_scheduled';
+  return null;
+}
 
 export function JobPipelineClient({
   jobListingId,
@@ -233,10 +146,14 @@ export function JobPipelineClient({
   canMoveStage,
   canBookInterviewSlot,
   canManageInterviews,
+  canCreateInterviewSlot,
   canAddInternalNotes,
   canNotifyCandidate,
   canManageOffers,
   canScoreScreening,
+  panelProfiles,
+  requestedInterviewSchedule,
+  preferredOfferTemplateId,
 }: {
   jobListingId: string;
   jobTitle: string;
@@ -244,18 +161,28 @@ export function JobPipelineClient({
   canMoveStage: boolean;
   canBookInterviewSlot: boolean;
   canManageInterviews: boolean;
+  canCreateInterviewSlot: boolean;
   canAddInternalNotes: boolean;
   canNotifyCandidate: boolean;
   canManageOffers: boolean;
   canScoreScreening: boolean;
+  panelProfiles: PanelProfile[];
+  requestedInterviewSchedule: RequestedInterviewRow[];
+  preferredOfferTemplateId?: string | null;
 }) {
   const router = useRouter();
+  const { feedback: pageNotice, setFeedback: setPageNotice, feedbackRef } = useTopPageFeedback();
   const [applications, setApplications] = useState(initialApplications);
   useEffect(() => {
     setApplications(initialApplications);
   }, [initialApplications]);
 
   const [sortBy, setSortBy] = useState<'submitted_at' | 'screening_avg'>('submitted_at');
+  const [trackerView, setTrackerView] = useState<TrackerView>('all');
+  const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
+  const [bulkActionId, setBulkActionId] = useState<QuickActionId>('draft_interview');
+  const [commandText, setCommandText] = useState('');
+  const [bulkFeedback, setBulkFeedback] = useState<string | null>(null);
 
   const sortedApplications = useMemo(() => {
     const list = [...applications];
@@ -286,18 +213,66 @@ export function JobPipelineClient({
   }, [sortedApplications]);
   const totalApplications = applications.length;
 
+  const applicantNumberById = useMemo(() => {
+    const byAppliedAt = [...applications]
+      .filter((a) => Boolean(a.submitted_at))
+      .sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
+    const map = new Map<string, number>();
+    byAppliedAt.forEach((app, idx) => map.set(app.id, idx + 1));
+    return map;
+  }, [applications]);
+
+  const applicationIdByApplicantNumber = useMemo(() => {
+    const map = new Map<number, string>();
+    applicantNumberById.forEach((num, id) => map.set(num, id));
+    return map;
+  }, [applicantNumberById]);
+
+  const visibleApplications = useMemo(() => {
+    if (trackerView === 'all') return sortedApplications;
+    if (trackerView === 'active') {
+      return sortedApplications.filter((a) => a.stage !== 'rejected' && a.stage !== 'hired');
+    }
+    if (trackerView === 'rejected') {
+      return sortedApplications.filter((a) => a.stage === 'rejected');
+    }
+    if (trackerView === 'offer') {
+      return sortedApplications.filter((a) => a.stage === 'offer_approved' || a.stage === 'offer_sent');
+    }
+    return sortedApplications.filter((a) => a.stage === 'hired');
+  }, [sortedApplications, trackerView]);
+
+  useEffect(() => {
+    setSelectedApplicationIds((prev) => prev.filter((id) => visibleApplications.some((app) => app.id === id)));
+  }, [visibleApplications]);
+
   const [stageDialog, setStageDialog] = useState<StageDialogState | null>(null);
   const [notify, setNotify] = useState(false);
   const [messageBody, setMessageBody] = useState('');
   const [interviewSlots, setInterviewSlots] = useState<InterviewSlotRow[]>([]);
+  const [jobAvailableSlots, setJobAvailableSlots] = useState<InterviewSlotRow[]>([]);
+  const [jobInterviewSessions, setJobInterviewSessions] = useState<InterviewSessionRow[]>([]);
   const [interviewSlotId, setInterviewSlotId] = useState('');
   const [interviewJoining, setInterviewJoining] = useState('');
+  const [slotDate, setSlotDate] = useState('');
+  const [slotStart, setSlotStart] = useState('09:00');
+  const [slotEnd, setSlotEnd] = useState('14:00');
+  const [slotMinutes, setSlotMinutes] = useState('45');
+  const [breakMinutes, setBreakMinutes] = useState('15');
+  const [slotCount, setSlotCount] = useState('1');
+  const [slotLocation, setSlotLocation] = useState('');
+  const [slotNotes, setSlotNotes] = useState('');
+  const [slotPanel, setSlotPanel] = useState<Record<string, boolean>>({});
+  const [panelSearch, setPanelSearch] = useState('');
+  const [showInterviewTool, setShowInterviewTool] = useState(false);
+  const [slotDetail, setSlotDetail] = useState<InterviewSessionRow | null>(null);
+  const [slotAssignAppId, setSlotAssignAppId] = useState<string>('');
   const [pending, startTransition] = useTransition();
 
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detail, setDetail] = useState<JobApplicationDetail | null>(null);
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!stageDialog || stageDialog.toStage !== 'interview_scheduled') {
@@ -319,18 +294,197 @@ export function JobPipelineClient({
     };
   }, [stageDialog, jobListingId]);
 
+  useEffect(() => {
+    let cancel = false;
+    void listAvailableInterviewSlotsForJob(jobListingId).then((r) => {
+      if (cancel) return;
+      if (r.ok) setJobAvailableSlots(r.slots);
+      else setJobAvailableSlots([]);
+    });
+    void listInterviewSessionsForJob(jobListingId).then((r) => {
+      if (cancel) return;
+      if (r.ok) setJobInterviewSessions(r.sessions);
+      else setJobInterviewSessions([]);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [jobListingId]);
+
+  const requestedSlotHints = useMemo(() => {
+    const toNum = (value: string | undefined, fallback: number) => {
+      const n = Number.parseInt((value ?? '').trim(), 10);
+      return Number.isFinite(n) && n > 0 ? n : fallback;
+    };
+    return (requestedInterviewSchedule ?? []).map((row) => {
+      const note = String(row.notes ?? '');
+      const slotMatch = /Slot length:\s*(\d+)\s*minutes/i.exec(note);
+      const breakMatch = /Break:\s*(\d+)\s*minutes/i.exec(note);
+      return {
+        date: String(row.date ?? ''),
+        startTime: String(row.startTime ?? ''),
+        endTime: String(row.endTime ?? ''),
+        slotMinutes: toNum(slotMatch?.[1], 45),
+        breakMinutes: toNum(breakMatch?.[1], 15),
+        notes: note
+          .split('|')
+          .map((s) => s.trim())
+          .filter((s) => !/^Slot length:/i.test(s) && !/^Break:/i.test(s))
+          .join(' | '),
+      };
+    });
+  }, [requestedInterviewSchedule]);
+
+  const selectedPanelIds = useMemo(
+    () => Object.keys(slotPanel).filter((id) => slotPanel[id]),
+    [slotPanel]
+  );
+  const selectedPanelProfiles = useMemo(
+    () => panelProfiles.filter((profile) => selectedPanelIds.includes(profile.id)),
+    [panelProfiles, selectedPanelIds]
+  );
+  const panelSearchResults = useMemo(() => {
+    const q = panelSearch.trim().toLowerCase();
+    if (!q) return [];
+    return panelProfiles
+      .filter((profile) => !slotPanel[profile.id])
+      .filter((profile) => {
+        const name = profile.full_name?.toLowerCase() ?? '';
+        const email = profile.email?.toLowerCase() ?? '';
+        return name.includes(q) || email.includes(q);
+      })
+      .slice(0, 6);
+  }, [panelProfiles, panelSearch, slotPanel]);
+
+  function generateSlotsForSession() {
+    if (!slotDate || !slotStart || !slotEnd) {
+      return { error: 'Choose date, start time, and end time.', slots: [] as Array<{ startsAtIso: string; endsAtIso: string }> };
+    }
+    const start = new Date(`${slotDate}T${slotStart}:00`);
+    const end = new Date(`${slotDate}T${slotEnd}:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      return { error: 'Invalid start/end time range.', slots: [] as Array<{ startsAtIso: string; endsAtIso: string }> };
+    }
+    const duration = Number.parseInt(slotMinutes, 10);
+    const gap = Number.parseInt(breakMinutes, 10);
+    const requestedCount = Math.max(1, Number.parseInt(slotCount, 10) || 1);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return { error: 'Slot duration must be greater than 0.', slots: [] as Array<{ startsAtIso: string; endsAtIso: string }> };
+    }
+    const slots: Array<{ startsAtIso: string; endsAtIso: string }> = [];
+    let cursor = start.getTime();
+    while (cursor + duration * 60_000 <= end.getTime() && slots.length < requestedCount) {
+      const startsAt = new Date(cursor);
+      const endsAt = new Date(cursor + duration * 60_000);
+      slots.push({ startsAtIso: startsAt.toISOString(), endsAtIso: endsAt.toISOString() });
+      cursor = endsAt.getTime() + Math.max(0, gap) * 60_000;
+    }
+    if (slots.length === 0) {
+      return { error: 'No slots fit this time window. Increase range or reduce slot/gap length.', slots };
+    }
+    return { error: '', slots };
+  }
+
+  function createSlotsForJob() {
+    if (!canCreateInterviewSlot) return;
+    if (selectedPanelIds.length === 0) {
+      setPageNotice({ type: 'err', text: 'Select at least one panel member.' });
+      return;
+    }
+    const generated = generateSlotsForSession();
+    if (generated.error) {
+      setPageNotice({ type: 'err', text: generated.error });
+      return;
+    }
+    const titleBits = ['Interview'];
+    if (slotLocation.trim()) titleBits.push(`Location: ${slotLocation.trim()}`);
+    if (slotNotes.trim()) titleBits.push(`Notes: ${slotNotes.trim()}`);
+    const title = titleBits.join(' | ');
+    startTransition(async () => {
+      const res = await bulkCreateInterviewSlots({
+        jobListingId,
+        title,
+        slots: generated.slots,
+        panelistProfileIds: selectedPanelIds,
+      });
+      if (!res.ok) {
+        setPageNotice({ type: 'err', text: res.error });
+        return;
+      }
+      setShowInterviewTool(false);
+      setPanelSearch('');
+      setPageNotice({ type: 'ok', text: 'Interview slots created.' });
+      const [availableRes, sessionsRes] = await Promise.all([
+        listAvailableInterviewSlotsForJob(jobListingId),
+        listInterviewSessionsForJob(jobListingId),
+      ]);
+      if (availableRes.ok) setJobAvailableSlots(availableRes.slots);
+      if (sessionsRes.ok) setJobInterviewSessions(sessionsRes.sessions);
+      router.refresh();
+    });
+  }
+
+  function openSlotDetail(session: InterviewSessionRow) {
+    setSlotDetail(session);
+    setSlotAssignAppId(session.booked_applications[0]?.id ?? '');
+  }
+
+  function saveSlotAssignment() {
+    if (!slotDetail || !canManageInterviews) return;
+    startTransition(async () => {
+      const res = await reassignInterviewSlotBooking({
+        jobListingId,
+        slotId: slotDetail.id,
+        applicationId: slotAssignAppId || null,
+      });
+      if (!res.ok) {
+        setPageNotice({ type: 'err', text: res.error });
+        return;
+      }
+      const sessionsRes = await listInterviewSessionsForJob(jobListingId);
+      if (sessionsRes.ok) {
+        setJobInterviewSessions(sessionsRes.sessions);
+        const refreshed = sessionsRes.sessions.find((s) => s.id === slotDetail.id) ?? null;
+        setSlotDetail(refreshed);
+      }
+      setPageNotice({ type: 'ok', text: 'Interview slot booking updated.' });
+      router.refresh();
+    });
+  }
+
+  function prefillFromRequested(row: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    slotMinutes: number;
+    breakMinutes: number;
+    notes: string;
+  }) {
+    setSlotDate(row.date || '');
+    setSlotStart(row.startTime || '09:00');
+    setSlotEnd(row.endTime || '14:00');
+    setSlotMinutes(String(row.slotMinutes || 45));
+    setBreakMinutes(String(row.breakMinutes || 15));
+    setSlotNotes(row.notes || '');
+  }
+
   const openDetail = useCallback(
     (id: string) => {
       setDetailId(id);
       setDetail(null);
-      startTransition(async () => {
+      setDetailError(null);
+      setDetailLoading(true);
+      startDetailTransition(async () => {
         const res = await loadJobApplicationDetail(id, jobListingId);
         if ('error' in res) {
+          setDetailError(res.error || 'Could not load detail.');
           setDetail(null);
+          setDetailLoading(false);
           return;
         }
         setDetail(res);
         setJoiningDraft(res.application.interview_joining_instructions ?? '');
+        setDetailLoading(false);
       });
     },
     [jobListingId]
@@ -339,13 +493,18 @@ export function JobPipelineClient({
   const closeDetail = () => {
     setDetailId(null);
     setDetail(null);
+    setDetailLoading(false);
+    setDetailError(null);
   };
 
   const submitStageChange = () => {
     if (!stageDialog) return;
     if (stageDialog.toStage === 'interview_scheduled') {
       if (!interviewSlotId) {
-        alert('Choose an available interview slot (create slots under Admin → Interview schedule if none appear).');
+        setPageNotice({
+          type: 'err',
+          text: 'Choose an available interview slot (create slots first if none appear).',
+        });
         return;
       }
       startTransition(async () => {
@@ -357,7 +516,7 @@ export function JobPipelineClient({
           portalMessage: interviewJoining,
         });
         if (!res.ok) {
-          alert(res.error);
+          setPageNotice({ type: 'err', text: res.error });
           return;
         }
         setStageDialog(null);
@@ -365,6 +524,7 @@ export function JobPipelineClient({
         setMessageBody('');
         setInterviewSlotId('');
         setInterviewJoining('');
+        setPageNotice({ type: 'ok', text: 'Applicant moved to interview stage.' });
         router.refresh();
       });
       return;
@@ -376,43 +536,19 @@ export function JobPipelineClient({
         jobListingId,
       });
       if (!res.ok) {
-        alert(res.error);
+        setPageNotice({ type: 'err', text: res.error });
         return;
       }
       setStageDialog(null);
       setNotify(false);
       setMessageBody('');
+      setPageNotice({
+        type: 'ok',
+        text: `Applicant moved to ${jobApplicationStageLabel(stageDialog.toStage)}.`,
+      });
       router.refresh();
     });
   };
-
-  function resolveTargetStage(overId: string, activeAppId: string): JobApplicationStage | null {
-    if (JOB_APPLICATION_STAGES.includes(overId as JobApplicationStage)) {
-      return overId as JobApplicationStage;
-    }
-    const targetApp = applications.find((a) => a.id === overId);
-    if (targetApp && isJobApplicationStage(targetApp.stage)) {
-      if (targetApp.id === activeAppId) return null;
-      return targetApp.stage as JobApplicationStage;
-    }
-    return null;
-  }
-
-  function onDragEnd(event: DragEndEvent) {
-    if (!canMoveStage) return;
-    const { active, over } = event;
-    if (!over) return;
-    const appId = String(active.id);
-    const overId = String(over.id);
-    const app = applications.find((a) => a.id === appId);
-    if (!app) return;
-    const target = resolveTargetStage(overId, appId);
-    if (!target || target === app.stage) return;
-    if (target === 'interview_scheduled' && !canBookInterviewSlot) return;
-    setStageDialog({ applicationId: appId, toStage: target });
-    setNotify(false);
-    setMessageBody('');
-  }
 
   const onRequestStageChange = (app: PipelineApplicationRow, next: JobApplicationStage) => {
     if (!canMoveStage) return;
@@ -428,6 +564,93 @@ export function JobPipelineClient({
   const [joiningDraft, setJoiningDraft] = useState('');
   const [detailBusy, startDetailTransition] = useTransition();
   const [generateOfferFor, setGenerateOfferFor] = useState<PipelineApplicationRow | null>(null);
+  const quickActionForStage = useCallback((stage: string): QuickActionId => {
+    if (stage === 'interview_scheduled') return 'interview';
+    if (stage === 'shortlisted') return 'draft_interview';
+    if (stage === 'assessed') return 'draft_reject';
+    if (stage === 'rejected') return 'reject';
+    if (stage === 'offer_approved') return 'draft_offer';
+    if (stage === 'offer_sent') return 'offer';
+    return 'applied';
+  }, []);
+
+  const executeBulkStageChange = useCallback(
+    (targetIds: string[], targetStage: JobApplicationStage, notifyCandidate: boolean) => {
+      if (!canMoveStage) {
+        setBulkFeedback('You do not have permission to move application stages.');
+        return;
+      }
+      if (!targetIds.length) {
+        setBulkFeedback('Select at least one applicant.');
+        return;
+      }
+      if (targetStage === 'interview_scheduled') {
+        setBulkFeedback('Interview scheduling requires slot selection per applicant. Use individual stage change.');
+        return;
+      }
+      startTransition(async () => {
+        for (const id of targetIds) {
+          const res = await updateJobApplicationStage(id, targetStage, {
+            notifyCandidate,
+            messageBody: notifyCandidate
+              ? `Your application status has been updated to ${jobApplicationStageLabel(targetStage)}.`
+              : '',
+            jobListingId,
+          });
+          if (!res.ok) {
+            setBulkFeedback(res.error);
+            return;
+          }
+        }
+        setBulkFeedback(
+          `Updated ${targetIds.length} applicant${targetIds.length === 1 ? '' : 's'} to ${jobApplicationStageLabel(targetStage)}.`
+        );
+        setSelectedApplicationIds([]);
+        setCommandText('');
+        router.refresh();
+      });
+    },
+    [canMoveStage, jobListingId, router]
+  );
+
+  const applyQuickAction = useCallback(
+    (targetIds: string[], actionId: QuickActionId) => {
+      const action = QUICK_ACTION_OPTIONS.find((a) => a.id === actionId);
+      if (!action) {
+        setBulkFeedback('Invalid action selected.');
+        return;
+      }
+      executeBulkStageChange(targetIds, action.stage, !action.draft);
+    },
+    [executeBulkStageChange]
+  );
+
+  const runCommand = useCallback(() => {
+    const command = commandText.trim();
+    if (!command) {
+      setBulkFeedback('Enter a command first.');
+      return;
+    }
+    const targetStage = parseBulkCommandToStage(command);
+    if (!targetStage) {
+      setBulkFeedback('Could not detect an action. Try: "shortlist application numbers 1, 4, 6".');
+      return;
+    }
+    const numberMatches = command.match(/\d+/g) ?? [];
+    const numbers = [...new Set(numberMatches.map((n) => Number.parseInt(n, 10)).filter((n) => Number.isInteger(n) && n > 0))];
+    if (!numbers.length) {
+      setBulkFeedback('No applicant numbers found in command.');
+      return;
+    }
+    const invalidNumbers = numbers.filter((n) => !applicationIdByApplicantNumber.has(n));
+    if (invalidNumbers.length) {
+      setBulkFeedback(`Invalid applicant number(s): ${invalidNumbers.join(', ')}.`);
+      return;
+    }
+    const targetIds = numbers.map((n) => applicationIdByApplicantNumber.get(n)).filter((v): v is string => Boolean(v));
+    const isDraftAction = command.toLowerCase().includes('draft ');
+    executeBulkStageChange(targetIds, targetStage, !isDraftAction);
+  }, [applicationIdByApplicantNumber, commandText, executeBulkStageChange]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-5 py-7 sm:px-7">
@@ -440,10 +663,9 @@ export function JobPipelineClient({
           Pipeline
         </p>
         <h1 className="mt-1 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">{jobTitle}</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Drag cards between columns or use the stage menu on each card. Optional email to the candidate when you move
-          stage.
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6b6b6b]">
+          <JobEditorTabNav jobId={jobListingId} activeTab="applicants" />
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6b6b6b]">
           <span className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1">
             Total applications: {totalApplications}
@@ -459,11 +681,353 @@ export function JobPipelineClient({
               <option value="screening_avg">Application question average</option>
             </select>
           </label>
-          <a href="/hr/applications" className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 transition-colors hover:bg-[#f5f4f1]">
-            Open full application tracker
-          </a>
+          <button
+            type="button"
+            onClick={() => setShowInterviewTool(true)}
+            className="rounded-full border border-[#d8d8d8] bg-white px-3 py-1 transition-colors hover:bg-[#f5f4f1]"
+          >
+            Create interview slots
+          </button>
         </div>
+        {jobInterviewSessions.length > 0 ? (
+          <div className="mt-3 overflow-x-auto rounded-lg border border-[#d8d8d8] bg-white">
+            <table className="min-w-full text-left text-[12px]">
+              <thead className="border-b border-[#ececec] bg-[#fafafa] text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]">
+                <tr>
+                  <th className="px-3 py-2.5">Date and Time</th>
+                  <th className="px-3 py-2.5">Interview slot time</th>
+                  <th className="px-3 py-2.5">Slots remaining</th>
+                  <th className="px-3 py-2.5">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f0f0f0]">
+                {jobInterviewSessions.map((session) => {
+                  const starts = new Date(session.starts_at);
+                  const ends = new Date(session.ends_at);
+                  const durationMins = Math.max(0, Math.round((ends.getTime() - starts.getTime()) / 60000));
+                  const totalSlots = 1;
+                  const remainingSlots = session.status === 'available' ? 1 : 0;
+                  return (
+                    <tr key={session.id} className="bg-[#fafaf9]">
+                      <td className="px-3 py-2.5 font-medium text-[#121212]">
+                        {starts.toLocaleString([], { hour: '2-digit', minute: '2-digit' })}{' '}
+                        {starts.toLocaleDateString('en-GB')}
+                      </td>
+                      <td className="px-3 py-2.5 text-[#505050]">
+                        {durationMins} mins
+                        {session.panel_names.length ? ` · Panel: ${session.panel_names.join(', ')}` : ''}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-900">
+                          {remainingSlots} slot{remainingSlots === 1 ? '' : 's'} out of {totalSlots} remaining
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => openSlotDetail(session)}
+                          className="rounded-md border border-[#d8d8d8] bg-white px-2.5 py-1 text-[11px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                        >
+                          Details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        {pageNotice ? (
+          <div
+            ref={feedbackRef}
+            tabIndex={-1}
+            role={pageNotice.type === 'err' ? 'alert' : 'status'}
+            className={[
+              'mt-3 rounded-xl border px-4 py-3 text-[13px]',
+              pageNotice.type === 'err'
+                ? 'border-red-200 bg-red-50 text-red-900'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-950',
+            ].join(' ')}
+          >
+            {pageNotice.text}
+          </div>
+        ) : null}
       </div>
+
+      {showInterviewTool ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+          <section className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white p-4 shadow-lg sm:p-5">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-authSerif text-[19px] leading-tight text-[#121212]">Interview sessions for this role</h2>
+            <p className="mt-1 text-[12px] text-[#6b6b6b]">
+              Create interview slots directly for this job. These slots are used when moving candidates to Interview.
+            </p>
+          </div>
+          <span className="rounded-full border border-[#d8d8d8] bg-[#faf9f6] px-2.5 py-1 text-[11px] text-[#6b6b6b]">
+            Available slots: {jobAvailableSlots.length}
+          </span>
+        </div>
+
+        {requestedSlotHints.length > 0 ? (
+          <div className="mb-4 rounded-lg border border-[#e8e8e8] bg-[#f7fbf8] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">
+              Requested by manager in recruitment request
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {requestedSlotHints.map((row, idx) => (
+                <button
+                  key={`${row.date}-${row.startTime}-${idx}`}
+                  type="button"
+                  onClick={() => prefillFromRequested(row)}
+                  className="rounded-full border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] text-[#121212] transition-colors hover:bg-[#f5f4f1]"
+                >
+                  {row.date || 'Date TBC'} • {row.startTime || '-'} to {row.endTime || '-'} • {row.slotMinutes}m / {row.breakMinutes}m
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="text-[12px] font-medium text-[#505050]">
+            Date
+            <input
+              type="date"
+              value={slotDate}
+              onChange={(e) => setSlotDate(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[12px] font-medium text-[#505050]">
+              Start time
+              <input
+                type="time"
+                value={slotStart}
+                onChange={(e) => setSlotStart(e.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+              />
+            </label>
+            <label className="text-[12px] font-medium text-[#505050]">
+              End time
+              <input
+                type="time"
+                value={slotEnd}
+                onChange={(e) => setSlotEnd(e.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+              />
+            </label>
+          </div>
+          <label className="text-[12px] font-medium text-[#505050]">
+            Duration of session
+            <select
+              value={slotMinutes}
+              onChange={(e) => setSlotMinutes(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            >
+              <option value="15">15 mins</option>
+              <option value="30">30 mins</option>
+              <option value="45">45 mins</option>
+              <option value="60">60 mins</option>
+            </select>
+          </label>
+          <label className="text-[12px] font-medium text-[#505050]">
+            Gap between sessions
+            <select
+              value={breakMinutes}
+              onChange={(e) => setBreakMinutes(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            >
+              <option value="0">No gap</option>
+              <option value="10">10 mins</option>
+              <option value="15">15 mins</option>
+              <option value="20">20 mins</option>
+            </select>
+          </label>
+          <label className="text-[12px] font-medium text-[#505050]">
+            Number of back to back interview sessions
+            <input
+              type="number"
+              min={1}
+              value={slotCount}
+              onChange={(e) => setSlotCount(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            />
+          </label>
+          <label className="text-[12px] font-medium text-[#505050]">
+            Location
+            <input
+              value={slotLocation}
+              onChange={(e) => setSlotLocation(e.target.value)}
+              placeholder="Interview location or call details"
+              className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            />
+          </label>
+        </div>
+
+        <label className="mt-3 block text-[12px] font-medium text-[#505050]">
+          Notes
+          <textarea
+            value={slotNotes}
+            onChange={(e) => setSlotNotes(e.target.value)}
+            rows={2}
+            className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+          />
+        </label>
+
+        <div className="mt-3">
+          <p className="mb-1 text-[12px] font-medium text-[#505050]">Panel members</p>
+          <div className="rounded-lg border border-[#e8e8e8] p-3">
+            <input
+              value={panelSearch}
+              onChange={(e) => setPanelSearch(e.target.value)}
+              placeholder="Type staff name and add to panel"
+              className="h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            />
+            {panelSearchResults.length > 0 ? (
+              <div className="mt-2 overflow-hidden rounded-lg border border-[#ececec] bg-white">
+                {panelSearchResults.map((profile) => (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() => {
+                      setSlotPanel((prev) => ({ ...prev, [profile.id]: true }));
+                      setPanelSearch('');
+                    }}
+                    className="flex w-full items-center justify-between border-b border-[#f0f0f0] px-3 py-2 text-left text-[12px] last:border-b-0 hover:bg-[#f7fbf8]"
+                  >
+                    <span className="font-medium text-[#121212]">{profile.full_name?.trim() || '-'}</span>
+                    <span className="text-[#9b9b9b]">{profile.email ?? ''}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {selectedPanelProfiles.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {selectedPanelProfiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() =>
+                      setSlotPanel((prev) => ({
+                        ...prev,
+                        [profile.id]: false,
+                      }))
+                    }
+                    className="rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-1 text-[11px] text-[#121212]"
+                    title="Remove from panel"
+                  >
+                    {profile.full_name?.trim() || profile.email || 'Staff'} ×
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-[12px] text-[#9b9b9b]">No panel members selected yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowInterviewTool(false)}
+            className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={createSlotsForJob}
+            disabled={!canCreateInterviewSlot || pending}
+            className="inline-flex h-9 items-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-white disabled:opacity-50"
+          >
+            {pending ? 'Saving…' : 'Save interview session'}
+          </button>
+          {!canCreateInterviewSlot ? (
+            <span className="text-[12px] text-[#9b9b9b]">
+              You can view sessions, but only users with interview slot creation access can create them.
+            </span>
+          ) : null}
+        </div>
+          </section>
+        </div>
+      ) : null}
+
+      {slotDetail ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+          <section className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white p-4 shadow-lg sm:p-5">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-authSerif text-[20px] leading-tight text-[#121212]">Interview Slot</h2>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                  {new Date(slotDetail.starts_at).toLocaleDateString('en-GB')} ·{' '}
+                  {new Date(slotDetail.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {' - '}
+                  {new Date(slotDetail.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSlotDetail(null)}
+                className="rounded-md border border-[#d8d8d8] bg-white px-2.5 py-1 text-[12px] text-[#121212]"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-[#e8e8e8] p-3 text-[12px]">
+              <p>
+                <span className="font-medium text-[#121212]">Panel:</span>{' '}
+                {slotDetail.panel_names.length ? slotDetail.panel_names.join(', ') : 'Not assigned'}
+              </p>
+              <p>
+                <span className="font-medium text-[#121212]">Booked applicant:</span>{' '}
+                {slotDetail.booked_applications[0]
+                  ? `${slotDetail.booked_applications[0].candidate_name} (${slotDetail.booked_applications[0].candidate_email})`
+                  : 'No one booked'}
+              </p>
+              <p>
+                <span className="font-medium text-[#121212]">Slots remaining:</span>{' '}
+                {slotDetail.status === 'available' ? '1 slot out of 1 remaining' : '0 slots out of 1 remaining'}
+              </p>
+            </div>
+
+            {canManageInterviews ? (
+              <div className="mt-4 rounded-lg border border-[#d8d8d8] bg-[#fafaf9] p-3">
+                <label className="text-[12px] font-medium text-[#505050]">Assign applicant to this slot</label>
+                <select
+                  value={slotAssignAppId}
+                  onChange={(e) => setSlotAssignAppId(e.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                >
+                  <option value="">No applicant (keep/open slot)</option>
+                  {applications.map((app) => (
+                    <option key={app.id} value={app.id}>
+                      {app.candidate_name} ({app.candidate_email})
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={saveSlotAssignment}
+                    disabled={pending}
+                    className="rounded-lg bg-[#121212] px-3 py-2 text-[12px] font-medium text-white disabled:opacity-60"
+                  >
+                    {pending ? 'Saving...' : 'Save slot assignment'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-4 text-[12px] text-[#9b9b9b]">
+                You can view slot details, but only users with interview management permission can edit booking.
+              </p>
+            )}
+          </section>
+        </div>
+      ) : null}
 
       {totalApplications === 0 ? (
         <div className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-4 text-[13px] text-[#6b6b6b]">
@@ -471,29 +1035,188 @@ export function JobPipelineClient({
         </div>
       ) : null}
 
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-        <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-[#fcfcfb] p-3">
-          <div className="grid min-w-[1500px] grid-cols-6 gap-3">
-          {JOB_APPLICATION_STAGE_ORDER.map((stage) => (
-            <StageColumn
-              key={stage}
-              stage={stage}
-              apps={byStage.get(stage) ?? []}
-              renderCard={(app) => (
-                <PipelineCard
-                  key={app.id}
-                  app={app}
-                  onOpenDetail={() => openDetail(app.id)}
-                  onRequestStageChange={(next) => onRequestStageChange(app, next)}
-                  canMoveStage={canMoveStage}
-                  canBookInterviewSlot={canBookInterviewSlot}
-                />
-              )}
-            />
-          ))}
+      {totalApplications > 0 ? (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-[#d8d8d8] bg-white p-2.5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-[#7a7a7a]">Quick actions</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-[#d8d8d8] bg-[#faf9f6] px-2.5 py-1 text-[12px] text-[#505050]">
+                Selected: {selectedApplicationIds.length}
+              </span>
+              <select
+                value={bulkActionId}
+                onChange={(e) => setBulkActionId(e.target.value as QuickActionId)}
+                className="h-8 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[12px] text-[#121212]"
+              >
+                {QUICK_ACTION_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => applyQuickAction(selectedApplicationIds, bulkActionId)}
+                className="inline-flex h-8 items-center justify-center rounded-lg bg-[#121212] px-3 text-[12px] font-medium text-white disabled:opacity-60"
+                disabled={pending || selectedApplicationIds.length === 0}
+              >
+                Apply to selected
+              </button>
+            </div>
+            <div className="mt-3">
+              <label className="text-[12px] font-medium text-[#505050]">Command action</label>
+              <textarea
+                value={commandText}
+                onChange={(e) => setCommandText(e.target.value)}
+                rows={1}
+                className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                placeholder="Example: shortlist application numbers 1, 4, 6"
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={runCommand}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-[#d8d8d8] bg-[#f5f4f1] px-3 text-[12px] font-medium text-[#121212] hover:bg-[#ecebe8]"
+                  disabled={pending}
+                >
+                  Run command
+                </button>
+                <span className="text-[11px] text-[#6b6b6b]">
+                  Uses applicant numbers. Invalid numbers or unsupported actions are rejected.
+                </span>
+              </div>
+            </div>
+            {bulkFeedback ? (
+              <p className="mt-2 rounded-md border border-[#e5e7eb] bg-[#fafafa] px-2.5 py-2 text-[12px] text-[#4b5563]">
+                {bulkFeedback}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] p-1">
+            {([
+              ['all', `All applications (${totalApplications})`],
+              ['active', `Active applications (${applications.filter((a) => a.stage !== 'rejected' && a.stage !== 'hired').length})`],
+              ['rejected', `Rejected (${applications.filter((a) => a.stage === 'rejected').length})`],
+              ['offer', `Under offer (${applications.filter((a) => a.stage === 'offer_approved' || a.stage === 'offer_sent').length})`],
+              ['hired', `Hired (${applications.filter((a) => a.stage === 'hired').length})`],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTrackerView(key)}
+                className={[
+                  'rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors',
+                  trackerView === key ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]',
+                ].join(' ')}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-white">
+            <table className="min-w-full text-left text-[13px]">
+              <thead className="border-b border-[#ececec] bg-[#f7fbf8] text-[11px] font-semibold uppercase tracking-wide text-[#6a6a6a]">
+                <tr>
+                  <th className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={visibleApplications.length > 0 && visibleApplications.every((a) => selectedApplicationIds.includes(a.id))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedApplicationIds((prev) => [
+                            ...new Set([...prev, ...visibleApplications.map((a) => a.id)]),
+                          ]);
+                        } else {
+                          setSelectedApplicationIds((prev) =>
+                            prev.filter((id) => !visibleApplications.some((a) => a.id === id))
+                          );
+                        }
+                      }}
+                    />
+                  </th>
+                  <th className="px-4 py-3">Applicant</th>
+                  <th className="px-4 py-3">Decision</th>
+                  <th className="px-4 py-3">Submitted</th>
+                  <th className="px-4 py-3">Actions</th>
+                  <th className="px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f0f0f0]">
+                {visibleApplications.map((app) => {
+                  const stage = isJobApplicationStage(app.stage) ? app.stage : 'applied';
+                  return (
+                    <tr key={app.id} className="align-top transition-colors hover:bg-[#faf9f6]">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedApplicationIds.includes(app.id)}
+                          onChange={(e) =>
+                            setSelectedApplicationIds((prev) =>
+                              e.target.checked ? [...new Set([...prev, app.id])] : prev.filter((id) => id !== app.id)
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-[#121212]">
+                          {app.candidate_name}{' '}
+                          <span className="text-[#6b6b6b]">({applicantNumberById.get(app.id) ? String(applicantNumberById.get(app.id)).padStart(4, '0') : 'Draft'})</span>
+                        </p>
+                        <p className="text-[12px] text-[#6b6b6b]">{app.candidate_email}</p>
+                        {app.screening_overall_avg != null ? (
+                          <p className="mt-1 text-[11px] text-[#0f766e]">
+                            App Q avg {app.screening_overall_avg.toFixed(1)}
+                            {app.screening_scorer_count > 0 ? ` · ${app.screening_scorer_count} scorer(s)` : null}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${stageBadgeClass(stage)}`}>
+                          {jobApplicationStageLabel(stage)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[#505050]">
+                        {app.submitted_at ? formatStableShortDate(app.submitted_at) : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => openDetail(app.id)}
+                          className="inline-flex h-8 items-center justify-center rounded-md border border-[#d8d8d8] bg-[#f0f7f2] px-3 text-[12px] font-medium text-[#285943] transition-colors hover:bg-[#e6f1ea]"
+                        >
+                          View application
+                        </button>
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          className="h-8 min-w-[11rem] rounded-md border border-[#d8d8d8] bg-white px-2 text-[12px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                          value={quickActionForStage(app.stage)}
+                          disabled={!canMoveStage}
+                          onChange={(e) => {
+                            const nextAction = QUICK_ACTION_OPTIONS.find((opt) => opt.id === e.target.value);
+                            if (!nextAction) return;
+                            if (nextAction.stage !== app.stage || nextAction.id !== quickActionForStage(app.stage)) {
+                              applyQuickAction([app.id], nextAction.id);
+                            }
+                          }}
+                        >
+                          {QUICK_ACTION_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
-      </DndContext>
+      ) : null}
 
       {stageDialog ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
@@ -549,11 +1272,7 @@ export function JobPipelineClient({
                 </label>
                 {interviewSlots.length === 0 ? (
                   <p className="text-[13px] text-amber-900">
-                    No available slots for this job.{' '}
-                    <a href="/hr/interviews" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-                      Create interview slots
-                    </a>
-                    .
+                    No available slots for this job. Create interview sessions in this job page first.
                   </p>
                 ) : null}
                 <label className="block text-[12px] font-medium text-[#505050]">
@@ -621,6 +1340,7 @@ export function JobPipelineClient({
           jobListingId={jobListingId}
           applicationId={generateOfferFor.id}
           candidateName={generateOfferFor.candidate_name}
+          preferredTemplateId={preferredOfferTemplateId ?? null}
           onClose={() => setGenerateOfferFor(null)}
           onSent={() => {
             router.refresh();
@@ -630,9 +1350,9 @@ export function JobPipelineClient({
       ) : null}
 
       {detailId ? (
-        <div className="fixed inset-0 z-30 flex justify-end bg-black/20 p-0 sm:p-4">
-          <div className="flex h-full w-full max-w-lg flex-col border-l border-[#e8e8e8] bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/35 p-4">
+          <div className="flex h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-[#f0f0f0] px-6 py-4">
               <h2 className="text-[15px] font-semibold text-[#121212]">Application</h2>
               <button
                 type="button"
@@ -642,12 +1362,15 @@ export function JobPipelineClient({
                 Close
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-6">
               {!detail ? (
-                <p className="text-[13px] text-[#6b6b6b]">{detailBusy ? 'Loading…' : 'Could not load detail.'}</p>
+                <p className="text-[13px] text-[#6b6b6b]">
+                  {detailLoading || detailBusy ? 'Loading…' : detailError ?? 'Could not load detail.'}
+                </p>
               ) : (
-                <div className="space-y-6">
-                  <section>
+                <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+                  <section className="space-y-6">
+                    <section>
                     <p className="text-[13px] font-medium text-[#121212]">{detail.application.candidate_name}</p>
                     <p className="text-[12px] text-[#6b6b6b]">{detail.application.candidate_email}</p>
                     {detail.application.candidate_phone ? (
@@ -723,68 +1446,71 @@ export function JobPipelineClient({
                         </p>
                       </div>
                     ) : null}
+                    </section>
+
+                    {detail.screening_answers.length > 0 ? (
+                      <section className="rounded-lg border border-[#d1fae5] bg-[#f6fdfb] p-3">
+                        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#0f766e]">
+                          Application question answers
+                        </h3>
+                        <p className="mt-1 text-[12px] text-[#505050]">
+                          Score each answer (1–5). Team average updates as more reviewers score.
+                        </p>
+                        <div className="mt-3 space-y-4">
+                          {detail.screening_answers.map((ans) => (
+                            <div key={ans.id} className="rounded-md border border-[#e5e7eb] bg-white p-3">
+                              <p className="text-[12px] font-medium text-[#121212]">{ans.prompt_snapshot}</p>
+                              <p className="mt-1 whitespace-pre-wrap text-[13px] text-[#303030]">{ans.display_value}</p>
+                              <p className="mt-2 text-[11px] text-[#6b6b6b]">
+                                Team avg:{' '}
+                                {ans.team_avg == null ? '—' : ans.team_avg.toFixed(2)} · Your score:{' '}
+                                {ans.my_score ?? '—'}
+                              </p>
+                              {canScoreScreening ? (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <button
+                                      key={n}
+                                      type="button"
+                                      disabled={detailBusy}
+                                      onClick={() => {
+                                        startDetailTransition(async () => {
+                                          const res = await upsertJobApplicationScreeningScore(
+                                            ans.id,
+                                            n,
+                                            jobListingId
+                                          );
+                                          if (!res.ok) {
+                                            alert(res.error);
+                                            return;
+                                          }
+                                          openDetail(detail.application.id);
+                                        });
+                                      }}
+                                      className={[
+                                        'h-8 min-w-[2rem] rounded-md border px-2 text-[12px] font-medium',
+                                        ans.my_score === n
+                                          ? 'border-[#0f766e] bg-[#0f766e] text-white'
+                                          : 'border-[#d8d8d8] bg-[#fafafa] text-[#121212] hover:border-[#0f766e]',
+                                      ].join(' ')}
+                                    >
+                                      {n}
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-2 text-[11px] text-[#9b9b9b]">
+                                  You do not have permission to score application question answers.
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    ) : null}
                   </section>
 
-                  {detail.screening_answers.length > 0 ? (
-                    <section className="rounded-lg border border-[#d1fae5] bg-[#f6fdfb] p-3">
-                      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#0f766e]">
-                        Application question answers
-                      </h3>
-                      <p className="mt-1 text-[12px] text-[#505050]">
-                        Score each answer (1–5). Team average updates as more reviewers score.
-                      </p>
-                      <div className="mt-3 space-y-4">
-                        {detail.screening_answers.map((ans) => (
-                          <div key={ans.id} className="rounded-md border border-[#e5e7eb] bg-white p-3">
-                            <p className="text-[12px] font-medium text-[#121212]">{ans.prompt_snapshot}</p>
-                            <p className="mt-1 whitespace-pre-wrap text-[13px] text-[#303030]">{ans.display_value}</p>
-                            <p className="mt-2 text-[11px] text-[#6b6b6b]">
-                              Team avg:{' '}
-                              {ans.team_avg == null ? '—' : ans.team_avg.toFixed(2)} · Your score:{' '}
-                              {ans.my_score ?? '—'}
-                            </p>
-                            {canScoreScreening ? (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {[1, 2, 3, 4, 5].map((n) => (
-                                  <button
-                                    key={n}
-                                    type="button"
-                                    disabled={detailBusy}
-                                    onClick={() => {
-                                      startDetailTransition(async () => {
-                                        const res = await upsertJobApplicationScreeningScore(
-                                          ans.id,
-                                          n,
-                                          jobListingId
-                                        );
-                                        if (!res.ok) {
-                                          alert(res.error);
-                                          return;
-                                        }
-                                        openDetail(detail.application.id);
-                                      });
-                                    }}
-                                    className={[
-                                      'h-8 min-w-[2rem] rounded-md border px-2 text-[12px] font-medium',
-                                      ans.my_score === n
-                                        ? 'border-[#0f766e] bg-[#0f766e] text-white'
-                                        : 'border-[#d8d8d8] bg-[#fafafa] text-[#121212] hover:border-[#0f766e]',
-                                    ].join(' ')}
-                                  >
-                                    {n}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="mt-2 text-[11px] text-[#9b9b9b]">
-                                You do not have permission to score application question answers.
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null}
+                  <section className="space-y-6">
 
                   {detail.application.stage === 'offer_sent' ? (
                     <section className="rounded-lg border border-[#e8f0fe] bg-[#f8fbff] p-3">
@@ -1037,6 +1763,7 @@ export function JobPipelineClient({
                         </li>
                       ))}
                     </ul>
+                  </section>
                   </section>
                 </div>
               )}

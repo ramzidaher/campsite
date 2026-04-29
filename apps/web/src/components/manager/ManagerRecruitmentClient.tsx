@@ -29,6 +29,10 @@ export type ManagerRecruitmentRow = {
   departments: { name: string } | { name: string }[] | null;
 };
 
+function isRequestArchived(row: Pick<ManagerRecruitmentRow, 'archived_at' | 'status'>): boolean {
+  return Boolean(row.archived_at) || row.status === 'filled' || row.status === 'rejected';
+}
+
 type InterviewScheduleInput = {
   date: string;
   startTime: string;
@@ -81,7 +85,7 @@ export function ManagerRecruitmentClient({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const filteredRequests = useMemo(() => {
-    const filtered = initialRequests.filter((r) => (showArchived ? Boolean(r.archived_at) : !r.archived_at));
+    const filtered = initialRequests.filter((r) => (showArchived ? isRequestArchived(r) : !isRequestArchived(r)));
     const dir = sortDir === 'asc' ? 1 : -1;
     const rank: Record<string, number> = {
       pending_review: 0,

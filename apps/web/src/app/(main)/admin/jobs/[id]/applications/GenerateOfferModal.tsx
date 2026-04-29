@@ -13,12 +13,14 @@ export function GenerateOfferModal({
   jobListingId,
   applicationId,
   candidateName,
+  preferredTemplateId,
   onClose,
   onSent,
 }: {
   jobListingId: string;
   applicationId: string;
   candidateName: string;
+  preferredTemplateId?: string | null;
   onClose: () => void;
   onSent: () => void;
 }) {
@@ -34,10 +36,15 @@ export function GenerateOfferModal({
     void listOfferTemplates().then((r) => {
       if (r.ok) {
         setTemplates(r.templates);
-        if (r.templates[0]?.id) setTemplateId(r.templates[0].id);
+        const preferred = String(preferredTemplateId ?? '').trim();
+        if (preferred && r.templates.some((t) => t.id === preferred)) {
+          setTemplateId(preferred);
+        } else if (r.templates[0]?.id) {
+          setTemplateId(r.templates[0].id);
+        }
       }
     });
-  }, []);
+  }, [preferredTemplateId]);
 
   const runMerge = () => {
     setMsg(null);

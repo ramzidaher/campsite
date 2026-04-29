@@ -8,7 +8,7 @@ export function HiringHubTabNav({ items }: { items: SectionNavItem[] }) {
   if (!items.length) return null;
   return (
     <SectionNav
-      className="mt-5"
+      className="mt-3"
       items={items}
       pathname={pathname}
       aria-label="Hiring workspace"

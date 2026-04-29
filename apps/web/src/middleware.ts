@@ -8,6 +8,8 @@ import { resolveHostRequestContext } from './lib/middleware/resolveHostRequestCo
 import { getSupabasePublicKey, getSupabaseUrl } from './lib/supabase/env';
 import { getPlatformAdminHost } from './lib/tenant/hostConfig';
 
+const MIDDLEWARE_AUTH_TIMEOUT_MS = 1500;
+
 export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
   const url = request.nextUrl.clone();
@@ -44,10 +46,18 @@ export async function middleware(request: NextRequest) {
       },
     });
 
-    const {
-      data: { user: verifiedUser },
-    } = await supabase.auth.getUser();
-    user = verifiedUser ?? null;
+    try {
+      const authResult = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('middleware auth timeout')), MIDDLEWARE_AUTH_TIMEOUT_MS);
+        }),
+      ]);
+      user = authResult.data.user ?? null;
+    } catch {
+      // Fail open on transient auth/provider stalls so public/login routes remain responsive.
+      user = null;
+    }
   }
 
   const pathname = request.nextUrl.pathname;

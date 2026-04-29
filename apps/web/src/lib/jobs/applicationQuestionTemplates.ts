@@ -7,7 +7,10 @@ export type ApplicationQuestionTemplate = {
   title: string;
   /** Optional; shown as tooltip on template chips. */
   description?: string;
-  build: () => Omit<JobScreeningQuestionPersist, 'id' | 'sortOrder'>;
+  build: () => Omit<
+    JobScreeningQuestionPersist,
+    'id' | 'sortOrder' | 'isPageBreak' | 'scoringEnabled' | 'initiallyHidden' | 'locked'
+  >;
 };
 
 function rid(): string {
@@ -33,6 +36,11 @@ export function materializeApplicationQuestionTemplate(
     prompt: base.prompt,
     helpText: base.helpText,
     required: base.required,
+    isPageBreak: false,
+    scoringEnabled: true,
+    scoringScaleMax: 5,
+    initiallyHidden: false,
+    locked: false,
     maxLength: base.maxLength,
     options: base.questionType === 'single_choice' ? options : null,
   };
