@@ -29,6 +29,23 @@ type PublicJobListRow = {
   published_at: string | null;
 };
 
+type PublicJobTimelineRow = {
+  id: string;
+  recruitment_request_id: string | null;
+  applications_close_at: string | null;
+  start_date_needed: string | null;
+  shortlisting_dates: unknown;
+  interview_dates: unknown;
+};
+
+type RecruitmentTimelineRow = {
+  id: string;
+  advert_closing_date: string | null;
+  shortlisting_dates: unknown;
+  interview_schedule: unknown;
+  start_date_needed: string | null;
+};
+
 const PAGE_SIZE = 12;
 
 const CONTRACT_OPTIONS = [
@@ -50,6 +67,88 @@ function SearchIcon({ className }: { className?: string }) {
       />
     </svg>
   );
+}
+
+function formatDateValue(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatDateTimeValue(iso: string | null | undefined): string {
+  if (!iso) return 'Rolling';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Rolling';
+  return d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function parseDateList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((v) => String(v ?? '').trim()).filter(Boolean);
+}
+
+function toDateOnly(value: string): Date | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const d = new Date(`${raw}T00:00:00.000Z`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDateDdMm(date: Date, withYear: boolean): string {
+  const dd = String(date.getUTCDate()).padStart(2, '0');
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = String(date.getUTCFullYear());
+  return withYear ? `${dd}/${mm}/${yyyy}` : `${dd}/${mm}`;
+}
+
+function formatMultiDateSummary(values: string[]): string {
+  const sortedUnique = Array.from(
+    new Set(
+      values
+        .map(toDateOnly)
+        .filter((d): d is Date => Boolean(d))
+        .map((d) => d.toISOString().slice(0, 10)),
+    ),
+  )
+    .map((isoDay) => new Date(`${isoDay}T00:00:00.000Z`))
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  if (sortedUnique.length === 0) return '—';
+  if (sortedUnique.length === 1) return formatDateDdMm(sortedUnique[0], true);
+
+  const isConsecutive = sortedUnique
+    .slice(1)
+    .every((d, idx) => d.getTime() - sortedUnique[idx]!.getTime() === 24 * 60 * 60 * 1000);
+
+  if (isConsecutive) {
+    return `${formatDateDdMm(sortedUnique[0], false)} to ${formatDateDdMm(
+      sortedUnique[sortedUnique.length - 1],
+      true,
+    )}`;
+  }
+
+  const prefix = sortedUnique
+    .slice(0, -1)
+    .map((d) => formatDateDdMm(d, false));
+  const last = formatDateDdMm(sortedUnique[sortedUnique.length - 1], true);
+  if (prefix.length === 1) return `${prefix[0]} and ${last}`;
+  return `${prefix.slice(0, -1).join(', ')}, ${prefix[prefix.length - 1]} and ${last}`;
+}
+
+function parseInterviewDateList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((row) => {
+      if (typeof row === 'string') return row.trim();
+      const rec = row as { date?: unknown; interviewDate?: unknown; interview_date?: unknown } | null;
+      return String(rec?.date ?? rec?.interviewDate ?? rec?.interview_date ?? '').trim();
+    })
+    .filter(Boolean);
 }
 
 export default async function PublicJobsPage({
@@ -103,6 +202,60 @@ export default async function PublicJobsPage({
   const rows = ((data as PublicJobListRow[] | null) ?? []).slice(0, PAGE_SIZE);
   const hasNext = ((data as PublicJobListRow[] | null) ?? []).length > PAGE_SIZE;
   const hasPrev = page > 1;
+  const listingIds = rows.map((r) => r.job_listing_id);
+
+  const timelineMap = new Map<string, PublicJobTimelineRow>();
+  if (listingIds.length > 0) {
+    const timelineWithNewCols = await supabase
+      .from('job_listings')
+      .select('id, recruitment_request_id, applications_close_at, start_date_needed, shortlisting_dates, interview_dates')
+      .in('id', listingIds);
+    const fallbackTimelineRows = timelineWithNewCols.error
+      ? await supabase
+          .from('job_listings')
+          .select('id, recruitment_request_id')
+          .in('id', listingIds)
+      : null;
+    const timelineRows = (fallbackTimelineRows?.data ?? timelineWithNewCols.data ?? []) as Array<Record<string, unknown>>;
+
+    const requestIds = Array.from(
+      new Set(
+        timelineRows
+          .map((row) => String(row.recruitment_request_id ?? '').trim())
+          .filter(Boolean),
+      ),
+    );
+    const requestMap = new Map<string, RecruitmentTimelineRow>();
+    if (requestIds.length > 0) {
+      const { data: reqRows } = await supabase
+        .from('recruitment_requests')
+        .select('id, advert_closing_date, shortlisting_dates, interview_schedule, start_date_needed')
+        .in('id', requestIds);
+      for (const req of (reqRows ?? []) as RecruitmentTimelineRow[]) {
+        requestMap.set(String(req.id), req);
+      }
+    }
+
+    for (const row of timelineRows) {
+      const reqId = String(row.recruitment_request_id ?? '').trim();
+      const req = reqId ? requestMap.get(reqId) : undefined;
+      const jobShortlisting = parseDateList(row.shortlisting_dates);
+      const jobInterviewDates = parseDateList(row.interview_dates);
+      timelineMap.set(String(row.id), {
+        id: String(row.id ?? ''),
+        recruitment_request_id: reqId || null,
+        applications_close_at:
+          String(row.applications_close_at ?? '').trim() ||
+          (req?.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null),
+        start_date_needed:
+          String(row.start_date_needed ?? '').trim() ||
+          String(req?.start_date_needed ?? '').trim() ||
+          null,
+        shortlisting_dates: jobShortlisting.length > 0 ? jobShortlisting : (req?.shortlisting_dates ?? []),
+        interview_dates: jobInterviewDates.length > 0 ? jobInterviewDates : parseInterviewDateList(req?.interview_schedule),
+      });
+    }
+  }
 
   const orgName = (orgLookup?.name as string | undefined)?.trim() || rows[0]?.org_name || 'Organisation';
   const orgLogoUrl = (orgLookup as { logo_url?: string | null } | null)?.logo_url ?? null;
@@ -297,6 +450,9 @@ export default async function PublicJobsPage({
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {rows.map((job) => {
               const href = tenantJobListingRelativePath(job.slug, orgSlug, host);
+              const timeline = timelineMap.get(job.job_listing_id);
+              const shortlistingDates = parseDateList(timeline?.shortlisting_dates);
+              const interviewDates = parseDateList(timeline?.interview_dates);
               const daysAgo = job.published_at
                 ? Math.floor(
                     (Date.now() - new Date(job.published_at).getTime()) / (1000 * 60 * 60 * 24)
@@ -368,6 +524,24 @@ export default async function PublicJobsPage({
                     </div>
 
                     {/* Footer */}
+                    <div className="mt-3 space-y-1.5 text-[11px]" style={{ color: 'var(--org-brand-muted)' }}>
+                      <p>
+                        <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>Closing:</span>{' '}
+                        {formatDateTimeValue(timeline?.applications_close_at)}
+                      </p>
+                      <p>
+                        <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>Start:</span>{' '}
+                        {formatDateValue(timeline?.start_date_needed)}
+                      </p>
+                      <p>
+                        <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>Shortlisting:</span>{' '}
+                        {formatMultiDateSummary(shortlistingDates)}
+                      </p>
+                      <p>
+                        <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>Interviews:</span>{' '}
+                        {formatMultiDateSummary(interviewDates)}
+                      </p>
+                    </div>
                     <div
                       className="mt-auto flex items-center justify-between border-t pt-4"
                       style={{ borderColor: 'var(--org-brand-border)', marginTop: '1rem' }}

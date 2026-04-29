@@ -1,13 +1,14 @@
 'use client';
 
 import { useInHiringHub } from '@/app/(main)/hr/hiring/HiringHubContext';
+import { archiveJobListing } from '@/app/(main)/admin/jobs/actions';
 import { campusFormControl, campusText } from '@campsite/ui/web';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
-import { ExternalLink, Share2 } from 'lucide-react';
+import { Archive, ExternalLink, Share2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 export type AdminJobListRow = {
   id: string;
@@ -53,12 +54,14 @@ export function AdminJobsListClient({
   const [status, setStatus] = useState<string>('');
   const [deptId, setDeptId] = useState<string>('');
   const [grade, setGrade] = useState<string>('');
-  const [salary, setSalary] = useState<string>('');
   const [contract, setContract] = useState<string>('');
   const [year, setYear] = useState<string>('');
   const [search, setSearch] = useState('');
   const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
+  const [archivingJobId, setArchivingJobId] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isArchiving, startArchiving] = useTransition();
 
   useEffect(() => {
     return () => {
@@ -80,8 +83,22 @@ export function AdminJobsListClient({
     }
   }, []);
 
+  const archiveListing = useCallback(
+    (jobId: string) => {
+      startArchiving(async () => {
+        setArchiveError(null);
+        setArchivingJobId(jobId);
+        const res = await archiveJobListing(jobId);
+        if (!res?.ok) {
+          setArchiveError(res?.error ?? 'Could not archive this listing.');
+        }
+        setArchivingJobId(null);
+      });
+    },
+    [startArchiving],
+  );
+
   const gradeOptions = useMemo(() => [...new Set(rows.map((r) => r.grade_level))].sort(), [rows]);
-  const salaryOptions = useMemo(() => [...new Set(rows.map((r) => r.salary_band))].sort(), [rows]);
   const years = useMemo(() => {
     const ys = rows
       .map((r) => r.posted_year)
@@ -101,12 +118,11 @@ export function AdminJobsListClient({
       if (listScope === 'all' && status && r.status !== status) return false;
       if (deptId && r.department_id !== deptId) return false;
       if (grade && r.grade_level !== grade) return false;
-      if (salary && r.salary_band !== salary) return false;
       if (contract && r.contract_type !== contract) return false;
       if (year && String(r.posted_year ?? '') !== year) return false;
       return true;
     });
-  }, [rows, listScope, status, deptId, grade, salary, contract, year, search]);
+  }, [rows, listScope, status, deptId, grade, contract, year, search]);
 
   function setScope(next: ListScope) {
     setListScope(next);
@@ -126,13 +142,18 @@ export function AdminJobsListClient({
         <header className="mb-6">
           <h1 className={`font-authSerif text-[26px] leading-tight tracking-[-0.03em] ${campusText.ink}`}>Job listings</h1>
           <p className={`mt-1 text-[13px] ${campusText.muted}`}>
-            HR publishes approved requests as shareable public job URLs. Filter by department, grade, contract,
-            salary band, and year posted. Use Active for live and draft listings, or Archived for closed roles.
+            HR publishes approved requests as shareable public job URLs. Filter by department, grade, contract, and
+            year posted. Use Active for live and draft listings, or Archived for closed roles.
           </p>
         </header>
       )}
 
       <div className="mb-5 flex flex-wrap items-center gap-2 sm:gap-3">
+        {archiveError ? (
+          <p className="w-full rounded-lg border border-[#f5d0d0] bg-[#fff7f7] px-3 py-2 text-[12px] text-[#9f1d1d]">
+            {archiveError}
+          </p>
+        ) : null}
         <div
           className="inline-flex h-9 shrink-0 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] p-0.5"
           role="group"
@@ -180,14 +201,6 @@ export function AdminJobsListClient({
           {gradeOptions.map((g) => (
             <option key={g} value={g}>
               {g}
-            </option>
-          ))}
-        </select>
-        <select className={sel} value={salary} onChange={(e) => setSalary(e.target.value)}>
-          <option value="">All salary bands</option>
-          {salaryOptions.map((band) => (
-            <option key={band} value={band}>
-              {band}
             </option>
           ))}
         </select>
@@ -270,36 +283,50 @@ export function AdminJobsListClient({
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {showPublic ? (
-                        <div className="flex flex-wrap items-center gap-1">
-                          <a
-                            href={publicUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-[#008B60] shadow-sm transition-colors hover:border-[#008B60]/40 hover:bg-[#f0fdf9]"
-                            aria-label={`Open public page for ${r.title} in a new tab`}
-                            title="Open in new tab"
-                          >
-                            <ExternalLink className="h-4 w-4" strokeWidth={2} aria-hidden />
-                          </a>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {showPublic ? (
+                          <>
+                            <a
+                              href={publicUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-[#008B60] shadow-sm transition-colors hover:border-[#008B60]/40 hover:bg-[#f0fdf9]"
+                              aria-label={`Open public page for ${r.title} in a new tab`}
+                              title="Open in new tab"
+                            >
+                              <ExternalLink className="h-4 w-4" strokeWidth={2} aria-hidden />
+                            </a>
+                            <button
+                              type="button"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-[#008B60] shadow-sm transition-colors hover:border-[#008B60]/40 hover:bg-[#f0fdf9]"
+                              aria-label={`Copy public link for ${r.title}`}
+                              title="Copy link"
+                              onClick={() => void copyPublicLink(r.id, publicUrl)}
+                            >
+                              <Share2 className="h-4 w-4" strokeWidth={2} aria-hidden />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="mr-1 text-[12px] text-[#9b9b9b]">Publish to enable</span>
+                        )}
+                        {r.status !== 'archived' ? (
                           <button
                             type="button"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-[#008B60] shadow-sm transition-colors hover:border-[#008B60]/40 hover:bg-[#f0fdf9]"
-                            aria-label={`Copy public link for ${r.title}`}
-                            title="Copy link"
-                            onClick={() => void copyPublicLink(r.id, publicUrl)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-[#8a4f00] shadow-sm transition-colors hover:border-[#8a4f00]/35 hover:bg-[#fff9f0] disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label={`Archive ${r.title}`}
+                            title="Archive listing"
+                            onClick={() => archiveListing(r.id)}
+                            disabled={isArchiving && archivingJobId === r.id}
                           >
-                            <Share2 className="h-4 w-4" strokeWidth={2} aria-hidden />
+                            <Archive className="h-4 w-4" strokeWidth={2} aria-hidden />
                           </button>
-                          {copiedJobId === r.id ? (
-                            <span className="text-[11px] font-medium text-[#008B60]" role="status">
-                              Copied
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="text-[12px] text-[#9b9b9b]">Publish to enable</span>
-                      )}
+                        ) : null}
+                        {copiedJobId === r.id ? (
+                          <span className="text-[11px] font-medium text-[#008B60]" role="status">
+                            Copied
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 );

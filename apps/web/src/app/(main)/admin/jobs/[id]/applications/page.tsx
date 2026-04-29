@@ -4,6 +4,7 @@ import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { redirect, notFound } from 'next/navigation';
 
 export default async function JobApplicationsPipelinePage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,11 +24,26 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
   const permissionKeys = parseShellPermissionKeys(bundle);
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
-  if (!permissionKeys.includes('applications.view')) redirect('/broadcasts');
+  const hasApplicationsView = permissionKeys.includes('applications.view');
 
   const supabase = await createClient();
-  const canMoveStage         = permissionKeys.includes('applications.move_stage');
-  const canBookInterviewSlot = permissionKeys.includes('interviews.book_slot');
+  const user = await getAuthUser();
+  if (!user) redirect('/login');
+  let isAssignedPanelist = false;
+  if (!hasApplicationsView) {
+    const { data: panelRow } = await supabase
+      .from('job_listing_panelists')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('job_listing_id', id)
+      .eq('profile_id', user.id)
+      .maybeSingle();
+    isAssignedPanelist = Boolean(panelRow?.id);
+    if (!isAssignedPanelist) redirect('/broadcasts');
+  }
+
+  const canMoveStage = permissionKeys.includes('applications.move_stage') || isAssignedPanelist;
+  const canBookInterviewSlot = permissionKeys.includes('interviews.book_slot') || isAssignedPanelist;
   const canManageInterviews  = permissionKeys.includes('interviews.manage');
   const canCreateInterviewSlot = permissionKeys.includes('interviews.create_slot');
   const canAddInternalNotes  = permissionKeys.includes('applications.add_internal_notes');
@@ -35,9 +51,11 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
   const canGenerateOffers    = permissionKeys.includes('offers.generate');
   const canSendEsignOffers   = permissionKeys.includes('offers.send_esign');
   const canScoreScreening =
-    permissionKeys.includes('applications.score_screening') || permissionKeys.includes('applications.manage');
+    permissionKeys.includes('applications.score_screening') ||
+    permissionKeys.includes('applications.manage') ||
+    isAssignedPanelist;
 
-  const { data: job, error: jobErr } = await withServerPerf(
+  const { data: jobWithNewCols, error: jobErrWithNewCols } = await withServerPerf(
     '/admin/jobs/[id]/applications',
     'job_listing_lookup',
     supabase
@@ -47,6 +65,7 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
         id,
         title,
         status,
+        offer_template_id,
         recruitment_request_id,
         recruitment_requests (
           interview_schedule
@@ -58,6 +77,39 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
       .maybeSingle(),
     350
   );
+
+  const fallbackJobResult = jobErrWithNewCols
+    ? await withServerPerf(
+        '/admin/jobs/[id]/applications',
+        'job_listing_lookup_fallback',
+        supabase
+          .from('job_listings')
+          .select(
+            `
+            id,
+            title,
+            status,
+            recruitment_request_id,
+            recruitment_requests (
+              interview_schedule
+            )
+          `
+          )
+          .eq('id', id)
+          .eq('org_id', orgId)
+          .maybeSingle(),
+        350
+      )
+    : null;
+
+  const jobRaw = fallbackJobResult?.data ?? jobWithNewCols;
+  const job = jobRaw
+    ? ({
+        ...jobRaw,
+        offer_template_id: (jobRaw as { offer_template_id?: string | null }).offer_template_id ?? null,
+      } as (typeof jobRaw & { offer_template_id: string | null }))
+    : null;
+  const jobErr = job ? null : fallbackJobResult?.error ?? jobErrWithNewCols;
 
   if (jobErr || !job) notFound();
 
@@ -155,6 +207,7 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
       canScoreScreening={canScoreScreening}
       panelProfiles={(profiles ?? []) as { id: string; full_name: string | null; email: string | null }[]}
       requestedInterviewSchedule={requestedInterviewSchedule}
+      preferredOfferTemplateId={String((job as { offer_template_id?: string | null }).offer_template_id ?? '').trim() || null}
     />
   );
   warnIfSlowServerPath('/admin/jobs/[id]/applications', pathStartedAtMs);

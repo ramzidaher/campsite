@@ -51,21 +51,72 @@ function parseDateArray(value: unknown): string[] {
 function parseInterviewDates(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
-    .map((entry) => String((entry as { date?: unknown } | null)?.date ?? '').trim())
+    .map((entry) => {
+      if (typeof entry === 'string') return entry.trim();
+      const rec = entry as { date?: unknown; interviewDate?: unknown; interview_date?: unknown } | null;
+      return String(rec?.date ?? rec?.interviewDate ?? rec?.interview_date ?? '').trim();
+    })
     .filter(Boolean);
+}
+
+function toDateOnly(value: string): Date | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const d = new Date(`${raw}T00:00:00.000Z`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDateDdMm(date: Date, withYear: boolean): string {
+  const dd = String(date.getUTCDate()).padStart(2, '0');
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = String(date.getUTCFullYear());
+  return withYear ? `${dd}/${mm}/${yyyy}` : `${dd}/${mm}`;
+}
+
+function formatMultiDateSummary(values: string[]): string {
+  const sortedUnique = Array.from(
+    new Set(
+      values
+        .map(toDateOnly)
+        .filter((d): d is Date => Boolean(d))
+        .map((d) => d.toISOString().slice(0, 10)),
+    ),
+  )
+    .map((isoDay) => new Date(`${isoDay}T00:00:00.000Z`))
+    .sort((a, b) => a.getTime() - b.getTime());
+  if (sortedUnique.length === 0) return 'TBC';
+  if (sortedUnique.length === 1) return formatDateDdMm(sortedUnique[0], true);
+
+  const isConsecutive = sortedUnique
+    .slice(1)
+    .every((d, idx) => d.getTime() - sortedUnique[idx]!.getTime() === 24 * 60 * 60 * 1000);
+
+  if (isConsecutive) {
+    return `${formatDateDdMm(sortedUnique[0], false)} to ${formatDateDdMm(
+      sortedUnique[sortedUnique.length - 1],
+      true,
+    )}`;
+  }
+
+  const prefix = sortedUnique
+    .slice(0, -1)
+    .map((d) => formatDateDdMm(d, false));
+  const last = formatDateDdMm(sortedUnique[sortedUnique.length - 1], true);
+  if (prefix.length === 1) return `${prefix[0]} and ${last}`;
+  return `${prefix.slice(0, -1).join(', ')}, ${prefix[prefix.length - 1]} and ${last}`;
 }
 
 function renderKeyDates(row: AdminRecruitmentListRow): string {
   const shortlistDates = parseDateArray(row.shortlisting_dates);
   const interviewDates = parseInterviewDates(row.interview_schedule);
   const shortlistLabel =
-    shortlistDates.length > 1
-      ? `${fmtDateOnly(shortlistDates[0])} (+${shortlistDates.length - 1})`
-      : fmtDateOnly(shortlistDates[0]);
+    formatMultiDateSummary(shortlistDates);
   const interviewLabel =
-    interviewDates.length > 1
-      ? `${fmtDateOnly(interviewDates[0])} (+${interviewDates.length - 1})`
-      : fmtDateOnly(interviewDates[0]);
+    formatMultiDateSummary(interviewDates);
   return `Advert ${fmtDateOnly(row.advert_release_date)}-${fmtDateOnly(row.advert_closing_date)} · Shortlist ${shortlistLabel} · Interviews ${interviewLabel} · Start ${fmtDateOnly(row.start_date_needed)}`;
 }
 
@@ -73,13 +124,9 @@ function keyDateItems(row: AdminRecruitmentListRow): string[] {
   const shortlistDates = parseDateArray(row.shortlisting_dates);
   const interviewDates = parseInterviewDates(row.interview_schedule);
   const shortlistLabel =
-    shortlistDates.length > 1
-      ? `${fmtDateOnly(shortlistDates[0])} (+${shortlistDates.length - 1})`
-      : fmtDateOnly(shortlistDates[0]);
+    formatMultiDateSummary(shortlistDates);
   const interviewLabel =
-    interviewDates.length > 1
-      ? `${fmtDateOnly(interviewDates[0])} (+${interviewDates.length - 1})`
-      : fmtDateOnly(interviewDates[0]);
+    formatMultiDateSummary(interviewDates);
 
   return [
     `Advert ${fmtDateOnly(row.advert_release_date)}-${fmtDateOnly(row.advert_closing_date)}`,
@@ -98,6 +145,10 @@ function submitterName(p: AdminRecruitmentListRow['submitter']): string {
 
 const STATUS_OPTIONS = ['all', 'pending_review', 'approved', 'in_progress', 'filled', 'rejected'] as const;
 const SHEET_STATUS_OPTIONS = ['approved', 'rejected', 'in_progress', 'filled'] as const;
+
+function isRequestArchived(row: Pick<AdminRecruitmentListRow, 'archived_at' | 'status'>): boolean {
+  return Boolean(row.archived_at) || row.status === 'filled' || row.status === 'rejected';
+}
 
 function hiringHubStatusDotClass(status: string): string {
   switch (status) {
@@ -142,15 +193,15 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
   const sort = preset.sort;
   const sortDir = preset.dir;
 
-  const openCount = rows.filter((r) => !r.archived_at).length;
-  const pendingCount = rows.filter((r) => r.status === 'pending_review' && !r.archived_at).length;
-  const inProgressCount = rows.filter((r) => r.status === 'in_progress' && !r.archived_at).length;
+  const openCount = rows.filter((r) => !isRequestArchived(r)).length;
+  const pendingCount = rows.filter((r) => r.status === 'pending_review' && !isRequestArchived(r)).length;
+  const inProgressCount = rows.filter((r) => r.status === 'in_progress' && !isRequestArchived(r)).length;
   const filledCount = rows.filter((r) => r.status === 'filled').length;
 
   const filtered = useMemo(() => {
     let r = rows;
-    if (filter === 'open') r = r.filter((x) => !x.archived_at);
-    else r = r.filter((x) => x.archived_at);
+    if (filter === 'open') r = r.filter((x) => !isRequestArchived(x));
+    else r = r.filter((x) => isRequestArchived(x));
     if (statusFilter !== 'all') r = r.filter((x) => x.status === statusFilter);
     return r;
   }, [rows, filter, statusFilter]);

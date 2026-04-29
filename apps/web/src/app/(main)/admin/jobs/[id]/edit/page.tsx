@@ -1,34 +1,8 @@
-import type { JobScreeningQuestionPersist } from '@/app/(main)/admin/jobs/actions';
 import { AdminJobEditClient } from '@/components/admin/AdminJobEditClient';
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { createClient } from '@/lib/supabase/server';
-import type { ScreeningQuestionOption } from '@campsite/types';
 import { redirect, notFound } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
-
-function mapScreeningRow(r: Record<string, unknown>): JobScreeningQuestionPersist {
-  const raw = r.options;
-  let options: ScreeningQuestionOption[] | null = null;
-  if (Array.isArray(raw)) {
-    options = raw
-      .map((o) => {
-        const row = o as { id?: string; label?: string };
-        return { id: String(row.id ?? '').trim(), label: String(row.label ?? '').trim() };
-      })
-      .filter((o) => o.id && o.label);
-    if (options.length === 0) options = null;
-  }
-  return {
-    id: String(r.id),
-    sortOrder: Number(r.sort_order ?? 0),
-    questionType: String(r.question_type),
-    prompt: String(r.prompt ?? ''),
-    helpText: String(r.help_text ?? ''),
-    required: Boolean(r.required),
-    maxLength: r.max_length == null ? null : Number(r.max_length),
-    options,
-  };
-}
 
 export default async function AdminJobEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params;
@@ -50,21 +24,16 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
 
   const orgId = profile.org_id as string;
 
-  const [{ data: orgRow }, { data: job, error }, { data: sqRows }, { data: formSets }, canHrSettings] = await Promise.all([
+  const [orgRowResult, jobResultWithExtendedCols, formSetsResult, canHrSettings] = await Promise.all([
     supabase.from('organisations').select('slug').eq('id', orgId).single(),
     supabase
       .from('job_listings')
       .select(
-        'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, allow_application_questions, recruitment_request_id, diversity_target_pct, diversity_included_codes, applications_close_at, application_question_set_id'
+        'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, allow_application_questions, recruitment_request_id, diversity_target_pct, diversity_included_codes, applications_close_at, application_question_set_id, hide_posted_date, scheduled_publish_at, shortlisting_dates, interview_dates, start_date_needed, role_profile_link'
       )
       .eq('id', id)
       .eq('org_id', orgId)
       .maybeSingle(),
-    supabase
-      .from('job_listing_screening_questions')
-      .select('id, sort_order, question_type, prompt, help_text, required, options, max_length')
-      .eq('job_listing_id', id)
-      .order('sort_order', { ascending: true }),
     supabase
       .from('org_application_question_sets')
       .select('id, name')
@@ -72,6 +41,33 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
       .order('name', { ascending: true }),
     viewerHasPermission('hr.view_records'),
   ]);
+  const orgRow = orgRowResult.data;
+  const formSets = formSetsResult.data;
+
+  const fallbackJobResult = jobResultWithExtendedCols.error
+    ? await supabase
+        .from('job_listings')
+        .select(
+          'id, title, slug, status, grade_level, salary_band, contract_type, advert_copy, requirements, benefits, application_mode, allow_cv, allow_loom, allow_staffsavvy, allow_application_questions, recruitment_request_id, diversity_target_pct, diversity_included_codes, applications_close_at, application_question_set_id'
+        )
+        .eq('id', id)
+        .eq('org_id', orgId)
+        .maybeSingle()
+    : null;
+
+  const jobRaw = fallbackJobResult?.data ?? jobResultWithExtendedCols.data;
+  const job = jobRaw
+    ? ({
+        ...jobRaw,
+        hide_posted_date: (jobRaw as { hide_posted_date?: boolean | null }).hide_posted_date ?? false,
+        scheduled_publish_at: (jobRaw as { scheduled_publish_at?: string | null }).scheduled_publish_at ?? null,
+        shortlisting_dates: (jobRaw as { shortlisting_dates?: unknown }).shortlisting_dates ?? [],
+        interview_dates: (jobRaw as { interview_dates?: unknown }).interview_dates ?? [],
+        start_date_needed: (jobRaw as { start_date_needed?: string | null }).start_date_needed ?? null,
+        role_profile_link: (jobRaw as { role_profile_link?: string | null }).role_profile_link ?? null,
+      } as Parameters<typeof AdminJobEditClient>[0]['job'])
+    : null;
+  const error = job ? null : fallbackJobResult?.error ?? jobResultWithExtendedCols.error;
 
   if (error || !job) notFound();
 
@@ -114,16 +110,13 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
     }
   }
 
-  const initialScreeningQuestions = (sqRows ?? []).map((r) => mapScreeningRow(r as Record<string, unknown>));
-
   return (
     <AdminJobEditClient
-      job={job as Parameters<typeof AdminJobEditClient>[0]['job']}
+      job={job}
       orgSlug={orgSlug}
       requestHref={`/hr/hiring/requests/${reqId}`}
       publicMetrics={publicMetrics}
       eqCategoryOptions={eqCategoryOptions}
-      initialScreeningQuestions={initialScreeningQuestions}
       applicationFormOptions={(formSets ?? []) as { id: string; name: string | null }[]}
     />
   );

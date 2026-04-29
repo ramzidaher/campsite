@@ -2,21 +2,19 @@
 
 import {
   archiveJobListing,
-  loadOrgApplicationQuestionSetAsPersist,
   publishJobListing,
-  replaceJobScreeningQuestions,
   unarchiveJobListing,
   updateJobListing,
-  type JobScreeningQuestionPersist,
 } from '@/app/(main)/admin/jobs/actions';
-import { JobScreeningQuestionsSection } from '@/components/admin/JobScreeningQuestionsSection';
+import { JobEditorTabNav } from '@/components/admin/JobEditorTabNav';
+import { useTopPageFeedback } from '@/lib/ui/useTopPageFeedback';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
-import { jobApplicationModeLabel, jobListingStatusLabel } from '@/lib/jobs/labels';
-import { JOB_APPLICATION_MODES, RECRUITMENT_CONTRACT_TYPES } from '@campsite/types';
+import { jobListingStatusLabel } from '@/lib/jobs/labels';
+import { RECRUITMENT_CONTRACT_TYPES } from '@campsite/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 function formatDatetimeLocalValue(iso: string | null | undefined): string {
   if (!iso) return '';
@@ -24,6 +22,19 @@ function formatDatetimeLocalValue(iso: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return '';
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDateOnlyValue(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function parseDateList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((v) => String(v ?? '').trim()).filter(Boolean);
 }
 
 export type JobEditRow = {
@@ -47,6 +58,12 @@ export type JobEditRow = {
   diversity_included_codes: string[] | null;
   applications_close_at: string | null;
   application_question_set_id: string | null;
+  hide_posted_date?: boolean | null;
+  scheduled_publish_at?: string | null;
+  shortlisting_dates?: unknown;
+  interview_dates?: unknown;
+  start_date_needed?: string | null;
+  role_profile_link?: string | null;
 };
 
 export type JobPublicMetrics = {
@@ -61,7 +78,6 @@ export function AdminJobEditClient({
   requestHref,
   publicMetrics,
   eqCategoryOptions = [],
-  initialScreeningQuestions = [],
   applicationFormOptions = [],
 }: {
   job: JobEditRow;
@@ -71,12 +87,11 @@ export function AdminJobEditClient({
   publicMetrics?: JobPublicMetrics | null;
   /** From org HR metric settings — used for diversity target codes. */
   eqCategoryOptions?: { code: string; label: string }[];
-  initialScreeningQuestions?: JobScreeningQuestionPersist[];
   applicationFormOptions?: { id: string; name: string | null }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const { feedback: msg, setFeedback: setMsg, feedbackRef } = useTopPageFeedback();
 
   const [title, setTitle] = useState(job.title);
   const [gradeLevel, setGradeLevel] = useState(job.grade_level);
@@ -85,13 +100,11 @@ export function AdminJobEditClient({
   const [advertCopy, setAdvertCopy] = useState(job.advert_copy);
   const [requirements, setRequirements] = useState(job.requirements);
   const [benefits, setBenefits] = useState(job.benefits);
-  const [applicationMode, setApplicationMode] = useState(job.application_mode);
-  const [allowCv, setAllowCv] = useState(job.allow_cv);
-  const [allowLoom, setAllowLoom] = useState(job.allow_loom);
-  const [allowStaffsavvy, setAllowStaffsavvy] = useState(job.allow_staffsavvy);
-  const [allowApplicationQuestions, setAllowApplicationQuestions] = useState(
-    Boolean(job.allow_application_questions),
-  );
+  const applicationMode = job.application_mode;
+  const allowCv = job.allow_cv;
+  const allowLoom = job.allow_loom;
+  const allowStaffsavvy = job.allow_staffsavvy;
+  const allowApplicationQuestions = Boolean(job.allow_application_questions);
   const [diversityTargetPct, setDiversityTargetPct] = useState(
     job.diversity_target_pct != null ? String(job.diversity_target_pct) : '',
   );
@@ -101,8 +114,20 @@ export function AdminJobEditClient({
   const [applicationsCloseAtInput, setApplicationsCloseAtInput] = useState(() =>
     formatDatetimeLocalValue(job.applications_close_at),
   );
-  const [screeningQuestions, setScreeningQuestions] =
-    useState<JobScreeningQuestionPersist[]>(initialScreeningQuestions);
+  const [scheduledPublishAtInput, setScheduledPublishAtInput] = useState(() =>
+    formatDatetimeLocalValue(job.scheduled_publish_at),
+  );
+  const [hidePostedDate, setHidePostedDate] = useState(Boolean(job.hide_posted_date));
+  const [shortlistingDates, setShortlistingDates] = useState<string[]>(() => {
+    const values = parseDateList(job.shortlisting_dates);
+    return values.length > 0 ? values : [''];
+  });
+  const [interviewDates, setInterviewDates] = useState<string[]>(() => {
+    const values = parseDateList(job.interview_dates);
+    return values.length > 0 ? values : [''];
+  });
+  const [startDateNeeded, setStartDateNeeded] = useState(() => formatDateOnlyValue(job.start_date_needed));
+  const [roleProfileLink, setRoleProfileLink] = useState(String(job.role_profile_link ?? '').trim());
   const [applicationQuestionSetId, setApplicationQuestionSetId] = useState(
     job.application_question_set_id ?? '',
   );
@@ -110,35 +135,24 @@ export function AdminJobEditClient({
   useEffect(() => {
     setApplicationsCloseAtInput(formatDatetimeLocalValue(job.applications_close_at));
   }, [job.applications_close_at]);
-
   useEffect(() => {
-    setScreeningQuestions(initialScreeningQuestions);
-  }, [initialScreeningQuestions]);
+    setScheduledPublishAtInput(formatDatetimeLocalValue(job.scheduled_publish_at));
+  }, [job.scheduled_publish_at]);
 
   const fieldClass =
-    'mt-0 w-full rounded-xl border border-[#d8d8d8] bg-white px-4 py-3 text-[14px] leading-relaxed text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
-  const labelClass = 'mb-2 block text-[12px] font-semibold text-[#6b6b6b]';
+    'mt-0 h-11 w-full rounded-xl border border-[#d8d8d8] bg-white px-3.5 text-[13px] leading-normal text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
+  const labelClass = 'mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]';
 
   const showPublic = job.status === 'live' && job.slug && !job.slug.startsWith('draft-');
   const publicUrl = showPublic ? tenantJobPublicUrl(orgSlug, job.slug) : '';
   const isArchived = job.status === 'archived';
-  const previewApplySummary = useMemo(() => {
-    if (applicationMode !== 'combination') {
-      return jobApplicationModeLabel(applicationMode);
-    }
-    const bits: string[] = [];
-    if (allowCv) bits.push(jobApplicationModeLabel('cv'));
-    if (allowLoom) bits.push(jobApplicationModeLabel('loom'));
-    if (allowStaffsavvy) bits.push(jobApplicationModeLabel('staffsavvy'));
-    if (allowApplicationQuestions) bits.push('Role application questions');
-    return bits.length > 0 ? bits.join(', ') : jobApplicationModeLabel('combination');
-  }, [applicationMode, allowCv, allowLoom, allowStaffsavvy, allowApplicationQuestions]);
-
   function save() {
     setMsg(null);
     startTransition(async () => {
       const tp = diversityTargetPct.trim();
       const targetNum = tp === '' ? null : Number.parseFloat(tp);
+      const nextShortlistingDates = shortlistingDates.map((d) => d.trim()).filter(Boolean);
+      const nextInterviewDates = interviewDates.map((d) => d.trim()).filter(Boolean);
       const res = await updateJobListing(job.id, {
         title,
         gradeLevel,
@@ -156,18 +170,16 @@ export function AdminJobEditClient({
           tp === '' || !Number.isFinite(targetNum) ? null : targetNum,
         diversityIncludedCodes: diversityCodes,
         applicationsCloseAt: applicationsCloseAtInput.trim() || null,
+        scheduledPublishAt: scheduledPublishAtInput.trim() || null,
+        hidePostedDate,
+        shortlistingDates: nextShortlistingDates,
+        interviewDates: nextInterviewDates,
+        startDateNeeded: startDateNeeded.trim() || null,
+        roleProfileLink: roleProfileLink.trim() || null,
         applicationQuestionSetId: applicationQuestionSetId.trim() || null,
       });
       if (!res.ok) {
         setMsg({ type: 'err', text: res.error });
-        return;
-      }
-      const sq = await replaceJobScreeningQuestions(
-        job.id,
-        screeningQuestions.map((q, i) => ({ ...q, sortOrder: i })),
-      );
-      if (!sq.ok) {
-        setMsg({ type: 'err', text: sq.error });
         return;
       }
       setMsg({ type: 'ok', text: 'Saved.' });
@@ -175,30 +187,44 @@ export function AdminJobEditClient({
     });
   }
 
-  function loadQuestionsFromSelectedApplicationForm() {
-    const setId = applicationQuestionSetId.trim();
-    if (!setId) {
-      setMsg({ type: 'err', text: 'Choose an application form first.' });
-      return;
-    }
-    setMsg(null);
-    startTransition(async () => {
-      const res = await loadOrgApplicationQuestionSetAsPersist(setId);
-      if (!res.ok) {
-        setMsg({ type: 'err', text: res.error });
-        return;
-      }
-      setScreeningQuestions(res.questions);
-      setMsg({
-        type: 'ok',
-        text: `Loaded ${res.questions.length} question${res.questions.length === 1 ? '' : 's'} from selected form.`,
-      });
-    });
-  }
-
   function publish() {
     setMsg(null);
     startTransition(async () => {
+      const tp = diversityTargetPct.trim();
+      const targetNum = tp === '' ? null : Number.parseFloat(tp);
+      const nextShortlistingDates = shortlistingDates.map((d) => d.trim()).filter(Boolean);
+      const nextInterviewDates = interviewDates.map((d) => d.trim()).filter(Boolean);
+
+      const saveRes = await updateJobListing(job.id, {
+        title,
+        gradeLevel,
+        salaryBand,
+        contractType,
+        advertCopy,
+        requirements,
+        benefits,
+        applicationMode,
+        allowCv,
+        allowLoom,
+        allowStaffsavvy,
+        allowApplicationQuestions,
+        diversityTargetPct:
+          tp === '' || !Number.isFinite(targetNum) ? null : targetNum,
+        diversityIncludedCodes: diversityCodes,
+        applicationsCloseAt: applicationsCloseAtInput.trim() || null,
+        scheduledPublishAt: scheduledPublishAtInput.trim() || null,
+        hidePostedDate,
+        shortlistingDates: nextShortlistingDates,
+        interviewDates: nextInterviewDates,
+        startDateNeeded: startDateNeeded.trim() || null,
+        roleProfileLink: roleProfileLink.trim() || null,
+        applicationQuestionSetId: applicationQuestionSetId.trim() || null,
+      });
+      if (!saveRes.ok) {
+        setMsg({ type: 'err', text: saveRes.error });
+        return;
+      }
+
       const res = await publishJobListing(job.id);
       if (!res.ok) {
         setMsg({ type: 'err', text: res.error });
@@ -233,10 +259,10 @@ export function AdminJobEditClient({
   }
 
   return (
-    <div className="mx-auto min-w-0 w-full space-y-10 py-10 lg:space-y-12 lg:py-12 font-sans text-[#121212]">
-      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 px-5 py-7 font-sans text-[#121212] sm:px-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 max-w-3xl">
-          <nav aria-label="Breadcrumb" className="text-[13px] font-medium text-[#6b6b6b]">
+          <nav aria-label="Breadcrumb" className="text-[12px] font-medium uppercase tracking-wide text-[#9b9b9b]">
             <Link href="/hr/hiring/jobs" className="text-[#121212] underline-offset-2 hover:underline">
               Job listings
             </Link>
@@ -249,7 +275,7 @@ export function AdminJobEditClient({
             </span>
             <span className="text-[#6b6b6b]">Edit</span>
           </nav>
-          <h1 className="mt-4 font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
+          <h1 className="mt-2 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
             {title || 'Job'}
           </h1>
           {job.status === 'live' ? (
@@ -258,7 +284,7 @@ export function AdminJobEditClient({
               Live
             </p>
           ) : null}
-          <p className={`max-w-2xl text-[13.5px] leading-relaxed text-[#6b6b6b] ${job.status === 'live' ? 'mt-2' : 'mt-4'}`}>
+          <p className={`max-w-2xl text-[12px] leading-relaxed text-[#6b6b6b] ${job.status === 'live' ? 'mt-1.5' : 'mt-2'}`}>
             {job.status === 'live' ? (
               <>
                 Public listing is visible on your careers site. Anonymous and internal visits both count toward funnel
@@ -272,7 +298,7 @@ export function AdminJobEditClient({
               </>
             )}
           </p>
-          <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-[#6b6b6b]">
+          <p className="mt-1.5 max-w-2xl text-[12px] leading-relaxed text-[#6b6b6b]">
             Prefilled from approved recruitment brief — title, grade / level, salary band, and contract type.
           </p>
         </div>
@@ -281,21 +307,21 @@ export function AdminJobEditClient({
             <button
               type="button"
               onClick={() => void navigator.clipboard.writeText(publicUrl)}
-              className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-4 text-[12px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
             >
               Copy public link
             </button>
           ) : null}
           <Link
             href={requestHref}
-            className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
+            className="inline-flex h-9 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-4 text-[12px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
           >
             Recruitment request
           </Link>
           {job.status === 'live' ? (
             <Link
               href={`/hr/jobs/${job.id}/applications`}
-              className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-4 text-[12px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
             >
               View pipeline
             </Link>
@@ -303,8 +329,12 @@ export function AdminJobEditClient({
         </div>
       </div>
 
+      <JobEditorTabNav jobId={job.id} activeTab="information" />
+
       {msg ? (
         <div
+          ref={feedbackRef}
+          tabIndex={-1}
           role={msg.type === 'err' ? 'alert' : 'status'}
           className={[
             'rounded-xl border px-4 py-3 text-[13px]',
@@ -348,9 +378,9 @@ export function AdminJobEditClient({
       ) : null}
 
       {eqCategoryOptions.length > 0 && !isArchived ? (
-        <section className="rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+        <section className="rounded-2xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
           <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Diversity monitoring (optional)</h2>
-          <p className="mt-3 max-w-3xl text-[13.5px] leading-relaxed text-[#6b6b6b]">
+          <p className="mt-2 max-w-3xl text-[12px] leading-relaxed text-[#6b6b6b]">
             When set, in-app alerts can fire if the share of applicants (with equality data) in the selected codes
             falls below the minimum % over the org&apos;s rolling window. Configure codes under HR metric alerts.
           </p>
@@ -393,8 +423,8 @@ export function AdminJobEditClient({
         </section>
       ) : null}
 
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
-        <div className="space-y-6 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+      <div className="space-y-8">
+        <div className="space-y-5 rounded-2xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
           <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Core details</h2>
           <div>
             <label className={labelClass} htmlFor="title">
@@ -452,106 +482,160 @@ export function AdminJobEditClient({
               ))}
             </select>
           </div>
+          <div>
+            <label className={labelClass} htmlFor="role_profile_link">
+              Job profile / description link
+            </label>
+            <input
+              id="role_profile_link"
+              className={fieldClass}
+              value={roleProfileLink}
+              disabled={isArchived}
+              placeholder="https://..."
+              onChange={(e) => setRoleProfileLink(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div>
+              <label className={labelClass} htmlFor="scheduled_publish_at">
+                Job posted (schedule)
+              </label>
+              <input
+                id="scheduled_publish_at"
+                type="datetime-local"
+                className={fieldClass}
+                value={scheduledPublishAtInput}
+                disabled={isArchived}
+                onChange={(e) => setScheduledPublishAtInput(e.target.value)}
+              />
+            </div>
+            <div className="pt-8">
+              <label className="flex items-center gap-2 text-[13px] text-[#121212]">
+                <input
+                  type="checkbox"
+                  checked={hidePostedDate}
+                  disabled={isArchived}
+                  onChange={(e) => setHidePostedDate(e.target.checked)}
+                />
+                Hide posted date from applicants
+              </label>
+            </div>
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="applications_close_at">
+              Closing date and time
+            </label>
+            <input
+              id="applications_close_at"
+              type="datetime-local"
+              className={fieldClass}
+              value={applicationsCloseAtInput}
+              disabled={isArchived}
+              onChange={(e) => setApplicationsCloseAtInput(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>
+              Shortlisting dates
+            </label>
+            <div className="space-y-2">
+              {shortlistingDates.map((value, idx) => (
+                <div key={`shortlisting-${idx}`} className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    className={fieldClass}
+                    value={value}
+                    disabled={isArchived}
+                    onChange={(e) => {
+                      const next = [...shortlistingDates];
+                      next[idx] = e.target.value;
+                      setShortlistingDates(next);
+                    }}
+                  />
+                  {shortlistingDates.length > 1 ? (
+                    <button
+                      type="button"
+                      disabled={isArchived}
+                      onClick={() => setShortlistingDates(shortlistingDates.filter((_, i) => i !== idx))}
+                      className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] text-[#6b6b6b] hover:bg-[#faf9f6]"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              <button
+                type="button"
+                disabled={isArchived}
+                onClick={() => setShortlistingDates((prev) => [...prev, ''])}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] text-[#121212] hover:bg-[#faf9f6]"
+              >
+                + Add shortlisting date
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>
+              Interview dates
+            </label>
+            <div className="space-y-2">
+              {interviewDates.map((value, idx) => (
+                <div key={`interview-${idx}`} className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    className={fieldClass}
+                    value={value}
+                    disabled={isArchived}
+                    onChange={(e) => {
+                      const next = [...interviewDates];
+                      next[idx] = e.target.value;
+                      setInterviewDates(next);
+                    }}
+                  />
+                  {interviewDates.length > 1 ? (
+                    <button
+                      type="button"
+                      disabled={isArchived}
+                      onClick={() => setInterviewDates(interviewDates.filter((_, i) => i !== idx))}
+                      className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] text-[#6b6b6b] hover:bg-[#faf9f6]"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              <button
+                type="button"
+                disabled={isArchived}
+                onClick={() => setInterviewDates((prev) => [...prev, ''])}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] text-[#121212] hover:bg-[#faf9f6]"
+              >
+                + Add interview date
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="start_date_needed">
+              Start date
+            </label>
+            <input
+              id="start_date_needed"
+              type="date"
+              className={fieldClass}
+              value={startDateNeeded}
+              disabled={isArchived}
+              onChange={(e) => setStartDateNeeded(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div className="space-y-6 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+        <div className="space-y-5 rounded-2xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
           <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Application options</h2>
-          <p className="text-[13.5px] leading-relaxed text-[#6b6b6b]">
-            Choose how applicants apply for this job.
-          </p>
-          <div className="space-y-3">
-            {JOB_APPLICATION_MODES.map((m) => (
-              <label
-                key={m}
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-[14px] transition-colors hover:border-[#ececec] hover:bg-[#faf9f6]"
-              >
-                <input
-                  type="radio"
-                  name="appMode"
-                  checked={applicationMode === m}
-                  disabled={isArchived}
-                  onChange={() => {
-                    setApplicationMode(m);
-                    if (m === 'cv') {
-                      setAllowCv(true);
-                      setAllowLoom(false);
-                      setAllowStaffsavvy(false);
-                      setAllowApplicationQuestions(false);
-                    } else if (m === 'loom') {
-                      setAllowCv(false);
-                      setAllowLoom(true);
-                      setAllowStaffsavvy(false);
-                      setAllowApplicationQuestions(false);
-                    } else if (m === 'staffsavvy') {
-                      setAllowCv(false);
-                      setAllowLoom(false);
-                      setAllowStaffsavvy(true);
-                      setAllowApplicationQuestions(false);
-                    }
-                    /* combination: keep current toggles */
-                  }}
-                />
-                {jobApplicationModeLabel(m)}
-              </label>
-            ))}
-          </div>
-          <div className="rounded-xl border border-[#e8e8e8] bg-[#faf9f6] p-4 text-[13px] leading-relaxed text-[#6b6b6b]">
-            Modes: CV upload, Loom 1-minute link, StaffSavvy score (out of 5), combination (pick any enabled options),
-            or role application questions alone when that option is enabled.
-          </div>
-          {applicationMode === 'combination' ? (
-            <div className="mt-6 space-y-3 border-t border-[#f0f0f0] pt-6">
-              <p className="text-[12px] font-semibold text-[#6b6b6b]">Enable for this role</p>
-              <label className="flex items-center gap-2 text-[13px]">
-                <input
-                  type="checkbox"
-                  checked={allowCv}
-                  disabled={isArchived}
-                  onChange={(e) => setAllowCv(e.target.checked)}
-                />
-                CV upload
-              </label>
-              <label className="flex items-center gap-2 text-[13px]">
-                <input
-                  type="checkbox"
-                  checked={allowLoom}
-                  disabled={isArchived}
-                  onChange={(e) => setAllowLoom(e.target.checked)}
-                />
-                Loom video (1 minute)
-              </label>
-              <label className="flex items-center gap-2 text-[13px]">
-                <input
-                  type="checkbox"
-                  checked={allowStaffsavvy}
-                  disabled={isArchived}
-                  onChange={(e) => setAllowStaffsavvy(e.target.checked)}
-                />
-                StaffSavvy score (1–5)
-              </label>
-              <label className="flex items-center gap-2 text-[13px]">
-                <input
-                  type="checkbox"
-                  checked={allowApplicationQuestions}
-                  disabled={isArchived}
-                  onChange={(e) => setAllowApplicationQuestions(e.target.checked)}
-                />
-                Role application questions (no CV required when used alone)
-              </label>
-              <p className="text-[12px] leading-relaxed text-[#9b9b9b]">
-                Turn this on when answers to the questions below should qualify someone without a CV, Loom, or
-                StaffSavvy score. You must add at least one question before publishing.
-              </p>
-            </div>
-          ) : null}
           {!isArchived ? (
-            <div className="mt-6 border-t border-[#f0f0f0] pt-6">
+            <div>
               <label className={labelClass} htmlFor="application_form">
                 Application form for this advert
               </label>
-              <p className="mb-2 text-[12px] text-[#9b9b9b]">
-                Select a reusable application form, then load its questions into this role.
-              </p>
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   id="application_form"
@@ -566,57 +650,22 @@ export function AdminJobEditClient({
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  disabled={pending || !applicationQuestionSetId}
-                  onClick={loadQuestionsFromSelectedApplicationForm}
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6] disabled:opacity-60"
-                >
-                  Load questions from form
-                </button>
               </div>
-              <p className="mt-2 text-[12px] text-[#9b9b9b]">
-                Save draft after loading to apply this form to the advert and applicant-facing flow.
-              </p>
-            </div>
-          ) : null}
-          {!isArchived ? (
-            <div className="mt-2">
-              <label className={labelClass} htmlFor="applications_close_at">
-                Stop accepting applications (optional)
-              </label>
-              <p className="mb-2 text-[12px] text-[#9b9b9b]">
-                When this date-time passes, new applications are blocked. Leave empty for no deadline.
-              </p>
-              <input
-                id="applications_close_at"
-                type="datetime-local"
-                className={fieldClass}
-                value={applicationsCloseAtInput}
-                onChange={(e) => setApplicationsCloseAtInput(e.target.value)}
-              />
             </div>
           ) : null}
         </div>
       </div>
 
-      <JobScreeningQuestionsSection
-        disabled={isArchived}
-        currentJobId={job.id}
-        questions={screeningQuestions}
-        onQuestionsChange={setScreeningQuestions}
-      />
-
-      <div className="space-y-6 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+      <div className="space-y-5 rounded-2xl border border-[#e8e8e8] bg-white p-5 shadow-sm">
         <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Listing copy</h2>
         <div>
           <label className={labelClass} htmlFor="advert">
-            Advert / overview
+            Job overview (optional)
           </label>
           <textarea
             id="advert"
             rows={10}
-            className={`${fieldClass} min-h-[12rem]`}
+            className={`${fieldClass} min-h-[10rem] h-auto py-2.5`}
             value={advertCopy}
             disabled={isArchived}
             onChange={(e) => setAdvertCopy(e.target.value)}
@@ -624,12 +673,12 @@ export function AdminJobEditClient({
         </div>
         <div>
           <label className={labelClass} htmlFor="reqs">
-            Requirements
+            Job description
           </label>
           <textarea
             id="reqs"
             rows={7}
-            className={`${fieldClass} min-h-[9rem]`}
+            className={`${fieldClass} min-h-[8rem] h-auto py-2.5`}
             value={requirements}
             disabled={isArchived}
             onChange={(e) => setRequirements(e.target.value)}
@@ -637,95 +686,16 @@ export function AdminJobEditClient({
         </div>
         <div>
           <label className={labelClass} htmlFor="benefits">
-            Benefits
+            About the organisation
           </label>
           <textarea
             id="benefits"
             rows={6}
-            className={`${fieldClass} min-h-[7rem]`}
+            className={`${fieldClass} min-h-[6rem] h-auto py-2.5`}
             value={benefits}
             disabled={isArchived}
             onChange={(e) => setBenefits(e.target.value)}
           />
-        </div>
-      </div>
-
-      <div className="space-y-6 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Job listing preview</h2>
-          <span className="rounded-full border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">
-            {job.status === 'live' ? 'Live format' : 'Draft preview'}
-          </span>
-        </div>
-        <div className="overflow-hidden rounded-2xl border border-[#ececec] bg-[#faf9f6]">
-          <header className="border-b border-[#ececec] bg-white px-8 py-6">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Your organisation</p>
-            <h3 className="mt-2 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
-              {title || 'Untitled role'}
-            </h3>
-            <p className="mt-2 text-[13.5px] text-[#6b6b6b]">
-              {gradeLevel || 'Grade / level'}
-              {' · '}
-              {recruitmentContractLabel(contractType)}
-              {' · '}
-              {salaryBand || 'Salary band'}
-            </p>
-          </header>
-          <div className="mx-auto max-w-3xl px-6 py-10 sm:px-10 sm:py-12">
-            <section className="rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">
-              <h4 className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">About the role</h4>
-              <div className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-[#242424]">
-                {advertCopy?.trim() || 'Details coming soon.'}
-              </div>
-            </section>
-
-            {requirements?.trim() ? (
-              <section className="mt-6 rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">
-                <h4 className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Requirements</h4>
-                <div className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed text-[#242424]">{requirements}</div>
-              </section>
-            ) : null}
-
-            {benefits?.trim() ? (
-              <section className="mt-6 rounded-xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">
-                <h4 className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Benefits</h4>
-                <div className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed text-[#242424]">{benefits}</div>
-              </section>
-            ) : null}
-
-            <section className="mt-6 rounded-xl border border-[#d8ece5] bg-[#f0fdf9] p-6 sm:p-8">
-              <h4 className="text-[11px] font-semibold uppercase tracking-widest text-[#0f5132]">How to apply</h4>
-              <p className="mt-3 text-[13.5px] leading-relaxed text-[#14532d]">
-                Apply online - this vacancy accepts: {previewApplySummary}.
-              </p>
-              {screeningQuestions.length > 0 ? (
-                <div className="mt-4 rounded-lg border border-[#bbf7d0] bg-white/90 p-4">
-                  <p className="text-[12px] font-semibold text-[#14532d]">
-                    Draft role questions ({screeningQuestions.length}) — not live until you save
-                  </p>
-                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-[13px] leading-snug text-[#166534]">
-                    {screeningQuestions.map((q) => {
-                      const raw = q.prompt?.trim() || 'Untitled question';
-                      const short = raw.length > 120 ? `${raw.slice(0, 117)}…` : raw;
-                      return (
-                        <li key={q.id}>
-                          {short}
-                          {q.required ? <span className="text-[11px] font-medium text-[#b45309]"> (required)</span> : null}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ) : null}
-              <button
-                type="button"
-                disabled
-                className="mt-3 inline-flex h-10 items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white opacity-70"
-              >
-                Apply now
-              </button>
-            </section>
-          </div>
         </div>
       </div>
 
@@ -735,17 +705,25 @@ export function AdminJobEditClient({
             type="button"
             disabled={pending}
             onClick={restoreToDraft}
-            className="inline-flex h-11 min-w-[10rem] items-center justify-center rounded-full bg-[#121212] px-6 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="inline-flex h-10 min-w-[9rem] items-center justify-center rounded-full bg-[#121212] px-5 text-[12px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {pending ? 'Restoring…' : 'Restore to draft'}
           </button>
         ) : (
           <>
+            <Link
+              href={`/hr/jobs/${job.id}/preview`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 min-w-[9rem] items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[12px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"
+            >
+              Preview
+            </Link>
             <button
               type="button"
               disabled={pending}
               onClick={save}
-              className="inline-flex h-11 min-w-[10rem] items-center justify-center rounded-full bg-[#121212] px-6 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="inline-flex h-10 min-w-[9rem] items-center justify-center rounded-full bg-[#121212] px-5 text-[12px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {pending ? 'Saving…' : 'Save draft'}
             </button>
@@ -754,7 +732,7 @@ export function AdminJobEditClient({
                 type="button"
                 disabled={pending}
                 onClick={publish}
-                className="inline-flex h-11 min-w-[10rem] items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-6 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6] disabled:opacity-60"
+                className="inline-flex h-10 min-w-[9rem] items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[12px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6] disabled:opacity-60"
               >
                 Publish
               </button>
@@ -764,7 +742,7 @@ export function AdminJobEditClient({
                 type="button"
                 disabled={pending}
                 onClick={archive}
-                className="inline-flex h-11 min-w-[10rem] items-center justify-center rounded-full border border-[#fecaca] bg-white px-6 text-[13px] font-medium text-[#b91c1c] hover:bg-red-50 disabled:opacity-60"
+                className="inline-flex h-10 min-w-[9rem] items-center justify-center rounded-full border border-[#fecaca] bg-white px-5 text-[12px] font-medium text-[#b91c1c] hover:bg-red-50 disabled:opacity-60"
               >
                 Archive
               </button>

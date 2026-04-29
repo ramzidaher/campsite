@@ -54,9 +54,23 @@ export function ShellBadgeRealtime() {
       });
     };
 
+    const getCurrentUserId = async (): Promise<string | null> => {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        return authData.user?.id ?? null;
+      } catch {
+        // Non-fatal: getUser can occasionally race on browser lock management.
+      }
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        return sessionData.session?.user?.id ?? null;
+      } catch {
+        return null;
+      }
+    };
+
     const init = async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      const uid = authData.user?.id ?? null;
+      const uid = await getCurrentUserId();
       if (!uid || cancelled) return;
 
       const { data: profile } = await supabase

@@ -19,6 +19,40 @@ import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export type JobActionState = { ok: true } | { ok: false; error: string };
 
+function parseDateList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((v) => String(v ?? '').trim()).filter(Boolean);
+}
+
+function parseInterviewDateList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((row) => {
+      if (typeof row === 'string') return row.trim();
+      const rec = row as { date?: unknown; interviewDate?: unknown; interview_date?: unknown } | null;
+      return String(rec?.date ?? rec?.interviewDate ?? rec?.interview_date ?? '').trim();
+    })
+    .filter(Boolean);
+}
+
+function isMissingNewJobListingColumnError(message: string | null | undefined): boolean {
+  const msg = String(message ?? '').toLowerCase();
+  if (!msg.includes('job_listings')) return false;
+  return (
+    msg.includes('hide_posted_date') ||
+    msg.includes('scheduled_publish_at') ||
+    msg.includes('shortlisting_dates') ||
+    msg.includes('interview_dates') ||
+    msg.includes('start_date_needed') ||
+    msg.includes('role_profile_link') ||
+    msg.includes('success_email_body') ||
+    msg.includes('rejection_email_body') ||
+    msg.includes('interview_invite_email_body') ||
+    msg.includes('offer_template_id') ||
+    msg.includes('contract_template_id')
+  );
+}
+
 async function autoMoveRecruitmentRequestToInProgress(opts: {
   recruitmentRequestId: string | null | undefined;
   actorUserId: string;
@@ -56,9 +90,11 @@ async function autoMoveRecruitmentRequestToInProgress(opts: {
 function revalidateJobs(jobId?: string) {
   revalidatePath('/admin/jobs');
   if (jobId) revalidatePath(`/admin/jobs/${jobId}/edit`);
+  if (jobId) revalidatePath(`/admin/jobs/${jobId}/admin-legal`);
   revalidatePath('/admin/recruitment');
   revalidatePath('/hr/jobs');
   if (jobId) revalidatePath(`/hr/jobs/${jobId}/edit`);
+  if (jobId) revalidatePath(`/hr/jobs/${jobId}/admin-legal`);
   revalidatePath('/hr/hiring/requests');
   revalidatePath('/hr/hiring/jobs');
   revalidatePath('/hr/hiring/requests');
@@ -100,7 +136,7 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
   const { data: req, error: reqErr } = await supabase
     .from('recruitment_requests')
     .select(
-      'id, org_id, department_id, job_title, grade_level, salary_band, contract_type, ideal_candidate_profile, specific_requirements, status'
+      'id, org_id, department_id, job_title, grade_level, salary_band, contract_type, ideal_candidate_profile, specific_requirements, status, start_date_needed, role_profile_link, advert_release_date, advert_closing_date, shortlisting_dates, interview_schedule'
     )
     .eq('id', rid)
     .eq('org_id', orgId)
@@ -114,6 +150,7 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
   const { data: existingLive } = await supabase
     .from('job_listings')
     .select('id')
+    .eq('org_id', orgId)
     .eq('recruitment_request_id', rid)
     .eq('status', 'live')
     .maybeSingle();
@@ -123,12 +160,59 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
 
   const { data: existingDraft } = await supabase
     .from('job_listings')
-    .select('id')
+    .select('id, shortlisting_dates, interview_dates, start_date_needed, role_profile_link, scheduled_publish_at, applications_close_at')
+    .eq('org_id', orgId)
     .eq('recruitment_request_id', rid)
     .eq('status', 'draft')
     .maybeSingle();
 
   if (existingDraft?.id) {
+    const nextShortlistingDates = parseDateList(req.shortlisting_dates);
+    const nextInterviewDates = parseInterviewDateList(req.interview_schedule);
+    const nextStartDateNeeded = String(req.start_date_needed ?? '').trim() || null;
+    const nextRoleProfileLink = String(req.role_profile_link ?? '').trim() || null;
+    const nextScheduledPublishAt = req.advert_release_date ? `${String(req.advert_release_date)}T09:00:00.000Z` : null;
+    const nextApplicationsCloseAt = req.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null;
+
+    const hasExistingShortlisting = parseDateList((existingDraft as { shortlisting_dates?: unknown }).shortlisting_dates).length > 0;
+    const hasExistingInterview = parseDateList((existingDraft as { interview_dates?: unknown }).interview_dates).length > 0;
+    const hasExistingStartDate = Boolean(String((existingDraft as { start_date_needed?: unknown }).start_date_needed ?? '').trim());
+    const hasExistingRoleProfile = Boolean(String((existingDraft as { role_profile_link?: unknown }).role_profile_link ?? '').trim());
+    const hasExistingScheduled = Boolean(String((existingDraft as { scheduled_publish_at?: unknown }).scheduled_publish_at ?? '').trim());
+    const hasExistingCloseAt = Boolean(String((existingDraft as { applications_close_at?: unknown }).applications_close_at ?? '').trim());
+
+    const patch: Record<string, unknown> = {};
+    if (!hasExistingShortlisting && nextShortlistingDates.length > 0) patch.shortlisting_dates = nextShortlistingDates;
+    if (!hasExistingInterview && nextInterviewDates.length > 0) patch.interview_dates = nextInterviewDates;
+    if (!hasExistingStartDate && nextStartDateNeeded) patch.start_date_needed = nextStartDateNeeded;
+    if (!hasExistingRoleProfile && nextRoleProfileLink) patch.role_profile_link = nextRoleProfileLink;
+    if (!hasExistingScheduled && nextScheduledPublishAt) patch.scheduled_publish_at = nextScheduledPublishAt;
+    if (!hasExistingCloseAt && nextApplicationsCloseAt) patch.applications_close_at = nextApplicationsCloseAt;
+
+    if (Object.keys(patch).length > 0) {
+      let backfillResult = await supabase
+        .from('job_listings')
+        .update(patch)
+        .eq('id', existingDraft.id as string)
+        .eq('org_id', orgId)
+        .eq('status', 'draft');
+      if (backfillResult.error && isMissingNewJobListingColumnError(backfillResult.error.message)) {
+        const legacyPatch: Record<string, unknown> = {};
+        if (!hasExistingCloseAt && nextApplicationsCloseAt) legacyPatch.applications_close_at = nextApplicationsCloseAt;
+        if (Object.keys(legacyPatch).length > 0) {
+          backfillResult = await supabase
+            .from('job_listings')
+            .update(legacyPatch)
+            .eq('id', existingDraft.id as string)
+            .eq('org_id', orgId)
+            .eq('status', 'draft');
+        }
+      }
+      if (backfillResult.error) {
+        return { ok: false, error: backfillResult.error.message };
+      }
+    }
+
     revalidateJobs(existingDraft.id as string);
     return { ok: true, jobId: existingDraft.id as string };
   }
@@ -139,7 +223,7 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
 
   const draftSlug = generateDraftJobSlug();
 
-  const { data: inserted, error: insErr } = await supabase
+  let insertResult = await supabase
     .from('job_listings')
     .insert({
       org_id: orgId,
@@ -158,10 +242,45 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
       allow_cv: true,
       allow_loom: false,
       allow_staffsavvy: false,
+      hide_posted_date: false,
+      scheduled_publish_at: req.advert_release_date ? `${String(req.advert_release_date)}T09:00:00.000Z` : null,
+      shortlisting_dates: parseDateList(req.shortlisting_dates),
+      interview_dates: parseInterviewDateList(req.interview_schedule),
+      start_date_needed: String(req.start_date_needed ?? '').trim() || null,
+      role_profile_link: String(req.role_profile_link ?? '').trim() || null,
+      applications_close_at: req.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null,
       status: 'draft',
     })
     .select('id')
     .single();
+  if (insertResult.error && isMissingNewJobListingColumnError(insertResult.error.message)) {
+    insertResult = await supabase
+      .from('job_listings')
+      .insert({
+        org_id: orgId,
+        recruitment_request_id: rid,
+        department_id: req.department_id as string,
+        created_by: user.id,
+        slug: draftSlug,
+        title: req.job_title as string,
+        grade_level: req.grade_level as string,
+        salary_band: req.salary_band as string,
+        contract_type: req.contract_type as string,
+        advert_copy: advertSeed,
+        requirements: '',
+        benefits: '',
+        application_mode: 'cv',
+        allow_cv: true,
+        allow_loom: false,
+        allow_staffsavvy: false,
+        applications_close_at: req.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null,
+        status: 'draft',
+      })
+      .select('id')
+      .single();
+  }
+  const inserted = insertResult.data;
+  const insErr = insertResult.error;
 
   if (insErr || !inserted?.id) {
     return { ok: false, error: insErr?.message ?? 'Could not create listing.' };
@@ -191,6 +310,12 @@ export async function updateJobListing(
     diversityIncludedCodes: string[];
     /** ISO or datetime-local string; empty clears. */
     applicationsCloseAt: string | null;
+    scheduledPublishAt: string | null;
+    hidePostedDate: boolean;
+    shortlistingDates: string[];
+    interviewDates: string[];
+    startDateNeeded: string | null;
+    roleProfileLink: string | null;
     applicationQuestionSetId: string | null;
   }
 ): Promise<JobActionState> {
@@ -223,6 +348,23 @@ export async function updateJobListing(
     }
     applicationsCloseAt = new Date(t).toISOString();
   }
+  let scheduledPublishAt: string | null = null;
+  const rawScheduled = fields.scheduledPublishAt?.trim();
+  if (rawScheduled) {
+    const t = Date.parse(rawScheduled);
+    if (Number.isNaN(t)) {
+      return { ok: false, error: 'Invalid scheduled publish date.' };
+    }
+    scheduledPublishAt = new Date(t).toISOString();
+  }
+  const shortlistingDates = Array.from(
+    new Set((fields.shortlistingDates ?? []).map((d) => String(d ?? '').trim()).filter(Boolean)),
+  );
+  const interviewDates = Array.from(
+    new Set((fields.interviewDates ?? []).map((d) => String(d ?? '').trim()).filter(Boolean)),
+  );
+  const startDateNeeded = String(fields.startDateNeeded ?? '').trim() || null;
+  const roleProfileLink = String(fields.roleProfileLink ?? '').trim() || null;
 
   const supabase = await createClient();
   const user = await getAuthUser();
@@ -260,7 +402,7 @@ export async function updateJobListing(
     }
   }
 
-  const { error } = await supabase
+  let updateResult = await supabase
     .from('job_listings')
     .update({
       title: fields.title.trim(),
@@ -278,10 +420,41 @@ export async function updateJobListing(
       diversity_target_pct: fields.diversityTargetPct,
       diversity_included_codes: fields.diversityIncludedCodes,
       applications_close_at: applicationsCloseAt,
+      scheduled_publish_at: scheduledPublishAt,
+      hide_posted_date: Boolean(fields.hidePostedDate),
+      shortlisting_dates: shortlistingDates,
+      interview_dates: interviewDates,
+      start_date_needed: startDateNeeded,
+      role_profile_link: roleProfileLink,
       application_question_set_id: setId,
     })
     .eq('id', id)
     .eq('org_id', profile.org_id as string);
+  if (updateResult.error && isMissingNewJobListingColumnError(updateResult.error.message)) {
+    updateResult = await supabase
+      .from('job_listings')
+      .update({
+        title: fields.title.trim(),
+        grade_level: fields.gradeLevel.trim(),
+        salary_band: fields.salaryBand.trim(),
+        contract_type: fields.contractType.trim(),
+        advert_copy: fields.advertCopy,
+        requirements: fields.requirements,
+        benefits: fields.benefits,
+        application_mode: mode,
+        allow_cv: flags.allow_cv,
+        allow_loom: flags.allow_loom,
+        allow_staffsavvy: flags.allow_staffsavvy,
+        allow_application_questions: flags.allow_application_questions,
+        diversity_target_pct: fields.diversityTargetPct,
+        diversity_included_codes: fields.diversityIncludedCodes,
+        applications_close_at: applicationsCloseAt,
+        application_question_set_id: setId,
+      })
+      .eq('id', id)
+      .eq('org_id', profile.org_id as string);
+  }
+  const error = updateResult.error;
 
   if (error) return { ok: false, error: error.message };
   revalidateJobs(id);
@@ -319,7 +492,7 @@ export async function publishJobListing(jobId: string): Promise<JobActionState> 
 
   const { data: row, error: fetchErr } = await supabase
     .from('job_listings')
-    .select('id, title, slug, status, recruitment_request_id')
+    .select('id, title, slug, status, recruitment_request_id, application_question_set_id')
     .eq('id', id)
     .eq('org_id', orgId)
     .maybeSingle();
@@ -340,6 +513,9 @@ export async function publishJobListing(jobId: string): Promise<JobActionState> 
   if (otherLive?.id) {
     return { ok: false, error: 'Another live job already exists for this recruitment request.' };
   }
+  if (!String(row.application_question_set_id ?? '').trim()) {
+    return { ok: false, error: 'Choose an application form for this advert before publishing.' };
+  }
 
   const title = (row.title as string)?.trim() || 'job';
   let attempts = 0;
@@ -347,16 +523,30 @@ export async function publishJobListing(jobId: string): Promise<JobActionState> 
   while (attempts < 8) {
     attempts += 1;
     const newSlug = generatePublishedJobSlug(title);
-    const { error: upErr } = await supabase
+    let publishResult = await supabase
       .from('job_listings')
       .update({
         slug: newSlug,
         status: 'live',
         published_at: new Date().toISOString(),
+        scheduled_publish_at: null,
       })
       .eq('id', id)
       .eq('org_id', orgId)
       .eq('status', 'draft');
+    if (publishResult.error && isMissingNewJobListingColumnError(publishResult.error.message)) {
+      publishResult = await supabase
+        .from('job_listings')
+        .update({
+          slug: newSlug,
+          status: 'live',
+          published_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .eq('org_id', orgId)
+        .eq('status', 'draft');
+    }
+    const upErr = publishResult.error;
 
     if (!upErr) {
       await autoMoveRecruitmentRequestToInProgress({
@@ -489,6 +679,84 @@ export async function unarchiveJobListing(jobId: string): Promise<JobActionState
   return { ok: true };
 }
 
+export async function updateJobAdminLegalSettings(
+  jobId: string,
+  fields: {
+    successEmailBody: string | null;
+    rejectionEmailBody: string | null;
+    interviewInviteEmailBody: string | null;
+    offerTemplateId: string | null;
+    contractTemplateId: string | null;
+  },
+): Promise<JobActionState> {
+  const id = jobId?.trim();
+  if (!id) return { ok: false, error: 'Missing job.' };
+
+  const supabase = await createClient();
+  const user = await getAuthUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id, role, status')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!profile?.org_id || profile.status !== 'active') {
+    return { ok: false, error: 'Not allowed.' };
+  }
+  const { data: canEdit } = await supabase.rpc('has_permission', {
+    p_user_id: user.id,
+    p_org_id: profile.org_id,
+    p_permission_key: 'jobs.edit',
+    p_context: {},
+  });
+  if (!canEdit) {
+    return { ok: false, error: 'Not allowed.' };
+  }
+
+  const offerTemplateId = String(fields.offerTemplateId ?? '').trim() || null;
+  const contractTemplateId = String(fields.contractTemplateId ?? '').trim() || null;
+  if (offerTemplateId) {
+    const { data: tpl, error: tplErr } = await supabase
+      .from('offer_letter_templates')
+      .select('id')
+      .eq('id', offerTemplateId)
+      .eq('org_id', profile.org_id as string)
+      .maybeSingle();
+    if (tplErr || !tpl) return { ok: false, error: 'Selected offer template is invalid.' };
+  }
+  if (contractTemplateId) {
+    const { data: tpl, error: tplErr } = await supabase
+      .from('offer_letter_templates')
+      .select('id')
+      .eq('id', contractTemplateId)
+      .eq('org_id', profile.org_id as string)
+      .maybeSingle();
+    if (tplErr || !tpl) return { ok: false, error: 'Selected contract template is invalid.' };
+  }
+
+  let updateResult = await supabase
+    .from('job_listings')
+    .update({
+      success_email_body: String(fields.successEmailBody ?? '').trim() || null,
+      rejection_email_body: String(fields.rejectionEmailBody ?? '').trim() || null,
+      interview_invite_email_body: String(fields.interviewInviteEmailBody ?? '').trim() || null,
+      offer_template_id: offerTemplateId,
+      contract_template_id: contractTemplateId,
+    })
+    .eq('id', id)
+    .eq('org_id', profile.org_id as string);
+
+  if (updateResult.error && isMissingNewJobListingColumnError(updateResult.error.message)) {
+    return { ok: false, error: 'Run latest migrations before using Admin & legal settings.' };
+  }
+  if (updateResult.error) return { ok: false, error: updateResult.error.message };
+
+  revalidateJobs(id);
+  return { ok: true };
+}
+
 export type JobScreeningQuestionPersist = {
   id: string;
   sortOrder: number;
@@ -496,6 +764,11 @@ export type JobScreeningQuestionPersist = {
   prompt: string;
   helpText: string;
   required: boolean;
+  isPageBreak: boolean;
+  scoringEnabled: boolean;
+  scoringScaleMax: number;
+  initiallyHidden: boolean;
+  locked: boolean;
   maxLength: number | null;
   options: ScreeningQuestionOption[] | null;
 };
@@ -522,6 +795,9 @@ function validateJobScreeningQuestionsPersist(questions: JobScreeningQuestionPer
     if (q.maxLength != null && (q.maxLength < 1 || q.maxLength > 20000)) {
       return 'Max length must be between 1 and 20000.';
     }
+    if (!Number.isInteger(q.scoringScaleMax) || q.scoringScaleMax < 0 || q.scoringScaleMax > 5) {
+      return 'Scoring scale must be an integer between 0 and 5.';
+    }
   }
   return null;
 }
@@ -532,6 +808,11 @@ type ScreeningQuestionDbRow = {
   prompt: string;
   help_text?: string | null;
   required?: boolean | null;
+  is_page_break?: boolean | null;
+  scoring_enabled?: boolean | null;
+  scoring_scale_max?: number | null;
+  initially_hidden?: boolean | null;
+  locked?: boolean | null;
   max_length?: number | null;
   options?: unknown;
 };
@@ -568,6 +849,16 @@ function mapScreeningQuestionDbRowsToPersist(
       prompt,
       helpText: String(r.help_text ?? '').trim(),
       required: Boolean(r.required),
+      isPageBreak: Boolean((r as { is_page_break?: boolean | null }).is_page_break),
+      scoringEnabled: (r as { scoring_enabled?: boolean | null }).scoring_enabled !== false,
+      scoringScaleMax:
+        Number.isInteger((r as { scoring_scale_max?: number | null }).scoring_scale_max) &&
+        Number((r as { scoring_scale_max?: number | null }).scoring_scale_max) >= 0 &&
+        Number((r as { scoring_scale_max?: number | null }).scoring_scale_max) <= 5
+          ? Number((r as { scoring_scale_max?: number | null }).scoring_scale_max)
+          : 5,
+      initiallyHidden: Boolean((r as { initially_hidden?: boolean | null }).initially_hidden),
+      locked: Boolean((r as { locked?: boolean | null }).locked),
       maxLength: r.max_length == null ? null : Number(r.max_length),
       options,
     });
@@ -646,6 +937,11 @@ export async function replaceJobScreeningQuestions(
       prompt: q.prompt.trim(),
       help_text: q.helpText.trim() ? q.helpText.trim() : null,
       required: q.required,
+      is_page_break: Boolean(q.isPageBreak),
+      scoring_enabled: q.scoringEnabled !== false,
+      scoring_scale_max: q.scoringScaleMax,
+      initially_hidden: Boolean(q.initiallyHidden),
+      locked: Boolean(q.locked),
       max_length: q.maxLength,
       options: q.questionType === 'single_choice' ? (q.options ?? []) : null,
     };
@@ -766,7 +1062,7 @@ export async function cloneJobScreeningQuestionsFromJob(
 
   const { data: rows, error: qErr } = await supabase
     .from('job_listing_screening_questions')
-    .select('sort_order, question_type, prompt, help_text, required, max_length, options')
+    .select('sort_order, question_type, prompt, help_text, required, max_length, options, is_page_break, scoring_enabled, scoring_scale_max, initially_hidden, locked')
     .eq('job_listing_id', src)
     .order('sort_order', { ascending: true });
 
@@ -884,6 +1180,11 @@ export async function createOrgApplicationQuestionSetFromQuestions(
     prompt: q.prompt.trim(),
     help_text: q.helpText.trim() ? q.helpText.trim() : null,
     required: q.required,
+    is_page_break: Boolean(q.isPageBreak),
+    scoring_enabled: q.scoringEnabled !== false,
+    scoring_scale_max: q.scoringScaleMax,
+    initially_hidden: Boolean(q.initiallyHidden),
+    locked: Boolean(q.locked),
     max_length: q.maxLength,
     options: q.questionType === 'single_choice' ? (q.options ?? []) : null,
   }));
@@ -925,7 +1226,7 @@ export async function loadOrgApplicationQuestionSetAsPersist(
 
   const { data: rows, error } = await supabase
     .from('org_application_question_set_items')
-    .select('sort_order, question_type, prompt, help_text, required, max_length, options')
+    .select('sort_order, question_type, prompt, help_text, required, max_length, options, is_page_break, scoring_enabled, scoring_scale_max, initially_hidden, locked')
     .eq('set_id', sid)
     .order('sort_order', { ascending: true });
 

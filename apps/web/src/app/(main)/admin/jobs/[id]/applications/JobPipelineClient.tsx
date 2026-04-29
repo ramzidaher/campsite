@@ -1,10 +1,15 @@
 'use client';
 
 import { GenerateOfferModal } from '@/app/(main)/admin/jobs/[id]/applications/GenerateOfferModal';
+import { JobEditorTabNav } from '@/components/admin/JobEditorTabNav';
+import { useTopPageFeedback } from '@/lib/ui/useTopPageFeedback';
 import {
   bookInterviewForApplication,
   bulkCreateInterviewSlots,
+  listInterviewSessionsForJob,
   listAvailableInterviewSlotsForJob,
+  reassignInterviewSlotBooking,
+  type InterviewSessionRow,
   type InterviewSlotRow,
 } from '@/app/(main)/admin/interviews/actions';
 import {
@@ -148,6 +153,7 @@ export function JobPipelineClient({
   canScoreScreening,
   panelProfiles,
   requestedInterviewSchedule,
+  preferredOfferTemplateId,
 }: {
   jobListingId: string;
   jobTitle: string;
@@ -162,8 +168,10 @@ export function JobPipelineClient({
   canScoreScreening: boolean;
   panelProfiles: PanelProfile[];
   requestedInterviewSchedule: RequestedInterviewRow[];
+  preferredOfferTemplateId?: string | null;
 }) {
   const router = useRouter();
+  const { feedback: pageNotice, setFeedback: setPageNotice, feedbackRef } = useTopPageFeedback();
   const [applications, setApplications] = useState(initialApplications);
   useEffect(() => {
     setApplications(initialApplications);
@@ -243,6 +251,7 @@ export function JobPipelineClient({
   const [messageBody, setMessageBody] = useState('');
   const [interviewSlots, setInterviewSlots] = useState<InterviewSlotRow[]>([]);
   const [jobAvailableSlots, setJobAvailableSlots] = useState<InterviewSlotRow[]>([]);
+  const [jobInterviewSessions, setJobInterviewSessions] = useState<InterviewSessionRow[]>([]);
   const [interviewSlotId, setInterviewSlotId] = useState('');
   const [interviewJoining, setInterviewJoining] = useState('');
   const [slotDate, setSlotDate] = useState('');
@@ -254,6 +263,10 @@ export function JobPipelineClient({
   const [slotLocation, setSlotLocation] = useState('');
   const [slotNotes, setSlotNotes] = useState('');
   const [slotPanel, setSlotPanel] = useState<Record<string, boolean>>({});
+  const [panelSearch, setPanelSearch] = useState('');
+  const [showInterviewTool, setShowInterviewTool] = useState(false);
+  const [slotDetail, setSlotDetail] = useState<InterviewSessionRow | null>(null);
+  const [slotAssignAppId, setSlotAssignAppId] = useState<string>('');
   const [pending, startTransition] = useTransition();
 
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -288,6 +301,11 @@ export function JobPipelineClient({
       if (r.ok) setJobAvailableSlots(r.slots);
       else setJobAvailableSlots([]);
     });
+    void listInterviewSessionsForJob(jobListingId).then((r) => {
+      if (cancel) return;
+      if (r.ok) setJobInterviewSessions(r.sessions);
+      else setJobInterviewSessions([]);
+    });
     return () => {
       cancel = true;
     };
@@ -321,6 +339,22 @@ export function JobPipelineClient({
     () => Object.keys(slotPanel).filter((id) => slotPanel[id]),
     [slotPanel]
   );
+  const selectedPanelProfiles = useMemo(
+    () => panelProfiles.filter((profile) => selectedPanelIds.includes(profile.id)),
+    [panelProfiles, selectedPanelIds]
+  );
+  const panelSearchResults = useMemo(() => {
+    const q = panelSearch.trim().toLowerCase();
+    if (!q) return [];
+    return panelProfiles
+      .filter((profile) => !slotPanel[profile.id])
+      .filter((profile) => {
+        const name = profile.full_name?.toLowerCase() ?? '';
+        const email = profile.email?.toLowerCase() ?? '';
+        return name.includes(q) || email.includes(q);
+      })
+      .slice(0, 6);
+  }, [panelProfiles, panelSearch, slotPanel]);
 
   function generateSlotsForSession() {
     if (!slotDate || !slotStart || !slotEnd) {
@@ -354,12 +388,12 @@ export function JobPipelineClient({
   function createSlotsForJob() {
     if (!canCreateInterviewSlot) return;
     if (selectedPanelIds.length === 0) {
-      alert('Select at least one panel member.');
+      setPageNotice({ type: 'err', text: 'Select at least one panel member.' });
       return;
     }
     const generated = generateSlotsForSession();
     if (generated.error) {
-      alert(generated.error);
+      setPageNotice({ type: 'err', text: generated.error });
       return;
     }
     const titleBits = ['Interview'];
@@ -374,9 +408,46 @@ export function JobPipelineClient({
         panelistProfileIds: selectedPanelIds,
       });
       if (!res.ok) {
-        alert(res.error);
+        setPageNotice({ type: 'err', text: res.error });
         return;
       }
+      setShowInterviewTool(false);
+      setPanelSearch('');
+      setPageNotice({ type: 'ok', text: 'Interview slots created.' });
+      const [availableRes, sessionsRes] = await Promise.all([
+        listAvailableInterviewSlotsForJob(jobListingId),
+        listInterviewSessionsForJob(jobListingId),
+      ]);
+      if (availableRes.ok) setJobAvailableSlots(availableRes.slots);
+      if (sessionsRes.ok) setJobInterviewSessions(sessionsRes.sessions);
+      router.refresh();
+    });
+  }
+
+  function openSlotDetail(session: InterviewSessionRow) {
+    setSlotDetail(session);
+    setSlotAssignAppId(session.booked_applications[0]?.id ?? '');
+  }
+
+  function saveSlotAssignment() {
+    if (!slotDetail || !canManageInterviews) return;
+    startTransition(async () => {
+      const res = await reassignInterviewSlotBooking({
+        jobListingId,
+        slotId: slotDetail.id,
+        applicationId: slotAssignAppId || null,
+      });
+      if (!res.ok) {
+        setPageNotice({ type: 'err', text: res.error });
+        return;
+      }
+      const sessionsRes = await listInterviewSessionsForJob(jobListingId);
+      if (sessionsRes.ok) {
+        setJobInterviewSessions(sessionsRes.sessions);
+        const refreshed = sessionsRes.sessions.find((s) => s.id === slotDetail.id) ?? null;
+        setSlotDetail(refreshed);
+      }
+      setPageNotice({ type: 'ok', text: 'Interview slot booking updated.' });
       router.refresh();
     });
   }
@@ -430,7 +501,10 @@ export function JobPipelineClient({
     if (!stageDialog) return;
     if (stageDialog.toStage === 'interview_scheduled') {
       if (!interviewSlotId) {
-        alert('Choose an available interview slot (create slots under Admin → Interview schedule if none appear).');
+        setPageNotice({
+          type: 'err',
+          text: 'Choose an available interview slot (create slots first if none appear).',
+        });
         return;
       }
       startTransition(async () => {
@@ -442,7 +516,7 @@ export function JobPipelineClient({
           portalMessage: interviewJoining,
         });
         if (!res.ok) {
-          alert(res.error);
+          setPageNotice({ type: 'err', text: res.error });
           return;
         }
         setStageDialog(null);
@@ -450,6 +524,7 @@ export function JobPipelineClient({
         setMessageBody('');
         setInterviewSlotId('');
         setInterviewJoining('');
+        setPageNotice({ type: 'ok', text: 'Applicant moved to interview stage.' });
         router.refresh();
       });
       return;
@@ -461,12 +536,16 @@ export function JobPipelineClient({
         jobListingId,
       });
       if (!res.ok) {
-        alert(res.error);
+        setPageNotice({ type: 'err', text: res.error });
         return;
       }
       setStageDialog(null);
       setNotify(false);
       setMessageBody('');
+      setPageNotice({
+        type: 'ok',
+        text: `Applicant moved to ${jobApplicationStageLabel(stageDialog.toStage)}.`,
+      });
       router.refresh();
     });
   };
@@ -584,10 +663,9 @@ export function JobPipelineClient({
           Pipeline
         </p>
         <h1 className="mt-1 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">{jobTitle}</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Drag cards between columns or use the stage menu on each card. Optional email to the candidate when you move
-          stage.
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6b6b6b]">
+          <JobEditorTabNav jobId={jobListingId} activeTab="applicants" />
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[#6b6b6b]">
           <span className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1">
             Total applications: {totalApplications}
@@ -603,13 +681,83 @@ export function JobPipelineClient({
               <option value="screening_avg">Application question average</option>
             </select>
           </label>
-          <a href="/hr/applications" className="rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1 transition-colors hover:bg-[#f5f4f1]">
-            Open full application tracker
-          </a>
+          <button
+            type="button"
+            onClick={() => setShowInterviewTool(true)}
+            className="rounded-full border border-[#d8d8d8] bg-white px-3 py-1 transition-colors hover:bg-[#f5f4f1]"
+          >
+            Create interview slots
+          </button>
         </div>
+        {jobInterviewSessions.length > 0 ? (
+          <div className="mt-3 overflow-x-auto rounded-lg border border-[#d8d8d8] bg-white">
+            <table className="min-w-full text-left text-[12px]">
+              <thead className="border-b border-[#ececec] bg-[#fafafa] text-[11px] font-semibold uppercase tracking-wide text-[#7a7a7a]">
+                <tr>
+                  <th className="px-3 py-2.5">Date and Time</th>
+                  <th className="px-3 py-2.5">Interview slot time</th>
+                  <th className="px-3 py-2.5">Slots remaining</th>
+                  <th className="px-3 py-2.5">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f0f0f0]">
+                {jobInterviewSessions.map((session) => {
+                  const starts = new Date(session.starts_at);
+                  const ends = new Date(session.ends_at);
+                  const durationMins = Math.max(0, Math.round((ends.getTime() - starts.getTime()) / 60000));
+                  const totalSlots = 1;
+                  const remainingSlots = session.status === 'available' ? 1 : 0;
+                  return (
+                    <tr key={session.id} className="bg-[#fafaf9]">
+                      <td className="px-3 py-2.5 font-medium text-[#121212]">
+                        {starts.toLocaleString([], { hour: '2-digit', minute: '2-digit' })}{' '}
+                        {starts.toLocaleDateString('en-GB')}
+                      </td>
+                      <td className="px-3 py-2.5 text-[#505050]">
+                        {durationMins} mins
+                        {session.panel_names.length ? ` · Panel: ${session.panel_names.join(', ')}` : ''}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-900">
+                          {remainingSlots} slot{remainingSlots === 1 ? '' : 's'} out of {totalSlots} remaining
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => openSlotDetail(session)}
+                          className="rounded-md border border-[#d8d8d8] bg-white px-2.5 py-1 text-[11px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                        >
+                          Details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        {pageNotice ? (
+          <div
+            ref={feedbackRef}
+            tabIndex={-1}
+            role={pageNotice.type === 'err' ? 'alert' : 'status'}
+            className={[
+              'mt-3 rounded-xl border px-4 py-3 text-[13px]',
+              pageNotice.type === 'err'
+                ? 'border-red-200 bg-red-50 text-red-900'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-950',
+            ].join(' ')}
+          >
+            {pageNotice.text}
+          </div>
+        ) : null}
       </div>
 
-      <section className="rounded-xl border border-[#d8d8d8] bg-white p-4 sm:p-5">
+      {showInterviewTool ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+          <section className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white p-4 shadow-lg sm:p-5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <h2 className="font-authSerif text-[19px] leading-tight text-[#121212]">Interview sessions for this role</h2>
@@ -731,35 +879,64 @@ export function JobPipelineClient({
 
         <div className="mt-3">
           <p className="mb-1 text-[12px] font-medium text-[#505050]">Panel members</p>
-          <div className="max-h-40 overflow-y-auto rounded-lg border border-[#e8e8e8]">
-            {panelProfiles.length === 0 ? (
-              <p className="p-3 text-[12px] text-[#9b9b9b]">No active staff profiles found.</p>
-            ) : (
-              <ul className="divide-y divide-[#f0f0f0]">
-                {panelProfiles.map((profile) => (
-                  <li key={profile.id} className="px-3 py-2">
-                    <label className="flex cursor-pointer items-center gap-2 text-[12px]">
-                      <input
-                        type="checkbox"
-                        checked={!!slotPanel[profile.id]}
-                        onChange={() =>
-                          setSlotPanel((prev) => ({
-                            ...prev,
-                            [profile.id]: !prev[profile.id],
-                          }))
-                        }
-                      />
-                      <span className="font-medium text-[#121212]">{profile.full_name?.trim() || '-'}</span>
-                      <span className="text-[#9b9b9b]">{profile.email ?? ''}</span>
-                    </label>
-                  </li>
+          <div className="rounded-lg border border-[#e8e8e8] p-3">
+            <input
+              value={panelSearch}
+              onChange={(e) => setPanelSearch(e.target.value)}
+              placeholder="Type staff name and add to panel"
+              className="h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+            />
+            {panelSearchResults.length > 0 ? (
+              <div className="mt-2 overflow-hidden rounded-lg border border-[#ececec] bg-white">
+                {panelSearchResults.map((profile) => (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() => {
+                      setSlotPanel((prev) => ({ ...prev, [profile.id]: true }));
+                      setPanelSearch('');
+                    }}
+                    className="flex w-full items-center justify-between border-b border-[#f0f0f0] px-3 py-2 text-left text-[12px] last:border-b-0 hover:bg-[#f7fbf8]"
+                  >
+                    <span className="font-medium text-[#121212]">{profile.full_name?.trim() || '-'}</span>
+                    <span className="text-[#9b9b9b]">{profile.email ?? ''}</span>
+                  </button>
                 ))}
-              </ul>
+              </div>
+            ) : null}
+            {selectedPanelProfiles.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {selectedPanelProfiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() =>
+                      setSlotPanel((prev) => ({
+                        ...prev,
+                        [profile.id]: false,
+                      }))
+                    }
+                    className="rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-1 text-[11px] text-[#121212]"
+                    title="Remove from panel"
+                  >
+                    {profile.full_name?.trim() || profile.email || 'Staff'} ×
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-[12px] text-[#9b9b9b]">No panel members selected yet.</p>
             )}
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowInterviewTool(false)}
+            className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+          >
+            Close
+          </button>
           <button
             type="button"
             onClick={createSlotsForJob}
@@ -774,7 +951,83 @@ export function JobPipelineClient({
             </span>
           ) : null}
         </div>
-      </section>
+          </section>
+        </div>
+      ) : null}
+
+      {slotDetail ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+          <section className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white p-4 shadow-lg sm:p-5">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-authSerif text-[20px] leading-tight text-[#121212]">Interview Slot</h2>
+                <p className="mt-1 text-[12px] text-[#6b6b6b]">
+                  {new Date(slotDetail.starts_at).toLocaleDateString('en-GB')} ·{' '}
+                  {new Date(slotDetail.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {' - '}
+                  {new Date(slotDetail.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSlotDetail(null)}
+                className="rounded-md border border-[#d8d8d8] bg-white px-2.5 py-1 text-[12px] text-[#121212]"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-[#e8e8e8] p-3 text-[12px]">
+              <p>
+                <span className="font-medium text-[#121212]">Panel:</span>{' '}
+                {slotDetail.panel_names.length ? slotDetail.panel_names.join(', ') : 'Not assigned'}
+              </p>
+              <p>
+                <span className="font-medium text-[#121212]">Booked applicant:</span>{' '}
+                {slotDetail.booked_applications[0]
+                  ? `${slotDetail.booked_applications[0].candidate_name} (${slotDetail.booked_applications[0].candidate_email})`
+                  : 'No one booked'}
+              </p>
+              <p>
+                <span className="font-medium text-[#121212]">Slots remaining:</span>{' '}
+                {slotDetail.status === 'available' ? '1 slot out of 1 remaining' : '0 slots out of 1 remaining'}
+              </p>
+            </div>
+
+            {canManageInterviews ? (
+              <div className="mt-4 rounded-lg border border-[#d8d8d8] bg-[#fafaf9] p-3">
+                <label className="text-[12px] font-medium text-[#505050]">Assign applicant to this slot</label>
+                <select
+                  value={slotAssignAppId}
+                  onChange={(e) => setSlotAssignAppId(e.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
+                >
+                  <option value="">No applicant (keep/open slot)</option>
+                  {applications.map((app) => (
+                    <option key={app.id} value={app.id}>
+                      {app.candidate_name} ({app.candidate_email})
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={saveSlotAssignment}
+                    disabled={pending}
+                    className="rounded-lg bg-[#121212] px-3 py-2 text-[12px] font-medium text-white disabled:opacity-60"
+                  >
+                    {pending ? 'Saving...' : 'Save slot assignment'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-4 text-[12px] text-[#9b9b9b]">
+                You can view slot details, but only users with interview management permission can edit booking.
+              </p>
+            )}
+          </section>
+        </div>
+      ) : null}
 
       {totalApplications === 0 ? (
         <div className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-4 text-[13px] text-[#6b6b6b]">
@@ -1087,6 +1340,7 @@ export function JobPipelineClient({
           jobListingId={jobListingId}
           applicationId={generateOfferFor.id}
           candidateName={generateOfferFor.candidate_name}
+          preferredTemplateId={preferredOfferTemplateId ?? null}
           onClose={() => setGenerateOfferFor(null)}
           onSent={() => {
             router.refresh();

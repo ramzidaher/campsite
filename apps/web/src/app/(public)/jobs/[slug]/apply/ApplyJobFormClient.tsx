@@ -15,6 +15,10 @@ type PublicScreeningQuestionRow = {
   prompt: string;
   help_text: string | null;
   required: boolean;
+  is_page_break?: boolean | null;
+  scoring_enabled?: boolean | null;
+  initially_hidden?: boolean | null;
+  locked?: boolean | null;
   options: unknown;
   max_length: number | null;
   sort_order: number;
@@ -81,6 +85,7 @@ export function ApplyJobFormClient({
   const screeningPayloadJson = useMemo(() => {
     const rows = screeningQuestions ?? [];
     const arr = rows.map((q) => {
+      if (q.is_page_break) return { question_id: q.id };
       const a = screeningAnswers[q.id] ?? {};
       const base: Record<string, unknown> = { question_id: q.id };
       if (q.question_type === 'short_text' || q.question_type === 'paragraph') {
@@ -113,6 +118,7 @@ export function ApplyJobFormClient({
     const rows = screeningQuestions ?? [];
     if (rows.length === 0) return true;
     return rows.every((q) => {
+      if (q.is_page_break) return true;
       const a = screeningAnswers[q.id];
       if (!q.required) return true;
       if (q.question_type === 'short_text' || q.question_type === 'paragraph') {
@@ -573,6 +579,16 @@ export function ApplyJobFormClient({
                     Role-specific questions
                   </p>
                   {(screeningQuestions ?? []).map((q) => {
+                    if (q.is_page_break) {
+                      return (
+                        <div key={q.id} className="rounded-[9px] border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                          <p className="text-[12px] font-semibold uppercase tracking-wide text-[#475569]">
+                            Page break
+                          </p>
+                          <p className="mt-1 text-[14px] font-medium text-[#0f172a]">{q.prompt}</p>
+                        </div>
+                      );
+                    }
                     const opts = Array.isArray(q.options)
                       ? (q.options as { id?: string; label?: string }[])
                           .map((o) => ({

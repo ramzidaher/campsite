@@ -1,0 +1,2 @@
+-- No-op migration to align local migration history with remote.
+-- Remote already references version 20260730233000.

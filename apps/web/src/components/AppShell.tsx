@@ -13,6 +13,7 @@ import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import { buildShellCommandPaletteSections } from '@/lib/shell/shellCommandPaletteSections';
 import { useShellBadgeCounts } from '@/hooks/useShellBadgeCounts';
 import { CheckboxUiSoundCapture } from '@/components/sound/CheckboxUiSoundCapture';
+import { GlobalActionFeedbackBridge } from '@/components/providers/GlobalActionFeedbackBridge';
 import { useUiSound } from '@/lib/sound/useUiSound';
 import { HolidayOverlay } from '@/components/shell/HolidayOverlay';
 import {
@@ -56,6 +57,21 @@ function safeHttpImageUrl(raw: string | null | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+function DegradedLastUpdatedText({ shellLastSuccessAt }: { shellLastSuccessAt: number }) {
+  const [nowMs, setNowMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Hydration-safe: render nothing on the server/first paint, then start ticking client-side.
+    setNowMs(Date.now());
+    const interval = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  if (nowMs === null) return null;
+  const secs = Math.max(0, Math.round((nowMs - shellLastSuccessAt) / 1000));
+  return <span className="text-amber-800/80">Last updated {secs}s ago</span>;
 }
 
 function NavLink({
@@ -444,10 +460,6 @@ export function AppShell({
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
   const showUserAvatar = Boolean(safeUserAvatar) && !userAvatarFailed;
   const shouldShowDegradedBanner = shellDegraded || shellDataFreshness === 'stale';
-  const degradedLastUpdated =
-    typeof shellLastSuccessAt === 'number'
-      ? Math.max(0, Math.round((Date.now() - shellLastSuccessAt) / 1000))
-      : null;
 
   const paletteSections = useMemo(
     () =>
@@ -1319,8 +1331,8 @@ export function AppShell({
           <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[12px] text-amber-900 sm:px-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">Refreshing workspace data...</span>
-              {degradedLastUpdated !== null ? (
-                <span className="text-amber-800/80">Last updated {degradedLastUpdated}s ago</span>
+              {typeof shellLastSuccessAt === 'number' ? (
+                <DegradedLastUpdatedText shellLastSuccessAt={shellLastSuccessAt} />
               ) : null}
               {shellDegradedReason ? (
                 <span className="text-amber-800/80">({shellDegradedReason})</span>
@@ -1335,6 +1347,7 @@ export function AppShell({
             </div>
           </div>
         ) : null}
+        <GlobalActionFeedbackBridge />
         <main id="main-content" tabIndex={-1} className="workspace-fluid flex-1 overflow-x-hidden overflow-y-auto">
           {children}
         </main>
