@@ -3,6 +3,8 @@
 **Follow-up to:** `reports/phase1-production-hardening-stage-report.md`
 **Status:** CODE-SIDE COMPLETE — production validation still required before Phase 1 can be called fully done
 
+**Validation follow-up:** `reports/phase1-production-validation-stage-report.md`
+
 ---
 
 ## What Was Verified First
