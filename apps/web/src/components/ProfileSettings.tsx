@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { Camera } from 'lucide-react';
 import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
@@ -635,6 +636,10 @@ export function ProfileSettings({
     applyAccessibilityPreferencesToDocument(DEFAULT_ACCESSIBILITY_PREFERENCES);
   }
 
+  const invalidateOwnProfileCaches = useCallback(async (userId: string) => {
+    await invalidateClientCaches({ scopes: ['profile-self'], shellUserIds: [userId] });
+  }, []);
+
   async function toggleBroadcastChannel(channelId: string, next: boolean) {
     const snapshot = channelPrefs;
     setChannelPrefs((p) => p.map((c) => (c.channel_id === channelId ? { ...c, subscribed: next } : c)));
@@ -675,6 +680,7 @@ export function ProfileSettings({
       setFeedback(error.message, 'error');
       return;
     }
+    await invalidateOwnProfileCaches(u.user.id).catch(() => null);
     setFeedback('Profile photo updated.', 'success');
     router.refresh();
   }
@@ -725,6 +731,7 @@ export function ProfileSettings({
       .eq('id', u.user.id);
     setLoading(false);
     if (error) { setFeedback(error.message, 'error'); return; }
+    await invalidateOwnProfileCaches(u.user.id).catch(() => null);
     setFeedback('Saved.', 'success');
     router.refresh();
   }
@@ -787,6 +794,7 @@ export function ProfileSettings({
     const { error } = await supabase.from('profiles').update({ status: 'inactive' }).eq('id', u.user.id);
     setLoading(false);
     if (error) { setFeedback(error.message, 'error'); return; }
+    await invalidateOwnProfileCaches(u.user.id).catch(() => null);
     await supabase.auth.signOut();
     router.replace('/login');
   }

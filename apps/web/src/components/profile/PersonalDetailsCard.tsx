@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -54,6 +55,7 @@ export function PersonalDetailsCard({
       .eq('id', data.user.id);
     setLoading(false);
     if (error) return;
+    await invalidateClientCaches({ scopes: ['profile-self'], shellUserIds: [data.user.id] }).catch(() => null);
     setEditing(false);
     router.refresh();
   }

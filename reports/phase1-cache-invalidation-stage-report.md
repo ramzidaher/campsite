@@ -3,6 +3,9 @@
 **Follow-up to:** `reports/phase1-redis-cache-stage-report.md`
 **Status:** PARTIALLY COMPLETE — core invalidation layer added and wired into major write paths; some domains still TTL-only
 
+**Follow-up:** production hardening and scope tightening are tracked in `reports/phase1-production-hardening-stage-report.md`
+**Latest code-side status:** `reports/phase1-code-closure-stage-report.md`
+
 ---
 
 ## What Was Verified First

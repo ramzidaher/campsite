@@ -3,6 +3,8 @@
 **Scope:** Full backend and database architecture review
 **Trigger:** Recurring production degradation under concurrent load (see `incident/prod-route-thrash-20260428-*`)
 
+> Status note (2026-04-30): this file is the original findings document. Current Phase 1 implementation status now lives in `reports/phase1-redis-cache-stage-report.md`, `reports/phase1-cache-invalidation-stage-report.md`, `reports/phase1-production-hardening-stage-report.md`, and `reports/phase1-code-closure-stage-report.md`. The checklist items below for `PermissionsContext` and “64 has_permission RPC calls in pages” are historical and were already resolved before remediation work started. The only remaining Phase 1 blocker after the code-side closure pass is deployed production validation.
+
 ---
 
 ## Executive Summary

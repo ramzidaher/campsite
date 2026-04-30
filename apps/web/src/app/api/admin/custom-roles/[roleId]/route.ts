@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { invalidateAllShellCaches } from '@/lib/cache/cacheInvalidation';
+import { invalidateShellCachesForOrg } from '@/lib/cache/cacheInvalidation';
 import { buildPermissionPickerItems } from '@/lib/authz/buildPermissionPicker';
 import { validateCustomRolePermissionKeys } from '@/lib/authz/validateCustomRolePermissions';
 import type { CustomRoleResponse } from '@/lib/authz/customRolePickerContract';
@@ -123,7 +123,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ro
     p_permission_keys: keys,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  await invalidateAllShellCaches();
+  await invalidateShellCachesForOrg(me.org_id as string);
   return NextResponse.json({ ok: true });
 }
 
@@ -148,6 +148,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     p_role_id: roleId,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  await invalidateAllShellCaches();
+  await invalidateShellCachesForOrg(me.org_id as string);
   return NextResponse.json({ ok: true });
 }

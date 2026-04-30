@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -61,6 +62,10 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
     }
     setApproveMinutes(am);
   }, [orgId, supabase]);
+
+  const invalidateAttendanceCaches = useCallback(async () => {
+    await invalidateClientCaches({ scopes: ['leave-attendance'] });
+  }, []);
 
   useEffect(() => {
     void load();
@@ -124,6 +129,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
       setErr(error.message);
       return;
     }
+    await invalidateAttendanceCaches().catch(() => null);
     await load();
   }
 
@@ -166,6 +172,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
       return;
     }
     setProxyReason('');
+    await invalidateAttendanceCaches().catch(() => null);
   }
 
   async function voidSickness(absenceId: string) {
@@ -182,6 +189,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
       return;
     }
     setVoidNotes('');
+    await invalidateAttendanceCaches().catch(() => null);
     void (async () => {
       const { data } = await supabase
         .from('sickness_absences')

@@ -11,6 +11,7 @@ import {
 import { leaveRangeOverlapsExisting } from '@/lib/leaveDateOverlap';
 import { formatToilMinutes, toilInputToMinutes } from '@/lib/toilDuration';
 import { countOrgLeaveDaysInclusive, overlapInclusiveRange, type OrgLeaveDayOptions } from '@/lib/workingDays';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { CampfireLoaderInline } from '@/components/CampfireLoaderInline';
 import { Calendar, ChevronDown, Info } from 'lucide-react';
@@ -738,6 +739,15 @@ export function LeaveHubClient({
     }
   }, [supabase, orgId, userId, year, canApprove, canManage, calendarMonth]);
 
+  const invalidateLeaveAttendanceCaches = useCallback(async () => {
+    await invalidateClientCaches({ scopes: ['leave-attendance'] });
+  }, []);
+
+  const handleLeaveMutationSuccess = useCallback(async () => {
+    await invalidateLeaveAttendanceCaches().catch(() => null);
+    await load();
+  }, [invalidateLeaveAttendanceCaches, load]);
+
   useEffect(() => {
     setLeaveHubReady(false);
   }, [year]);
@@ -813,7 +823,7 @@ export function LeaveHubClient({
       }
     }
     setFormStart(''); setFormEnd(''); setFormNote(''); setFormDayMode('full'); setFormHalfDayPortion('am'); setFormParentalSubtype('maternity'); setFormSupportingDoc(null); setFormSupportingDocKind('fit_note'); setShowLeaveForm(false);
-    await load();
+    await handleLeaveMutationSuccess();
   }
 
   async function openSupportingDocument(doc: LeaveRequestDocument) {
@@ -839,7 +849,7 @@ export function LeaveHubClient({
     setBusy(false);
     if (error) { setMsg(error.message); return; }
     setSickStart(''); setSickEnd(''); setSickNotes(''); setSickDayMode('full'); setSickHalfDayPortion('am'); setShowSickForm(false);
-    await load();
+    await handleLeaveMutationSuccess();
   }
 
   async function cancelRequest(id: string) {
@@ -847,35 +857,40 @@ export function LeaveHubClient({
     queueEntityCalendarSync({ type: 'leave', id, action: 'delete' });
     const { error } = await supabase.rpc('leave_request_cancel', { p_request_id: id });
     setBusy(false);
-    if (error) setMsg(error.message); else await load();
+    if (error) setMsg(error.message);
+    else await handleLeaveMutationSuccess();
   }
 
   async function cancelToilCreditRequest(id: string) {
     setBusy(true);
     const { error } = await supabase.rpc('toil_credit_request_cancel', { p_request_id: id });
     setBusy(false);
-    if (error) setMsg(error.message); else await load();
+    if (error) setMsg(error.message);
+    else await handleLeaveMutationSuccess();
   }
 
   async function cancelCarryoverRequest(id: string) {
     setBusy(true);
     const { error } = await supabase.rpc('leave_carryover_request_cancel', { p_request_id: id });
     setBusy(false);
-    if (error) setMsg(error.message); else await load();
+    if (error) setMsg(error.message);
+    else await handleLeaveMutationSuccess();
   }
 
   async function cancelEncashmentRequest(id: string) {
     setBusy(true);
     const { error } = await supabase.rpc('leave_encashment_request_cancel', { p_request_id: id });
     setBusy(false);
-    if (error) setMsg(error.message); else await load();
+    if (error) setMsg(error.message);
+    else await handleLeaveMutationSuccess();
   }
 
   async function requestCancelApproval(id: string) {
     setBusy(true);
     const { error } = await supabase.rpc('leave_request_cancel_request', { p_request_id: id });
     setBusy(false);
-    if (error) setMsg(error.message); else await load();
+    if (error) setMsg(error.message);
+    else await handleLeaveMutationSuccess();
   }
 
   async function requestEditApproval(e: React.FormEvent) {
@@ -907,7 +922,7 @@ export function LeaveHubClient({
     setEditDayMode('full');
     setEditHalfDayPortion('am');
     setEditParentalSubtype('maternity');
-    await load();
+    await handleLeaveMutationSuccess();
   }
 
   function openEditDialog(r: LeaveRequest) {
@@ -956,7 +971,7 @@ export function LeaveHubClient({
     setToilEarnAmount('');
     setToilEarnNote('');
     setShowToilEarnForm(false);
-    await load();
+    await handleLeaveMutationSuccess();
   }
 
   async function submitCarryoverRequest(e: React.FormEvent) {
@@ -978,7 +993,7 @@ export function LeaveHubClient({
     setCarryoverDays('');
     setCarryoverNote('');
     setShowCarryoverForm(false);
-    await load();
+    await handleLeaveMutationSuccess();
   }
 
   async function submitEncashmentRequest(e: React.FormEvent) {
@@ -1000,7 +1015,7 @@ export function LeaveHubClient({
     setEncashmentDays('');
     setEncashmentNote('');
     setShowEncashmentForm(false);
-    await load();
+    await handleLeaveMutationSuccess();
   }
 
   async function submitApprovalDecision() {
@@ -1042,7 +1057,7 @@ export function LeaveHubClient({
     }
     setApprovalModal(null);
     setApprovalNote('');
-    await load();
+    await handleLeaveMutationSuccess();
   }
 
   async function submitBulkApprovalDecision(approve: boolean) {
@@ -1092,7 +1107,7 @@ export function LeaveHubClient({
     setBusy(false);
     setSelectedApprovalKeys([]);
     setBulkApprovalNote('');
-    await load();
+    await handleLeaveMutationSuccess();
     if (failures.length) {
       setMsg(`${success} processed, ${failures.length} failed. ${failures[0]}`);
     } else {

@@ -1,6 +1,7 @@
 'use client';
 
 import { currentLeaveYearKey } from '@/lib/datetime';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -172,6 +173,10 @@ export function OrgLeaveAdminClient({
     setMsgKind(kind);
   }
 
+  const invalidateLeaveAttendanceCaches = useCallback(async () => {
+    await invalidateClientCaches({ scopes: ['leave-attendance'] });
+  }, []);
+
   async function saveAllowance(e: React.FormEvent) {
     e.preventDefault();
     if (!targetId) return;
@@ -185,7 +190,10 @@ export function OrgLeaveAdminClient({
     });
     setBusy(false);
     if (error) flash(error.message, 'err');
-    else flash('Allowance saved.');
+    else {
+      await invalidateLeaveAttendanceCaches().catch(() => null);
+      flash('Allowance saved.');
+    }
   }
 
   async function saveSettings(e: React.FormEvent) {
@@ -259,6 +267,7 @@ export function OrgLeaveAdminClient({
     setBusy(false);
     if (error) flash(error.message, 'err');
     else {
+      await invalidateLeaveAttendanceCaches().catch(() => null);
       if (removeOrgDefaultAnnual) {
         setDefaultOrgAnnual('');
         setRemoveOrgDefaultAnnual(false);
@@ -276,7 +285,10 @@ export function OrgLeaveAdminClient({
     });
     setBusy(false);
     if (error) flash(error.message, 'err');
-    else flash(`Applied default to ${typeof data === 'number' ? data : 0} people for ${year}.`);
+    else {
+      await invalidateLeaveAttendanceCaches().catch(() => null);
+      flash(`Applied default to ${typeof data === 'number' ? data : 0} people for ${year}.`);
+    }
   }
 
   async function addHolidayPeriod(e: React.FormEvent) {
@@ -306,6 +318,7 @@ export function OrgLeaveAdminClient({
     setHolidayStart('');
     setHolidayEnd('');
     await loadHolidayPeriods();
+    await invalidateLeaveAttendanceCaches().catch(() => null);
     flash('Holiday period added.');
   }
 
@@ -323,6 +336,7 @@ export function OrgLeaveAdminClient({
       return;
     }
     await loadHolidayPeriods();
+    await invalidateLeaveAttendanceCaches().catch(() => null);
     flash(nextActive ? 'Holiday period enabled.' : 'Holiday period disabled.');
   }
 
@@ -340,6 +354,7 @@ export function OrgLeaveAdminClient({
       return;
     }
     await loadHolidayPeriods();
+    await invalidateLeaveAttendanceCaches().catch(() => null);
     flash('Holiday period removed.');
   }
 

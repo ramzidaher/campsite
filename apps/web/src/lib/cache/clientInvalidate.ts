@@ -1,11 +1,17 @@
 export type ClientCacheInvalidationScope =
   | 'org-members'
+  | 'org-settings'
+  | 'departments'
   | 'jobs'
   | 'applications'
   | 'recruitment'
   | 'interviews'
   | 'onboarding'
-  | 'performance';
+  | 'performance'
+  | 'hr-records'
+  | 'leave-attendance'
+  | 'attendance-self'
+  | 'profile-self';
 
 export async function invalidateClientCaches({
   scopes,

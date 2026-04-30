@@ -190,7 +190,7 @@ export function AdminDepartmentsClient({
   }, [router]);
 
   const invalidateDepartmentViews = useCallback(async () => {
-    await invalidateClientCaches({ scopes: ['org-members', 'jobs', 'applications', 'recruitment'] });
+    await invalidateClientCaches({ scopes: ['departments'] });
   }, []);
 
   async function createDept() {

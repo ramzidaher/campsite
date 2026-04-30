@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import {
   CELEBRATION_MODE_OPTIONS,
@@ -526,9 +527,14 @@ export function OrgSettingsClient({
     setMsgTone(tone);
   }
 
+  async function invalidateOrgSettingsCaches() {
+    await invalidateClientCaches({ scopes: ['org-settings'] }).catch(() => null);
+  }
+
   async function persistBrandingPatch(patch: Record<string, unknown>) {
     const { error } = await supabase.from('organisations').update(patch).eq('id', initial.id);
     if (error) throw new Error(error.message);
+    await invalidateOrgSettingsCaches();
   }
 
   function toLogoDevDomain(input: string): string | null {
@@ -705,6 +711,7 @@ export function OrgSettingsClient({
       flash(error.message, 'err');
       return;
     }
+    await invalidateOrgSettingsCaches();
     flash(
       enforced.adjusted
         ? 'Branding saved. Some colors were adjusted for accessibility.'
@@ -814,6 +821,7 @@ export function OrgSettingsClient({
       flash(error.message, 'err');
       return;
     }
+    await invalidateOrgSettingsCaches();
     flash('Settings saved.', 'ok');
     router.refresh();
   }
@@ -834,6 +842,7 @@ export function OrgSettingsClient({
     setLoading(false);
     if (error) flash(error.message, 'err');
     else {
+      await invalidateOrgSettingsCaches();
       flash('Deactivation request recorded.', 'ok');
       router.refresh();
     }
@@ -895,6 +904,7 @@ export function OrgSettingsClient({
       flash(error.message, 'err');
       return;
     }
+    await invalidateOrgSettingsCaches();
     flash('Celebration settings saved.', 'ok');
     router.refresh();
   }
@@ -914,6 +924,7 @@ export function OrgSettingsClient({
       return;
     }
     setCelebrationModes((prev) => prev.filter((row) => row.mode_key !== modeKey));
+    await invalidateOrgSettingsCaches();
     flash('Custom mode removed.', 'ok');
     router.refresh();
   }

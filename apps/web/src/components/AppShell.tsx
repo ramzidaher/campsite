@@ -25,6 +25,7 @@ import {
   type CelebrationMode,
 } from '@/lib/holidayThemes';
 import { orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
 import { nextUiMode, type UiMode } from '@/lib/uiMode';
@@ -382,6 +383,7 @@ export function AppShell({
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) return;
     await supabase.from('profiles').update({ ui_mode: nextMode }).eq('id', authData.user.id);
+    await invalidateClientCaches({ scopes: ['profile-self'], shellUserIds: [authData.user.id] }).catch(() => null);
   };
 
   useEffect(() => {

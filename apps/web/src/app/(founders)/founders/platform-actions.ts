@@ -1,5 +1,13 @@
 'use server';
 
+import {
+  invalidateAllKnownSharedCachesForOrg,
+  invalidateOrgMemberCachesForOrg,
+  invalidateOrgSettingsCachesForOrg,
+  invalidateShellCacheForUser,
+  invalidateShellCachesForOrg,
+  invalidateShellCachesForUsers,
+} from '@/lib/cache/cacheInvalidation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -69,6 +77,20 @@ async function getPlatformFounderContext(): Promise<
   return { ok: true, userId: user.id, userSupabase };
 }
 
+async function invalidateFounderMemberMutation(orgId: string, userIds: string[]): Promise<void> {
+  await Promise.all([
+    invalidateOrgMemberCachesForOrg(orgId),
+    invalidateShellCachesForUsers(userIds),
+  ]);
+}
+
+async function invalidateFounderOrgDeletionMutation(orgId: string, userIds: string[]): Promise<void> {
+  await Promise.all([
+    invalidateAllKnownSharedCachesForOrg(orgId),
+    invalidateShellCachesForUsers(userIds),
+  ]);
+}
+
 export async function deactivatePlatformOrg(orgId: string): Promise<PlatformActionResult> {
   const ctx = await getPlatformFounderContext();
   if (!ctx.ok) return ctx;
@@ -77,6 +99,7 @@ export async function deactivatePlatformOrg(orgId: string): Promise<PlatformActi
     .update({ is_active: false })
     .eq('id', orgId);
   if (error) return { ok: false, error: error.message };
+  await invalidateShellCachesForOrg(orgId);
   return { ok: true };
 }
 
@@ -125,6 +148,7 @@ export async function deletePlatformOrgUser(orgId: string, userId: string): Prom
     console.error('[platform] deletePlatformOrgUser failed', { orgId, userId, error: de.message, blockers });
     return { ok: false, error: `${de.message}.${blockerText}` };
   }
+  await invalidateFounderMemberMutation(orgId, [userId]);
   return { ok: true };
 }
 
@@ -149,23 +173,42 @@ export async function permanentlyDeletePlatformOrg(orgId: string): Promise<Platf
   const founderIds = new Set((founderRows ?? []).map((r) => r.user_id as string));
 
   const nonFounderMemberIds: string[] = [];
+  const detachedMemberIds: string[] = [];
   for (const m of members ?? []) {
     const uid = m.id as string;
     if (founderIds.has(uid)) {
       const { error: ue } = await admin.from('profiles').update({ org_id: null }).eq('id', uid).eq('org_id', orgId);
-      if (ue) return { ok: false, error: `Could not detach platform founder from org: ${ue.message}` };
+      if (ue) {
+        if (detachedMemberIds.length > 0) {
+          await invalidateFounderOrgDeletionMutation(orgId, detachedMemberIds);
+        }
+        return { ok: false, error: `Could not detach platform founder from org: ${ue.message}` };
+      }
+      detachedMemberIds.push(uid);
       continue;
     }
     // Detach first so org delete can proceed even if profile->org FK is restrictive.
     const { error: ue } = await admin.from('profiles').update({ org_id: null }).eq('id', uid).eq('org_id', orgId);
-    if (ue) return { ok: false, error: `Could not detach user from org before deletion: ${ue.message}` };
+    if (ue) {
+      if (detachedMemberIds.length > 0) {
+        await invalidateFounderOrgDeletionMutation(orgId, detachedMemberIds);
+      }
+      return { ok: false, error: `Could not detach user from org before deletion: ${ue.message}` };
+    }
+    detachedMemberIds.push(uid);
     nonFounderMemberIds.push(uid);
   }
   const { error: delOrg } = await admin.from('organisations').delete().eq('id', orgId);
-  if (delOrg) return { ok: false, error: delOrg.message };
+  if (delOrg) {
+    if (detachedMemberIds.length > 0) {
+      await invalidateFounderOrgDeletionMutation(orgId, detachedMemberIds);
+    }
+    return { ok: false, error: delOrg.message };
+  }
   for (const uid of nonFounderMemberIds) {
     const { error: de } = await admin.auth.admin.deleteUser(uid);
     if (de) {
+      await invalidateFounderOrgDeletionMutation(orgId, detachedMemberIds);
       const blockers = await collectUserDeleteBlockers(admin, uid);
       const blockerText = blockers.length ? ` Potential blockers: ${blockers.join(', ')}.` : '';
       console.error('[platform] permanentlyDeletePlatformOrg user delete failed', {
@@ -177,6 +220,7 @@ export async function permanentlyDeletePlatformOrg(orgId: string): Promise<Platf
       return { ok: false, error: `Failed to delete user ${uid}: ${de.message}.${blockerText}` };
     }
   }
+  await invalidateFounderOrgDeletionMutation(orgId, detachedMemberIds);
   return { ok: true };
 }
 
@@ -257,6 +301,7 @@ export async function updateOrganisationGovernance(input: {
     p_clear_trial: input.clearTrial ?? false,
   });
   if (error) return { ok: false, error: error.message };
+  await invalidateShellCachesForOrg(input.orgId);
   return { ok: true };
 }
 
@@ -266,11 +311,53 @@ export async function setFounderProfileStatus(
 ): Promise<PlatformActionResult> {
   const ctx = await getPlatformFounderContext();
   if (!ctx.ok) return ctx;
+  let admin: ReturnType<typeof createServiceRoleClient>;
+  try {
+    admin = createServiceRoleClient();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Service configuration error.';
+    return { ok: false, error: msg };
+  }
+  const { data: profile, error: profileError } = await admin
+    .from('profiles')
+    .select('org_id')
+    .eq('id', profileId)
+    .maybeSingle();
+  if (profileError) return { ok: false, error: profileError.message };
   const { error } = await ctx.userSupabase.rpc('platform_founder_set_profile_status', {
     p_profile_id: profileId,
     p_new_status: newStatus,
   });
   if (error) return { ok: false, error: error.message };
+  const orgId = typeof profile?.org_id === 'string' ? profile.org_id : null;
+  if (orgId) {
+    await invalidateFounderMemberMutation(orgId, [profileId]);
+  } else {
+    await invalidateShellCacheForUser(profileId);
+  }
+  return { ok: true };
+}
+
+export async function updatePlatformOrgSettings(input: {
+  orgId: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  isActive: boolean;
+}): Promise<PlatformActionResult> {
+  const ctx = await getPlatformFounderContext();
+  if (!ctx.ok) return ctx;
+  const { error } = await ctx.userSupabase
+    .from('organisations')
+    .update({
+      name: input.name,
+      slug: input.slug,
+      logo_url: input.logoUrl,
+      is_active: input.isActive,
+    })
+    .eq('id', input.orgId);
+  if (error) return { ok: false, error: error.message };
+  await invalidateOrgSettingsCachesForOrg(input.orgId);
   return { ok: true };
 }
 

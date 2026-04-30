@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -68,6 +69,10 @@ export function AttendanceClockClient({
     setEvents((ev as typeof events) ?? []);
     setTsStatus((ts as { status?: string } | null)?.status ?? null);
   }, [orgId, userId, supabase, weekEnd, weekStart]);
+
+  const invalidateAttendanceCaches = useCallback(async () => {
+    await invalidateClientCaches({ scopes: ['attendance-self'] });
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -148,6 +153,7 @@ export function AttendanceClockClient({
       setErr(error.message);
       return;
     }
+    await invalidateAttendanceCaches().catch(() => null);
     await refresh();
   }
 
@@ -160,6 +166,7 @@ export function AttendanceClockClient({
       setErr(error.message);
       return;
     }
+    await invalidateAttendanceCaches().catch(() => null);
     await refresh();
   }
 
