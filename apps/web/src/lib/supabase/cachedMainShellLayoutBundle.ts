@@ -5,13 +5,15 @@ import {
   resolveBadgeWithGuardrails,
   resolveStructuralWithTimeout,
 } from '@/lib/shell/shellRpcGuardrails';
+import { deleteRedisKey, deleteRedisKeysByPrefix, redisGet, redisSet } from '@/lib/cache/sharedCache';
 import { getAuthUser } from './getAuthUser';
 import { createClient } from './server';
 
 const SHELL_RESPONSE_CACHE_TTL_MS = Number.parseInt(
-  process.env.CAMPSITE_SHELL_RESPONSE_CACHE_TTL_MS ?? '10000',
+  process.env.CAMPSITE_SHELL_RESPONSE_CACHE_TTL_MS ?? '30000',
   10
 );
+const SHELL_REDIS_KEY_PREFIX = 'campsite:shell:user';
 const SHELL_RESPONSE_CACHE_NO_PROFILE_TTL_MS = Number.parseInt(
   process.env.CAMPSITE_SHELL_RESPONSE_CACHE_NO_PROFILE_TTL_MS ?? '750',
   10
@@ -268,6 +270,20 @@ export function getStaleOrDefaultShellBundle(viewerKey: string): ShellBundle {
   };
 }
 
+export async function invalidateCachedMainShellLayoutBundle(viewerKey: string): Promise<void> {
+  const key = viewerKey.trim();
+  if (!key) return;
+  shellResponseCache.delete(key);
+  shellInFlight.delete(key);
+  await deleteRedisKey(`${SHELL_REDIS_KEY_PREFIX}:${key}`);
+}
+
+export async function invalidateAllCachedMainShellLayoutBundles(): Promise<void> {
+  shellResponseCache.clear();
+  shellInFlight.clear();
+  await deleteRedisKeysByPrefix(`${SHELL_REDIS_KEY_PREFIX}:`);
+}
+
 /**
  * Shell bundle loader shared via React `cache()`.
  * Uses a single merged RPC by default, with optional split-RPC compatibility.
@@ -308,7 +324,22 @@ export async function getMainShellLayoutBundleForViewer(
     }
   }
 
+  const shellRedisKey = `${SHELL_REDIS_KEY_PREFIX}:${viewerKey}`;
+
   const fetchPromise = (async () => {
+    // L2: Redis — check before firing the RPC, eliminates thundering herd on cold instances.
+    const redisBundle = await redisGet<ShellBundle>(shellRedisKey);
+    if (redisBundle !== null && !redisBundle.shell_degraded) {
+      const cachedAt = Date.now();
+      shellResponseCache.set(viewerKey, {
+        value: redisBundle,
+        cachedAt,
+        expiresAt: cachedAt + SHELL_RESPONSE_CACHE_TTL_MS,
+        lastSuccessAt: cachedAt,
+      });
+      return withShellCacheMeta(redisBundle, 'hit', cachedAt, 'fresh', cachedAt);
+    }
+
     // Default path: one merged RPC reduces DB round-trips under Nano constraints.
     if (!rpcOptions?.structuralRpcName && !rpcOptions?.badgeRpcName) {
       const wrapped = await resolveStructuralWithTimeout(
@@ -346,6 +377,9 @@ export async function getMainShellLayoutBundleForViewer(
         expiresAt: nextShellExpiry(merged, cachedAt),
         lastSuccessAt: cachedAt,
       });
+      if (!merged.shell_degraded) {
+        await redisSet(shellRedisKey, merged, Math.ceil(SHELL_RESPONSE_CACHE_TTL_MS / 1000));
+      }
       return merged;
     }
 
@@ -400,6 +434,9 @@ export async function getMainShellLayoutBundleForViewer(
       expiresAt: nextShellExpiry(finalBundle, cachedAt),
       lastSuccessAt: cachedAt,
     });
+    if (!finalBundle.shell_degraded) {
+      await redisSet(shellRedisKey, finalBundle, Math.ceil(SHELL_RESPONSE_CACHE_TTL_MS / 1000));
+    }
     return finalBundle;
   })();
 

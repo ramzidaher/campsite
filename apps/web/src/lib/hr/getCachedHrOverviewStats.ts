@@ -1,6 +1,7 @@
 import { cache } from 'react';
 
-import { getOrLoadTtlCachedValue, type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
+import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
+import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { createClient } from '@/lib/supabase/server';
 
 export type HrOverviewStats = {
@@ -13,11 +14,12 @@ export type HrOverviewStats = {
 };
 
 const HR_OVERVIEW_RESPONSE_CACHE_TTL_MS = Number.parseInt(
-  process.env.CAMPSITE_HR_OVERVIEW_RESPONSE_CACHE_TTL_MS ?? '10000',
+  process.env.CAMPSITE_HR_OVERVIEW_RESPONSE_CACHE_TTL_MS ?? '60000',
   10
 );
 const hrOverviewResponseCache = new Map<string, TtlCacheEntry<HrOverviewStats>>();
 const hrOverviewInFlight = new Map<string, Promise<HrOverviewStats>>();
+registerSharedCacheStore('campsite:hr:overview', hrOverviewResponseCache, hrOverviewInFlight);
 
 function getHrOverviewCacheKey(
   orgId: string,
@@ -50,10 +52,11 @@ export const getCachedHrOverviewStats = cache(
       includeInterviews: boolean;
     }
   ): Promise<HrOverviewStats> => {
-    return getOrLoadTtlCachedValue({
+    return getOrLoadSharedCachedValue({
       cache: hrOverviewResponseCache,
       inFlight: hrOverviewInFlight,
       key: getHrOverviewCacheKey(orgId, includeJobs, includeApplications, includeMembers, includeInterviews),
+      cacheNamespace: 'campsite:hr:overview',
       ttlMs: HR_OVERVIEW_RESPONSE_CACHE_TTL_MS,
       load: async () => {
         const supabase = await createClient();

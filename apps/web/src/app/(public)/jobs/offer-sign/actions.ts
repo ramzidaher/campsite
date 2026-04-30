@@ -1,5 +1,6 @@
 'use server';
 
+import { invalidateOnboardingForOrg } from '@/lib/cache/cacheInvalidation';
 import { buildSignedOfferPdfBytes } from '@/lib/offers/buildSignedOfferPdf';
 import { htmlToPlainTextForPdf } from '@/lib/offers/mergeOfferTemplate';
 import { sendSignedOfferPdfEmail } from '@/lib/recruitment/sendOfferLetterEmails';
@@ -250,6 +251,7 @@ export async function submitOfferSignature(
     filename: `signed-offer-${offerId.slice(0, 8)}.pdf`,
   });
 
+  await invalidateOnboardingForOrg(orgId);
   if (listingId) {
     revalidatePath(`/admin/jobs/${listingId}/applications`);
     revalidatePath(`/hr/jobs/${listingId}/applications`);

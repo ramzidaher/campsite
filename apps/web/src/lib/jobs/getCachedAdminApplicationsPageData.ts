@@ -1,6 +1,7 @@
 import { cache } from 'react';
 
-import { getOrLoadTtlCachedValue, type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
+import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
+import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { createClient } from '@/lib/supabase/server';
 
 export type AdminApplicationsJobRow = {
@@ -33,21 +34,23 @@ export type AdminApplicationsPageData = {
 };
 
 const ADMIN_APPLICATIONS_RESPONSE_CACHE_TTL_MS = Number.parseInt(
-  process.env.CAMPSITE_ADMIN_APPLICATIONS_RESPONSE_CACHE_TTL_MS ?? '8000',
+  process.env.CAMPSITE_ADMIN_APPLICATIONS_RESPONSE_CACHE_TTL_MS ?? '30000',
   10
 );
 const adminApplicationsResponseCache = new Map<string, TtlCacheEntry<AdminApplicationsPageData>>();
 const adminApplicationsInFlight = new Map<string, Promise<AdminApplicationsPageData>>();
+registerSharedCacheStore('campsite:jobs:applications', adminApplicationsResponseCache, adminApplicationsInFlight);
 
 function getAdminApplicationsCacheKey(orgId: string): string {
   return `org:${orgId}`;
 }
 
 export const getCachedAdminApplicationsPageData = cache(async (orgId: string): Promise<AdminApplicationsPageData> => {
-  return getOrLoadTtlCachedValue({
+  return getOrLoadSharedCachedValue({
     cache: adminApplicationsResponseCache,
     inFlight: adminApplicationsInFlight,
     key: getAdminApplicationsCacheKey(orgId),
+    cacheNamespace: 'campsite:jobs:applications',
     ttlMs: ADMIN_APPLICATIONS_RESPONSE_CACHE_TTL_MS,
     load: async () => {
       const supabase = await createClient();

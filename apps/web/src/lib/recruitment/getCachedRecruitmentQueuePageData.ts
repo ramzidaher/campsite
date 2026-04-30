@@ -1,6 +1,7 @@
 import { cache } from 'react';
 
-import { getOrLoadTtlCachedValue, type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
+import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
+import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { createClient } from '@/lib/supabase/server';
 
 export type RecruitmentQueueRow = {
@@ -16,21 +17,23 @@ export type RecruitmentQueueRow = {
 };
 
 const RECRUITMENT_QUEUE_RESPONSE_CACHE_TTL_MS = Number.parseInt(
-  process.env.CAMPSITE_RECRUITMENT_QUEUE_RESPONSE_CACHE_TTL_MS ?? '8000',
+  process.env.CAMPSITE_RECRUITMENT_QUEUE_RESPONSE_CACHE_TTL_MS ?? '30000',
   10
 );
 const recruitmentQueueResponseCache = new Map<string, TtlCacheEntry<RecruitmentQueueRow[]>>();
 const recruitmentQueueInFlight = new Map<string, Promise<RecruitmentQueueRow[]>>();
+registerSharedCacheStore('campsite:jobs:recruitment', recruitmentQueueResponseCache, recruitmentQueueInFlight);
 
 function getRecruitmentQueueCacheKey(orgId: string): string {
   return `org:${orgId}`;
 }
 
 export const getCachedRecruitmentQueuePageData = cache(async (orgId: string): Promise<RecruitmentQueueRow[]> => {
-  return getOrLoadTtlCachedValue({
+  return getOrLoadSharedCachedValue({
     cache: recruitmentQueueResponseCache,
     inFlight: recruitmentQueueInFlight,
     key: getRecruitmentQueueCacheKey(orgId),
+    cacheNamespace: 'campsite:jobs:recruitment',
     ttlMs: RECRUITMENT_QUEUE_RESPONSE_CACHE_TTL_MS,
     load: async () => {
       const supabase = await createClient();

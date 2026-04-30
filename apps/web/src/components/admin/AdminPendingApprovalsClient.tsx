@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -129,6 +130,7 @@ export function AdminPendingApprovalsClient({
       }
       setRows((r) => r.filter((x) => x.id !== id));
       setRejectingId(null);
+      await invalidateClientCaches({ scopes: ['org-members'], shellUserIds: [id] }).catch(() => null);
       void refresh();
     } finally {
       setBusy(null);
@@ -151,6 +153,7 @@ export function AdminPendingApprovalsClient({
       }
       setRows((r) => r.filter((x) => x.id !== id));
       setRejectingId(null);
+      await invalidateClientCaches({ scopes: ['org-members'], shellUserIds: [id] }).catch(() => null);
       void refresh();
     } finally {
       setBusy(null);
@@ -189,6 +192,7 @@ export function AdminPendingApprovalsClient({
     }
     setBulkAllBusy(false);
     setRows([]);
+    await invalidateClientCaches({ scopes: ['org-members'], shellUserIds: ids }).catch(() => null);
     void refresh();
   }
 

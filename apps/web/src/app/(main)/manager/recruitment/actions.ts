@@ -1,5 +1,6 @@
 'use server';
 
+import { invalidateRecruitmentRelatedCachesForOrg } from '@/lib/cache/cacheInvalidation';
 import { sendRecruitmentRequestHrEmail } from '@/lib/recruitment/sendRecruitmentRequestHrEmail';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
@@ -344,6 +345,7 @@ export async function createRecruitmentRequest(form: {
   const submitterName = ((profile.full_name as string | undefined)?.trim() || user.email?.split('@')[0] || 'Manager')
     .trim();
 
+  await invalidateRecruitmentRelatedCachesForOrg(orgId);
   revalidatePath('/manager/recruitment');
   revalidatePath('/admin/recruitment');
   revalidatePath('/hr/hiring/requests');

@@ -1,5 +1,6 @@
 'use server';
 
+import { invalidateInterviewRelatedCachesForOrg } from '@/lib/cache/cacheInvalidation';
 import {
   createInterviewSlotEventsForPanelists,
   deleteInterviewCalendarEvents,
@@ -334,6 +335,7 @@ export async function reassignInterviewSlotBooking(opts: {
     });
   }
 
+  await invalidateInterviewRelatedCachesForOrg(orgId);
   revalidatePath(`/admin/jobs/${jobId}/applications`);
   revalidatePath(`/hr/jobs/${jobId}/applications`);
   revalidatePath('/admin/interviews');
@@ -489,6 +491,7 @@ export async function createInterviewSlot(fields: {
     );
   }
 
+  await invalidateInterviewRelatedCachesForOrg(orgId);
   revalidatePath('/admin/interviews');
   revalidatePath('/hr/interviews');
   revalidatePath(`/admin/jobs/${jobId}/applications`);
@@ -610,6 +613,7 @@ export async function bulkCreateInterviewSlots(fields: {
     }
   } catch { /* Google Calendar not configured — fine */ }
 
+  await invalidateInterviewRelatedCachesForOrg(orgId);
   revalidatePath('/admin/interviews');
   revalidatePath('/hr/interviews');
   revalidatePath(`/admin/jobs/${jobId}/applications`);
@@ -689,6 +693,7 @@ export async function completeInterviewSlot(slotId: string): Promise<InterviewAc
     .eq('status', 'booked');
   if (upErr) return { ok: false, error: upErr.message };
 
+  await invalidateInterviewRelatedCachesForOrg(orgId);
   revalidatePath('/admin/interviews');
   revalidatePath('/hr/interviews');
   return { ok: true };
@@ -758,6 +763,7 @@ export async function cancelAvailableInterviewSlot(slotId: string): Promise<Inte
   const { error: delErr } = await supabase.from('interview_slots').delete().eq('id', id).eq('org_id', orgId);
   if (delErr) return { ok: false, error: delErr.message };
 
+  await invalidateInterviewRelatedCachesForOrg(orgId);
   revalidatePath('/admin/interviews');
   return { ok: true };
 }
@@ -981,6 +987,7 @@ export async function bookInterviewForApplication(opts: {
     });
   }
 
+  await invalidateInterviewRelatedCachesForOrg(orgId);
   revalidatePath(`/admin/jobs/${jobListingId}/applications`);
   revalidatePath('/admin/applications');
   revalidatePath('/admin/interviews');

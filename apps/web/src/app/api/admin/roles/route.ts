@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { DEFAULT_PERMISSION_SEED } from '@/lib/authz/defaultPermissions';
+import { invalidateAllShellCaches } from '@/lib/cache/cacheInvalidation';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -110,6 +111,6 @@ export async function POST(req: NextRequest) {
       .eq('org_id', me.org_id);
     if (sourceError) return NextResponse.json({ error: sourceError.message }, { status: 400 });
   }
+  await invalidateAllShellCaches();
   return NextResponse.json({ ok: true, role_id: data });
 }
-

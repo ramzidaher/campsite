@@ -267,6 +267,7 @@ export function orgBrandingCssVars(tokens: Record<OrgBrandTokenKey, string>): CS
     ['--org-brand-primary' as string]: tokens.primary,
     ['--org-brand-secondary' as string]: tokens.secondary,
     ['--org-brand-accent' as string]: tokens.accent,
+    ['--org-brand-on-primary' as string]: onColorFor(tokens.primary),
   };
 }
 
@@ -278,4 +279,3 @@ export function suggestedBrandTokensFromHexes(hexes: string[]): OrgBrandTokens {
   const accent = clean[2] ?? secondary;
   return { primary, secondary, accent };
 }
-

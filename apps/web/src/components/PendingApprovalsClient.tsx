@@ -1,6 +1,7 @@
 'use client';
 
 import { rolesAssignableOnApprove } from '@campsite/types';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -134,6 +135,7 @@ export function PendingApprovalsClient({
       }
       setRows((r) => r.filter((x) => x.id !== id));
       setRejectingId(null);
+      await invalidateClientCaches({ scopes: ['org-members'], shellUserIds: [id] }).catch(() => null);
       void refresh();
     } finally {
       setBusy(null);
@@ -159,6 +161,7 @@ export function PendingApprovalsClient({
       }
       setRows((r) => r.filter((x) => x.id !== id));
       setRejectingId(null);
+      await invalidateClientCaches({ scopes: ['org-members'], shellUserIds: [id] }).catch(() => null);
       void refresh();
     } finally {
       setBusy(null);

@@ -1,6 +1,7 @@
 import { cache } from 'react';
 
-import { getOrLoadTtlCachedValue, type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
+import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
+import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { createClient } from '@/lib/supabase/server';
 
 export type InterviewScheduleJobRow = {
@@ -22,21 +23,23 @@ export type InterviewSchedulePageData = {
 };
 
 const INTERVIEW_SCHEDULE_RESPONSE_CACHE_TTL_MS = Number.parseInt(
-  process.env.CAMPSITE_INTERVIEW_SCHEDULE_RESPONSE_CACHE_TTL_MS ?? '8000',
+  process.env.CAMPSITE_INTERVIEW_SCHEDULE_RESPONSE_CACHE_TTL_MS ?? '30000',
   10
 );
 const interviewScheduleResponseCache = new Map<string, TtlCacheEntry<InterviewSchedulePageData>>();
 const interviewScheduleInFlight = new Map<string, Promise<InterviewSchedulePageData>>();
+registerSharedCacheStore('campsite:jobs:interviews', interviewScheduleResponseCache, interviewScheduleInFlight);
 
 function getInterviewScheduleCacheKey(orgId: string): string {
   return `org:${orgId}`;
 }
 
 export const getCachedInterviewSchedulePageData = cache(async (orgId: string): Promise<InterviewSchedulePageData> => {
-  return getOrLoadTtlCachedValue({
+  return getOrLoadSharedCachedValue({
     cache: interviewScheduleResponseCache,
     inFlight: interviewScheduleInFlight,
     key: getInterviewScheduleCacheKey(orgId),
+    cacheNamespace: 'campsite:jobs:interviews',
     ttlMs: INTERVIEW_SCHEDULE_RESPONSE_CACHE_TTL_MS,
     load: async () => {
       const supabase = await createClient();

@@ -1,6 +1,7 @@
 import { cache } from 'react';
 
-import { getOrLoadTtlCachedValue, type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
+import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
+import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { createClient } from '@/lib/supabase/server';
 
 export type OnboardingHubSharedData = {
@@ -48,13 +49,19 @@ export type OnboardingTemplateTaskRow = {
 };
 
 const ONBOARDING_RESPONSE_CACHE_TTL_MS = Number.parseInt(
-  process.env.CAMPSITE_ONBOARDING_RESPONSE_CACHE_TTL_MS ?? '8000',
+  process.env.CAMPSITE_ONBOARDING_RESPONSE_CACHE_TTL_MS ?? '60000',
   10
 );
 const onboardingSharedResponseCache = new Map<string, TtlCacheEntry<OnboardingHubSharedData>>();
 const onboardingSharedInFlight = new Map<string, Promise<OnboardingHubSharedData>>();
 const onboardingTemplateTasksResponseCache = new Map<string, TtlCacheEntry<OnboardingTemplateTaskRow[]>>();
 const onboardingTemplateTasksInFlight = new Map<string, Promise<OnboardingTemplateTaskRow[]>>();
+registerSharedCacheStore('campsite:hr:onboarding', onboardingSharedResponseCache, onboardingSharedInFlight);
+registerSharedCacheStore(
+  'campsite:hr:onboarding:tasks',
+  onboardingTemplateTasksResponseCache,
+  onboardingTemplateTasksInFlight
+);
 
 function getOnboardingSharedCacheKey(orgId: string): string {
   return `org:${orgId}:shared`;
@@ -65,10 +72,11 @@ function getOnboardingTemplateTasksCacheKey(orgId: string, templateId: string): 
 }
 
 export const getCachedOnboardingHubSharedData = cache(async (orgId: string): Promise<OnboardingHubSharedData> => {
-  return getOrLoadTtlCachedValue({
+  return getOrLoadSharedCachedValue({
     cache: onboardingSharedResponseCache,
     inFlight: onboardingSharedInFlight,
     key: getOnboardingSharedCacheKey(orgId),
+    cacheNamespace: 'campsite:hr:onboarding',
     ttlMs: ONBOARDING_RESPONSE_CACHE_TTL_MS,
     load: async () => {
       const supabase = await createClient();
@@ -105,10 +113,11 @@ export const getCachedOnboardingHubSharedData = cache(async (orgId: string): Pro
 
 export const getCachedOnboardingTemplateTasks = cache(
   async (orgId: string, templateId: string): Promise<OnboardingTemplateTaskRow[]> => {
-  return getOrLoadTtlCachedValue({
+  return getOrLoadSharedCachedValue({
     cache: onboardingTemplateTasksResponseCache,
     inFlight: onboardingTemplateTasksInFlight,
     key: getOnboardingTemplateTasksCacheKey(orgId, templateId),
+    cacheNamespace: 'campsite:hr:onboarding:tasks',
     ttlMs: ONBOARDING_RESPONSE_CACHE_TTL_MS,
     load: async () => {
       const supabase = await createClient();

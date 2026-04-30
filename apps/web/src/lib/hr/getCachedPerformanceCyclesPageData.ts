@@ -1,6 +1,7 @@
 import { cache } from 'react';
 
-import { getOrLoadTtlCachedValue, type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
+import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
+import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { createClient } from '@/lib/supabase/server';
 
 export type PerformanceCycleSummary = {
@@ -18,21 +19,23 @@ export type PerformanceCycleSummary = {
 };
 
 const PERFORMANCE_CYCLES_RESPONSE_CACHE_TTL_MS = Number.parseInt(
-  process.env.CAMPSITE_PERFORMANCE_CYCLES_RESPONSE_CACHE_TTL_MS ?? '10000',
+  process.env.CAMPSITE_PERFORMANCE_CYCLES_RESPONSE_CACHE_TTL_MS ?? '120000',
   10
 );
 const performanceCyclesResponseCache = new Map<string, TtlCacheEntry<PerformanceCycleSummary[]>>();
 const performanceCyclesInFlight = new Map<string, Promise<PerformanceCycleSummary[]>>();
+registerSharedCacheStore('campsite:hr:performance', performanceCyclesResponseCache, performanceCyclesInFlight);
 
 function getPerformanceCyclesCacheKey(orgId: string): string {
   return `org:${orgId}`;
 }
 
 export const getCachedPerformanceCyclesPageData = cache(async (orgId: string): Promise<PerformanceCycleSummary[]> => {
-  return getOrLoadTtlCachedValue({
+  return getOrLoadSharedCachedValue({
     cache: performanceCyclesResponseCache,
     inFlight: performanceCyclesInFlight,
     key: getPerformanceCyclesCacheKey(orgId),
+    cacheNamespace: 'campsite:hr:performance',
     ttlMs: PERFORMANCE_CYCLES_RESPONSE_CACHE_TTL_MS,
     load: async () => {
       const supabase = await createClient();

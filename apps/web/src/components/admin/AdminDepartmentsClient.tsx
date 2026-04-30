@@ -1,6 +1,7 @@
 'use client';
 
 import { adminDepartmentsChannelsHeading, adminDepartmentsChannelsHint } from '@/lib/broadcasts/channelCopy';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -188,6 +189,10 @@ export function AdminDepartmentsClient({
     router.refresh();
   }, [router]);
 
+  const invalidateDepartmentViews = useCallback(async () => {
+    await invalidateClientCaches({ scopes: ['org-members', 'jobs', 'applications', 'recruitment'] });
+  }, []);
+
   async function createDept() {
     if (!nName.trim()) {
       setMsg('Please enter a department name.');
@@ -206,6 +211,7 @@ export function AdminDepartmentsClient({
       setMsg(error.message);
       return;
     }
+    await invalidateDepartmentViews();
     setCreateOpen(false);
     setNName('');
     setNDesc('');
@@ -226,7 +232,10 @@ export function AdminDepartmentsClient({
       .eq('id', d.id);
     setBusy(false);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function mergeDeptInto(sourceId: string, targetId: string) {
@@ -245,6 +254,7 @@ export function AdminDepartmentsClient({
       setMsg(error.message);
       return;
     }
+    await invalidateDepartmentViews();
     setDetailDept(null);
     if (openDeptIdFromUrl) {
       router.replace(pathname);
@@ -256,25 +266,37 @@ export function AdminDepartmentsClient({
     if (!name.trim()) return;
     const { error } = await supabase.from('broadcast_channels').insert({ dept_id: deptId, name: name.trim() });
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function removeCategory(catId: string) {
     const { error } = await supabase.from('broadcast_channels').delete().eq('id', catId);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function addManager(deptId: string, userId: string) {
     const { error } = await supabase.from('dept_managers').insert({ dept_id: deptId, user_id: userId });
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function removeManager(deptId: string, userId: string) {
     const { error } = await supabase.from('dept_managers').delete().eq('dept_id', deptId).eq('user_id', userId);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function upsertBroadcastPerm(deptId: string, permission: string, min_role: MinRoleOpt) {
@@ -291,7 +313,10 @@ export function AdminDepartmentsClient({
     );
     setBusy(false);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function revokeBroadcastPerm(deptId: string, permission: string) {
@@ -304,21 +329,30 @@ export function AdminDepartmentsClient({
       .eq('permission', permission);
     setBusy(false);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function addDeptMember(deptId: string, userId: string) {
     setMsg(null);
     const { error } = await supabase.from('user_departments').insert({ dept_id: deptId, user_id: userId });
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function removeDeptMember(deptId: string, userId: string) {
     setMsg(null);
     const { error } = await supabase.from('user_departments').delete().eq('dept_id', deptId).eq('user_id', userId);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function addTeam(deptId: string, name: string, leadUserId: string | null) {
@@ -331,7 +365,10 @@ export function AdminDepartmentsClient({
     if (leadUserId) row.lead_user_id = leadUserId;
     const { error } = await supabase.from('department_teams').insert(row);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function updateTeam(
@@ -341,21 +378,30 @@ export function AdminDepartmentsClient({
     setMsg(null);
     const { error } = await supabase.from('department_teams').update(patch).eq('id', teamId);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function removeTeam(teamId: string) {
     setMsg(null);
     const { error } = await supabase.from('department_teams').delete().eq('id', teamId);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function addTeamMember(teamId: string, userId: string) {
     setMsg(null);
     const { error } = await supabase.from('department_team_members').insert({ user_id: userId, team_id: teamId });
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   async function removeTeamMember(teamId: string, userId: string) {
@@ -366,7 +412,10 @@ export function AdminDepartmentsClient({
       .eq('team_id', teamId)
       .eq('user_id', userId);
     if (error) setMsg(error.message);
-    else void refresh();
+    else {
+      await invalidateDepartmentViews();
+      void refresh();
+    }
   }
 
   return (

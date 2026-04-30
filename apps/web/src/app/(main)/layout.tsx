@@ -20,8 +20,6 @@ import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import {
   type PermissionKey,
 } from '@campsite/types';
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 
 // Force-dynamic is required: layout data is fully user-specific (permissions, badge counts).
 export const dynamic = 'force-dynamic';
@@ -43,8 +41,6 @@ function roleLabel(role: string): string {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const pathStartedAtMs = Date.now();
-  const headerStore = await headers();
-  const pathname = headerStore.get('x-campsite-pathname') ?? '';
 
   // Shell bundle is loaded once and cached per request so child routes reuse it.
   // Runtime loader prefers a single merged RPC on Nano to reduce round trips.
@@ -329,7 +325,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           pendingApprovalCount={pendingApprovalCount}
           rotaPendingFinalCount={rotaPendingFinalCount}
           rotaPendingPeerCount={rotaPendingPeerCount}
-          recruitmentPendingReviewCount={recruitmentPendingReviewCount}
           topBarNotifications={topBarNotifications}
           managerNavItems={managerNavItems}
           managerNavSectionLabel={

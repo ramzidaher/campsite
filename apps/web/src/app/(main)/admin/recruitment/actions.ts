@@ -1,5 +1,6 @@
 'use server';
 
+import { invalidateRecruitmentRelatedCachesForOrg } from '@/lib/cache/cacheInvalidation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { isRecruitmentRequestStatus } from '@campsite/types';
@@ -77,6 +78,7 @@ export async function setRecruitmentRequestStatusAction(
     }
   }
 
+  await invalidateRecruitmentRelatedCachesForOrg(profile.org_id as string);
   revalidatePath('/admin/recruitment');
   revalidatePath(`/admin/recruitment/${id}`);
   revalidatePath('/hr/hiring/requests');

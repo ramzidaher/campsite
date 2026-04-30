@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  invalidateOrgMemberCachesForOrg,
+  invalidateShellCacheForUser,
+} from '@/lib/cache/cacheInvalidation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
@@ -116,5 +120,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `${deleteErr.message}.${blockerText}` }, { status: 400 });
   }
 
+  await Promise.all([
+    invalidateOrgMemberCachesForOrg(me.org_id as string),
+    invalidateShellCacheForUser(targetUserId),
+  ]);
   return NextResponse.json({ ok: true });
 }

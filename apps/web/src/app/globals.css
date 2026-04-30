@@ -54,6 +54,7 @@
   --org-brand-primary: var(--campsite-accent);
   --org-brand-secondary: #4f4f4f;
   --org-brand-accent: var(--campsite-accent);
+  --org-brand-on-primary: #faf9f6;
 }
 
 body {

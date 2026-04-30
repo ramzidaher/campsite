@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { invalidateAllShellCaches } from '@/lib/cache/cacheInvalidation';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
@@ -31,6 +32,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ro
     p_permission_keys: body.permission_keys ?? [],
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await invalidateAllShellCaches();
   return NextResponse.json({ ok: true });
 }
-

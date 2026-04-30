@@ -1,6 +1,11 @@
 'use server';
 
 import {
+  invalidateAdminApplicationsForOrg,
+  invalidateInterviewRelatedCachesForOrg,
+  invalidateRecruitmentQueueForOrg,
+} from '@/lib/cache/cacheInvalidation';
+import {
   sendApplicationStageEmail,
 } from '@/lib/recruitment/sendApplicationCandidateEmails';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
@@ -288,6 +293,10 @@ export async function updateJobApplicationStage(
     }
   }
 
+  await invalidateAdminApplicationsForOrg(orgId);
+  if (newStage === 'offer_sent') {
+    await invalidateRecruitmentQueueForOrg(orgId);
+  }
   revalidatePath(`/admin/jobs/${opts.jobListingId}/applications`);
   revalidatePath('/admin/applications');
   revalidatePath(`/hr/jobs/${opts.jobListingId}/applications`);
@@ -402,6 +411,7 @@ export async function setInterviewJoiningInstructions(
   });
   if (error) return { ok: false, error: error.message };
 
+  await invalidateInterviewRelatedCachesForOrg(profile.org_id as string);
   revalidatePath(`/admin/jobs/${jobListingId}/applications`);
   revalidatePath(`/hr/jobs/${jobListingId}/applications`);
   return { ok: true };

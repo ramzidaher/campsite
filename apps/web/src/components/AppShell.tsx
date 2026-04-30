@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
+import { PageInfoFab } from '@/components/shell/PageInfoFab';
 import { AppTopBar } from '@/components/shell/AppTopBar';
 import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
@@ -190,7 +191,6 @@ export function AppShell({
   pendingApprovalCount,
   rotaPendingFinalCount,
   rotaPendingPeerCount,
-  recruitmentPendingReviewCount = 0,
   topBarNotifications,
   showLeaveNav = false,
   showAttendanceNav = false,
@@ -242,8 +242,6 @@ export function AppShell({
   pendingApprovalCount: number;
   rotaPendingFinalCount: number;
   rotaPendingPeerCount: number;
-  /** Open recruitment requests in `pending_review` (org admins only; layout passes 0 for others). */
-  recruitmentPendingReviewCount?: number;
   topBarNotifications: TopBarNotificationItem[];
   showLeaveNav?: boolean;
   showAttendanceNav?: boolean;
@@ -304,7 +302,6 @@ export function AppShell({
   const livePendingApprovalCount      = bc('pending_approvals',           pendingApprovalCount);
   const liveRotaPendingFinalCount     = bc('rota_pending_final',          rotaPendingFinalCount);
   const liveRotaPendingPeerCount      = bc('rota_pending_peer',           rotaPendingPeerCount);
-  const liveRecruitmentPendingCount   = bc('recruitment_pending_review',  recruitmentPendingReviewCount);
   const liveLeaveNavBadge             = bc('leave_pending_approval',      leaveNavBadge);
   const livePerformanceNavBadge       = bc('performance_pending',         performanceNavBadge);
   const liveCalendarNotifications     = bc('calendar_event_notifications', 0);
@@ -347,7 +344,7 @@ export function AppShell({
         { id: 'calendar-notifications',     label: 'Calendar updates',               href: '/notifications/calendar',       count: liveCalendarNotifications },
       ] satisfies TopBarNotificationItem[]
     ).filter((item) => item.count > 0);
-  }, [live, topBarNotifications, adminNavItems]);
+  }, [live, topBarNotifications, adminNavItems, liveCalendarNotifications]);
 
   useEffect(() => {
     try {
@@ -1334,9 +1331,6 @@ export function AppShell({
               {typeof shellLastSuccessAt === 'number' ? (
                 <DegradedLastUpdatedText shellLastSuccessAt={shellLastSuccessAt} />
               ) : null}
-              {shellDegradedReason ? (
-                <span className="text-amber-800/80">({shellDegradedReason})</span>
-              ) : null}
               <button
                 type="button"
                 onClick={() => window.location.reload()}
@@ -1351,6 +1345,7 @@ export function AppShell({
         <main id="main-content" tabIndex={-1} className="workspace-fluid flex-1 overflow-x-hidden overflow-y-auto">
           {children}
         </main>
+        <PageInfoFab />
       </div>
     </div>
   );

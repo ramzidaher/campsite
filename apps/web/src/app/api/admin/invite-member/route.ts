@@ -1,5 +1,9 @@
 import { sendOrgMemberAccessEmail } from '@/lib/admin/sendOrgMemberAccessEmail';
 import { inviteCallbackUrl } from '@/lib/auth/inviteCallbackBaseUrl';
+import {
+  invalidateOrgMemberCachesForOrg,
+  invalidateShellCacheForUser,
+} from '@/lib/cache/cacheInvalidation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { getSupabaseServiceRoleKey } from '@/lib/supabase/env';
@@ -207,6 +211,10 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  await Promise.all([
+    invalidateOrgMemberCachesForOrg(orgId),
+    targetUserId ? invalidateShellCacheForUser(targetUserId) : Promise.resolve(),
+  ]);
   return NextResponse.json({
     ok: true,
     accessEmailChannel,
