@@ -23,6 +23,21 @@ type FormQuestionPersist = {
   options: ScreeningQuestionOption[] | null;
 };
 
+type FormQuestionSetItemRow = {
+  sort_order: number | null;
+  question_type: string | null;
+  prompt: string | null;
+  help_text: string | null;
+  required: boolean | null;
+  max_length: number | null;
+  options: unknown;
+  is_page_break: boolean | null;
+  scoring_enabled: boolean | null;
+  scoring_scale_max?: number | null;
+  initially_hidden: boolean | null;
+  locked: boolean | null;
+};
+
 function isMissingScoringScaleColumnError(message: string | null | undefined): boolean {
   const msg = String(message ?? '').toLowerCase();
   return msg.includes('scoring_scale_max') && msg.includes('org_application_question_set_items');
@@ -168,24 +183,25 @@ export async function duplicateApplicationForm(formId: string): Promise<ActionRe
   if (insertError) {
     return { ok: false, error: insertError?.message ?? 'Could not duplicate application form.' };
   }
-  let sourceItemsResult = await supabase
+  const sourceItemsResultWithScale = await supabase
     .from('org_application_question_set_items')
     .select('sort_order, question_type, prompt, help_text, required, max_length, options, is_page_break, scoring_enabled, scoring_scale_max, initially_hidden, locked')
     .eq('set_id', id)
     .order('sort_order', { ascending: true });
-  if (sourceItemsResult.error && isMissingScoringScaleColumnError(sourceItemsResult.error.message)) {
-    sourceItemsResult = await supabase
+  const sourceItemsResult =
+    sourceItemsResultWithScale.error && isMissingScoringScaleColumnError(sourceItemsResultWithScale.error.message)
+      ? await supabase
       .from('org_application_question_set_items')
       .select('sort_order, question_type, prompt, help_text, required, max_length, options, is_page_break, scoring_enabled, initially_hidden, locked')
       .eq('set_id', id)
-      .order('sort_order', { ascending: true });
-  }
-  const sourceItems = sourceItemsResult.data;
+      .order('sort_order', { ascending: true })
+      : sourceItemsResultWithScale;
+  const sourceItems = (sourceItemsResult.data ?? []) as FormQuestionSetItemRow[];
   if (sourceItemsResult.error) return { ok: false, error: sourceItemsResult.error.message };
 
-  if ((sourceItems ?? []).length > 0) {
+  if (sourceItems.length > 0) {
     let itemsInsertResult = await supabase.from('org_application_question_set_items').insert(
-      (sourceItems ?? []).map((item) => ({
+      sourceItems.map((item) => ({
         set_id: newId,
         sort_order: item.sort_order,
         question_type: item.question_type,
@@ -203,7 +219,7 @@ export async function duplicateApplicationForm(formId: string): Promise<ActionRe
     );
     if (itemsInsertResult.error && isMissingScoringScaleColumnError(itemsInsertResult.error.message)) {
       itemsInsertResult = await supabase.from('org_application_question_set_items').insert(
-        (sourceItems ?? []).map((item) => ({
+        sourceItems.map((item) => ({
           set_id: newId,
           sort_order: item.sort_order,
           question_type: item.question_type,

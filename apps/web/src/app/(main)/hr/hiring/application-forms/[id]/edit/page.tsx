@@ -5,6 +5,20 @@ import { createClient } from '@/lib/supabase/server';
 import { HiringApplicationFormEditorClient } from '@/components/admin/HiringApplicationFormEditorClient';
 import { redirect } from 'next/navigation';
 
+type ApplicationFormItemRow = {
+  options: unknown;
+  question_type: string | null;
+  prompt: string | null;
+  help_text: string | null;
+  required: boolean | null;
+  is_page_break: boolean | null;
+  scoring_enabled: boolean | null;
+  scoring_scale_max?: number | null;
+  initially_hidden: boolean | null;
+  locked: boolean | null;
+  max_length: number | null;
+};
+
 export default async function EditApplicationFormPage({
   params,
 }: {
@@ -56,7 +70,7 @@ export default async function EditApplicationFormPage({
         .eq('set_id', formId)
         .order('sort_order', { ascending: true })
     : rowsResultWithScale;
-  const rows = rowsResult.data;
+  const rows = (rowsResult.data ?? []) as ApplicationFormItemRow[];
 
   const { data: departments } = await supabase
     .from('departments')
@@ -80,7 +94,7 @@ export default async function EditApplicationFormPage({
 
   if (!setRow?.id) redirect('/hr/hiring/application-forms');
 
-  const questions = (rows ?? []).map((q, i) => {
+  const questions = rows.map((q, i) => {
     const options = Array.isArray(q.options)
       ? (q.options as { id?: string; label?: string }[])
           .map((o) => ({ id: String(o.id ?? '').trim(), label: String(o.label ?? '').trim() }))
