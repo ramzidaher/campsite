@@ -168,19 +168,36 @@ export async function duplicateApplicationForm(formId: string): Promise<ActionRe
   if (insertError) {
     return { ok: false, error: insertError?.message ?? 'Could not duplicate application form.' };
   }
-  let sourceItemsResult = await supabase
+  const sourceItemsResultWithScale = await supabase
     .from('org_application_question_set_items')
     .select('sort_order, question_type, prompt, help_text, required, max_length, options, is_page_break, scoring_enabled, scoring_scale_max, initially_hidden, locked')
     .eq('set_id', id)
     .order('sort_order', { ascending: true });
-  if (sourceItemsResult.error && isMissingScoringScaleColumnError(sourceItemsResult.error.message)) {
-    sourceItemsResult = await supabase
+
+  const sourceItemsResult = sourceItemsResultWithScale.error &&
+    isMissingScoringScaleColumnError(sourceItemsResultWithScale.error.message)
+    ? await supabase
       .from('org_application_question_set_items')
       .select('sort_order, question_type, prompt, help_text, required, max_length, options, is_page_break, scoring_enabled, initially_hidden, locked')
       .eq('set_id', id)
-      .order('sort_order', { ascending: true });
-  }
-  const sourceItems = sourceItemsResult.data;
+      .order('sort_order', { ascending: true })
+    : sourceItemsResultWithScale;
+  const sourceItems = sourceItemsResult.data as
+    | Array<{
+        sort_order: number;
+        question_type: string;
+        prompt: string;
+        help_text: string | null;
+        required: boolean;
+        max_length: number | null;
+        options: unknown;
+        is_page_break: boolean;
+        scoring_enabled: boolean;
+        scoring_scale_max?: number | null;
+        initially_hidden: boolean;
+        locked: boolean;
+      }>
+    | null;
   if (sourceItemsResult.error) return { ok: false, error: sourceItemsResult.error.message };
 
   if ((sourceItems ?? []).length > 0) {

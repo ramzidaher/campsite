@@ -81,6 +81,7 @@ export default async function EditApplicationFormPage({
   if (!setRow?.id) redirect('/hr/hiring/application-forms');
 
   const questions = (rows ?? []).map((q, i) => {
+    const scoringScaleRaw = (q as { scoring_scale_max?: unknown }).scoring_scale_max;
     const options = Array.isArray(q.options)
       ? (q.options as { id?: string; label?: string }[])
           .map((o) => ({ id: String(o.id ?? '').trim(), label: String(o.label ?? '').trim() }))
@@ -96,8 +97,8 @@ export default async function EditApplicationFormPage({
       isPageBreak: Boolean(q.is_page_break),
       scoringEnabled: q.scoring_enabled !== false,
       scoringScaleMax:
-        Number.isInteger(q.scoring_scale_max) && Number(q.scoring_scale_max) >= 0 && Number(q.scoring_scale_max) <= 5
-          ? Number(q.scoring_scale_max)
+        Number.isInteger(scoringScaleRaw) && Number(scoringScaleRaw) >= 0 && Number(scoringScaleRaw) <= 5
+          ? Number(scoringScaleRaw)
           : 5,
       initiallyHidden: Boolean(q.initially_hidden),
       locked: Boolean(q.locked),
