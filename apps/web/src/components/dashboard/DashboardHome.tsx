@@ -101,7 +101,7 @@ export function DashboardHome({
       ) : null}
       {isPartial ? (
         <div className="status-banner-warning mb-4 rounded-lg px-3 py-2 text-[12px]">
-          Some dashboard sections are temporarily delayed. Data may be partially loaded.
+          Some sections are still loading. The dashboard will fill in automatically.
         </div>
       ) : null}
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

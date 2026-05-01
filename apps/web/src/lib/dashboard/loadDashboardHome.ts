@@ -20,6 +20,7 @@ import {
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
 import { withServerPerf } from '@/lib/perf/serverPerf';
 const DASHBOARD_NON_CRITICAL_TIMEOUT_MS = 2200;
+const DASHBOARD_NON_CRITICAL_COLD_TIMEOUT_MS = 4000;
 
 async function resolveWithTimeout<T>(
   promise: PromiseLike<T>,
@@ -170,6 +171,12 @@ export async function loadDashboardHome(
   const fallbackLabels = new Set<string>();
   const markFallback = (label: string) => fallbackLabels.add(label);
   const abortSignal = options?.abortSignal;
+  const hasWarmShellData =
+    options?.initialBroadcastUnread !== undefined || options?.initialPendingApprovals !== undefined;
+  // First-login / cold-session requests can be slower; avoid premature timeout fallbacks.
+  const nonCriticalTimeoutMs = hasWarmShellData
+    ? DASHBOARD_NON_CRITICAL_TIMEOUT_MS
+    : DASHBOARD_NON_CRITICAL_COLD_TIMEOUT_MS;
   const { data: orgRow } = await supabase
     .from('organisations')
     .select('name, timezone')
@@ -212,7 +219,7 @@ export async function loadDashboardHome(
         'fetch_dashboard_stat_counts',
         resolveWithTimeout(
           fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          nonCriticalTimeoutMs,
           null,
           'fetch_dashboard_stat_counts',
           () => markFallback('fetch_dashboard_stat_counts'),
@@ -230,7 +237,7 @@ export async function loadDashboardHome(
             .gte('start_time', w0.toISOString())
             .lt('start_time', w1.toISOString())
             .abortSignal(abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          nonCriticalTimeoutMs,
           { data: null, error: null, count: 0 } as { data: null; error: null; count: number },
           'rota_shifts_week_count',
           () => markFallback('rota_shifts_week_count'),
@@ -249,7 +256,7 @@ export async function loadDashboardHome(
             .order('start_time', { ascending: true })
             .limit(1)
             .abortSignal(abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          nonCriticalTimeoutMs,
           { data: [], error: null } as { data: Array<{ start_time: string; end_time: string; role_label: string | null }>; error: null },
           'next_shift_lookup',
           () => markFallback('next_shift_lookup'),
@@ -270,7 +277,7 @@ export async function loadDashboardHome(
             .order('sent_at', { ascending: false })
             .limit(3)
             .abortSignal(options?.abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          nonCriticalTimeoutMs,
           { data: [], error: null } as { data: RawBroadcast[]; error: null },
           'recent_broadcasts',
           () => markFallback('recent_broadcasts'),
@@ -289,7 +296,7 @@ export async function loadDashboardHome(
             .order('start_time', { ascending: true })
             .limit(5)
             .abortSignal(abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          nonCriticalTimeoutMs,
           { data: [], error: null } as { data: Array<{ id: string; title: string; start_time: string }>; error: null },
           'upcoming_calendar_events',
           () => markFallback('upcoming_calendar_events'),
@@ -309,7 +316,7 @@ export async function loadDashboardHome(
             .order('start_time', { ascending: true })
             .limit(8)
             .abortSignal(abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+          nonCriticalTimeoutMs,
           { data: [], error: null } as { data: Array<{ id: string; start_time: string; role_label: string | null }>; error: null },
           'upcoming_shifts_calendar',
           () => markFallback('upcoming_shifts_calendar'),
@@ -347,7 +354,7 @@ export async function loadDashboardHome(
         supabase
           .rpc('pending_approvals_nav_count')
           .abortSignal(abortSignal ?? new AbortController().signal),
-        DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
+        nonCriticalTimeoutMs,
         { data: 0, error: null } as { data: number; error: null },
         'pending_approvals_nav_count',
         () => markFallback('pending_approvals_nav_count'),
