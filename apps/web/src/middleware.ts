@@ -157,6 +157,13 @@ export async function middleware(request: NextRequest) {
       dest.search = '';
       return NextResponse.redirect(dest);
     }
+    const nextParam = request.nextUrl.searchParams.get('next');
+    if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('/login')) {
+      const dest = request.nextUrl.clone();
+      dest.pathname = nextParam;
+      dest.search = '';
+      return NextResponse.redirect(dest);
+    }
     const dest = request.nextUrl.clone();
     dest.pathname = isPlatformAdmin ? '/dashboard' : '/';
     dest.search = '';

@@ -48,6 +48,16 @@ const shellInFlight = new Map<string, Promise<ShellBundle>>();
 registerSharedCacheStore('campsite:shell:bundle', shellResponseCache, shellInFlight);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function withViewerIdentity(value: ShellBundle, viewerKey: string): ShellBundle {
+  if (!UUID_RE.test(viewerKey)) return value;
+  const userId = typeof value.user_id === 'string' ? value.user_id.trim() : '';
+  if (userId) return value;
+  return {
+    ...value,
+    user_id: viewerKey,
+  };
+}
+
 function isMissingProfileBundle(value: ShellBundle): boolean {
   return value.has_profile === false;
 }
@@ -253,22 +263,46 @@ async function recoverPermissionKeysIfNeeded(
 export function getStaleOrDefaultShellBundle(viewerKey: string): ShellBundle {
   const cached = shellResponseCache.get(viewerKey);
   if (cached) {
-    return withShellDegradedMeta(
-      withShellCacheMeta(cached.value, 'hit', cached.cachedAt, 'stale', cached.lastSuccessAt),
-      'app_timeout_fallback'
+    return withViewerIdentity(
+      withShellDegradedMeta(
+        withShellCacheMeta(cached.value, 'hit', cached.cachedAt, 'stale', cached.lastSuccessAt),
+        'app_timeout_fallback'
+      ),
+      viewerKey
     );
   }
-  return {
-    shell_response_cache_status: 'unknown',
-    shell_response_cache_age_ms: null,
-    shell_cache_status: 'stale-fallback',
-    shell_degraded: true,
-    shell_degraded_reason: 'app_timeout_fallback',
-    shell_guardrail_reasons: ['app_timeout_fallback'],
-    shell_data_freshness: 'unknown',
-    shell_last_success_at: null,
-    has_profile: null,
-  };
+  return withViewerIdentity(
+    {
+      shell_response_cache_status: 'unknown',
+      shell_response_cache_age_ms: null,
+      shell_cache_status: 'stale-fallback',
+      shell_degraded: true,
+      shell_degraded_reason: 'app_timeout_fallback',
+      shell_guardrail_reasons: ['app_timeout_fallback'],
+      shell_data_freshness: 'unknown',
+      shell_last_success_at: null,
+      has_profile: null,
+    },
+    viewerKey
+  );
+}
+
+function withViewerIdentityAndCacheMeta(
+  value: ShellBundle,
+  status: 'hit' | 'miss' | 'coalesced',
+  cachedAt: number,
+  freshness: 'fresh' | 'stale' | 'unknown',
+  lastSuccessAt: number | null,
+  viewerKey: string
+): ShellBundle {
+  return withViewerIdentity(
+    withShellCacheMeta(value, status, cachedAt, freshness, lastSuccessAt),
+    viewerKey
+  );
+}
+
+function withViewerIdentityOnly(value: ShellBundle, viewerKey: string): ShellBundle {
+  return withViewerIdentity(value, viewerKey);
 }
 
 export async function invalidateCachedMainShellLayoutBundle(viewerKey: string): Promise<void> {
@@ -310,14 +344,14 @@ export async function getMainShellLayoutBundleForViewer(
   const now = Date.now();
   const cached = shellResponseCache.get(viewerKey);
   if (cached && cached.expiresAt > now) {
-    return withShellCacheMeta(cached.value, 'hit', cached.cachedAt, 'fresh', cached.lastSuccessAt);
+    return withViewerIdentityAndCacheMeta(cached.value, 'hit', cached.cachedAt, 'fresh', cached.lastSuccessAt, viewerKey);
   }
 
   const inFlight = shellInFlight.get(viewerKey);
   if (inFlight) {
     try {
       const { value } = await awaitWithTimeout(inFlight, SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS);
-      return withShellCacheMeta(value, 'coalesced', Date.now(), 'fresh', Date.now());
+      return withViewerIdentityAndCacheMeta(value, 'coalesced', Date.now(), 'fresh', Date.now(), viewerKey);
     } catch {
       // If an in-flight request hangs or fails, release coalescing so future requests can recover.
       shellInFlight.delete(viewerKey);
@@ -332,13 +366,14 @@ export async function getMainShellLayoutBundleForViewer(
     const redisBundle = await redisGet<ShellBundle>(shellRedisKey);
     if (redisBundle !== null && !redisBundle.shell_degraded) {
       const cachedAt = Date.now();
+      const bundleWithViewer = withViewerIdentityOnly(redisBundle, viewerKey);
       shellResponseCache.set(viewerKey, {
-        value: redisBundle,
+        value: bundleWithViewer,
         cachedAt,
         expiresAt: cachedAt + SHELL_RESPONSE_CACHE_TTL_MS,
         lastSuccessAt: cachedAt,
       });
-      return withShellCacheMeta(redisBundle, 'hit', cachedAt, 'fresh', cachedAt);
+      return withViewerIdentityAndCacheMeta(bundleWithViewer, 'hit', cachedAt, 'fresh', cachedAt, viewerKey);
     }
 
     // Default path: one merged RPC reduces DB round-trips under Nano constraints.
@@ -371,17 +406,18 @@ export async function getMainShellLayoutBundleForViewer(
             ? recoveredPayload.shell_cache_status
             : 'single-rpc',
       };
+      const mergedWithViewer = withViewerIdentityOnly(merged, viewerKey);
       const cachedAt = Date.now();
       shellResponseCache.set(viewerKey, {
-        value: merged,
+        value: mergedWithViewer,
         cachedAt,
-        expiresAt: nextShellExpiry(merged, cachedAt),
+        expiresAt: nextShellExpiry(mergedWithViewer, cachedAt),
         lastSuccessAt: cachedAt,
       });
-      if (!merged.shell_degraded) {
-        await redisSet(shellRedisKey, merged, Math.ceil(SHELL_RESPONSE_CACHE_TTL_MS / 1000));
+      if (!mergedWithViewer.shell_degraded) {
+        await redisSet(shellRedisKey, mergedWithViewer, Math.ceil(SHELL_RESPONSE_CACHE_TTL_MS / 1000));
       }
-      return merged;
+      return mergedWithViewer;
     }
 
     // Compatibility path for explicit split-RPC callers.
@@ -428,23 +464,24 @@ export async function getMainShellLayoutBundleForViewer(
       shell_cache_status:
         typeof merged.shell_cache_status === 'string' ? merged.shell_cache_status : badgeWrapped.meta.cacheStatus,
     };
+    const finalBundleWithViewer = withViewerIdentityOnly(finalBundle, viewerKey);
     const cachedAt = Date.now();
     shellResponseCache.set(viewerKey, {
-      value: finalBundle,
+      value: finalBundleWithViewer,
       cachedAt,
-      expiresAt: nextShellExpiry(finalBundle, cachedAt),
+      expiresAt: nextShellExpiry(finalBundleWithViewer, cachedAt),
       lastSuccessAt: cachedAt,
     });
-    if (!finalBundle.shell_degraded) {
-      await redisSet(shellRedisKey, finalBundle, Math.ceil(SHELL_RESPONSE_CACHE_TTL_MS / 1000));
+    if (!finalBundleWithViewer.shell_degraded) {
+      await redisSet(shellRedisKey, finalBundleWithViewer, Math.ceil(SHELL_RESPONSE_CACHE_TTL_MS / 1000));
     }
-    return finalBundle;
+    return finalBundleWithViewer;
   })();
 
   shellInFlight.set(viewerKey, fetchPromise);
   try {
     const { value } = await awaitWithTimeout(fetchPromise, SHELL_IN_FLIGHT_AWAIT_TIMEOUT_MS);
-    return withShellCacheMeta(value, 'miss', Date.now(), 'fresh', Date.now());
+    return withViewerIdentityAndCacheMeta(value, 'miss', Date.now(), 'fresh', Date.now(), viewerKey);
   } catch {
     return getStaleOrDefaultShellBundle(viewerKey);
   } finally {
