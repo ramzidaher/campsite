@@ -2,7 +2,6 @@
 
 import { PROFILE_ROLES, type ProfileRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Tier = {
@@ -115,12 +114,6 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-5 py-7 sm:px-[28px]">
-      <Link
-        href="/settings"
-        className="text-[13px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-      >
-        ← Settings
-      </Link>
       <div>
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Discount tiers</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">

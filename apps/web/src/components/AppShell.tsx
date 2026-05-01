@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
-import { PageInfoFab } from '@/components/shell/PageInfoFab';
 import { AppTopBar } from '@/components/shell/AppTopBar';
 import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
@@ -25,7 +24,6 @@ import {
   type CelebrationMode,
 } from '@/lib/holidayThemes';
 import { orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
-import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
 import { nextUiMode, type UiMode } from '@/lib/uiMode';
@@ -73,7 +71,65 @@ function DegradedLastUpdatedText({ shellLastSuccessAt }: { shellLastSuccessAt: n
 
   if (nowMs === null) return null;
   const secs = Math.max(0, Math.round((nowMs - shellLastSuccessAt) / 1000));
-  return <span className="text-[#6b6b6b]">Last updated {secs}s ago</span>;
+  return <span className="text-amber-800/80">Last updated {secs}s ago</span>;
+}
+
+function titleFromPathSegment(segment: string): string {
+  return segment
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function getGlobalBackLink(pathname: string): { href: string; label: string } | null {
+  if (!pathname || pathname === '/') return null;
+  const cleanPath = pathname.split('?')[0] ?? pathname;
+  const mainPages = new Set([
+    '/dashboard',
+    '/broadcasts',
+    '/calendar',
+    '/rota',
+    '/discount',
+    '/leave',
+    '/attendance',
+    '/performance',
+    '/resources',
+    '/onboarding',
+    '/profile',
+    '/settings',
+    '/hr',
+    '/hr/hiring',
+    '/hr/hiring/requests',
+    '/hr/hiring/jobs',
+    '/hr/hiring/application-forms',
+    '/hr/hiring/templates',
+    '/hr/hiring/contract-templates',
+    '/hr/hiring/new-request',
+    '/admin',
+    '/manager',
+    '/finance',
+    '/reports',
+    '/notifications',
+  ]);
+  if (mainPages.has(cleanPath)) return null;
+
+  const routeOverrides: Array<{ test: RegExp; href: string; label: string }> = [
+    { test: /^\/hr\/hiring\/requests\/[^/]+/, href: '/hr/hiring/requests', label: 'Hiring requests' },
+    { test: /^\/hr\/recruitment\/[^/]+/, href: '/hr/hiring/requests', label: 'Hiring requests' },
+    { test: /^\/hr\/hiring\/jobs\/[^/]+/, href: '/hr/hiring/jobs', label: 'Job listings' },
+    { test: /^\/hr\/jobs\/[^/]+/, href: '/hr/hiring/jobs', label: 'Job listings' },
+    { test: /^\/hr\/hiring\/application-forms\/[^/]+/, href: '/hr/hiring/application-forms', label: 'Application forms' },
+    { test: /^\/admin\/jobs\/[^/]+/, href: '/admin/jobs', label: 'Jobs' },
+  ];
+  const override = routeOverrides.find((item) => item.test.test(cleanPath));
+  if (override) return { href: override.href, label: override.label };
+
+  const segments = cleanPath.split('/').filter(Boolean);
+  if (segments.length <= 1) return null;
+  const parentSegments = segments.slice(0, -1);
+  const href = `/${parentSegments.join('/')}`;
+  const parentLast = parentSegments[parentSegments.length - 1] ?? '';
+  if (!parentLast) return null;
+  return { href, label: titleFromPathSegment(parentLast) };
 }
 
 function NavLink({
@@ -120,7 +176,7 @@ function NavLink({
       <span className="ml-auto flex shrink-0 items-center gap-1">
         {secondaryBadge !== undefined && secondaryBadge > 0 ? (
           <span
-            className="min-w-[18px] rounded-full bg-[#b91c1c] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white"
+            className="min-w-[18px] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-[10px] font-semibold text-amber-950"
             title={secondaryBadgeTitle ?? 'Needs attention'}
           >
             {secondaryBadge > 99 ? '99+' : secondaryBadge}
@@ -192,6 +248,7 @@ export function AppShell({
   pendingApprovalCount,
   rotaPendingFinalCount,
   rotaPendingPeerCount,
+  recruitmentPendingReviewCount = 0,
   topBarNotifications,
   showLeaveNav = false,
   showAttendanceNav = false,
@@ -243,6 +300,8 @@ export function AppShell({
   pendingApprovalCount: number;
   rotaPendingFinalCount: number;
   rotaPendingPeerCount: number;
+  /** Open recruitment requests in `pending_review` (org admins only; layout passes 0 for others). */
+  recruitmentPendingReviewCount?: number;
   topBarNotifications: TopBarNotificationItem[];
   showLeaveNav?: boolean;
   showAttendanceNav?: boolean;
@@ -280,7 +339,6 @@ export function AppShell({
 }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [desktopNavOpen, setDesktopNavOpen] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
   const [managerNavExpanded, setManagerNavExpanded] = useState(true);
   const [financeNavExpanded, setFinanceNavExpanded] = useState(true);
@@ -304,6 +362,7 @@ export function AppShell({
   const livePendingApprovalCount      = bc('pending_approvals',           pendingApprovalCount);
   const liveRotaPendingFinalCount     = bc('rota_pending_final',          rotaPendingFinalCount);
   const liveRotaPendingPeerCount      = bc('rota_pending_peer',           rotaPendingPeerCount);
+  const liveRecruitmentPendingCount   = bc('recruitment_pending_review',  recruitmentPendingReviewCount);
   const liveLeaveNavBadge             = bc('leave_pending_approval',      leaveNavBadge);
   const livePerformanceNavBadge       = bc('performance_pending',         performanceNavBadge);
   const liveCalendarNotifications     = bc('calendar_event_notifications', 0);
@@ -346,7 +405,7 @@ export function AppShell({
         { id: 'calendar-notifications',     label: 'Calendar updates',               href: '/notifications/calendar',       count: liveCalendarNotifications },
       ] satisfies TopBarNotificationItem[]
     ).filter((item) => item.count > 0);
-  }, [live, topBarNotifications, adminNavItems, liveCalendarNotifications]);
+  }, [live, topBarNotifications, adminNavItems]);
 
   useEffect(() => {
     try {
@@ -362,6 +421,9 @@ export function AppShell({
       const fin = localStorage.getItem(FINANCE_NAV_EXPANDED_KEY);
       if (fin === '0') setFinanceNavExpanded(false);
       else if (fin === '1') setFinanceNavExpanded(true);
+      const desktopSidebar = localStorage.getItem(DESKTOP_SIDEBAR_OPEN_KEY);
+      if (desktopSidebar === '1') setDesktopNavOpen(true);
+      else if (desktopSidebar === '0') setDesktopNavOpen(false);
       const savedMode = localStorage.getItem(SHELL_MODE_STORAGE_KEY);
       const legacyPride = localStorage.getItem(LEGACY_PRIDE_MODE_STORAGE_KEY) === '1';
       if (savedMode) setShellMode(normalizeCelebrationMode(savedMode));
@@ -372,7 +434,6 @@ export function AppShell({
     } catch {
       /* ignore */
     }
-    setHydrated(true);
   }, [initialCelebrationMode, initialCelebrationAutoEnabled]);
 
   const toggleUiMode = async () => {
@@ -382,7 +443,6 @@ export function AppShell({
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) return;
     await supabase.from('profiles').update({ ui_mode: nextMode }).eq('id', authData.user.id);
-    await invalidateClientCaches({ scopes: ['profile-self'], shellUserIds: [authData.user.id] }).catch(() => null);
   };
 
   useEffect(() => {
@@ -458,6 +518,7 @@ export function AppShell({
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
   const showUserAvatar = Boolean(safeUserAvatar) && !userAvatarFailed;
   const shouldShowDegradedBanner = shellDegraded || shellDataFreshness === 'stale';
+  const globalBackLink = getGlobalBackLink(pathname);
 
   const paletteSections = useMemo(
     () =>
@@ -1295,8 +1356,7 @@ export function AppShell({
 
       <div
         className={[
-          'flex min-h-screen flex-1 flex-col transition-[margin]',
-          hydrated ? 'duration-200' : 'duration-0',
+          'flex min-h-screen flex-1 flex-col transition-[margin] duration-200',
           desktopNavOpen ? 'md:ml-[240px]' : 'md:ml-[58px]',
         ].join(' ')}
         style={
@@ -1327,16 +1387,19 @@ export function AppShell({
           }}
         />
         {shouldShowDegradedBanner ? (
-          <div className="status-banner-warning border-b px-4 py-2 text-[12px] sm:px-6">
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[12px] text-amber-900 sm:px-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">Refreshing workspace data...</span>
               {typeof shellLastSuccessAt === 'number' ? (
                 <DegradedLastUpdatedText shellLastSuccessAt={shellLastSuccessAt} />
               ) : null}
+              {shellDegradedReason ? (
+                <span className="text-amber-800/80">({shellDegradedReason})</span>
+              ) : null}
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="ml-auto rounded border border-[#d8d8d8] bg-white px-2 py-0.5 text-[11px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                className="ml-auto rounded border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
               >
                 Retry
               </button>
@@ -1345,9 +1408,19 @@ export function AppShell({
         ) : null}
         <GlobalActionFeedbackBridge />
         <main id="main-content" tabIndex={-1} className="workspace-fluid flex-1 overflow-x-hidden overflow-y-auto">
+          {globalBackLink ? (
+            <div className="px-5 pt-3 sm:px-7">
+              <Link
+                href={globalBackLink.href}
+                prefetch={false}
+                className="inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
+              >
+                {`\u2190 ${globalBackLink.label}`}
+              </Link>
+            </div>
+          ) : null}
           {children}
         </main>
-        <PageInfoFab />
       </div>
     </div>
   );

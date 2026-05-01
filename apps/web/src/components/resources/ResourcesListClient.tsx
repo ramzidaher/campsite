@@ -230,17 +230,25 @@ export function ResourcesListClient({
 
   const fetchFolderRows = useCallback(
     async (mode: 'match_view' | 'active_only'): Promise<StaffResourceFolderRow[]> => {
-      const selectCols = folderHierarchyOk
-        ? 'id, name, sort_order, parent_id, archived_at'
-        : 'id, name, sort_order';
-      let q = supabase.from('staff_resource_folders').select(selectCols).eq('org_id', orgId);
-      if (folderHierarchyOk) {
-        const wantArchivedFolders = mode === 'match_view' && archiveOnly;
-        if (wantArchivedFolders) q = q.not('archived_at', 'is', null);
-        else q = q.is('archived_at', null);
-      }
-      q = q.order('sort_order', { ascending: true }).order('name', { ascending: true });
-      const { data, error } = await q;
+      const q = folderHierarchyOk
+        ? (() => {
+            const wantArchivedFolders = mode === 'match_view' && archiveOnly;
+            let base = supabase
+              .from('staff_resource_folders')
+              .select('id, name, sort_order, parent_id, archived_at')
+              .eq('org_id', orgId);
+            base = wantArchivedFolders
+              ? base.not('archived_at', 'is', null)
+              : base.is('archived_at', null);
+            return base;
+          })()
+        : supabase
+            .from('staff_resource_folders')
+            .select('id, name, sort_order')
+            .eq('org_id', orgId);
+      const { data, error } = await q
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as StaffResourceFolderRow[];
     },
@@ -811,13 +819,15 @@ export function ResourcesListClient({
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-authSerif text-3xl leading-tight text-[var(--org-brand-text)]">
+          <h1 className="campsite-title text-[var(--org-brand-text)]">
             Resource library
             {archiveOnly ? (
-              <span className="ml-2 text-lg font-normal text-[var(--org-brand-muted)]">· Archived</span>
+              <span className="ml-2 text-[var(--campsite-font-subheading)] font-normal text-[var(--org-brand-muted)]">
+                · Archived
+              </span>
             ) : null}
           </h1>
-          <p className="mt-1 text-[13px] text-[var(--org-brand-muted)]">
+          <p className="campsite-body mt-1 text-[var(--org-brand-muted)]">
             {archiveOnly
               ? 'Documents hidden from the main library. Restore or delete them from the resource page.'
               : 'Policies, handbooks, and reference files for your organisation.'}
@@ -825,11 +835,6 @@ export function ResourcesListClient({
         </div>
         {canManage ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {!archiveOnly ? (
-              <button type="button" className={outlineHeaderBtn} onClick={openNewFolderPanel}>
-                New folder
-              </button>
-            ) : null}
             {archiveColumnOk ? (
               <Link href={archiveOnly ? '/resources' : '/resources?archived=1'} className={outlineHeaderBtn}>
                 {archiveOnly ? 'Active library' : 'Archived'}

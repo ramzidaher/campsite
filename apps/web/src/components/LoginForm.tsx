@@ -145,10 +145,12 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
   }
 
   return (
-    <div>
+    <div className="campsite-stack-md">
       {signingIn && <AppLoaderOverlay />}
-      <h2 className="auth-title">Welcome back</h2>
-      <p className="auth-sub mb-8">Sign in to your Campsite account</p>
+      <div className="campsite-stack-sm">
+        <h2 className="auth-title">Welcome back</h2>
+        <p className="auth-sub">Sign in to your Campsite account</p>
+      </div>
 
       <form onSubmit={(e) => void onSubmit(e)}>
         <div className="mb-4">
@@ -172,7 +174,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
             <label className="auth-label mb-0" htmlFor="password">
               Password
             </label>
-            <Link href="/forgot-password" className="text-[12.5px] text-[#9b9b9b] hover:text-[#121212]">
+            <Link href="/forgot-password" className="campsite-body text-[#9b9b9b] hover:text-[#121212]">
               Forgot password?
             </Link>
           </div>
@@ -204,7 +206,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
             onChange={(e) => setKeepSignedIn(e.target.checked)}
             className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#121212]"
           />
-          <span className="text-[12.5px] leading-snug text-[#6b6b6b]">
+          <span className="campsite-body text-[#6b6b6b]">
             Keep me signed in on this device
           </span>
         </label>
@@ -223,7 +225,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-[13px] text-[#6b6b6b]">
+      <p className="mt-6 text-center campsite-body text-[#6b6b6b]">
         Don&apos;t have an account?{' '}
         <Link
           href="/register"

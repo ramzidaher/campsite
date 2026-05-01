@@ -271,10 +271,10 @@ export function LandingPage() {
         .landing-page .problem-panel-left { background: var(--problem-panel-bg); }
         .landing-page .problem-panel-right { background: var(--problem-panel-bg); display: flex; flex-direction: column; justify-content: space-between; gap: 22px; border-left: 1px solid var(--lp-border); }
         .landing-page .problem-eyebrow { margin-bottom: 16px; color: var(--lp-text-muted); }
-        .landing-page .problem-heading { font-family: var(--font-auth-serif), Georgia, ui-serif, serif; font-size: clamp(1.8rem, 3.3vw, 2.6rem); line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--lp-foreground); }
+        .landing-page .problem-heading { font-family: var(--font-auth-serif), Georgia, ui-serif, serif; font-size: clamp(1.8rem, 3.3vw, 2.6rem); line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 12px; color: #000; }
         .landing-page .problem-body { max-width: 38ch; line-height: 1.65; color: var(--lp-text-secondary); }
         .landing-page .problem-eyebrow-fix { color: var(--problem-fix-eyebrow); }
-        .landing-page .problem-heading-fix { color: var(--problem-fix-heading); }
+        .landing-page .problem-heading-fix { color: #000; }
         .landing-page .problem-body-fix { color: var(--problem-fix-body); max-width: 40ch; }
         .landing-page .problem-actions { margin-top: 22px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
         .landing-page .problem-btn-outline {

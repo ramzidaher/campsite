@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 type VerifyTokenResponse =
@@ -86,12 +85,6 @@ export function DiscountScannerClient() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6 px-5 py-7 sm:px-[28px]">
-      <Link
-        href="/discount"
-        className="text-[13px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-      >
-        ← Back to discount card
-      </Link>
       <div>
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Verify staff QR</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import type { ProfileRow } from '@/lib/AuthContext';
+import { mainShell, mainShellText } from '@/constants/mainShell';
 import { getSupabase } from '@/lib/supabase';
 
 type QuestionOwner = 'employee' | 'manager' | 'both';
@@ -167,9 +168,16 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
   }
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{
+        paddingHorizontal: mainShell.spacing.md,
+        paddingTop: mainShell.spacing.md,
+        paddingBottom: mainShell.spacing.xxl + mainShell.spacing.xs,
+      }}
+    >
       <Pressable onPress={() => router.back()}>
-        <Text style={{ color: textSecondary, fontSize: 13 }}>← Back</Text>
+        <Text style={{ color: textSecondary, ...mainShellText.caption }}>← Back</Text>
       </Pressable>
       <Text style={[styles.title, { color: textPrimary }]}>{isManager ? m.report_name : m.manager_name}</Text>
       <Text style={[styles.meta, { color: textSecondary }]}>
@@ -191,8 +199,8 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
 
       <Text style={[styles.h2, { color: textPrimary }]}>Check-in</Text>
       {doc.questions.map((q) => (
-        <View key={q.id} style={{ marginBottom: 12 }}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: textPrimary }}>{q.prompt || 'Question'}</Text>
+        <View key={q.id} style={{ marginBottom: mainShell.spacing.sm }}>
+          <Text style={{ ...mainShellText.bodyStrong, color: textPrimary }}>{q.prompt || 'Question'}</Text>
           {canEditNotes && canEditAnswer(!!isManager, q.owner) ? (
             <TextInput
               multiline
@@ -208,7 +216,9 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
               style={[styles.input, { color: textPrimary, borderColor: border, minHeight: 72 }]}
             />
           ) : (
-            <Text style={{ fontSize: 14, color: textPrimary, marginTop: 4 }}>{q.answer || '—'}</Text>
+            <Text style={{ ...mainShellText.body, color: textPrimary, marginTop: mainShell.spacing.xxs }}>
+              {q.answer || '—'}
+            </Text>
           )}
         </View>
       ))}
@@ -251,7 +261,15 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
 
       <Text style={[styles.h2, { color: textPrimary }]}>Actions</Text>
       {doc.action_items.map((a) => (
-        <View key={a.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+        <View
+          key={a.id}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: mainShell.spacing.xs,
+            marginBottom: mainShell.spacing.xs,
+          }}
+        >
           <Pressable
             onPress={() => {
               if (!canEditNotes) return;
@@ -272,7 +290,7 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
               alignItems: 'center',
             }}
           >
-            {a.done ? <Text style={{ fontSize: 12 }}>✓</Text> : null}
+            {a.done ? <Text style={styles.checkmark}>✓</Text> : null}
           </Pressable>
           {canEditNotes ? (
             <TextInput
@@ -295,7 +313,7 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
       ))}
 
       {isManager && m.status !== 'completed' && m.status !== 'cancelled' ? (
-        <View style={{ marginTop: 16, gap: 8 }}>
+        <View style={{ marginTop: mainShell.spacing.md, gap: mainShell.spacing.xs }}>
           {m.status === 'scheduled' ? (
             <Pressable onPress={() => void setStatus('in_progress')} style={styles.btnOutline}>
               <Text style={{ color: textPrimary }}>Start meeting</Text>
@@ -308,7 +326,7 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
       ) : null}
 
       {locked && (m.manager_user_id === profile.id || m.report_user_id === profile.id) ? (
-        <View style={{ marginTop: 20 }}>
+        <View style={{ marginTop: mainShell.spacing.lg }}>
           <Text style={[styles.h2, { color: textPrimary }]}>Request note change</Text>
           <TextInput
             multiline
@@ -329,34 +347,39 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  title: { fontSize: 22, fontWeight: '600', marginTop: 12 },
-  meta: { fontSize: 13, marginTop: 6 },
-  h2: { fontSize: 15, fontWeight: '600', marginTop: 20, marginBottom: 8 },
-  body: { fontSize: 14, lineHeight: 20 },
+  title: { ...mainShellText.pageTitle, fontWeight: '600', marginTop: mainShell.spacing.sm },
+  meta: { ...mainShellText.caption, marginTop: mainShell.spacing.xs - 2 },
+  h2: {
+    ...mainShellText.subheading,
+    marginTop: mainShell.spacing.lg,
+    marginBottom: mainShell.spacing.xs,
+  },
+  body: { ...mainShellText.body },
   input: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 10,
-    padding: 12,
+    padding: mainShell.spacing.sm,
     minHeight: 120,
     textAlignVertical: 'top',
-    fontSize: 14,
+    ...mainShellText.body,
   },
   btnDark: {
     alignSelf: 'flex-start',
     backgroundColor: '#121212',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: mainShell.spacing.md,
+    paddingVertical: mainShell.spacing.xs + 2,
     borderRadius: 10,
-    marginTop: 10,
+    marginTop: mainShell.spacing.xs + 2,
   },
-  btnDarkText: { color: '#faf9f6', fontWeight: '600', fontSize: 14 },
+  btnDarkText: { color: '#faf9f6', ...mainShellText.bodyStrong },
   btnOutline: {
     alignSelf: 'flex-start',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#d8d8d8',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: mainShell.spacing.md,
+    paddingVertical: mainShell.spacing.xs + 2,
     borderRadius: 10,
   },
-  err: { color: '#b91c1c', marginTop: 12, fontSize: 13 },
+  err: { color: '#b91c1c', marginTop: mainShell.spacing.sm, ...mainShellText.caption },
+  checkmark: { ...mainShellText.caption },
 });

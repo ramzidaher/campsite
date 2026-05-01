@@ -1,8 +1,18 @@
-import { getCachedHiringApplicationFormPreviewPageData } from '@/lib/recruitment/getCachedHiringApplicationFormPreviewPageData';
-import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
-import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import Link from 'next/link';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+
+type QuestionRow = {
+  id: string;
+  question_type: string | null;
+  prompt: string | null;
+  help_text: string | null;
+  required: boolean | null;
+  options: unknown;
+  max_length: number | null;
+  sort_order: number | null;
+};
 
 export default async function ApplicationFormPreviewPage({
   params,
@@ -13,36 +23,48 @@ export default async function ApplicationFormPreviewPage({
   const formId = rawId?.trim();
   if (!formId) redirect('/hr/hiring/application-forms');
 
-  const bundle = await getCachedMainShellLayoutBundle();
-  const orgId = shellBundleOrgId(bundle);
-  if (!orgId) redirect('/login');
-  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
-  const permissionKeys = parseShellPermissionKeys(bundle);
-  const canViewJobs = permissionKeys.includes('jobs.view');
-  if (!canViewJobs) redirect('/forbidden');
+  const supabase = await createClient();
+  const user = await getAuthUser();
+  if (!user) redirect('/login');
 
-  const pageData = await getCachedHiringApplicationFormPreviewPageData(orgId, formId);
-  if (!pageData) redirect('/hr/hiring/application-forms');
-  const questions = pageData.questions;
+  const { data: profile } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).single();
+  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
+
+  const canViewJobs = await viewerHasPermission('jobs.view');
+  if (!canViewJobs) redirect('/broadcasts');
+
+  const orgId = profile.org_id as string;
+
+  const [{ data: setRow }, { data: rows }] = await Promise.all([
+    supabase
+      .from('org_application_question_sets')
+      .select('id, name')
+      .eq('id', formId)
+      .eq('org_id', orgId)
+      .maybeSingle(),
+    supabase
+      .from('org_application_question_set_items')
+      .select('id, question_type, prompt, help_text, required, options, max_length, sort_order')
+      .eq('set_id', formId)
+      .order('sort_order', { ascending: true }),
+  ]);
+
+  if (!setRow?.id) redirect('/hr/hiring/application-forms');
+
+  const questions = ((rows ?? []) as QuestionRow[]).filter((q) => String(q.prompt ?? '').trim().length > 0);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-7 sm:px-7">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6">
         <div>
           <p className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Applicant preview</p>
           <h1 className="mt-2 font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
-            {pageData.formName}
+            {String(setRow.name ?? '').trim() || 'Application form'}
           </h1>
           <p className="mt-2 text-[13.5px] leading-relaxed text-[#6b6b6b]">
             This is how applicants will see your custom application questions.
           </p>
         </div>
-        <Link
-          href={`/hr/hiring/application-forms/${formId}/edit`}
-          className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#121212] transition-colors hover:border-[#121212]"
-        >
-          Back to editor
-        </Link>
       </div>
 
       <section className="space-y-4 rounded-2xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">

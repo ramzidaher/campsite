@@ -692,9 +692,9 @@ export function RotaClient({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-7 sm:px-[28px]">
-      <div className="mb-4">
-        <h1 className="font-authSerif text-[26px] tracking-tight text-[#121212]">Rota</h1>
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
+      <div className="mb-6 campsite-stack-sm">
+        <h1 className="campsite-title text-[#121212]">Rota</h1>
         <RotaHowItWorksSubtitle role={profile.role} />
       </div>
 

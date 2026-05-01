@@ -4,7 +4,6 @@ import { currentLeaveYearKey } from '@/lib/datetime';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Member = { id: string; full_name: string; email: string | null };
@@ -363,10 +362,7 @@ export function OrgLeaveAdminClient({
   return (
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
       <div className="mb-6">
-        <Link href="/leave" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-          ← Back to time off
-        </Link>
-        <h1 className="mt-3 font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           Leave settings
         </h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">

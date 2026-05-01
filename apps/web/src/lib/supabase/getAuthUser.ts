@@ -13,8 +13,20 @@ import { createClient } from './server';
  */
 export const getAuthUser = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isRetryableFetchFailure =
+      message.toLowerCase().includes('fetch failed') ||
+      message.includes('AuthRetryableFetchError');
+    if (isRetryableFetchFailure) {
+      // Fail open on transient auth network issues so SSR routes can still render.
+      return null;
+    }
+    throw error;
+  }
 });

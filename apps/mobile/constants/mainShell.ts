@@ -10,6 +10,67 @@ export const mainShell = {
   sidebarText: '#faf9f6',
   topBarBg: '#faf9f6',
   accentDot: '#E11D48',
+  spacing: {
+    xxs: 4,
+    xs: 8,
+    sm: 12,
+    md: 16,
+    lg: 20,
+    xl: 24,
+    xxl: 32,
+  },
+  type: {
+    title: 20,
+    subheading: 15,
+    body: 14,
+  },
+} as const;
+
+/** Shared semantic type styles for mobile screens/components. */
+export const mainShellText = {
+  pageTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  sectionTitle: {
+    fontSize: mainShell.type.title,
+    lineHeight: 26,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  subheading: {
+    fontSize: mainShell.type.subheading,
+    lineHeight: 22,
+    fontWeight: '600',
+  },
+  body: {
+    fontSize: mainShell.type.body,
+    lineHeight: 20,
+  },
+  bodyStrong: {
+    fontSize: mainShell.type.body,
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+  caption: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  tabLabel: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  overline: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
 } as const;
 
 /** True when the main tab home screen is active (used for personalised header title). */

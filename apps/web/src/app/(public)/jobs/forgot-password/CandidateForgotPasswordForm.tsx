@@ -70,7 +70,7 @@ export function CandidateForgotPasswordForm({ orgSlug, hostHeader }: Props) {
           className="mt-5 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-[14px] font-semibold transition-opacity hover:opacity-90"
           style={{ background: 'var(--org-brand-primary, #121212)', color: 'var(--jobs-on-primary, #fff)' }}
         >
-          Back to sign in
+          Sign in
         </Link>
       </div>
     );

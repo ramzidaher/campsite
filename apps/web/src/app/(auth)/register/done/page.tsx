@@ -84,9 +84,6 @@ export default async function RegisterDonePage({
           If you haven&apos;t heard back in a couple of days, contact your manager directly.
         </span>
       </div>
-      <Link href="/login" className="auth-btn-ghost mt-8 inline-flex no-underline">
-        Back to sign in
-      </Link>
     </div>
   );
 }

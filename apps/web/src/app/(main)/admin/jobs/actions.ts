@@ -3,10 +3,6 @@
 import { randomUUID } from 'node:crypto';
 
 import { generateDraftJobSlug, generatePublishedJobSlug } from '@/lib/jobs/jobListingSlug';
-import {
-  invalidateJobRelatedCachesForOrg,
-  invalidateRecruitmentRelatedCachesForOrg,
-} from '@/lib/cache/cacheInvalidation';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import {
@@ -217,7 +213,6 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
       }
     }
 
-    await invalidateJobRelatedCachesForOrg(orgId);
     revalidateJobs(existingDraft.id as string);
     return { ok: true, jobId: existingDraft.id as string };
   }
@@ -292,7 +287,6 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
   }
 
   const jobId = inserted.id as string;
-  await invalidateJobRelatedCachesForOrg(orgId);
   revalidateJobs(jobId);
   return { ok: true, jobId };
 }
@@ -463,7 +457,6 @@ export async function updateJobListing(
   const error = updateResult.error;
 
   if (error) return { ok: false, error: error.message };
-  await invalidateJobRelatedCachesForOrg(profile.org_id as string);
   revalidateJobs(id);
   return { ok: true };
 }
@@ -561,10 +554,6 @@ export async function publishJobListing(jobId: string): Promise<JobActionState> 
         actorUserId: user.id,
         orgId,
       });
-      await Promise.all([
-        invalidateJobRelatedCachesForOrg(orgId),
-        invalidateRecruitmentRelatedCachesForOrg(orgId),
-      ]);
       revalidateJobs(id);
       return { ok: true };
     }
@@ -614,7 +603,6 @@ export async function archiveJobListing(jobId: string): Promise<JobActionState> 
     .eq('org_id', profile.org_id as string);
 
   if (error) return { ok: false, error: error.message };
-  await invalidateJobRelatedCachesForOrg(profile.org_id as string);
   revalidateJobs(id);
   return { ok: true };
 }
@@ -687,7 +675,6 @@ export async function unarchiveJobListing(jobId: string): Promise<JobActionState
     .eq('status', 'archived');
 
   if (error) return { ok: false, error: error.message };
-  await invalidateJobRelatedCachesForOrg(orgId);
   revalidateJobs(id);
   return { ok: true };
 }

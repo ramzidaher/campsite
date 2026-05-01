@@ -1,7 +1,6 @@
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { createClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 function fmtDateTime(value: string | null): string {
@@ -83,7 +82,7 @@ export default async function HrJobPreviewPage({
 
   const { data: profile } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).single();
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('jobs.view'))) redirect('/forbidden');
+  if (!(await viewerHasPermission('jobs.view'))) redirect('/broadcasts');
 
   const { data: job } = await supabase
     .from('job_listings')
@@ -100,14 +99,8 @@ export default async function HrJobPreviewPage({
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
-      <div className="mb-6 flex items-center justify-between gap-3">
+      <div className="mb-6">
         <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Job listing preview</h1>
-        <Link
-          href={`/hr/jobs/${id}/edit`}
-          className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[13px] font-medium text-[#121212] hover:bg-[#faf9f6]"
-        >
-          Back to editor
-        </Link>
       </div>
 
       <section className="space-y-5 rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">

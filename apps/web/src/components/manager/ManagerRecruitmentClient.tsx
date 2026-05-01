@@ -10,7 +10,6 @@ import {
 import {
   RECRUITMENT_CONTRACT_TYPES,
   RECRUITMENT_HIRE_REASONS,
-  RECRUITMENT_URGENCY_LEVELS,
 } from '@campsite/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -37,6 +36,8 @@ type InterviewScheduleInput = {
   date: string;
   startTime: string;
   endTime: string;
+  slotMinutes: string;
+  breakMinutes: string;
   notes: string;
 };
 
@@ -53,7 +54,7 @@ const APPROVAL_OPTIONS = [
 ] as const;
 
 const ELIGIBILITY_OPTIONS = [
-  { value: 'internal_staff_only', label: 'Internal staff only (DM recruitment only)' },
+  { value: 'internal_staff_only', label: 'Internal staff only' },
   { value: 'internal_and_external', label: 'Internal and external candidates' },
   { value: 'sussex_or_bsms_students_only', label: 'Sussex or BSMS students only' },
 ] as const;
@@ -78,7 +79,7 @@ export function ManagerRecruitmentClient({
   const [success, setSuccess] = useState<string | null>(null);
   const [shortlistingDates, setShortlistingDates] = useState<string[]>(['']);
   const [interviewSchedule, setInterviewSchedule] = useState<InterviewScheduleInput[]>([
-    { date: '', startTime: '', endTime: '', notes: '' },
+    { date: '', startTime: '', endTime: '', slotMinutes: '45', breakMinutes: '15', notes: '' },
   ]);
   const [showArchived, setShowArchived] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'urgency' | 'status'>('date');
@@ -122,7 +123,7 @@ export function ManagerRecruitmentClient({
         businessCase: String(fd.get('businessCase') ?? ''),
         headcountType: String(fd.get('headcountType') ?? ''),
         costCenter: String(fd.get('costCenter') ?? ''),
-        budgetApproved: String(fd.get('budgetApproved') ?? '') === 'on',
+        budgetApproved: false,
         targetStartWindow: String(fd.get('targetStartWindow') ?? ''),
         hiringOwnerUserId: '',
         reasonForHire: String(fd.get('reasonForHire') ?? ''),
@@ -130,7 +131,7 @@ export function ManagerRecruitmentClient({
         contractType: String(fd.get('contractType') ?? ''),
         idealCandidateProfile: String(fd.get('idealCandidateProfile') ?? ''),
         specificRequirements: String(fd.get('specificRequirements') ?? ''),
-        urgency: String(fd.get('urgency') ?? ''),
+        urgency: String(fd.get('urgency') ?? 'normal'),
         numberOfPositions: String(fd.get('numberOfPositions') ?? ''),
         regradeStatus: String(fd.get('regradeStatus') ?? ''),
         approvalStatus: String(fd.get('approvalStatus') ?? ''),
@@ -145,16 +146,22 @@ export function ManagerRecruitmentClient({
               date: row.date.trim(),
               startTime: row.startTime.trim(),
               endTime: row.endTime.trim(),
-              notes: row.notes.trim(),
+              notes: [
+                row.notes.trim(),
+                row.slotMinutes ? `Slot length: ${row.slotMinutes} minutes` : '',
+                row.breakMinutes ? `Break: ${row.breakMinutes} minutes` : '',
+              ]
+                .filter(Boolean)
+                .join(' | '),
             }))
             .filter((row) => row.date || row.startTime || row.endTime || row.notes)
         ),
         eligibility: String(fd.get('eligibility') ?? ''),
-        payRate: String(fd.get('payRate') ?? ''),
+        payRate: String(fd.get('payRate') ?? 'N/A'),
         contractLengthDetail: String(fd.get('contractLengthDetail') ?? ''),
         additionalAdvertisingChannels: String(fd.get('additionalAdvertisingChannels') ?? ''),
         interviewPanelDetails: String(fd.get('interviewPanelDetails') ?? ''),
-        needsAdvertCopyHelp: String(fd.get('needsAdvertCopyHelp') ?? '') === 'on',
+        needsAdvertCopyHelp: String(fd.get('needsAdvertCopyHelp') ?? 'no_help') === 'needs_help',
       });
       if (!res.ok) {
         setError(res.error);
@@ -162,7 +169,7 @@ export function ManagerRecruitmentClient({
       }
       (e.target as HTMLFormElement).reset();
       setShortlistingDates(['']);
-      setInterviewSchedule([{ date: '', startTime: '', endTime: '', notes: '' }]);
+      setInterviewSchedule([{ date: '', startTime: '', endTime: '', slotMinutes: '45', breakMinutes: '15', notes: '' }]);
       setSuccess('Recruitment request submitted. HR has been notified in-app and by email.');
       router.refresh();
     });
@@ -171,18 +178,12 @@ export function ManagerRecruitmentClient({
   const labelClass = 'mb-1 block text-[12px] font-medium text-[#505050]';
   const fieldClass =
     'mt-0 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#008B60] focus:ring-1 focus:ring-[#008B60]';
+  const sectionHeadingClass = 'text-[12px] font-semibold uppercase tracking-widest text-[#008B60]';
 
   return (
     <div className={`space-y-10 ${hiringHubRaise ? 'font-sans text-[#121212]' : ''}`}>
       {hiringHubRaise ? (
         <header className="space-y-2">
-          <Link
-            href="/hr/hiring/requests"
-            prefetch={false}
-            className="inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
-          >
-            ← Hiring requests
-          </Link>
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">New request</h1>
           <p className="max-w-2xl text-[13.5px] text-[#6b6b6b]">
             Raise a recruitment request to HR using a structured brief. Submissions keep full history.
@@ -234,6 +235,11 @@ export function ManagerRecruitmentClient({
                 {error}
               </div>
             ) : null}
+            <input type="hidden" name="urgency" value="normal" />
+            <input type="hidden" name="payRate" value="N/A" />
+            <div className="border-b border-[#ececec] pb-2">
+              <p className={sectionHeadingClass}>Role basics</p>
+            </div>
             <div>
               <label className={labelClass} htmlFor="departmentId">
                 Department
@@ -247,26 +253,20 @@ export function ManagerRecruitmentClient({
                 ))}
               </select>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="sm:col-span-2 lg:col-span-3">
                 <label className={labelClass} htmlFor="jobTitle">
                   Job title
                 </label>
                 <input id="jobTitle" name="jobTitle" required className={fieldClass} autoComplete="off" />
               </div>
-              <div>
+              <div className="lg:col-span-1">
                 <label className={labelClass} htmlFor="gradeLevel">
                   Grade / level
                 </label>
                 <input id="gradeLevel" name="gradeLevel" required className={fieldClass} autoComplete="off" />
               </div>
-              <div>
-                <label className={labelClass} htmlFor="salaryBand">
-                  Salary band
-                </label>
-                <input id="salaryBand" name="salaryBand" required className={fieldClass} autoComplete="off" />
-              </div>
-              <div>
+              <div className="lg:col-span-1">
                 <label className={labelClass} htmlFor="headcountType">
                   Is this a new role or direct replacement?
                 </label>
@@ -275,13 +275,13 @@ export function ManagerRecruitmentClient({
                   <option value="backfill">Direct replacement</option>
                 </select>
               </div>
-              <div>
+              <div className="sm:col-span-2 lg:col-span-1">
                 <label className={labelClass} htmlFor="numberOfPositions">
                   Number of positions
                 </label>
                 <input id="numberOfPositions" name="numberOfPositions" type="number" min={1} required className={fieldClass} defaultValue={1} />
               </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2 lg:col-span-3">
                 <label className={labelClass} htmlFor="regradeStatus">
                   Re-grading confirmation
                 </label>
@@ -293,7 +293,7 @@ export function ManagerRecruitmentClient({
                   ))}
                 </select>
               </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2 lg:col-span-3">
                 <label className={labelClass} htmlFor="approvalStatus">
                   Approval status
                 </label>
@@ -305,24 +305,8 @@ export function ManagerRecruitmentClient({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className={labelClass} htmlFor="costCenter">
-                  Cost center
-                </label>
-                <input id="costCenter" name="costCenter" required className={fieldClass} autoComplete="off" />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="targetStartWindow">
-                  Target start window
-                </label>
-                <input
-                  id="targetStartWindow"
-                  name="targetStartWindow"
-                  required
-                  className={fieldClass}
-                  autoComplete="off"
-                  placeholder="e.g. Q4 2026 / within 45 days"
-                />
+              <div className="sm:col-span-2 lg:col-span-3 border-b border-[#ececec] pb-2 pt-1">
+                <p className={sectionHeadingClass}>Advertising setup</p>
               </div>
               <div>
                 <label className={labelClass} htmlFor="roleProfileLink">
@@ -349,17 +333,17 @@ export function ManagerRecruitmentClient({
                   placeholder="https://... (leave blank only if advert help needed)"
                 />
               </div>
-              <div className="sm:col-span-2">
-                <label className="inline-flex items-center gap-2 text-[12px] font-medium text-[#505050]">
-                  <input id="budgetApproved" name="budgetApproved" type="checkbox" className="h-4 w-4" />
-                  Budget approved
+              <div>
+                <label className={labelClass} htmlFor="needsAdvertCopyHelp">
+                  Advertisement support
                 </label>
+                <select id="needsAdvertCopyHelp" name="needsAdvertCopyHelp" className={fieldClass} defaultValue="no_help">
+                  <option value="needs_help">I need assistance from HR to write the advertisement</option>
+                  <option value="no_help">I dont need assistance</option>
+                </select>
               </div>
-              <div className="sm:col-span-2">
-                <label className="inline-flex items-center gap-2 text-[12px] font-medium text-[#505050]">
-                  <input id="needsAdvertCopyHelp" name="needsAdvertCopyHelp" type="checkbox" className="h-4 w-4" />
-                  I need HR help writing the advertisement copy
-                </label>
+              <div className="sm:col-span-2 lg:col-span-3 border-b border-[#ececec] pb-2 pt-1">
+                <p className={sectionHeadingClass}>Hiring details</p>
               </div>
               <div>
                 <label className={labelClass} htmlFor="reasonForHire">
@@ -374,22 +358,16 @@ export function ManagerRecruitmentClient({
                 </select>
               </div>
               <div>
-                <label className={labelClass} htmlFor="urgency">
-                  Urgency
+                <label className={labelClass} htmlFor="eligibility">
+                  Eligible applicants
                 </label>
-                <select id="urgency" name="urgency" required className={fieldClass}>
-                  {RECRUITMENT_URGENCY_LEVELS.map((v) => (
-                    <option key={v} value={v}>
-                      {recruitmentUrgencyLabel(v)}
+                <select id="eligibility" name="eligibility" required className={fieldClass} defaultValue={ELIGIBILITY_OPTIONS[1].value}>
+                  {ELIGIBILITY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="startDateNeeded">
-                  Start date needed
-                </label>
-                <input id="startDateNeeded" name="startDateNeeded" type="date" required className={fieldClass} />
               </div>
               <div>
                 <label className={labelClass} htmlFor="contractType">
@@ -403,37 +381,7 @@ export function ManagerRecruitmentClient({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className={labelClass} htmlFor="advertReleaseDate">
-                  Advertisement release date
-                </label>
-                <input id="advertReleaseDate" name="advertReleaseDate" type="date" required className={fieldClass} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="advertClosingDate">
-                  Advertisement closing date
-                </label>
-                <input id="advertClosingDate" name="advertClosingDate" type="date" required className={fieldClass} />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="eligibility">
-                  Eligible applicants
-                </label>
-                <select id="eligibility" name="eligibility" required className={fieldClass} defaultValue={ELIGIBILITY_OPTIONS[1].value}>
-                  {ELIGIBILITY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="payRate">
-                  Pay rate / grade
-                </label>
-                <input id="payRate" name="payRate" required className={fieldClass} autoComplete="off" placeholder="CSA / DM / Grade X" />
-              </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2 lg:col-span-3">
                 <label className={labelClass} htmlFor="contractLengthDetail">
                   Contract length / permanent detail
                 </label>
@@ -445,6 +393,30 @@ export function ManagerRecruitmentClient({
                   autoComplete="off"
                   placeholder="e.g. 12 months fixed term / permanent"
                 />
+              </div>
+            </div>
+
+            <div className="border-b border-[#ececec] pb-2 pt-1">
+              <p className={sectionHeadingClass}>Key dates and timeline</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label className={labelClass} htmlFor="startDateNeeded">
+                  Start date needed
+                </label>
+                <input id="startDateNeeded" name="startDateNeeded" type="date" required className={fieldClass} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="advertReleaseDate">
+                  Advertisement release date
+                </label>
+                <input id="advertReleaseDate" name="advertReleaseDate" type="date" required className={fieldClass} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="advertClosingDate">
+                  Advertisement closing date
+                </label>
+                <input id="advertClosingDate" name="advertClosingDate" type="date" required className={fieldClass} />
               </div>
             </div>
 
@@ -484,10 +456,13 @@ export function ManagerRecruitmentClient({
             </div>
 
             <div className="space-y-3">
-              <label className={labelClass}>Interview date(s) and times</label>
+              <div>
+                <label className={labelClass}>Interview date(s) and times</label>
+                <p className="text-[11px] text-[#6b6b6b]">Example: 9:00 AM to 2:00 PM, 45 minutes slot, 15 minutes break.</p>
+              </div>
               {interviewSchedule.map((row, idx) => (
                 <div key={`interview-${idx}`} className="rounded-lg border border-[#e8e8e8] bg-[#fafafa] p-3">
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_minmax(0,1fr)]">
                     <input
                       type="date"
                       required={idx === 0}
@@ -510,6 +485,7 @@ export function ManagerRecruitmentClient({
                       }}
                       className={fieldClass}
                     />
+                    <div className="flex items-center justify-center text-[12px] font-medium text-[#6b6b6b]">to</div>
                     <input
                       type="time"
                       required={idx === 0}
@@ -522,17 +498,39 @@ export function ManagerRecruitmentClient({
                       className={fieldClass}
                     />
                   </div>
-                  <textarea
-                    rows={2}
-                    value={row.notes}
-                    onChange={(e) => {
-                      const next = [...interviewSchedule];
-                      next[idx] = { ...next[idx], notes: e.target.value };
-                      setInterviewSchedule(next);
-                    }}
-                    className={`${fieldClass} mt-3`}
-                    placeholder="Optional notes (location, panel split, etc.)"
-                  />
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <select
+                      required={idx === 0}
+                      value={row.slotMinutes}
+                      onChange={(e) => {
+                        const next = [...interviewSchedule];
+                        next[idx] = { ...next[idx], slotMinutes: e.target.value };
+                        setInterviewSchedule(next);
+                      }}
+                      className={fieldClass}
+                    >
+                      <option value="30">30 minutes slot</option>
+                      <option value="45">45 minutes slot</option>
+                      <option value="60">60 minutes slot</option>
+                      <option value="90">90 minutes slot</option>
+                    </select>
+                    <select
+                      required={idx === 0}
+                      value={row.breakMinutes}
+                      onChange={(e) => {
+                        const next = [...interviewSchedule];
+                        next[idx] = { ...next[idx], breakMinutes: e.target.value };
+                        setInterviewSchedule(next);
+                      }}
+                      className={fieldClass}
+                    >
+                      <option value="0">No break</option>
+                      <option value="10">10 minutes break</option>
+                      <option value="15">15 minutes break</option>
+                      <option value="20">20 minutes break</option>
+                      <option value="30">30 minutes break</option>
+                    </select>
+                  </div>
                   {interviewSchedule.length > 1 ? (
                     <button
                       type="button"
@@ -547,38 +545,18 @@ export function ManagerRecruitmentClient({
               <button
                 type="button"
                 onClick={() =>
-                  setInterviewSchedule((prev) => [...prev, { date: '', startTime: '', endTime: '', notes: '' }])
+                  setInterviewSchedule((prev) => [
+                    ...prev,
+                    { date: '', startTime: '', endTime: '', slotMinutes: '45', breakMinutes: '15', notes: '' },
+                  ])
                 }
                 className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12px] text-[#505050] hover:bg-[#fafafa]"
               >
                 + Add interview slot
               </button>
             </div>
-            <div>
-              <label className={labelClass} htmlFor="businessCase">
-                Business case
-              </label>
-              <textarea
-                id="businessCase"
-                name="businessCase"
-                required
-                rows={3}
-                className={fieldClass}
-                placeholder="Business justification, expected impact, and urgency context…"
-              />
-            </div>
-            <div>
-              <label className={labelClass} htmlFor="idealCandidateProfile">
-                Ideal candidate profile
-              </label>
-              <textarea
-                id="idealCandidateProfile"
-                name="idealCandidateProfile"
-                required
-                rows={5}
-                className={fieldClass}
-                placeholder="Describe the person you are looking for…"
-              />
+            <div className="border-b border-[#ececec] pb-2 pt-1">
+              <p className={sectionHeadingClass}>Additional notes</p>
             </div>
             <div>
               <label className={labelClass} htmlFor="specificRequirements">

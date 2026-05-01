@@ -118,11 +118,7 @@ export function PerformanceCycleDetailClient({
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
-      <Link href="/hr/performance" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-        ← Performance reviews
-      </Link>
-
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-authSerif text-[24px] leading-tight tracking-[-0.03em] text-[#121212]">{cycle.name}</h1>
           <p className="mt-0.5 text-[13px] text-[#6b6b6b]">

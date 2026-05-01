@@ -8,10 +8,10 @@ import { useCallback, useContext } from 'react';
 import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { mainShell } from '@/constants/mainShell';
+import { mainShell, mainShellText } from '@/constants/mainShell';
 
-const FLOATING_GAP = 8;
-const HORIZONTAL_MARGIN = 14;
+const FLOATING_GAP = mainShell.spacing.xs;
+const HORIZONTAL_MARGIN = mainShell.spacing.sm;
 const ROW_MIN_HEIGHT = 52;
 const ICON_SIZE = 22;
 
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     borderRadius: 999,
     overflow: 'hidden',
-    paddingVertical: 6,
+    paddingVertical: mainShell.spacing.xxs + 2,
     elevation: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
@@ -154,15 +154,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 999,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingHorizontal: mainShell.spacing.xs - 2,
+    paddingVertical: mainShell.spacing.xxs,
     gap: 2,
     alignSelf: 'stretch',
     maxWidth: '100%',
   },
   label: {
-    fontSize: 10,
-    fontWeight: '600',
+    ...mainShellText.tabLabel,
     textAlign: 'center',
   },
 });

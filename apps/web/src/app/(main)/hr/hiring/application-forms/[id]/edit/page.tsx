@@ -1,14 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import { viewerHasPermission } from '@/lib/authz/serverGuards';
+import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { createClient } from '@/lib/supabase/server';
 import { HiringApplicationFormEditorClient } from '@/components/admin/HiringApplicationFormEditorClient';
-import { getCachedHiringApplicationFormEditPageData } from '@/lib/recruitment/getCachedHiringApplicationFormEditPageData';
-import {
-  getCachedMainShellLayoutBundle,
-} from '@/lib/supabase/cachedMainShellLayoutBundle';
-import {
-  parseShellPermissionKeys,
-  shellBundleOrgId,
-  shellBundleProfileStatus,
-} from '@/lib/shell/shellBundleAccess';
 import { redirect } from 'next/navigation';
 
 export default async function EditApplicationFormPage({
@@ -20,17 +14,62 @@ export default async function EditApplicationFormPage({
   const formId = rawId?.trim();
   if (!formId) redirect('/hr/hiring/application-forms');
 
-  const shellBundle = await getCachedMainShellLayoutBundle();
-  const orgId = shellBundleOrgId(shellBundle);
-  if (!orgId) redirect('/login');
-  if (shellBundleProfileStatus(shellBundle) !== 'active') redirect('/broadcasts');
-  const permissionKeys = parseShellPermissionKeys(shellBundle);
-  if (!permissionKeys.includes('jobs.view')) redirect('/forbidden');
+  const supabase = await createClient();
+  const user = await getAuthUser();
+  if (!user) redirect('/login');
 
-  const pageData = await getCachedHiringApplicationFormEditPageData(orgId, formId);
-  if (!pageData?.setRow?.id) redirect('/hr/hiring/application-forms');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id, status')
+    .eq('id', user.id)
+    .single();
+  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
-  const { setRow, rows, departments, jobRows } = pageData;
+  const canViewJobs = await viewerHasPermission('jobs.view');
+  if (!canViewJobs) redirect('/broadcasts');
+
+  const orgId = profile.org_id as string;
+  const [setRowResult, rowsResultWithScale] = await Promise.all([
+    supabase
+      .from('org_application_question_sets')
+      .select('id, name, job_title, grade_level, department_id')
+      .eq('id', formId)
+      .eq('org_id', orgId)
+      .maybeSingle(),
+    supabase
+      .from('org_application_question_set_items')
+      .select('sort_order, question_type, prompt, help_text, required, max_length, options, is_page_break, scoring_enabled, scoring_scale_max, initially_hidden, locked')
+      .eq('set_id', formId)
+      .order('sort_order', { ascending: true }),
+  ]);
+  const setRow = setRowResult.data;
+
+  const needsRowsFallback = (() => {
+    const msg = String(rowsResultWithScale.error?.message ?? '').toLowerCase();
+    return msg.includes('scoring_scale_max') && msg.includes('org_application_question_set_items');
+  })();
+
+  const rowsResult = needsRowsFallback
+    ? await supabase
+        .from('org_application_question_set_items')
+        .select('sort_order, question_type, prompt, help_text, required, max_length, options, is_page_break, scoring_enabled, initially_hidden, locked')
+        .eq('set_id', formId)
+        .order('sort_order', { ascending: true })
+    : rowsResultWithScale;
+  const rows = rowsResult.data;
+
+  const { data: departments } = await supabase
+    .from('departments')
+    .select('id, name')
+    .eq('org_id', orgId)
+    .order('name', { ascending: true });
+
+  const { data: jobRows } = await supabase
+    .from('job_listings')
+    .select('title, grade_level')
+    .eq('org_id', orgId)
+    .order('updated_at', { ascending: false })
+    .limit(200);
 
   const jobTitleOptions = Array.from(
     new Set((jobRows ?? []).map((j) => String(j.title ?? '').trim()).filter(Boolean)),
@@ -39,7 +78,9 @@ export default async function EditApplicationFormPage({
     new Set((jobRows ?? []).map((j) => String(j.grade_level ?? '').trim()).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
 
-  const questions = rows.map((q, i) => {
+  if (!setRow?.id) redirect('/hr/hiring/application-forms');
+
+  const questions = (rows ?? []).map((q, i) => {
     const options = Array.isArray(q.options)
       ? (q.options as { id?: string; label?: string }[])
           .map((o) => ({ id: String(o.id ?? '').trim(), label: String(o.label ?? '').trim() }))

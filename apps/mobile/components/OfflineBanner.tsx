@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 
+import { mainShell, mainShellText } from '@/constants/mainShell';
+
 export function OfflineBanner() {
   const { tokens } = useCampsiteTheme();
   const [offline, setOffline] = useState(false);
@@ -30,13 +32,13 @@ export function OfflineBanner() {
 
 const styles = StyleSheet.create({
   banner: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: mainShell.spacing.xs + 2,
+    paddingHorizontal: mainShell.spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderLeftWidth: 4,
   },
   text: {
-    fontSize: 13,
+    ...mainShellText.body,
     textAlign: 'center',
   },
 });

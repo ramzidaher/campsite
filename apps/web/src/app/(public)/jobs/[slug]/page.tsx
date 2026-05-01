@@ -318,15 +318,6 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
         <CareersHeader
           orgName={orgName}
           orgLogoUrl={orgLogoUrl}
-          actions={
-            <Link
-              href={jobsIndexHref}
-              className="rounded-lg px-3 py-1.5 text-[13px] transition-colors hover:bg-black/[0.06]"
-              style={{ color: 'var(--org-brand-text)' }}
-            >
-              ← All open roles
-            </Link>
-          }
         />
 
         {/* ── Job title block ── */}

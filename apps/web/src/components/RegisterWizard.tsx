@@ -656,39 +656,25 @@ export function RegisterWizard({
   const orgName = orgs.find((o) => o.id === orgId)?.name;
 
   return (
-    <div>
+    <div className="campsite-stack-md">
       {step === 1 ? (
         <Link
           href="/login"
-          className="mb-6 inline-flex items-center gap-1.5 text-[13px] text-[#9b9b9b] transition-colors hover:text-[#121212]"
+          className="inline-flex items-center gap-1.5 campsite-body text-[#9b9b9b] transition-colors hover:text-[#121212]"
         >
           ← Back to sign in
         </Link>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setStep((s) => s - 1)}
-          className="mb-6 flex w-fit items-center gap-1.5 text-[13px] text-[#9b9b9b] transition-colors hover:text-[#121212]"
-        >
-          ← Back
-        </button>
-      )}
+      ) : null}
 
       <StepProgress step={step} labels={stepLabels} />
 
-      {error ? (
-        <p className="mb-6 rounded-[10px] bg-red-500/10 px-3 py-2 text-sm text-[#b91c1c]">{error}</p>
-      ) : null}
-      {info ? (
-        <p className="mb-6 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] px-3 py-2 text-sm text-[#121212]">
-          {info}
-        </p>
-      ) : null}
+      {error ? <p className="rounded-[10px] bg-red-500/10 px-3 py-2 text-sm text-[#b91c1c]">{error}</p> : null}
+      {info ? <p className="rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] px-3 py-2 text-sm text-[#121212]">{info}</p> : null}
 
       {step === 1 ? (
-        <div>
+        <div className="campsite-stack-md">
           <h2 className="auth-title">Create your account</h2>
-          <p className="auth-sub mb-8">
+          <p className="auth-sub">
             {orgName ? (
               <>
                 Joining <strong className="font-medium text-[#121212]">{orgName}</strong>
@@ -805,7 +791,7 @@ export function RegisterWizard({
             className="auth-btn-primary"
             onClick={() => {
               setError(null);
-                setInfo(null);
+              setInfo(null);
               if (!fullName.trim() || !email.trim()) {
                 setError('Please fill in all required fields.');
                 return;
@@ -829,9 +815,9 @@ export function RegisterWizard({
       ) : null}
 
       {step === 2 ? (
-        <div>
+        <div className="campsite-stack-md">
           <h2 className="auth-title">Your organisation</h2>
-          <p className="auth-sub mb-8">
+          <p className="auth-sub">
             {inviteFlow
               ? 'We matched your workspace from the sign-up link and locked it to your organisation.'
               : 'Tell us your organisation name. We’ll suggest a short identifier for shared links and invites — change it only if you want to.'}
@@ -908,7 +894,7 @@ export function RegisterWizard({
               </div>
               <div className="rounded-xl border border-[#e8e6e3] bg-white p-3">
                 <div className="text-[13px] font-medium text-[#121212]">Organisation logo (optional)</div>
-                <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
+                <p className="mt-1 campsite-body text-[#9b9b9b]">
                   Add a logo now so your workspace starts with branding.
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -1042,9 +1028,9 @@ export function RegisterWizard({
       ) : null}
 
       {step === 3 ? (
-        <div>
+        <div className="campsite-stack-md">
           <h2 className="auth-title">Profile photo (optional)</h2>
-          <p className="auth-sub mb-6">
+          <p className="auth-sub">
             Add a picture for your profile if you like, you can skip this and add or change it later in
             Settings.
           </p>
@@ -1152,9 +1138,9 @@ export function RegisterWizard({
       ) : null}
 
       {step === 4 && inviteFlow ? (
-        <div>
+        <div className="campsite-stack-md">
           <h2 className="auth-title">Review & submit</h2>
-          <p className="auth-sub mb-6">
+          <p className="auth-sub">
             Check your details before sending your registration for approval
           </p>
           <div className="mb-4 rounded-xl bg-[#f5f4f1] p-4">

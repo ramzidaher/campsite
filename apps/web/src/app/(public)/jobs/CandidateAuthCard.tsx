@@ -242,7 +242,7 @@ export function CandidateAuthCard({
   });
   const inputClass =
     'w-full rounded-xl border px-3.5 py-2.5 text-[14px] outline-none transition-all focus:ring-2 placeholder:opacity-40';
-  const labelClass = 'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em]';
+  const labelClass = 'mb-1.5 block campsite-body font-semibold uppercase tracking-[0.08em]';
 
   return (
     <div className="relative w-full max-w-[420px]">
@@ -285,10 +285,7 @@ export function CandidateAuthCard({
       </div>
 
       {/* ── Headline ── */}
-      <h1
-        className="font-authSerif text-[2.25rem] leading-[1.15] tracking-[-0.025em]"
-        style={{ color: 'var(--org-brand-text)' }}
-      >
+      <h1 className="campsite-title text-[2.25rem] leading-[1.15] tracking-[-0.025em]" style={{ color: 'var(--org-brand-text)' }}>
         {tab === 'login' ? (
           <>
             Your{' '}
@@ -305,7 +302,7 @@ export function CandidateAuthCard({
           </>
         )}
       </h1>
-      <p className="mt-2 mb-5 text-[13.5px] leading-relaxed" style={{ color: 'var(--org-brand-muted)' }}>
+      <p className="mt-2 mb-5 campsite-subheading" style={{ color: 'var(--org-brand-muted)' }}>
         {tab === 'login'
           ? 'Sign in to track applications and receive updates.'
           : 'Level up your career. No more boring applications.'}

@@ -7,57 +7,78 @@ import { createClient } from '@/lib/supabase/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
 
+function isRetryableFetchFailure(error: unknown): boolean {
+  const name =
+    typeof error === 'object' && error !== null && 'name' in error
+      ? String((error as { name?: unknown }).name ?? '')
+      : '';
+  const message = error instanceof Error ? error.message : String(error);
+  const lowerMessage = message.toLowerCase();
+  return (
+    name.includes('AuthRetryableFetchError') ||
+    lowerMessage.includes('authretryablefetcherror') ||
+    lowerMessage.includes('fetch failed')
+  );
+}
+
 export default async function HomePage() {
   const supabase = await createClient();
   const user = await getAuthUser();
   const host = (await headers()).get('host');
 
   if (user) {
-    const [founder, { data: profile }] = await Promise.all([
-      isPlatformFounder(supabase, user.id),
-      supabase.from('profiles').select('status, role, org_id').eq('id', user.id).maybeSingle(),
-    ]);
+    try {
+      const [founder, { data: profile }] = await Promise.all([
+        isPlatformFounder(supabase, user.id),
+        supabase.from('profiles').select('status, role, org_id').eq('id', user.id).maybeSingle(),
+      ]);
 
-    if (founder) {
-      if (!profile) {
-        redirect('/founders');
+      if (founder) {
+        if (!profile) {
+          redirect('/founders');
+        }
+        if (profile.status === 'inactive') {
+          redirect('/login?error=inactive');
+        }
+        if (profile.status === 'pending') {
+          redirect('/pending');
+        }
+        if (!profile.org_id) {
+          redirect('/founders');
+        }
+        redirect('/session-choice');
       }
-      if (profile.status === 'inactive') {
-        redirect('/login?error=inactive');
+
+      if (!profile) {
+        // `/pending` runs `completeRegistrationProfileIfNeeded` (RPC + JWT metadata) before showing errors.
+        redirect('/pending');
       }
       if (profile.status === 'pending') {
         redirect('/pending');
       }
-      if (!profile.org_id) {
-        redirect('/founders');
+      if (profile.status === 'inactive') {
+        redirect('/login?error=inactive');
       }
-      redirect('/session-choice');
-    }
 
-    if (!profile) {
-      // `/pending` runs `completeRegistrationProfileIfNeeded` (RPC + JWT metadata) before showing errors.
-      redirect('/pending');
-    }
-    if (profile.status === 'pending') {
-      redirect('/pending');
-    }
-    if (profile.status === 'inactive') {
-      redirect('/login?error=inactive');
-    }
-
-    if (profile.org_id) {
-      const { data: org } = await supabase
-        .from('organisations')
-        .select('slug')
-        .eq('id', profile.org_id)
-        .maybeSingle();
-      const orgSlug = (org?.slug as string | undefined)?.trim();
-      if (orgSlug && !tenantHostMatchesOrg(orgSlug, host)) {
-        redirect(`${tenantSubdomainOriginForHost(orgSlug, host)}/dashboard`);
+      if (profile.org_id) {
+        const { data: org } = await supabase
+          .from('organisations')
+          .select('slug')
+          .eq('id', profile.org_id)
+          .maybeSingle();
+        const orgSlug = (org?.slug as string | undefined)?.trim();
+        if (orgSlug && !tenantHostMatchesOrg(orgSlug, host)) {
+          redirect(`${tenantSubdomainOriginForHost(orgSlug, host)}/dashboard`);
+        }
       }
-    }
 
-    redirect('/dashboard');
+      redirect('/dashboard');
+    } catch (error) {
+      if (!isRetryableFetchFailure(error)) {
+        throw error;
+      }
+      // Fail open for transient auth/postgrest network errors so `/` still renders.
+    }
   }
 
   return (

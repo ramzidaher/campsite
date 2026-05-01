@@ -1,7 +1,6 @@
 import { CareersHeader, CareersJobsHero } from '@/app/(public)/jobs/CareersBranding';
 import { buildPublicJobsHref } from '@/app/(public)/jobs/buildPublicJobsHref';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
-import { getCachedPublicJobsPageData } from '@/lib/jobs/getCachedPublicJobsPageData';
 import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { createClient } from '@/lib/supabase/server';
@@ -13,6 +12,39 @@ import {
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+
+type PublicJobListRow = {
+  job_listing_id: string;
+  slug: string;
+  org_name: string;
+  title: string;
+  department_name: string;
+  grade_level: string;
+  salary_band: string;
+  contract_type: string;
+  application_mode: string;
+  allow_cv: boolean;
+  allow_loom: boolean;
+  allow_staffsavvy: boolean;
+  published_at: string | null;
+};
+
+type PublicJobTimelineRow = {
+  id: string;
+  recruitment_request_id: string | null;
+  applications_close_at: string | null;
+  start_date_needed: string | null;
+  shortlisting_dates: unknown;
+  interview_dates: unknown;
+};
+
+type RecruitmentTimelineRow = {
+  id: string;
+  advert_closing_date: string | null;
+  shortlisting_dates: unknown;
+  interview_schedule: unknown;
+  start_date_needed: string | null;
+};
 
 const PAGE_SIZE = 12;
 
@@ -108,6 +140,17 @@ function formatMultiDateSummary(values: string[]): string {
   return `${prefix.slice(0, -1).join(', ')}, ${prefix[prefix.length - 1]} and ${last}`;
 }
 
+function parseInterviewDateList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((row) => {
+      if (typeof row === 'string') return row.trim();
+      const rec = row as { date?: unknown; interviewDate?: unknown; interview_date?: unknown } | null;
+      return String(rec?.date ?? rec?.interviewDate ?? rec?.interview_date ?? '').trim();
+    })
+    .filter(Boolean);
+}
+
 export default async function PublicJobsPage({
   searchParams,
 }: {
@@ -131,33 +174,96 @@ export default async function PublicJobsPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pageData = await getCachedPublicJobsPageData(orgSlug, q, dept, contract, PAGE_SIZE, offset);
-  if (!pageData.orgLookup && pageData.rows.length === 0) notFound();
+  const [{ data: summaryRows }, { data, error }, { data: orgLookup }] =
+    await Promise.all([
+      supabase.rpc('public_job_listings_org_summary', { p_org_slug: orgSlug }),
+      supabase.rpc('public_job_listings', {
+        p_org_slug: orgSlug,
+        p_search: q || null,
+        p_department: dept || null,
+        p_contract_type: contract || null,
+        p_limit: PAGE_SIZE + 1,
+        p_offset: offset,
+      }),
+      supabase
+        .from('organisations')
+        .select('name, logo_url, brand_preset_key, brand_tokens, brand_policy')
+        .eq('slug', orgSlug)
+        .maybeSingle(),
+    ]);
 
-  const liveCount = pageData.liveCount;
-  const deptCount = pageData.deptCount;
-  const rows = pageData.rows;
-  const hasNext = pageData.hasNext;
+  if (error) notFound();
+
+  const summary = summaryRows?.[0] as
+    | { live_job_count?: number; department_count?: number }
+    | undefined;
+  const liveCount = Number(summary?.live_job_count ?? 0);
+  const deptCount = Number(summary?.department_count ?? 0);
+  const rows = ((data as PublicJobListRow[] | null) ?? []).slice(0, PAGE_SIZE);
+  const hasNext = ((data as PublicJobListRow[] | null) ?? []).length > PAGE_SIZE;
   const hasPrev = page > 1;
-  const timelineMap = new Map<
-    string,
-    {
-      id: string;
-      recruitment_request_id: string | null;
-      applications_close_at: string | null;
-      start_date_needed: string | null;
-      shortlisting_dates: unknown;
-      interview_dates: unknown;
-    }
-  >(Object.entries(pageData.timelineByJobId));
+  const listingIds = rows.map((r) => r.job_listing_id);
 
-  const orgName = pageData.orgLookup?.name?.trim() || rows[0]?.org_name || 'Organisation';
-  const orgLogoUrl = pageData.orgLookup?.logo_url ?? null;
+  const timelineMap = new Map<string, PublicJobTimelineRow>();
+  if (listingIds.length > 0) {
+    const timelineWithNewCols = await supabase
+      .from('job_listings')
+      .select('id, recruitment_request_id, applications_close_at, start_date_needed, shortlisting_dates, interview_dates')
+      .in('id', listingIds);
+    const fallbackTimelineRows = timelineWithNewCols.error
+      ? await supabase
+          .from('job_listings')
+          .select('id, recruitment_request_id')
+          .in('id', listingIds)
+      : null;
+    const timelineRows = (fallbackTimelineRows?.data ?? timelineWithNewCols.data ?? []) as Array<Record<string, unknown>>;
+
+    const requestIds = Array.from(
+      new Set(
+        timelineRows
+          .map((row) => String(row.recruitment_request_id ?? '').trim())
+          .filter(Boolean),
+      ),
+    );
+    const requestMap = new Map<string, RecruitmentTimelineRow>();
+    if (requestIds.length > 0) {
+      const { data: reqRows } = await supabase
+        .from('recruitment_requests')
+        .select('id, advert_closing_date, shortlisting_dates, interview_schedule, start_date_needed')
+        .in('id', requestIds);
+      for (const req of (reqRows ?? []) as RecruitmentTimelineRow[]) {
+        requestMap.set(String(req.id), req);
+      }
+    }
+
+    for (const row of timelineRows) {
+      const reqId = String(row.recruitment_request_id ?? '').trim();
+      const req = reqId ? requestMap.get(reqId) : undefined;
+      const jobShortlisting = parseDateList(row.shortlisting_dates);
+      const jobInterviewDates = parseDateList(row.interview_dates);
+      timelineMap.set(String(row.id), {
+        id: String(row.id ?? ''),
+        recruitment_request_id: reqId || null,
+        applications_close_at:
+          String(row.applications_close_at ?? '').trim() ||
+          (req?.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null),
+        start_date_needed:
+          String(row.start_date_needed ?? '').trim() ||
+          String(req?.start_date_needed ?? '').trim() ||
+          null,
+        shortlisting_dates: jobShortlisting.length > 0 ? jobShortlisting : (req?.shortlisting_dates ?? []),
+        interview_dates: jobInterviewDates.length > 0 ? jobInterviewDates : parseInterviewDateList(req?.interview_schedule),
+      });
+    }
+  }
+
+  const orgName = (orgLookup?.name as string | undefined)?.trim() || rows[0]?.org_name || 'Organisation';
+  const orgLogoUrl = (orgLookup as { logo_url?: string | null } | null)?.logo_url ?? null;
 
   const resolvedBranding = resolveOrgBranding({
-    presetKey: pageData.orgLookup?.brand_preset_key,
-    customTokens: pageData.orgLookup?.brand_tokens,
-    policy: pageData.orgLookup?.brand_policy,
+    presetKey: orgLookup?.brand_preset_key,
+    customTokens: orgLookup?.brand_tokens,
+    policy: orgLookup?.brand_policy,
     effectiveMode: 'off',
   });
   const jobsVars = {
