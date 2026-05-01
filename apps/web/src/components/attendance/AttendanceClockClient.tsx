@@ -182,7 +182,7 @@ export function AttendanceClockClient({
   return (
     <div className="space-y-6">
       {err ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-900">{err}</p>
+        <p className="status-banner-error rounded-lg px-3 py-2 text-[13px]">{err}</p>
       ) : null}
 
       <div>

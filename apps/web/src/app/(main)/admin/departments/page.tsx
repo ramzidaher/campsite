@@ -25,7 +25,7 @@ export default async function AdminDepartmentsPage({
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!hasPermission(permissionKeys, 'departments.view')) redirect('/admin');
+  if (!hasPermission(permissionKeys, 'departments.view')) redirect('/forbidden');
   const userIdRaw = (bundle as Record<string, unknown>)['user_id'];
   const userId = typeof userIdRaw === 'string' ? userIdRaw : '';
   if (!userId) redirect('/login');

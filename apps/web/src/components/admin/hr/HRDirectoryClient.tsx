@@ -137,7 +137,7 @@ function HRQuickViewSummary({
         </div>
       </div>
       {!r.hr_record_id ? (
-        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-950">
+        <p className="status-banner-warning mb-4 rounded-lg px-3 py-2 text-[12.5px]">
           No HR record on file yet. Open the full file to create one.
         </p>
       ) : null}

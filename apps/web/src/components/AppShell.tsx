@@ -73,7 +73,7 @@ function DegradedLastUpdatedText({ shellLastSuccessAt }: { shellLastSuccessAt: n
 
   if (nowMs === null) return null;
   const secs = Math.max(0, Math.round((nowMs - shellLastSuccessAt) / 1000));
-  return <span className="text-amber-800/80">Last updated {secs}s ago</span>;
+  return <span className="text-[#6b6b6b]">Last updated {secs}s ago</span>;
 }
 
 function NavLink({
@@ -120,7 +120,7 @@ function NavLink({
       <span className="ml-auto flex shrink-0 items-center gap-1">
         {secondaryBadge !== undefined && secondaryBadge > 0 ? (
           <span
-            className="min-w-[18px] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-[10px] font-semibold text-amber-950"
+            className="min-w-[18px] rounded-full bg-[#b91c1c] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white"
             title={secondaryBadgeTitle ?? 'Needs attention'}
           >
             {secondaryBadge > 99 ? '99+' : secondaryBadge}
@@ -280,6 +280,7 @@ export function AppShell({
 }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [desktopNavOpen, setDesktopNavOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [adminNavExpanded, setAdminNavExpanded] = useState(true);
   const [managerNavExpanded, setManagerNavExpanded] = useState(true);
   const [financeNavExpanded, setFinanceNavExpanded] = useState(true);
@@ -361,9 +362,6 @@ export function AppShell({
       const fin = localStorage.getItem(FINANCE_NAV_EXPANDED_KEY);
       if (fin === '0') setFinanceNavExpanded(false);
       else if (fin === '1') setFinanceNavExpanded(true);
-      const desktopSidebar = localStorage.getItem(DESKTOP_SIDEBAR_OPEN_KEY);
-      if (desktopSidebar === '1') setDesktopNavOpen(true);
-      else if (desktopSidebar === '0') setDesktopNavOpen(false);
       const savedMode = localStorage.getItem(SHELL_MODE_STORAGE_KEY);
       const legacyPride = localStorage.getItem(LEGACY_PRIDE_MODE_STORAGE_KEY) === '1';
       if (savedMode) setShellMode(normalizeCelebrationMode(savedMode));
@@ -374,6 +372,7 @@ export function AppShell({
     } catch {
       /* ignore */
     }
+    setHydrated(true);
   }, [initialCelebrationMode, initialCelebrationAutoEnabled]);
 
   const toggleUiMode = async () => {
@@ -1296,7 +1295,8 @@ export function AppShell({
 
       <div
         className={[
-          'flex min-h-screen flex-1 flex-col transition-[margin] duration-200',
+          'flex min-h-screen flex-1 flex-col transition-[margin]',
+          hydrated ? 'duration-200' : 'duration-0',
           desktopNavOpen ? 'md:ml-[240px]' : 'md:ml-[58px]',
         ].join(' ')}
         style={
@@ -1327,7 +1327,7 @@ export function AppShell({
           }}
         />
         {shouldShowDegradedBanner ? (
-          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[12px] text-amber-900 sm:px-6">
+          <div className="status-banner-warning border-b px-4 py-2 text-[12px] sm:px-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">Refreshing workspace data...</span>
               {typeof shellLastSuccessAt === 'number' ? (
@@ -1336,7 +1336,7 @@ export function AppShell({
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="ml-auto rounded border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
+                className="ml-auto rounded border border-[#d8d8d8] bg-white px-2 py-0.5 text-[11px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
               >
                 Retry
               </button>

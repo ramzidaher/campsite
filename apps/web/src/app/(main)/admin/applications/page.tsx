@@ -36,7 +36,7 @@ export default async function AdminApplicationsPage({
   const permissionKeys = parseShellPermissionKeys(bundle);
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
-  if (!permissionKeys.includes('applications.view')) redirect('/broadcasts');
+  if (!permissionKeys.includes('applications.view')) redirect('/forbidden');
 
   const sp = await searchParams;
   const filterJobId = spVal(sp.job);

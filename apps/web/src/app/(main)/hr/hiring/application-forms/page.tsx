@@ -13,7 +13,7 @@ export default async function HiringApplicationFormsPage() {
   const permissionKeys = parseShellPermissionKeys(bundle);
   const canViewJobs = permissionKeys.includes('jobs.view');
   const canViewApplications = permissionKeys.includes('applications.view');
-  if (!canViewJobs && !canViewApplications) redirect('/broadcasts');
+  if (!canViewJobs && !canViewApplications) redirect('/forbidden');
 
   const pageData = await getCachedHiringApplicationFormsPageData(orgId);
 

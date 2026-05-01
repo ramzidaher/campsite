@@ -16,7 +16,7 @@ export default async function FinancePage() {
   const permissionKeys = await getMyPermissions(orgId);
   const permissionKeyStrings = permissionKeys as unknown as string[];
   const canView = permissionKeys.includes('payroll.view') || permissionKeys.includes('payroll.manage');
-  if (!canView) redirect('/hr/records');
+  if (!canView) redirect('/forbidden');
   const canManage = permissionKeys.includes('payroll.manage');
   const canFinanceApprove = permissionKeyStrings.includes('payroll.finance_approve') || canManage;
   const canManagePolicy = permissionKeyStrings.includes('payroll.policy.manage') || canManage;

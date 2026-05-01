@@ -302,7 +302,7 @@ export function RotaRequestsPanel({
           : 'Swaps need the other person to accept, then any manager or duty manager in the organisation can approve. Unassign requests go straight to those approvers.'}
       </p>
       {msg ? (
-        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-900">{msg}</p>
+        <p className="status-banner-error mt-4 rounded-xl px-4 py-3 text-[13px]">{msg}</p>
       ) : null}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:gap-10">

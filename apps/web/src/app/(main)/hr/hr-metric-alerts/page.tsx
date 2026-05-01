@@ -10,7 +10,7 @@ export default async function HrMetricAlertsPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!permissionKeys.includes('hr.view_records')) redirect('/broadcasts');
+  if (!permissionKeys.includes('hr.view_records')) redirect('/forbidden');
 
   const pageData = await getCachedHrMetricAlertsPageData(orgId);
   if (!pageData) redirect('/broadcasts');

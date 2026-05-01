@@ -94,13 +94,13 @@ export function DashboardHome({
       {variant === 'dashboard' ? <DashboardCampfireAmbient /> : null}
       {variant === 'dashboard' ? <h1 className="sr-only">Dashboard</h1> : null}
       {isStale ? (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+        <div className="status-banner-warning mb-4 rounded-lg px-3 py-2 text-[12px]">
           Refreshing dashboard data...
           {lastUpdatedSeconds !== null ? ` Last updated ${lastUpdatedSeconds}s ago.` : ''}
         </div>
       ) : null}
       {isPartial ? (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+        <div className="status-banner-warning mb-4 rounded-lg px-3 py-2 text-[12px]">
           Some dashboard sections are temporarily delayed. Data may be partially loaded.
         </div>
       ) : null}

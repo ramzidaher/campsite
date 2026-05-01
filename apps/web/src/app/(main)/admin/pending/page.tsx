@@ -32,7 +32,7 @@ export default async function AdminPendingPage() {
   );
   const canReviewApprovals = permissionKeys.includes('approvals.members.review');
   const canBulkApprove     = permissionKeys.includes('members.edit_status');
-  if (!canReviewApprovals) redirect('/admin');
+  if (!canReviewApprovals) redirect('/forbidden');
 
   const orgId = profile.org_id as string;
   const rows = await withServerPerf(

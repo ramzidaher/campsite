@@ -26,7 +26,7 @@ export default async function ManagerDepartmentsPage({
   if (!orgId || !userId || !role) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!permissionKeys.includes('departments.view')) redirect('/broadcasts');
+  if (!permissionKeys.includes('departments.view')) redirect('/forbidden');
 
   const pageData = await withServerPerf(
     '/manager/departments',

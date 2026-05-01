@@ -51,7 +51,7 @@ export function ManagerDashboardClient({
       {!hasDepartments ? (
         <div
           role="status"
-          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950"
+          className="status-banner-warning rounded-xl px-4 py-3 text-[13px]"
         >
           You are not assigned as a department manager yet.
         </div>

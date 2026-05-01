@@ -12,7 +12,7 @@ export default async function AdminLeavePage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!permissionKeys.includes('leave.manage_org')) redirect('/admin');
+  if (!permissionKeys.includes('leave.manage_org')) redirect('/forbidden');
 
   const pageData = await withServerPerf(
     '/admin/leave',

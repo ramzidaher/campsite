@@ -18,7 +18,7 @@ export default async function ManagerDashboardPage() {
   const permissionKeys = parseShellPermissionKeys(shellBundle);
   const canViewDepartments   = permissionKeys.includes('departments.view');
   const canCreateRecruitment = permissionKeys.includes('recruitment.create_request');
-  if (!canViewDepartments && !canCreateRecruitment) redirect('/broadcasts');
+  if (!canViewDepartments && !canCreateRecruitment) redirect('/forbidden');
 
   if (!canCreateRecruitment) {
     redirect('/manager/teams');

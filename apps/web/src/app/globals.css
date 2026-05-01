@@ -193,6 +193,24 @@ html[data-a11y-dim-flashing-lights='1'] video {
     text-wrap: balance;
   }
 
+  .status-banner-success {
+    border: 1px solid color-mix(in srgb, var(--campsite-success) 30%, #d8d8d8);
+    background: color-mix(in srgb, var(--campsite-success) 8%, #faf9f6);
+    color: #14532d;
+  }
+
+  .status-banner-error {
+    border: 1px solid color-mix(in srgb, var(--campsite-warning) 30%, #d8d8d8);
+    background: color-mix(in srgb, var(--campsite-warning) 8%, #faf9f6);
+    color: #7f1d1d;
+  }
+
+  .status-banner-warning {
+    border: 1px solid #d8d8d8;
+    background: #f5f4f1;
+    color: #121212;
+  }
+
   /*
    * Main shell pages frequently use `mx-auto max-w-*` as their root wrapper.
    * Inside the workspace we want those wrappers to fill available width while

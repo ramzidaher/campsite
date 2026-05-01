@@ -11,7 +11,7 @@ export default async function AdminCategoriesPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!hasPermission(permissionKeys, 'departments.view')) redirect('/admin');
+  if (!hasPermission(permissionKeys, 'departments.view')) redirect('/forbidden');
 
   const pageData = await getCachedAdminCategoriesPageData(orgId);
 

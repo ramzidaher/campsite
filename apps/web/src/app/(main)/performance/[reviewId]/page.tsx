@@ -25,7 +25,7 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ r
   const canHR = canViewReports || canManageCycles;
   const canReviewerWrite = isReviewer && canReviewDirectReports;
 
-  if (!isReviewee && !canReviewerWrite && !canHR) redirect('/broadcasts');
+  if (!isReviewee && !canReviewerWrite && !canHR) redirect('/forbidden');
 
   return (
     <ReviewDetailClient

@@ -220,7 +220,7 @@ export function PendingApprovalsClient({
       </div>
 
       {msg ? (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-950" role="alert">
+        <p className="status-banner-error mb-4 rounded-lg px-3 py-2 text-[13px]" role="alert">
           {msg}
         </p>
       ) : null}

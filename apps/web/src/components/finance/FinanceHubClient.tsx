@@ -1,7 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Timesheet = {
   user_id: string;
@@ -131,6 +131,8 @@ export function FinanceHubClient({
   canManagePayElements: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const loadInFlightRef = useRef<Promise<void> | null>(null);
+  const realtimeRefreshTimerRef = useRef<number | null>(null);
   const [weekFilter, setWeekFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
   const [rows, setRows] = useState<FinanceRow[]>([]);
@@ -171,6 +173,12 @@ export function FinanceHubClient({
   const [manualOverridesOpen, setManualOverridesOpen] = useState(false);
 
   const load = useCallback(async () => {
+    if (loadInFlightRef.current) {
+      await loadInFlightRef.current;
+      return;
+    }
+
+    const run = (async () => {
     setErr(null);
     const { data: peopleData } = await supabase
       .from('profiles')
@@ -402,7 +410,28 @@ export function FinanceHubClient({
 
     rowList.sort((a, b) => (a.weekStart === b.weekStart ? a.name.localeCompare(b.name) : b.weekStart.localeCompare(a.weekStart)));
     setRows(rowList);
+    })();
+
+    loadInFlightRef.current = run;
+    try {
+      await run;
+    } finally {
+      loadInFlightRef.current = null;
+    }
   }, [orgId, supabase, weekFilter]);
+
+  const scheduleLoad = useCallback(
+    (delayMs = 220) => {
+      if (realtimeRefreshTimerRef.current != null) {
+        window.clearTimeout(realtimeRefreshTimerRef.current);
+      }
+      realtimeRefreshTimerRef.current = window.setTimeout(() => {
+        realtimeRefreshTimerRef.current = null;
+        void load();
+      }, delayMs);
+    },
+    [load],
+  );
 
   useEffect(() => {
     void load();
@@ -411,14 +440,18 @@ export function FinanceHubClient({
   useEffect(() => {
     const channel = supabase
       .channel(`finance-live-${orgId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_timesheets', filter: `org_id=eq.${orgId}` }, () => void load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wagesheet_lines', filter: `org_id=eq.${orgId}` }, () => void load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll_manual_adjustments', filter: `org_id=eq.${orgId}` }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_timesheets', filter: `org_id=eq.${orgId}` }, () => scheduleLoad())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wagesheet_lines', filter: `org_id=eq.${orgId}` }, () => scheduleLoad())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll_manual_adjustments', filter: `org_id=eq.${orgId}` }, () => scheduleLoad())
       .subscribe();
     return () => {
+      if (realtimeRefreshTimerRef.current != null) {
+        window.clearTimeout(realtimeRefreshTimerRef.current);
+        realtimeRefreshTimerRef.current = null;
+      }
       void supabase.removeChannel(channel);
     };
-  }, [load, orgId, supabase]);
+  }, [orgId, scheduleLoad, supabase]);
 
   async function saveRate(role: 'csa' | 'dm') {
     const value = Number(role === 'csa' ? rateInputs.csa : rateInputs.dm);
@@ -713,7 +746,7 @@ export function FinanceHubClient({
 
   return (
     <div className="space-y-5 font-sans text-[#121212]">
-      {err ? <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-900">{err}</p> : null}
+      {err ? <p className="status-banner-error rounded-xl px-3 py-2 text-[13px]">{err}</p> : null}
 
       <section className="rounded-xl border border-[#e8e8e8] bg-white p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

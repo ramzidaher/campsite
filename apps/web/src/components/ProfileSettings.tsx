@@ -173,7 +173,7 @@ function IntegrationStatusPill({ connected }: { connected: boolean }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-[#d8d8d8] bg-[#fafaf9] px-2.5 py-1 text-[11px] font-semibold text-[#121212]">
       <span
-        className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-[#b7b7b1]'}`}
+        className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-[#15803d]' : 'bg-[#b7b7b1]'}`}
         aria-hidden
       />
       {connected ? 'Connected' : 'Not connected'}
@@ -233,7 +233,7 @@ const btnPrimary =
 const btnSecondary =
   'inline-flex items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#121212] transition hover:bg-[#f5f4f1] disabled:pointer-events-none disabled:opacity-45';
 const btnDanger =
-  'inline-flex items-center justify-center rounded-lg border border-[#b91c1c]/35 bg-[#b91c1c] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[#991b1b] disabled:pointer-events-none disabled:opacity-45';
+  'inline-flex items-center justify-center rounded-lg border border-[#b91c1c]/35 bg-[#b91c1c] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[#7f1d1d] disabled:pointer-events-none disabled:opacity-45';
 const SHELL_MODE_STORAGE_KEY = 'campsite_shell_mode';
 const SHELL_MODE_AUTO_STORAGE_KEY = 'campsite_shell_mode_auto_enabled';
 const LEGACY_PRIDE_MODE_STORAGE_KEY = 'campsite_pride_mode';
@@ -983,10 +983,10 @@ export function ProfileSettings({
 
   const flashClass =
     msgTone === 'success'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+      ? 'status-banner-success'
       : msgTone === 'error'
-        ? 'border-red-200 bg-red-50 text-red-950'
-        : 'border-[#d8d8d8] bg-[#f5f4f1] text-[#121212]';
+        ? 'status-banner-error'
+        : 'status-banner-warning';
 
   if (!profile) {
     return (
@@ -2066,12 +2066,12 @@ export function ProfileSettings({
                       <span
                         className={`text-[12px] font-medium ${
                           passwordStrength.score === 4
-                            ? 'text-emerald-600'
+                            ? 'text-[#15803d]'
                             : passwordStrength.score === 3
                               ? 'text-yellow-600'
                               : passwordStrength.score === 2
                                 ? 'text-orange-500'
-                                : 'text-red-500'
+                                : 'text-[#b91c1c]'
                         }`}
                       >
                         {passwordStrength.label}
@@ -2099,7 +2099,7 @@ export function ProfileSettings({
                     ].map((rule) => (
                       <li
                         key={rule.label}
-                        className={`flex items-center gap-1.5 text-[12px] ${rule.ok ? 'text-emerald-600' : 'text-[#9b9b9b]'}`}
+                        className={`flex items-center gap-1.5 text-[12px] ${rule.ok ? 'text-[#15803d]' : 'text-[#9b9b9b]'}`}
                       >
                         <svg
                           viewBox="0 0 24 24"
@@ -2127,7 +2127,7 @@ export function ProfileSettings({
                     type={showConfirm ? 'text' : 'password'}
                     className={`${inputClass} mt-0 pr-10 ${
                       confirmPassword && !passwordsMatch
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                        ? 'border-[#b91c1c] focus:border-[#b91c1c] focus:ring-[#b91c1c]'
                         : ''
                     }`}
                     value={confirmPassword}
@@ -2154,7 +2154,7 @@ export function ProfileSettings({
                   </button>
                 </div>
                 {confirmPassword && !passwordsMatch && (
-                  <p className="mt-1.5 text-[12px] text-red-500">Passwords do not match.</p>
+                  <p className="mt-1.5 text-[12px] text-[#b91c1c]">Passwords do not match.</p>
                 )}
               </label>
 
@@ -2226,11 +2226,11 @@ export function ProfileSettings({
             </div>
 
             {/* Danger zone */}
-            <div className="rounded-xl border border-red-200 bg-red-50/60 p-5 sm:p-6">
-              <h2 className="mb-1 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-red-800/80">
+            <div className="rounded-xl border border-[#f0c2c2] bg-[#fff5f5] p-5 sm:p-6">
+              <h2 className="mb-1 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#7f1d1d]">
                 Danger zone
               </h2>
-              <p className="mb-4 text-[13px] text-red-950/70">
+              <p className="mb-4 text-[13px] text-[#7f1d1d]/90">
                 Deactivating removes your access until an administrator restores your account.
               </p>
               <button

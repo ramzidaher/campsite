@@ -19,7 +19,7 @@ export default async function AdminHrCustomFieldsPage() {
   const permissionKeys = parseShellPermissionKeys(bundle);
   const canView       = permissionKeys.includes('hr.custom_fields.view');
   const canManageDefs = permissionKeys.includes('hr.custom_fields.manage_definitions');
-  if (!canView && !canManageDefs) redirect('/admin');
+  if (!canView && !canManageDefs) redirect('/forbidden');
 
   const { definitions } = await withServerPerf(
     '/admin/hr/custom-fields',

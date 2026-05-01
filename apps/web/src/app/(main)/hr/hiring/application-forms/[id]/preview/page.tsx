@@ -19,7 +19,7 @@ export default async function ApplicationFormPreviewPage({
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
   const canViewJobs = permissionKeys.includes('jobs.view');
-  if (!canViewJobs) redirect('/broadcasts');
+  if (!canViewJobs) redirect('/forbidden');
 
   const pageData = await getCachedHiringApplicationFormPreviewPageData(orgId, formId);
   if (!pageData) redirect('/hr/hiring/application-forms');

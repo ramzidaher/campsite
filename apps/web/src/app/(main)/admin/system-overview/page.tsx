@@ -48,7 +48,7 @@ export default async function AdminSystemOverviewPage() {
       k.startsWith('offers.') ||
       k.startsWith('interviews.')
   );
-  if (!hasGraphAccess) redirect('/admin');
+  if (!hasGraphAccess) redirect('/forbidden');
 
   const graph = await withServerPerf(
     '/admin/system-overview',

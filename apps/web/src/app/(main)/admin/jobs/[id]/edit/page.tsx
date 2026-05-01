@@ -15,7 +15,7 @@ export default async function AdminJobEditPage({ params }: { params: Promise<{ i
   const permissionKeys = parseShellPermissionKeys(bundle);
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
-  if (!permissionKeys.includes('jobs.edit')) redirect('/broadcasts');
+  if (!permissionKeys.includes('jobs.edit')) redirect('/forbidden');
   const canHrSettings = permissionKeys.includes('hr.view_records');
 
   const pageData = await withServerPerf(

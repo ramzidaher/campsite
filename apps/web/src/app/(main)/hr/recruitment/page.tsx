@@ -25,7 +25,7 @@ export default async function HrRecruitmentPage() {
   const canRaise = Boolean(canCreateRequest);
   const canUseRecruitmentWorkspace =
     canRaise || canViewRecruitment || canApproveRequest || canManageRecruitment;
-  if (!canUseRecruitmentWorkspace) redirect('/broadcasts');
+  if (!canUseRecruitmentWorkspace) redirect('/forbidden');
 
   const canViewQueue = Boolean(canViewRecruitment || canApproveRequest || canManageRecruitment);
   const pageData = await withServerPerf(

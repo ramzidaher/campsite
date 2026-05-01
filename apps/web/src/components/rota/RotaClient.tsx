@@ -1380,7 +1380,7 @@ function RotaManagePanel({
                 </div>
           ) : null}
           {msg ? (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-900 sm:col-span-2">
+            <p className="status-banner-error rounded-xl px-4 py-3 text-[13px] sm:col-span-2">
               {msg}
             </p>
           ) : null}
@@ -1804,7 +1804,7 @@ function ShiftEditor({
             <textarea className={fieldClass} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
           {msg ? (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-900 sm:col-span-2">
+            <p className="status-banner-error rounded-xl px-4 py-3 text-[13px] sm:col-span-2">
               {msg}
             </p>
           ) : null}

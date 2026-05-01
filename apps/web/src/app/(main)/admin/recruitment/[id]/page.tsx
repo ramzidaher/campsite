@@ -18,7 +18,7 @@ export default async function AdminRecruitmentDetailPage({ params }: { params: P
   const canViewQueue = permissionKeys.some((key) =>
     ['recruitment.view', 'recruitment.manage', 'recruitment.approve_request'].includes(key)
   );
-  if (!canViewQueue) redirect('/broadcasts');
+  if (!canViewQueue) redirect('/forbidden');
 
   const { request, events, jobListing, orgSlug } = await withServerPerf(
     '/admin/recruitment/[id]',

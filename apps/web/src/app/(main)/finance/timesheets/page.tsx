@@ -20,7 +20,7 @@ export default async function FinanceTimesheetsPage() {
   const orgId = profile.org_id as string;
 
   const permissionKeys = await getMyPermissions(orgId);
-  if (!permissionKeys.includes('leave.approve_direct_reports') && !permissionKeys.includes('leave.manage_org')) redirect('/hr/records');
+  if (!permissionKeys.includes('leave.approve_direct_reports') && !permissionKeys.includes('leave.manage_org')) redirect('/forbidden');
 
   return (
     <div className="mx-auto w-full max-w-[90rem] px-5 py-8 sm:px-7">

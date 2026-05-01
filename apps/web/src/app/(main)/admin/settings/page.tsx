@@ -11,7 +11,7 @@ export default async function OrgAdminSettingsPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!hasPermission(permissionKeys, 'roles.manage')) redirect('/admin');
+  if (!hasPermission(permissionKeys, 'roles.manage')) redirect('/forbidden');
 
   const pageData = await getCachedAdminSettingsPageData(orgId);
   const org = pageData.org;

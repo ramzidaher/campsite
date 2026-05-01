@@ -77,7 +77,7 @@ export default async function AbsenceReportingPage() {
   const canViewAll =
     permissionKeys.includes('hr.view_records') || permissionKeys.includes('leave.manage_org');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
-  if (!canViewAll && !canViewTeam) redirect('/broadcasts');
+  if (!canViewAll && !canViewTeam) redirect('/forbidden');
 
   const asOf = new Date().toISOString().slice(0, 10);
   const pageData = await withServerPerf(

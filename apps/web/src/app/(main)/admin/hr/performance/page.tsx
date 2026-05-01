@@ -20,7 +20,7 @@ export default async function PerformanceCyclesPage() {
   const canManage = permissionKeys.includes('performance.manage_cycles');
   const canView   = permissionKeys.includes('performance.view_reports');
 
-  if (!canManage && !canView) redirect('/admin');
+  if (!canManage && !canView) redirect('/forbidden');
   const cycles = await withServerPerf(
     '/admin/hr/performance',
     'performance_cycles_bundle_cached',

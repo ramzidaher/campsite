@@ -24,7 +24,7 @@ export default async function HRDirectoryPage({
 
   const canViewAll = permissionKeys.includes('hr.view_records');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
-  if (!canViewAll && !canViewTeam) redirect('/broadcasts');
+  if (!canViewAll && !canViewTeam) redirect('/forbidden');
 
   const canManage = permissionKeys.includes('hr.manage_records');
   const canManagePerformanceCycles = permissionKeys.includes('performance.manage_cycles');

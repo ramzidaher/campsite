@@ -715,7 +715,7 @@ export function BroadcastComposer({
   return (
     <div className="mx-auto max-w-2xl space-y-5 rounded-xl border border-[#d8d8d8] bg-[#faf9f6] p-5 sm:p-6">
       {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div className="status-banner-error rounded-lg px-3 py-2 text-sm">
           {error}
         </div>
       ) : null}

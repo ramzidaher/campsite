@@ -98,7 +98,7 @@ export default async function MyProfilePage({
       ? shellPermissions
       : await withServerPerf('/profile', 'get_my_permissions', getMyPermissions(orgId), 350);
   const canViewOwn = permissionKeys.includes('hr.view_own');
-  if (!canViewOwn) redirect('/dashboard');
+  if (!canViewOwn) redirect('/forbidden');
   const canPerf = permissionKeys.includes('performance.view_own');
   const canViewPhotoOwn = permissionKeys.includes('hr.employee_photo.view_own');
   const canUploadPhotoOwn = permissionKeys.includes('hr.employee_photo.upload_own');
@@ -465,9 +465,9 @@ export default async function MyProfilePage({
     const view = (
       <div className="min-h-[calc(100vh-60px)]">
         <ProfileUiModeSync initialMode={uiMode} />
-        <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
+        <div className="mx-auto max-w-7xl px-5 py-8 sm:px-[28px]">
           {hasProfilePartialData ? (
-            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+            <div className="mb-4 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 py-2 text-[12px] text-[#121212]">
               Some profile sections are temporarily delayed and may be partially loaded.
               {profileFallbackSummary ? ` Delayed areas include ${profileFallbackSummary}.` : ''}
             </div>
@@ -532,9 +532,9 @@ export default async function MyProfilePage({
   const view = (
     <div className="min-h-[calc(100vh-60px)]">
       <ProfileUiModeSync initialMode={uiMode} />
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
+      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-[28px]">
         {hasProfilePartialData ? (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+          <div className="mb-4 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 py-2 text-[12px] text-[#121212]">
             Some profile sections are temporarily delayed and may be partially loaded.
             {profileFallbackSummary ? ` Delayed areas include ${profileFallbackSummary}.` : ''}
           </div>

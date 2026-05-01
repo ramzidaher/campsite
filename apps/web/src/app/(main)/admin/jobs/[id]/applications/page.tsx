@@ -37,7 +37,7 @@ export default async function JobApplicationsPipelinePage({ params }: { params: 
       500
     );
     isAssignedPanelist = accessData.isAssignedPanelist;
-    if (!isAssignedPanelist) redirect('/broadcasts');
+    if (!isAssignedPanelist) redirect('/forbidden');
   }
 
   const canMoveStage = permissionKeys.includes('applications.move_stage') || isAssignedPanelist;

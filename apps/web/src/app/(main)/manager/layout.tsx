@@ -23,7 +23,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
       k === 'teams.view' ||
       k === 'approvals.members.review'
   );
-  if (!canAccessManagerWorkspace) redirect('/broadcasts');
+  if (!canAccessManagerWorkspace) redirect('/forbidden');
 
   return <div className="min-w-0 w-full px-5 py-7 pb-10 sm:px-[28px]">{children}</div>;
 }

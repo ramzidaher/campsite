@@ -19,8 +19,8 @@ export default async function AdminJobAdminLegalPage({
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!permissionKeys.includes('jobs.edit')) redirect('/broadcasts');
-  if (!(await viewerHasPermission('jobs.edit'))) redirect('/broadcasts');
+  if (!permissionKeys.includes('jobs.edit')) redirect('/forbidden');
+  if (!(await viewerHasPermission('jobs.edit'))) redirect('/forbidden');
 
   const pageData = await getCachedJobAdminLegalPageData(orgId, id);
   if (!pageData.job) notFound();

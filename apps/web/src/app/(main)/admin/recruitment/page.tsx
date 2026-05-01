@@ -14,7 +14,7 @@ export default async function AdminRecruitmentPage() {
   const canViewQueue = permissionKeys.some((key) =>
     ['recruitment.view', 'recruitment.manage', 'recruitment.approve_request'].includes(key)
   );
-  if (!canViewQueue) redirect('/broadcasts');
+  if (!canViewQueue) redirect('/forbidden');
 
   const rows = await withServerPerf(
     '/admin/recruitment',

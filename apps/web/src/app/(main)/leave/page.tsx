@@ -22,7 +22,7 @@ export default async function LeavePage() {
     keys.includes('leave.view_own') ||
     keys.includes('leave.approve_direct_reports') ||
     keys.includes('leave.manage_org');
-  if (!canView) redirect('/broadcasts');
+  if (!canView) redirect('/forbidden');
 
   const canSubmit = keys.includes('leave.submit');
   const canApprove = keys.includes('leave.approve_direct_reports') || keys.includes('leave.manage_org');

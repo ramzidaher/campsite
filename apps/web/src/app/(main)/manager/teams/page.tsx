@@ -19,7 +19,7 @@ export default async function ManagerTeamsPage() {
   if (!orgId || !userId || !role) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!permissionKeys.includes('teams.view')) redirect('/broadcasts');
+  if (!permissionKeys.includes('teams.view')) redirect('/forbidden');
 
   const pageData = await withServerPerf(
     '/manager/teams',

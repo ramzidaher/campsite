@@ -215,7 +215,7 @@ export function ResourceDetailClient({
   }, [canManage, initial.id, initial.storage_path, initial.title, router, supabase]);
 
   return (
-    <div className="resource-detail-redesign mx-auto max-w-[1100px] px-5 py-8 sm:px-6">
+    <div className="resource-detail-redesign mx-auto max-w-[1100px] px-5 py-8 sm:px-[28px]">
       <nav className="mb-6 flex flex-wrap items-center gap-2 text-[13px] text-[#888]">
         <Link href="/resources" className="transition hover:text-[#1a1a1a]">
           Resource library
@@ -239,12 +239,10 @@ export function ResourceDetailClient({
         <span className="text-[#1a1a1a]">{initial.title}</span>
       </nav>
 
-      {manageErr ? (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800">{manageErr}</p>
-      ) : null}
+      {manageErr ? <p className="status-banner-error mb-4 rounded-lg px-3 py-2 text-[13px]">{manageErr}</p> : null}
 
       {isArchived ? (
-        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
+        <div className="mb-4 rounded-xl border border-[#d8d8d8] bg-[#f5f4f1] px-4 py-3 text-[13px] text-[#121212]">
           <strong className="font-semibold">Archived</strong> — hidden from the resource library and search. Restore to
           make it visible again, or delete permanently.
         </div>

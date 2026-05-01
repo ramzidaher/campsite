@@ -906,7 +906,7 @@ function PendingBroadcastList({
   return (
     <div className="space-y-3">
       {decideError ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{decideError}</p>
+        <p className="status-banner-error rounded-lg px-3 py-2 text-sm">{decideError}</p>
       ) : null}
       <ul className="space-y-3">
       {rows.map((r) => (

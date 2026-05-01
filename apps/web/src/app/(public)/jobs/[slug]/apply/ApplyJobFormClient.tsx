@@ -339,7 +339,7 @@ export function ApplyJobFormClient({
         ) : null}
 
         {state?.ok === false ? (
-          <div role="alert" className="mb-5 rounded-[11px] border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-900">
+          <div role="alert" className="status-banner-error mb-5 rounded-[11px] px-4 py-3 text-[14px]">
             {state.error}
           </div>
         ) : null}

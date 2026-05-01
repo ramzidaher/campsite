@@ -83,7 +83,7 @@ export default async function HrJobPreviewPage({
 
   const { data: profile } = await supabase.from('profiles').select('org_id, status').eq('id', user.id).single();
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('jobs.view'))) redirect('/broadcasts');
+  if (!(await viewerHasPermission('jobs.view'))) redirect('/forbidden');
 
   const { data: job } = await supabase
     .from('job_listings')

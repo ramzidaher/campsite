@@ -82,7 +82,7 @@ export default async function PendingPage({
         </p>
         {registrationError ? (
           <div
-            className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-950"
+            className="status-banner-error mt-4 rounded-lg px-4 py-3 text-[13px]"
             role="alert"
           >
             {registrationError}
@@ -90,7 +90,7 @@ export default async function PendingPage({
         ) : null}
         {!emailVerified ? (
           <div
-            className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950"
+            className="status-banner-warning mt-4 rounded-lg px-4 py-3 text-[13px]"
             role="status"
           >
             Please verify your email address. Check your inbox for a confirmation link from Campsite.

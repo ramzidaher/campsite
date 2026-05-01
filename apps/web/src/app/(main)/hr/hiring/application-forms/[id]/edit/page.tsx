@@ -25,7 +25,7 @@ export default async function EditApplicationFormPage({
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(shellBundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(shellBundle);
-  if (!permissionKeys.includes('jobs.view')) redirect('/broadcasts');
+  if (!permissionKeys.includes('jobs.view')) redirect('/forbidden');
 
   const pageData = await getCachedHiringApplicationFormEditPageData(orgId, formId);
   if (!pageData?.setRow?.id) redirect('/hr/hiring/application-forms');

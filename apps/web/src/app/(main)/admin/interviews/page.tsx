@@ -13,7 +13,7 @@ export default async function AdminInterviewsPage() {
   const permissionKeys = parseShellPermissionKeys(bundle);
   const canViewInterviews = permissionKeys.includes('interviews.view');
   const canBookInterviewSlot = permissionKeys.includes('interviews.book_slot');
-  if (!canViewInterviews && !canBookInterviewSlot) redirect('/broadcasts');
+  if (!canViewInterviews && !canBookInterviewSlot) redirect('/forbidden');
   const canCreateSlot = permissionKeys.includes('interviews.create_slot');
   const canCompleteSlot = permissionKeys.includes('interviews.complete_slot');
   const { jobs, profiles, slots } = await withServerPerf(

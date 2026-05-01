@@ -28,7 +28,7 @@ export default async function AdminPrivacyPage() {
     getMyPermissions(orgId),
     300
   );
-  if (!permissionKeys.includes('privacy.retention_policy.view') && !permissionKeys.includes('privacy.erasure_request.review')) redirect('/admin');
+  if (!permissionKeys.includes('privacy.retention_policy.view') && !permissionKeys.includes('privacy.erasure_request.review')) redirect('/forbidden');
   const view = <PrivacyAdminClient />;
   warnIfSlowServerPath('/admin/privacy', pathStartedAtMs);
   return view;

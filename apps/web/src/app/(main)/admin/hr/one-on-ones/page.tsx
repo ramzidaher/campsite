@@ -17,7 +17,7 @@ export default async function HrOneOnOnesPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!permissionKeys.includes('hr.view_records')) redirect('/broadcasts');
+  if (!permissionKeys.includes('hr.view_records')) redirect('/forbidden');
 
   const pageData = await withServerPerf(
     '/admin/hr/one-on-ones',

@@ -35,7 +35,7 @@ export default async function ManagerSystemOverviewPage() {
       k === 'teams.view' ||
       k === 'approvals.members.review'
   );
-  if (!canAccessManagerWorkspace) redirect('/manager');
+  if (!canAccessManagerWorkspace) redirect('/forbidden');
 
   const graph = await withServerPerf(
     '/manager/system-overview',

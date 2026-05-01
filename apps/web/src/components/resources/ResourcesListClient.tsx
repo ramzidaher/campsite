@@ -1441,7 +1441,7 @@ export function ResourcesListClient({
       ) : null}
 
       {err ? (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800">{err}</p>
+        <p className="status-banner-error mb-4 rounded-lg px-3 py-2 text-[13px]">{err}</p>
       ) : null}
 
       {busy ? (

@@ -22,7 +22,7 @@ export default async function OfferTemplatesPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!permissionKeys.includes('offers.view')) redirect('/broadcasts');
+  if (!permissionKeys.includes('offers.view')) redirect('/forbidden');
 
   const { templates } = await getCachedAdminOfferTemplatesPageData(orgId);
 
