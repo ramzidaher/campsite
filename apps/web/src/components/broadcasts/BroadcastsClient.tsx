@@ -523,11 +523,13 @@ export function BroadcastsClient({
                     ▾
                   </span>
                 </div>
-                <div className="relative min-w-[170px] flex-[1_1_180px]">
+              </div>
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <div className="relative">
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as BroadcastSort)}
-                    className="h-9 w-full appearance-none rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
+                    className="h-8 appearance-none rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 pr-7 text-[11.5px] font-medium text-[#121212] outline-none transition focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
                     aria-label="Sort broadcasts"
                   >
                     <option value="newest">Newest first</option>
@@ -537,29 +539,29 @@ export function BroadcastsClient({
                   </select>
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
+                    className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-[#6b6b6b]"
                   >
                     ▾
                   </span>
                 </div>
+                <ExperienceLensBar
+                  ariaLabel="Broadcast feed layout"
+                  value={feedLayout}
+                  onChange={(next) => {
+                    setFeedLayout(next);
+                    try {
+                      sessionStorage.setItem(FEED_LAYOUT_KEY, next);
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                  choices={[
+                    { value: 'stream', label: 'Cards' },
+                    { value: 'timeline', label: 'Timeline' },
+                  ]}
+                  className="shrink-0"
+                />
               </div>
-              <ExperienceLensBar
-                ariaLabel="Broadcast feed layout"
-                value={feedLayout}
-                onChange={(next) => {
-                  setFeedLayout(next);
-                  try {
-                    sessionStorage.setItem(FEED_LAYOUT_KEY, next);
-                  } catch {
-                    /* ignore */
-                  }
-                }}
-                choices={[
-                  { value: 'stream', label: 'Cards' },
-                  { value: 'timeline', label: 'Timeline' },
-                ]}
-                className="ml-auto shrink-0"
-              />
             </div>
           </div>
 
@@ -588,13 +590,6 @@ export function BroadcastsClient({
 
       {composeOpen && composeAllowed ? (
         <div className="space-y-4">
-          <button
-            type="button"
-            onClick={() => closeCompose()}
-            className="text-[13px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-          >
-            ← Back
-          </button>
           <BroadcastComposer
             supabase={supabase}
             orgId={profile.org_id}

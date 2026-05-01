@@ -813,13 +813,15 @@ export function ResourcesListClient({
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-authSerif text-3xl leading-tight text-[var(--org-brand-text)]">
+          <h1 className="campsite-title text-[var(--org-brand-text)]">
             Resource library
             {archiveOnly ? (
-              <span className="ml-2 text-lg font-normal text-[var(--org-brand-muted)]">· Archived</span>
+              <span className="ml-2 text-[var(--campsite-font-subheading)] font-normal text-[var(--org-brand-muted)]">
+                · Archived
+              </span>
             ) : null}
           </h1>
-          <p className="mt-1 text-[13px] text-[var(--org-brand-muted)]">
+          <p className="campsite-body mt-1 text-[var(--org-brand-muted)]">
             {archiveOnly
               ? 'Documents hidden from the main library. Restore or delete them from the resource page.'
               : 'Policies, handbooks, and reference files for your organisation.'}
@@ -827,11 +829,6 @@ export function ResourcesListClient({
         </div>
         {canManage ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {!archiveOnly ? (
-              <button type="button" className={outlineHeaderBtn} onClick={openNewFolderPanel}>
-                New folder
-              </button>
-            ) : null}
             {archiveColumnOk ? (
               <Link href={archiveOnly ? '/resources' : '/resources?archived=1'} className={outlineHeaderBtn}>
                 {archiveOnly ? 'Active library' : 'Archived'}

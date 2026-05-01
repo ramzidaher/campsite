@@ -74,6 +74,64 @@ function DegradedLastUpdatedText({ shellLastSuccessAt }: { shellLastSuccessAt: n
   return <span className="text-amber-800/80">Last updated {secs}s ago</span>;
 }
 
+function titleFromPathSegment(segment: string): string {
+  return segment
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function getGlobalBackLink(pathname: string): { href: string; label: string } | null {
+  if (!pathname || pathname === '/') return null;
+  const cleanPath = pathname.split('?')[0] ?? pathname;
+  const mainPages = new Set([
+    '/dashboard',
+    '/broadcasts',
+    '/calendar',
+    '/rota',
+    '/discount',
+    '/leave',
+    '/attendance',
+    '/performance',
+    '/resources',
+    '/onboarding',
+    '/profile',
+    '/settings',
+    '/hr',
+    '/hr/hiring',
+    '/hr/hiring/requests',
+    '/hr/hiring/jobs',
+    '/hr/hiring/application-forms',
+    '/hr/hiring/templates',
+    '/hr/hiring/contract-templates',
+    '/hr/hiring/new-request',
+    '/admin',
+    '/manager',
+    '/finance',
+    '/reports',
+    '/notifications',
+  ]);
+  if (mainPages.has(cleanPath)) return null;
+
+  const routeOverrides: Array<{ test: RegExp; href: string; label: string }> = [
+    { test: /^\/hr\/hiring\/requests\/[^/]+/, href: '/hr/hiring/requests', label: 'Hiring requests' },
+    { test: /^\/hr\/recruitment\/[^/]+/, href: '/hr/hiring/requests', label: 'Hiring requests' },
+    { test: /^\/hr\/hiring\/jobs\/[^/]+/, href: '/hr/hiring/jobs', label: 'Job listings' },
+    { test: /^\/hr\/jobs\/[^/]+/, href: '/hr/hiring/jobs', label: 'Job listings' },
+    { test: /^\/hr\/hiring\/application-forms\/[^/]+/, href: '/hr/hiring/application-forms', label: 'Application forms' },
+    { test: /^\/admin\/jobs\/[^/]+/, href: '/admin/jobs', label: 'Jobs' },
+  ];
+  const override = routeOverrides.find((item) => item.test.test(cleanPath));
+  if (override) return { href: override.href, label: override.label };
+
+  const segments = cleanPath.split('/').filter(Boolean);
+  if (segments.length <= 1) return null;
+  const parentSegments = segments.slice(0, -1);
+  const href = `/${parentSegments.join('/')}`;
+  const parentLast = parentSegments[parentSegments.length - 1] ?? '';
+  if (!parentLast) return null;
+  return { href, label: titleFromPathSegment(parentLast) };
+}
+
 function NavLink({
   href,
   icon,
@@ -460,6 +518,7 @@ export function AppShell({
   const showOrgLogo = Boolean(safeOrgLogo) && !orgLogoFailed;
   const showUserAvatar = Boolean(safeUserAvatar) && !userAvatarFailed;
   const shouldShowDegradedBanner = shellDegraded || shellDataFreshness === 'stale';
+  const globalBackLink = getGlobalBackLink(pathname);
 
   const paletteSections = useMemo(
     () =>
@@ -1349,6 +1408,17 @@ export function AppShell({
         ) : null}
         <GlobalActionFeedbackBridge />
         <main id="main-content" tabIndex={-1} className="workspace-fluid flex-1 overflow-x-hidden overflow-y-auto">
+          {globalBackLink ? (
+            <div className="px-5 pt-3 sm:px-7">
+              <Link
+                href={globalBackLink.href}
+                prefetch={false}
+                className="inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
+              >
+                {`\u2190 ${globalBackLink.label}`}
+              </Link>
+            </div>
+          ) : null}
           {children}
         </main>
       </div>

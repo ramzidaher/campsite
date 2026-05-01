@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import type { ProfileRow } from '@/lib/AuthContext';
+import { mainShell, mainShellText } from '@/constants/mainShell';
 import { getSupabase } from '@/lib/supabase';
 
 type MeetingRow = {
@@ -70,14 +71,18 @@ export function OneOnOneListScreen({ profile }: { profile: ProfileRow }) {
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+      contentContainerStyle={{
+        paddingHorizontal: mainShell.spacing.md,
+        paddingTop: mainShell.spacing.md,
+        paddingBottom: mainShell.spacing.xxl,
+      }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <Text style={[styles.heading, { color: textPrimary }]}>1:1 check-ins</Text>
       <Text style={[styles.sub, { color: textSecondary }]}>Tap a meeting to open notes and actions.</Text>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 24 }} />
+        <ActivityIndicator style={{ marginTop: mainShell.spacing.xl }} />
       ) : rows.length === 0 ? (
         <Text style={[styles.empty, { color: textSecondary }]}>No 1:1 meetings yet.</Text>
       ) : (
@@ -111,16 +116,20 @@ export function OneOnOneListScreen({ profile }: { profile: ProfileRow }) {
 }
 
 const styles = StyleSheet.create({
-  heading: { fontSize: 22, fontWeight: '600' },
-  sub: { fontSize: 13, marginTop: 6, marginBottom: 16 },
-  empty: { fontSize: 14, marginTop: 12 },
+  heading: { ...mainShellText.pageTitle, fontWeight: '600' },
+  sub: {
+    ...mainShellText.caption,
+    marginTop: mainShell.spacing.xs - 2,
+    marginBottom: mainShell.spacing.md,
+  },
+  empty: { ...mainShellText.body, marginTop: mainShell.spacing.sm },
   card: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: mainShell.spacing.sm,
+    padding: mainShell.spacing.sm + 2,
+    marginBottom: mainShell.spacing.xs + 2,
   },
-  cardTitle: { fontSize: 16, fontWeight: '600' },
-  cardMeta: { fontSize: 12, marginTop: 4 },
-  preview: { fontSize: 12, marginTop: 8 },
+  cardTitle: { ...mainShellText.subheading },
+  cardMeta: { ...mainShellText.caption, marginTop: mainShell.spacing.xxs },
+  preview: { ...mainShellText.caption, marginTop: mainShell.spacing.xs },
 });

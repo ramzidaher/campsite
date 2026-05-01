@@ -65,7 +65,7 @@ export function DashboardHome({
   const broadcastSentSubline =
     statScope === 'dept' ? 'Sent in your department(s)' : 'Sent in your organisation';
   const memberFootnote = (
-    <div className="mt-2 text-xs text-[#9b9b9b]">
+    <div className="mt-2 campsite-body text-[#9b9b9b]">
       {statScope === 'dept'
         ? 'Active members in your department(s)'
         : membersStatHref
@@ -76,7 +76,7 @@ export function DashboardHome({
 
   const memberTileInner = (
     <>
-      <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+      <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
         <span>👥</span> Active members
       </div>
       <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
@@ -90,7 +90,7 @@ export function DashboardHome({
   );
 
   return (
-    <div className="w-full px-5 py-7 sm:px-[28px]">
+    <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
       {variant === 'dashboard' ? <DashboardCampfireAmbient /> : null}
       {variant === 'dashboard' ? <h1 className="sr-only">Dashboard</h1> : null}
       {isStale ? (
@@ -100,11 +100,11 @@ export function DashboardHome({
         </div>
       ) : null}
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="font-authSerif text-[28px] leading-tight tracking-tight text-[#121212]">
+        <div className="campsite-stack-sm">
+          <h2 className="campsite-title">
             {greetingLine}
           </h2>
-          <p className="mt-1 text-[13px] text-[#6b6b6b]">
+          <p className="campsite-subheading">
             {now.toLocaleDateString(undefined, {
               weekday: 'long',
               day: 'numeric',
@@ -120,7 +120,7 @@ export function DashboardHome({
             <Link
               href={composeHref}
               prefetch={false}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 campsite-body font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
             >
               ✏ New broadcast
             </Link>
@@ -129,7 +129,7 @@ export function DashboardHome({
             <Link
               href={composeHref}
               prefetch={false}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] shadow-sm transition-opacity hover:opacity-90"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 campsite-body font-medium text-[#faf9f6] shadow-sm transition-opacity hover:opacity-90"
             >
               ✏ Submit draft for approval
             </Link>
@@ -140,13 +140,13 @@ export function DashboardHome({
       <div className={`mb-6 grid grid-cols-1 gap-3.5 sm:grid-cols-2 ${statGridLg}`}>
         {showBroadcastTotal ? (
           <Link href="/broadcasts" prefetch={false} className={statTileClass}>
-            <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+            <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
               <span>📡</span> Total broadcasts
             </div>
             <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
               {data.broadcastTotal}
             </div>
-            <div className="mt-2 text-xs text-[#9b9b9b]">{broadcastSentSubline}</div>
+            <div className="mt-2 campsite-body text-[#9b9b9b]">{broadcastSentSubline}</div>
             {isAdmin && data.broadcastTotal !== undefined ? (
               <StatBar pct={statFillPct(data.broadcastTotal, 200)} />
             ) : null}
@@ -169,7 +169,7 @@ export function DashboardHome({
             prefetch={false}
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
-            <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+            <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
               <span>⏳</span> Pending approvals
             </div>
             <div
@@ -180,7 +180,7 @@ export function DashboardHome({
             >
               {data.pendingCount}
             </div>
-            <div className="mt-2 text-xs text-[#9b9b9b]">
+            <div className="mt-2 campsite-body text-[#9b9b9b]">
               {data.pendingCount > 0 ? 'Needs your attention' : 'All caught up'}
             </div>
             {isAdmin ? (
@@ -193,13 +193,13 @@ export function DashboardHome({
             prefetch={false}
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
-            <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+            <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
               <span>📬</span> Unread
             </div>
             <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
               {data.unreadCount}
             </div>
-            <div className="mt-2 text-xs text-[#9b9b9b]">Broadcasts you haven&apos;t opened</div>
+            <div className="mt-2 campsite-body text-[#9b9b9b]">Broadcasts you haven&apos;t opened</div>
           </Link>
         ) : (
           <Link
@@ -207,11 +207,11 @@ export function DashboardHome({
             prefetch={false}
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
-            <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+            <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
               <span>📬</span> Broadcasts
             </div>
-            <div className="mt-2 text-[13px] font-medium leading-snug text-[#121212]">View feed</div>
-            <div className="mt-2 text-xs text-[#9b9b9b]">Updates from your organisation</div>
+            <div className="mt-2 campsite-subheading font-medium text-[#121212]">View feed</div>
+            <div className="mt-2 campsite-body text-[#9b9b9b]">Updates from your organisation</div>
           </Link>
         )}
 
@@ -220,14 +220,14 @@ export function DashboardHome({
           prefetch={false}
           className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
         >
-          <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
+          <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
             <span>🗓</span> Shifts this week
           </div>
           <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {data.shiftsThisWeek}
           </div>
           {isAdmin ? (
-            <div className="mt-2 space-y-1 text-xs text-[#9b9b9b]">
+            <div className="mt-2 space-y-1 campsite-body text-[#9b9b9b]">
               <p>Organisation shifts in the next 7 days</p>
               {data.nextShiftSummary ? (
                 <p>
@@ -239,7 +239,7 @@ export function DashboardHome({
               )}
             </div>
           ) : (
-            <div className="mt-2 text-xs text-[#9b9b9b]">
+            <div className="mt-2 campsite-body text-[#9b9b9b]">
               {data.nextShiftSummary ? (
                 <>
                   Next: <span className="font-medium text-[#121212]">{data.nextShiftSummary}</span>
@@ -256,7 +256,7 @@ export function DashboardHome({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
         <div>
           <div className="mb-3.5 flex items-center justify-between">
-            <h3 className="font-authSerif text-[17px] tracking-tight text-[#121212]">Recent broadcasts</h3>
+            <h3 className="campsite-subheading font-authSerif tracking-tight text-[#121212]">Recent broadcasts</h3>
             <Link
               href={isAdmin ? '/admin/broadcasts' : '/broadcasts'}
               prefetch={false}

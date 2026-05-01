@@ -91,10 +91,10 @@ export function OneOnOnesHubClient({
   const scheduleSidebar = canManage && directReports.length > 0;
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
-      <div className="mb-6">
-        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">1:1 check-ins</h1>
-        <p className="mt-1 text-[13px] text-[#6b6b6b]">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
+      <div className="mb-8">
+        <h1 className="campsite-title text-[#121212]">1:1 check-ins</h1>
+        <p className="campsite-body mt-1 text-[#6b6b6b]">
           {canManage ? 'Schedule and run 1:1s with your team.' : 'Your upcoming and past 1:1 meetings.'}
         </p>
       </div>

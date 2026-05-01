@@ -2,9 +2,7 @@ import { ApplyJobFormClient } from '@/app/(public)/jobs/[slug]/apply/ApplyJobFor
 import { CareersHeader } from '@/app/(public)/jobs/CareersBranding';
 import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { createClient } from '@/lib/supabase/server';
-import { tenantJobListingRelativePath } from '@/lib/tenant/adminUrl';
 import { headers } from 'next/headers';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 type PublicJobRow = {
@@ -97,15 +95,6 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
         <CareersHeader
           orgName={orgName}
           orgLogoUrl={orgLogoUrl}
-          actions={
-            <Link
-              href={tenantJobListingRelativePath(jobSlug, orgSlug, host)}
-              className="rounded-lg px-3 py-1.5 text-[13px] transition-colors hover:bg-black/[0.06]"
-              style={{ color: 'var(--org-brand-text)' }}
-            >
-              ← Back to role
-            </Link>
-          }
         />
 
         {/* ── Job context ── */}

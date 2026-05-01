@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { extractSpreadsheetId } from '@/lib/rota/sheetsImportParse';
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 /** Org admin - Google Sheets rota import wizard; links `google_connections`, `sheets_mappings`, then POST import. */
@@ -194,12 +193,6 @@ export function SheetsImportWizard({ orgId }: { orgId: string }) {
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-5 py-7 sm:px-[28px]">
-      <Link
-        href="/admin"
-        className="text-[13px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-      >
-        ← Admin
-      </Link>
       <div>
         <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">
           Rota import (Google Sheets)

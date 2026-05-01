@@ -10,7 +10,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { homeHeaderTitle, isHomeTabPathname, mainShell, mainScreenTitle } from '@/constants/mainShell';
+import {
+  homeHeaderTitle,
+  isHomeTabPathname,
+  mainScreenTitle,
+  mainShell,
+  mainShellText,
+} from '@/constants/mainShell';
 import { useAuth } from '@/lib/AuthContext';
 import { useUiSound } from '@/lib/sound/useUiSound';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -168,15 +174,15 @@ const styles = StyleSheet.create({
   },
   row: {
     height: 56,
-    paddingHorizontal: 20,
+    paddingHorizontal: mainShell.spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: mainShell.spacing.xs,
   },
   backBtn: {
     width: 36,
     height: 36,
-    marginRight: 4,
+    marginRight: mainShell.spacing.xxs,
     marginLeft: -6,
     alignItems: 'center',
     justifyContent: 'center',
@@ -189,14 +195,13 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 20,
+    ...mainShellText.sectionTitle,
     lineHeight: 26,
-    letterSpacing: -0.3,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     fontWeight: '400',
     color: mainShell.pageText,
   },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: mainShell.spacing.xs },
   iconBtn: {
     width: 36,
     height: 36,
@@ -207,7 +212,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconBtnGlyph: { fontSize: 16 },
+  iconBtnGlyph: { fontSize: mainShell.type.subheading + 1 },
   notifDot: {
     position: 'absolute',
     right: 6,
@@ -228,7 +233,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 12,
+    ...mainShellText.caption,
     fontWeight: '600',
     color: mainShell.sidebarText,
   },

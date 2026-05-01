@@ -14,6 +14,17 @@
   --campsite-warning: #b91c1c;
   --campsite-success: #15803d;
   --campsite-accent: #121212;
+  --campsite-space-1: 0.25rem;
+  --campsite-space-2: 0.5rem;
+  --campsite-space-3: 0.75rem;
+  --campsite-space-4: 1rem;
+  --campsite-space-5: 1.25rem;
+  --campsite-space-6: 1.5rem;
+  --campsite-space-8: 2rem;
+  --campsite-space-10: 2.5rem;
+  --campsite-font-title: 1.75rem;
+  --campsite-font-subheading: 0.9375rem;
+  --campsite-font-body: 0.875rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -344,5 +355,32 @@ html[data-a11y-dim-flashing-lights='1'] video {
   .auth-divider::after {
     content: '';
     @apply h-px flex-1 bg-[#d8d8d8];
+  }
+
+  .campsite-title {
+    @apply font-authSerif leading-tight tracking-[-0.03em] text-[#121212];
+    font-size: var(--campsite-font-title);
+  }
+
+  .campsite-subheading {
+    @apply font-medium leading-relaxed text-[#6b6b6b];
+    font-size: var(--campsite-font-subheading);
+  }
+
+  .campsite-body {
+    @apply leading-relaxed text-[#6b6b6b];
+    font-size: var(--campsite-font-body);
+  }
+
+  .campsite-stack-sm > * + * {
+    margin-top: var(--campsite-space-2);
+  }
+
+  .campsite-stack-md > * + * {
+    margin-top: var(--campsite-space-4);
+  }
+
+  .campsite-stack-lg > * + * {
+    margin-top: var(--campsite-space-6);
   }
 }

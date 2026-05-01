@@ -8,7 +8,6 @@ import { createClient } from '@/lib/supabase/server';
 import {
   tenantJobListingRelativePath,
   tenantJobMeApplicationRelativePath,
-  tenantJobsSubrouteRelativePath,
 } from '@/lib/tenant/adminUrl';
 import { headers } from 'next/headers';
 import Link from 'next/link';
@@ -86,7 +85,6 @@ export default async function CandidateApplicationDetailPage({
 
   const listingHref = tenantJobListingRelativePath(row.job_slug, row.org_slug, host);
   const trackerHref = `/jobs/status/new/${encodeURIComponent(applicationId)}`;
-  const backToListHref = tenantJobsSubrouteRelativePath('me', orgSlug, host);
 
   const submittedLabel = row.submitted_at
     ? new Date(row.submitted_at).toLocaleString(undefined, {
@@ -126,13 +124,6 @@ export default async function CandidateApplicationDetailPage({
           className="mt-8 rounded-2xl border p-6"
           style={{ borderColor: 'var(--org-brand-border)', background: 'var(--org-brand-surface)' }}
         >
-          <Link
-            href={backToListHref}
-            className="inline-flex items-center gap-1 text-[12px] font-medium underline underline-offset-2 hover:opacity-70"
-            style={{ color: 'var(--org-brand-muted)' }}
-          >
-            ← My applications
-          </Link>
           <h1
             className="mt-3 font-authSerif text-[clamp(1.4rem,3.5vw,1.875rem)] leading-tight tracking-[-0.02em]"
             style={{ color: 'var(--org-brand-text)' }}

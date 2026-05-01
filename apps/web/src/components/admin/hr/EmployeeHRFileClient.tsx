@@ -1101,15 +1101,7 @@ export function EmployeeHRFileClient({
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7 font-sans text-[#121212]">
-      {/* Back — stays outside hero so the hero matches /profile card weight */}
-      <Link
-        href="/hr/records"
-        className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[var(--org-brand-primary,#0f6e56)]"
-      >
-        ← Employee records
-      </Link>
-
-      <header className="mb-7 mt-4 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white shadow-sm [border-left-width:4px] [border-left-style:solid] [border-left-color:var(--org-brand-primary,#0f6e56)]">
+      <header className="mb-7 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white shadow-sm [border-left-width:4px] [border-left-style:solid] [border-left-color:var(--org-brand-primary,#0f6e56)]">
         <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-start gap-3 sm:gap-4">
             {employee.avatar_url ? (

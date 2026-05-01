@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { mainShell } from '@/constants/mainShell';
+import { mainShell, mainShellText } from '@/constants/mainShell';
 import type { HomeUpcomingEvent } from '@/lib/mobileHomeData';
 
 const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
@@ -178,7 +178,7 @@ export function HomeMiniCalendar({
 const styles = StyleSheet.create({
   card: {
     overflow: 'hidden',
-    borderRadius: 14,
+    borderRadius: mainShell.spacing.sm,
     borderWidth: 1,
     borderColor: mainShell.border,
     backgroundColor: '#ffffff',
@@ -187,37 +187,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: mainShell.spacing.lg - 2,
+    paddingVertical: mainShell.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: mainShell.border,
   },
   monthLabel: {
-    fontSize: 15,
+    ...mainShellText.subheading,
     color: mainShell.pageText,
     fontFamily: 'Georgia',
   },
-  monthNav: { flexDirection: 'row', gap: 4 },
+  monthNav: { flexDirection: 'row', gap: mainShell.spacing.xxs },
   navBtn: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: mainShell.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navBtnText: { fontSize: 16, color: mainShell.textSecondary, lineHeight: 18 },
-  gridPad: { padding: 12 },
-  weekRow: { flexDirection: 'row', marginBottom: 4 },
+  navBtnText: { fontSize: mainShell.type.subheading + 1, color: mainShell.textSecondary, lineHeight: 18 },
+  gridPad: { padding: mainShell.spacing.sm },
+  weekRow: { flexDirection: 'row', marginBottom: mainShell.spacing.xxs },
   weekday: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 10,
-    fontWeight: '600',
+    ...mainShellText.overline,
     color: mainShell.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   daysGrid: { gap: 0 },
   dayRow: { flexDirection: 'row' },
@@ -230,7 +227,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   dayToday: { backgroundColor: mainShell.pageText },
-  dayNum: { fontSize: 12, color: mainShell.textSecondary },
+  dayNum: { ...mainShellText.caption, color: mainShell.textSecondary },
   dayMuted: { color: `${mainShell.textMuted}73` },
   dayNumToday: { color: mainShell.sidebarText, fontWeight: '600' },
   eventDot: {
@@ -245,22 +242,25 @@ const styles = StyleSheet.create({
   upcomingSection: {
     borderTopWidth: 1,
     borderTopColor: mainShell.border,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingHorizontal: mainShell.spacing.sm + 2,
+    paddingTop: mainShell.spacing.sm,
+    paddingBottom: mainShell.spacing.sm - 2,
   },
   upcomingLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.6,
+    ...mainShellText.overline,
     color: mainShell.textMuted,
-    marginBottom: 6,
+    marginBottom: mainShell.spacing.xs - 2,
   },
-  noEvents: { textAlign: 'center', fontSize: 12, color: mainShell.textMuted, paddingVertical: 16 },
+  noEvents: {
+    textAlign: 'center',
+    ...mainShellText.caption,
+    color: mainShell.textMuted,
+    paddingVertical: mainShell.spacing.md,
+  },
   eventRow: {
     flexDirection: 'row',
-    gap: 10,
-    paddingVertical: 8,
+    gap: mainShell.spacing.xs + 2,
+    paddingVertical: mainShell.spacing.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: mainShell.border,
   },
@@ -271,6 +271,6 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   eventTextCol: { flex: 1, minWidth: 0 },
-  eventTitle: { fontSize: 12.5, fontWeight: '500', color: mainShell.pageText },
-  eventWhen: { fontSize: 11.5, color: mainShell.textMuted, marginTop: 2 },
+  eventTitle: { ...mainShellText.caption, fontWeight: '500', color: mainShell.pageText },
+  eventWhen: { fontSize: 11, lineHeight: 14, color: mainShell.textMuted, marginTop: 2 },
 });

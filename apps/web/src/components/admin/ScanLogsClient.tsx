@@ -197,7 +197,7 @@ export function ScanLogsClient({ initialRows }: { initialRows: ScanLogRow[] }) {
 
       <div className="mt-8 flex flex-wrap gap-4 text-[13px]">
         <Link href="/admin/discount" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-          ← Discount rules
+          Discount rules
         </Link>
         <Link href="/discount/scan" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
           Open staff scanner

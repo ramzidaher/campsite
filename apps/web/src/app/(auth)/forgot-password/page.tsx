@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { clientEmailRedirectBaseUrl } from '@/lib/auth/inviteCallbackBaseUrl';
 import { createClient } from '@/lib/supabase/client';
@@ -46,21 +45,12 @@ export default function ForgotPasswordPage() {
           Didn&apos;t receive it? Check your spam folder, or make sure you used the same email as your
           Campsite account.
         </div>
-        <Link href="/login" className="auth-btn-ghost mt-6 inline-flex no-underline">
-          Back to sign in
-        </Link>
       </div>
     );
   }
 
   return (
     <div>
-      <Link
-        href="/login"
-        className="mb-6 flex w-fit items-center gap-1.5 text-[13px] text-[#9b9b9b] transition-colors hover:text-[#121212]"
-      >
-        ← Back to sign in
-      </Link>
       <h2 className="auth-title">Reset your password</h2>
       <p className="auth-sub mb-8">
         Enter your account email and we&apos;ll send a reset link. This password applies across all linked organisations.

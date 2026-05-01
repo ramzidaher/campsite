@@ -1,7 +1,6 @@
 import { viewerHasPermission } from '@/lib/authz/serverGuards';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { createClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 type QuestionRow = {
@@ -56,7 +55,7 @@ export default async function ApplicationFormPreviewPage({
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-7 sm:px-7">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6">
         <div>
           <p className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Applicant preview</p>
           <h1 className="mt-2 font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
@@ -66,12 +65,6 @@ export default async function ApplicationFormPreviewPage({
             This is how applicants will see your custom application questions.
           </p>
         </div>
-        <Link
-          href={`/hr/hiring/application-forms/${formId}/edit`}
-          className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#121212] transition-colors hover:border-[#121212]"
-        >
-          Back to editor
-        </Link>
       </div>
 
       <section className="space-y-4 rounded-2xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">

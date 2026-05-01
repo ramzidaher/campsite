@@ -1,7 +1,6 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -131,12 +130,8 @@ export function OnboardingRunClient({
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
-      <Link href="/hr/onboarding" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-        ← Onboarding
-      </Link>
-
       {/* Header */}
-      <div className="mt-4 flex items-start gap-4">
+      <div className="flex items-start gap-4">
         {employee.avatar_url ? (
           <img src={employee.avatar_url} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
         ) : (

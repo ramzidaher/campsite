@@ -10,7 +10,6 @@ import {
 import { RECRUITMENT_REQUEST_STATUSES, type RecruitmentRequestStatus } from '@campsite/types';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 
@@ -216,15 +215,8 @@ export function AdminRecruitmentDetailClient({
   }
 
   return (
-    <div className="mx-auto min-w-0 max-w-[90rem] px-5 py-10 font-sans text-[#121212] sm:px-8 lg:px-10 lg:py-12">
-      <Link
-        href="/hr/hiring/requests"
-        className="inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
-      >
-        ← Hiring requests
-      </Link>
-
-      <div className="mt-6 flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+    <div className="mx-auto min-w-0 max-w-[90rem] px-5 pt-2 pb-10 font-sans text-[#121212] sm:px-8 lg:px-10 lg:pt-3 lg:pb-12">
+      <div className="mt-2 flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
         <div className="min-w-0 max-w-3xl">
           <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">{req.job_title}</h1>
           <p className="mt-3 text-[13.5px] leading-relaxed text-[#6b6b6b]">

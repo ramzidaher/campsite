@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -419,11 +418,7 @@ export function OneOnOneMeetingDetailClient({
         </div>
       </div>
 
-      <Link href="/one-on-ones" className="text-[12px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-        ← All 1:1s
-      </Link>
-
-      <div className="mt-4 text-[12px] text-[#6b6b6b]">
+      <div className="text-[12px] text-[#6b6b6b]">
         <span>1:1 Notes</span>
         <span className="mx-1.5 text-[#d4d4d4]">/</span>
         <span>

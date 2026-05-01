@@ -460,18 +460,7 @@ export function BroadcastDetailView({
         />
 
         <div className="relative z-[100] flex w-full max-w-full flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-3">
-          <div className="flex justify-start">
-            <Link
-              href="/broadcasts"
-              className={[
-                'inline-flex w-fit items-center gap-1.5 rounded-lg border-2 border-[#121212] bg-white px-3 py-2 text-[13px] font-semibold text-[#121212]',
-                'shadow-[0_4px_24px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.65)] transition-colors hover:bg-[#f4f4f4]',
-                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]',
-              ].join(' ')}
-            >
-              <span aria-hidden>←</span> Back to broadcasts
-            </Link>
-          </div>
+          <div className="flex justify-start" />
 
           <div className="flex min-h-[44px] items-center justify-center">
             {initial.status === 'sent' && detailNavFallback.isLoading && !effectiveNavigation ? (

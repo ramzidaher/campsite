@@ -3,9 +3,8 @@ import { CandidateForgotPasswordForm } from '@/app/(public)/jobs/forgot-password
 import { getOrganisationDisplayName } from '@/app/(public)/jobs/getOrganisationDisplayName';
 import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { createClient } from '@/lib/supabase/server';
-import { tenantJobsSubrouteRelativePath, tenantPublicJobsIndexRelativePath } from '@/lib/tenant/adminUrl';
+import { tenantJobsSubrouteRelativePath } from '@/lib/tenant/adminUrl';
 import { headers } from 'next/headers';
-import Link from 'next/link';
 
 function getInitials(name: string) {
   const words = name.trim().split(/\s+/);
@@ -48,7 +47,6 @@ export default async function CandidateForgotPasswordPage({
   const orgLogoUrl = (orgBrand as { logo_url?: string | null } | null)?.logo_url ?? null;
   const initials = getInitials(displayName);
   const loginHref = tenantJobsSubrouteRelativePath('login', orgSlug, host);
-  const jobsIndexHref = tenantPublicJobsIndexRelativePath(orgSlug, host);
 
   return (
     <div
@@ -119,15 +117,6 @@ export default async function CandidateForgotPasswordPage({
 
         <CandidateForgotPasswordForm orgSlug={orgSlug} hostHeader={host} />
 
-        <p className="mt-5 text-center">
-          <Link
-            href={jobsIndexHref}
-            className="text-[13px] transition-opacity hover:opacity-70"
-            style={{ color: 'var(--org-brand-muted, #9b9b9b)' }}
-          >
-            ← Browse open roles
-          </Link>
-        </p>
       </div>
     </div>
   );

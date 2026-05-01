@@ -13,6 +13,13 @@ function titleCaseSlug(s: string) {
     .join(' ');
 }
 
+function getAuthBackLink(pathname: string): { href: string; label: string } | null {
+  const clean = pathname.split('?')[0] ?? pathname;
+  if (clean === '/forgot-password') return { href: '/login', label: 'Sign in' };
+  if (clean === '/register/done') return { href: '/login', label: 'Sign in' };
+  return null;
+}
+
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const h = await headers();
   const slug = h.get('x-campsite-org-slug');
@@ -36,6 +43,8 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   }
 
   const displayName = orgName ?? (slug ? titleCaseSlug(slug) : 'Campsite');
+  const pathname = h.get('x-campsite-pathname') ?? '';
+  const backLink = getAuthBackLink(pathname);
 
   const org: AuthOrgDisplay = {
     slug,
@@ -101,6 +110,15 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             <CampsiteLogoMark className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] bg-[#121212]" />
             <span className="font-authSerif text-xl tracking-tight text-[#121212]">Campsite</span>
           </Link>
+          {backLink ? (
+            <Link
+              href={backLink.href}
+              prefetch={false}
+              className="mb-5 inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
+            >
+              {`\u2190 ${backLink.label}`}
+            </Link>
+          ) : null}
           <AuthOrgCard org={org} />
           {children}
         </div>

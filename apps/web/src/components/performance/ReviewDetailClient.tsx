@@ -1,7 +1,6 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -174,9 +173,6 @@ export function ReviewDetailClient({
   const canEditManager = isReviewer && isOpen && cycleOpen;
   const canAddGoals = (isReviewee || isReviewer) && isOpen && cycleOpen;
 
-  const backHref = (isReviewee && !isReviewer && !canHR) ? '/performance' : '/hr/performance';
-  const backLabel = (isReviewee && !isReviewer && !canHR) ? '← My reviews' : '← Performance reviews';
-
   const today = new Date().toISOString().slice(0, 10);
   const selfDue = cycle?.self_assessment_due;
   const managerDue = cycle?.manager_assessment_due;
@@ -185,12 +181,8 @@ export function ReviewDetailClient({
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-8 sm:px-7">
-      <Link href={backHref} className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] hover:text-[#121212]">
-        {backLabel}
-      </Link>
-
       {/* Header */}
-      <div className="mt-5 mb-6">
+      <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           {isReviewee ? (cycle?.name ?? 'Review') : review.reviewee_name}
         </h1>

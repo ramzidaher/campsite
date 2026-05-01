@@ -117,10 +117,7 @@ export function ResourceNewClient({
 
   return (
     <div className="mx-auto max-w-lg px-7 py-8">
-      <Link href="/resources" className="text-[13px] text-[#6b6b6b] hover:text-[#121212]">
-        ← Resource library
-      </Link>
-      <h1 className="mt-4 font-authSerif text-2xl text-[#121212]">Upload resource</h1>
+      <h1 className="font-authSerif text-2xl text-[#121212]">Upload resource</h1>
       <p className="mt-1 text-[13px] text-[#6b6b6b]">PDF, text, or common office formats (max 20 MB).</p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">

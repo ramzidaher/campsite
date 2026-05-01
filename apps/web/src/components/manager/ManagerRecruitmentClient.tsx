@@ -184,13 +184,6 @@ export function ManagerRecruitmentClient({
     <div className={`space-y-10 ${hiringHubRaise ? 'font-sans text-[#121212]' : ''}`}>
       {hiringHubRaise ? (
         <header className="space-y-2">
-          <Link
-            href="/hr/hiring/requests"
-            prefetch={false}
-            className="inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
-          >
-            ← Hiring requests
-          </Link>
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">New request</h1>
           <p className="max-w-2xl text-[13.5px] text-[#6b6b6b]">
             Raise a recruitment request to HR using a structured brief. Submissions keep full history.

@@ -102,14 +102,7 @@ export function BroadcastEditForm({
 
   return (
     <div className="mx-auto w-full max-w-3xl py-8">
-      <Link
-        href={`/broadcasts/${broadcastId}`}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#121212] underline-offset-2 hover:underline"
-      >
-        <span aria-hidden>←</span> Back to broadcast
-      </Link>
-
-      <h1 className="mt-6 font-authSerif text-2xl font-normal text-[#121212]">Edit broadcast</h1>
+      <h1 className="font-authSerif text-2xl font-normal text-[#121212]">Edit broadcast</h1>
       <p className="mt-2 text-sm text-[#6b6b6b]">
         {isSent
           ? 'Sent broadcasts can be edited for one hour after publishing (title, body, and cover).'
