@@ -19,41 +19,6 @@ import {
 } from '@/lib/cache/sharedCache';
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
 import { withServerPerf } from '@/lib/perf/serverPerf';
-const DASHBOARD_NON_CRITICAL_TIMEOUT_MS = 2200;
-const DASHBOARD_NON_CRITICAL_COLD_TIMEOUT_MS = 4000;
-
-async function resolveWithTimeout<T>(
-  promise: PromiseLike<T>,
-  timeoutMs: number,
-  fallback: unknown,
-  label: string,
-  onTimeout?: () => void,
-): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let didTimeout = false;
-  try {
-    return await Promise.race<T>([
-      Promise.resolve(promise),
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => {
-          didTimeout = true;
-          onTimeout?.();
-          // #region agent log
-          fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'post-fix',hypothesisId:'H1',location:'loadDashboardHome.ts:resolveWithTimeout',message:'Dashboard timeout fallback fired',data:{timeoutMs,label},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
-          resolve(fallback as T);
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-    if (!didTimeout) {
-      // #region agent log
-      fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'post-fix',hypothesisId:'H1',location:'loadDashboardHome.ts:resolveWithTimeout',message:'Dashboard timeout fallback not used',data:{timeoutMs,label},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
-  }
-}
 
 export type PendingPreviewRow = {
   id: string;
@@ -168,15 +133,7 @@ export async function loadDashboardHome(
     abortSignal?: AbortSignal;
   }
 ): Promise<DashboardHomeModel> {
-  const fallbackLabels = new Set<string>();
-  const markFallback = (label: string) => fallbackLabels.add(label);
   const abortSignal = options?.abortSignal;
-  const hasWarmShellData =
-    options?.initialBroadcastUnread !== undefined || options?.initialPendingApprovals !== undefined;
-  // First-login / cold-session requests can be slower; avoid premature timeout fallbacks.
-  const nonCriticalTimeoutMs = hasWarmShellData
-    ? DASHBOARD_NON_CRITICAL_TIMEOUT_MS
-    : DASHBOARD_NON_CRITICAL_COLD_TIMEOUT_MS;
   const { data: orgRow } = await supabase
     .from('organisations')
     .select('name, timezone')
@@ -217,110 +174,74 @@ export async function loadDashboardHome(
       withServerPerf(
         '/dashboard',
         'fetch_dashboard_stat_counts',
-        resolveWithTimeout(
-          fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
-          nonCriticalTimeoutMs,
-          null,
-          'fetch_dashboard_stat_counts',
-          () => markFallback('fetch_dashboard_stat_counts'),
-        ),
+        fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
         1500
       ),
       withServerPerf(
         '/dashboard',
         'rota_shifts_week_count',
-        resolveWithTimeout(
-          supabase
-            .from('rota_shifts')
-            .select('id', { count: 'planned', head: true })
-            .eq('user_id', userId)
-            .gte('start_time', w0.toISOString())
-            .lt('start_time', w1.toISOString())
-            .abortSignal(abortSignal ?? new AbortController().signal),
-          nonCriticalTimeoutMs,
-          { data: null, error: null, count: 0 } as { data: null; error: null; count: number },
-          'rota_shifts_week_count',
-          () => markFallback('rota_shifts_week_count'),
-        ),
+        supabase
+          .from('rota_shifts')
+          .select('id', { count: 'planned', head: true })
+          .eq('user_id', userId)
+          .gte('start_time', w0.toISOString())
+          .lt('start_time', w1.toISOString())
+          .abortSignal(abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf(
         '/dashboard',
         'next_shift_lookup',
-        resolveWithTimeout(
-          supabase
-            .from('rota_shifts')
-            .select('start_time,end_time,role_label')
-            .eq('user_id', userId)
-            .gte('start_time', now.toISOString())
-            .order('start_time', { ascending: true })
-            .limit(1)
-            .abortSignal(abortSignal ?? new AbortController().signal),
-          nonCriticalTimeoutMs,
-          { data: [], error: null } as { data: Array<{ start_time: string; end_time: string; role_label: string | null }>; error: null },
-          'next_shift_lookup',
-          () => markFallback('next_shift_lookup'),
-        ),
+        supabase
+          .from('rota_shifts')
+          .select('start_time,end_time,role_label')
+          .eq('user_id', userId)
+          .gte('start_time', now.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(1)
+          .abortSignal(abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf(
         '/dashboard',
         'recent_broadcasts',
-        resolveWithTimeout(
-          supabase
-            .from('broadcasts')
-            .select(
-              'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
-            )
-            .eq('org_id', orgId)
-            .eq('status', 'sent')
-            .order('sent_at', { ascending: false })
-            .limit(3)
-            .abortSignal(options?.abortSignal ?? new AbortController().signal),
-          nonCriticalTimeoutMs,
-          { data: [], error: null } as { data: RawBroadcast[]; error: null },
-          'recent_broadcasts',
-          () => markFallback('recent_broadcasts'),
-        ),
+        supabase
+          .from('broadcasts')
+          .select(
+            'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
+          )
+          .eq('org_id', orgId)
+          .eq('status', 'sent')
+          .order('sent_at', { ascending: false })
+          .limit(3)
+          .abortSignal(options?.abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf(
         '/dashboard',
         'upcoming_calendar_events',
-        resolveWithTimeout(
-          supabase
-            .from('calendar_events')
-            .select('id,title,start_time')
-            .eq('org_id', orgId)
-            .gte('start_time', now.toISOString())
-            .order('start_time', { ascending: true })
-            .limit(5)
-            .abortSignal(abortSignal ?? new AbortController().signal),
-          nonCriticalTimeoutMs,
-          { data: [], error: null } as { data: Array<{ id: string; title: string; start_time: string }>; error: null },
-          'upcoming_calendar_events',
-          () => markFallback('upcoming_calendar_events'),
-        ),
+        supabase
+          .from('calendar_events')
+          .select('id,title,start_time')
+          .eq('org_id', orgId)
+          .gte('start_time', now.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(5)
+          .abortSignal(abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf(
         '/dashboard',
         'upcoming_shifts_calendar',
-        resolveWithTimeout(
-          supabase
-            .from('rota_shifts')
-            .select('id,start_time,role_label')
-            .eq('user_id', userId)
-            .gte('start_time', now.toISOString())
-            .lt('start_time', monthEnd.toISOString())
-            .order('start_time', { ascending: true })
-            .limit(8)
-            .abortSignal(abortSignal ?? new AbortController().signal),
-          nonCriticalTimeoutMs,
-          { data: [], error: null } as { data: Array<{ id: string; start_time: string; role_label: string | null }>; error: null },
-          'upcoming_shifts_calendar',
-          () => markFallback('upcoming_shifts_calendar'),
-        ),
+        supabase
+          .from('rota_shifts')
+          .select('id,start_time,role_label')
+          .eq('user_id', userId)
+          .gte('start_time', now.toISOString())
+          .lt('start_time', monthEnd.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(8)
+          .abortSignal(abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf('/dashboard', 'unread_count', unreadRpcPromise, 1200),
@@ -350,15 +271,9 @@ export async function loadDashboardHome(
       pendingCount =
         navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
     } else {
-      const navRes = await resolveWithTimeout(
-        supabase
-          .rpc('pending_approvals_nav_count')
-          .abortSignal(abortSignal ?? new AbortController().signal),
-        nonCriticalTimeoutMs,
-        { data: 0, error: null } as { data: number; error: null },
-        'pending_approvals_nav_count',
-        () => markFallback('pending_approvals_nav_count'),
-      );
+      const navRes = await supabase
+        .rpc('pending_approvals_nav_count')
+        .abortSignal(abortSignal ?? new AbortController().signal);
       const navN = navRes?.data;
       pendingCount =
         navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
@@ -438,8 +353,8 @@ export async function loadDashboardHome(
     calendarTodayD: calToday.d,
     dashboardDataFreshness: 'fresh',
     dashboardLastSuccessAt: Date.now(),
-    dashboardPartialData: fallbackLabels.size > 0,
-    dashboardPartialSections: [...fallbackLabels],
+    dashboardPartialData: false,
+    dashboardPartialSections: [],
   };
 }
 
