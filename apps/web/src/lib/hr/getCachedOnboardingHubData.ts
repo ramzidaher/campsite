@@ -48,6 +48,15 @@ export type OnboardingTemplateTaskRow = {
   sort_order: number;
 };
 
+export type OnboardingRunRow = {
+  id: string;
+  user_id: string;
+  status: string;
+  employment_start_date: string;
+  created_at: string;
+  template_id: string | null;
+};
+
 const ONBOARDING_RESPONSE_CACHE_TTL_MS = Number.parseInt(
   process.env.CAMPSITE_ONBOARDING_RESPONSE_CACHE_TTL_MS ?? '60000',
   10
@@ -56,12 +65,15 @@ const onboardingSharedResponseCache = new Map<string, TtlCacheEntry<OnboardingHu
 const onboardingSharedInFlight = new Map<string, Promise<OnboardingHubSharedData>>();
 const onboardingTemplateTasksResponseCache = new Map<string, TtlCacheEntry<OnboardingTemplateTaskRow[]>>();
 const onboardingTemplateTasksInFlight = new Map<string, Promise<OnboardingTemplateTaskRow[]>>();
+const onboardingRunsResponseCache = new Map<string, TtlCacheEntry<OnboardingRunRow[]>>();
+const onboardingRunsInFlight = new Map<string, Promise<OnboardingRunRow[]>>();
 registerSharedCacheStore('campsite:hr:onboarding', onboardingSharedResponseCache, onboardingSharedInFlight);
 registerSharedCacheStore(
   'campsite:hr:onboarding:tasks',
   onboardingTemplateTasksResponseCache,
   onboardingTemplateTasksInFlight
 );
+registerSharedCacheStore('campsite:hr:onboarding:runs', onboardingRunsResponseCache, onboardingRunsInFlight);
 
 function getOnboardingSharedCacheKey(orgId: string): string {
   return `org:${orgId}:shared`;
@@ -69,6 +81,10 @@ function getOnboardingSharedCacheKey(orgId: string): string {
 
 function getOnboardingTemplateTasksCacheKey(orgId: string, templateId: string): string {
   return `org:${orgId}:template:${templateId}`;
+}
+
+function getOnboardingRunsCacheKey(orgId: string, userId: string, onlyOwn: boolean): string {
+  return `org:${orgId}:user:${userId}:self_only:${onlyOwn ? '1' : '0'}`;
 }
 
 export const getCachedOnboardingHubSharedData = cache(async (orgId: string): Promise<OnboardingHubSharedData> => {
@@ -131,4 +147,30 @@ export const getCachedOnboardingTemplateTasks = cache(
     },
   });
 }
+);
+
+export const getCachedOnboardingHubRuns = cache(
+  async (orgId: string, userId: string, onlyOwnRuns: boolean): Promise<OnboardingRunRow[]> => {
+    return getOrLoadSharedCachedValue({
+      cache: onboardingRunsResponseCache,
+      inFlight: onboardingRunsInFlight,
+      key: getOnboardingRunsCacheKey(orgId, userId, onlyOwnRuns),
+      cacheNamespace: 'campsite:hr:onboarding:runs',
+      ttlMs: ONBOARDING_RESPONSE_CACHE_TTL_MS,
+      load: async () => {
+        const supabase = await createClient();
+        let runsQuery = supabase
+          .from('onboarding_runs')
+          .select('id, user_id, status, employment_start_date, created_at, template_id')
+          .eq('org_id', orgId)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (onlyOwnRuns) {
+          runsQuery = runsQuery.eq('user_id', userId);
+        }
+        const { data } = await runsQuery;
+        return (data ?? []) as OnboardingRunRow[];
+      },
+    });
+  }
 );

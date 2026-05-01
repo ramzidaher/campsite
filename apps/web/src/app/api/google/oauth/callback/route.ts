@@ -5,17 +5,18 @@ import {
   buildGoogleOAuthRedirectUri,
   parseGoogleOAuthState,
 } from '@/lib/google/googleOAuth';
-import { encryptGoogleTokenIfConfigured, isGoogleTokenCryptoConfigured } from '@/lib/google/googleTokenCrypto';
+import {
+  encryptGoogleTokenIfConfigured,
+  isGoogleTokenCryptoConfigured,
+} from '@/lib/google/googleTokenCrypto';
+import { invalidateSettingsPageDataForUser } from '@/lib/settings/getCachedSettingsPageData';
 
 /** Exchanges Google OAuth code and stores tokens in `google_connections`. */
 export async function GET(req: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
-    return NextResponse.json(
-      { error: 'Google OAuth is not configured.' },
-      { status: 501 }
-    );
+    return NextResponse.json({ error: 'Google OAuth is not configured.' }, { status: 501 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -48,7 +49,9 @@ export async function GET(req: Request) {
 
   if (!tokenRes.ok) {
     const t = await tokenRes.text();
-    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', `token ${t.slice(0, 80)}`));
+    return NextResponse.redirect(
+      appendGoogleAuthParam(returnTo, 'google_error', `token ${t.slice(0, 80)}`)
+    );
   }
 
   const tokens = (await tokenRes.json()) as {
@@ -58,12 +61,16 @@ export async function GET(req: Request) {
   };
 
   if (!tokens.access_token) {
-    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', 'no_access_token'));
+    return NextResponse.redirect(
+      appendGoogleAuthParam(returnTo, 'google_error', 'no_access_token')
+    );
   }
 
   const refreshToken = tokens.refresh_token;
   if (!refreshToken) {
-    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', 'no_refresh_token_re_consent'));
+    return NextResponse.redirect(
+      appendGoogleAuthParam(returnTo, 'google_error', 'no_refresh_token_re_consent')
+    );
   }
 
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
@@ -84,7 +91,9 @@ export async function GET(req: Request) {
   try {
     admin = createServiceRoleClient();
   } catch {
-    return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', 'service_role_missing'));
+    return NextResponse.redirect(
+      appendGoogleAuthParam(returnTo, 'google_error', 'service_role_missing')
+    );
   }
 
   const { error } = await admin.from('google_connections').upsert(
@@ -108,6 +117,8 @@ export async function GET(req: Request) {
   if (error) {
     return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_error', error.message));
   }
+
+  await invalidateSettingsPageDataForUser(oauthState.uid).catch(() => null);
 
   return NextResponse.redirect(appendGoogleAuthParam(returnTo, 'google_connected', '1'));
 }

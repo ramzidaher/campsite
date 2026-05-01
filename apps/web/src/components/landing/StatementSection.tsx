@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAnimeReveal } from '@/hooks/useAnimeReveal';
 
 const PILLARS = [
   {
@@ -32,9 +33,15 @@ const PILLARS = [
 
 export function StatementSection() {
   const [activeIndex, setActiveIndex] = useState(2);
+  const sectionRef = useAnimeReveal<HTMLElement>('[data-anime-reveal]', {
+    staggerMs: 70,
+    delay: 0,
+    translateY: 36,
+    threshold: 0.08,
+  });
 
   return (
-    <section id="statement" className="px-4 py-16 md:px-8 md:py-20">
+    <section ref={sectionRef} id="statement" className="px-4 py-16 md:px-8 md:py-20">
       <h2 className="lp-sr-only">How Campsite works</h2>
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
         <div className="space-y-1" role="tablist" aria-label="Campsite pillars">
@@ -43,6 +50,7 @@ export function StatementSection() {
             return (
               <button
                 key={item.title}
+                data-anime-reveal
                 type="button"
                 role="tab"
                 aria-selected={active}
@@ -64,6 +72,7 @@ export function StatementSection() {
         </div>
 
         <div
+          data-anime-reveal
           className="flex items-center lg:justify-start"
           role="tabpanel"
           id={`pillar-panel-${activeIndex}`}

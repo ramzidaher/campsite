@@ -1,9 +1,4 @@
-import {
-  currentLeaveYearKeyForOrgCalendar,
-  currentLeaveYearKeyUtc,
-  formatLeaveYearPeriodRange,
-} from '@/lib/datetime';
-import { createClient } from '@/lib/supabase/server';
+import { formatLeaveYearPeriodRange } from '@/lib/datetime';
 import { EmployeeSelfDocumentsClient } from '@/components/profile/EmployeeSelfDocumentsClient';
 import { DependantsEditorClient } from '@/components/hr/DependantsEditorClient';
 import { BankDetailsClient } from '@/components/hr/BankDetailsClient';
@@ -15,7 +10,7 @@ import { PrivacySelfRequestClient } from '@/components/privacy/PrivacySelfReques
 import { TaxDocumentsClient } from '@/components/hr/TaxDocumentsClient';
 import { UkTaxDetailsClient } from '@/components/hr/UkTaxDetailsClient';
 import { TrainingRecordsClient } from '@/components/hr/TrainingRecordsClient';
-import { GraphExperience } from '@/components/genz/GraphExperience';
+import RadialOrbitalTimeline from '@/components/ui/radial-orbital-timeline';
 import { PersonalDetailsCard } from '@/components/profile/PersonalDetailsCard';
 import { ProfileUiModeSync } from '@/components/profile/ProfileUiModeSync';
 import Link from 'next/link';
@@ -27,104 +22,11 @@ import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { warnIfSlowServerPath } from '@/lib/perf/serverPerf';
 import { withServerPerf } from '@/lib/perf/serverPerf';
-
-const PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS = 1400;
-/** Cap slow HR RPCs so a stuck Supabase query does not block the whole profile response. */
-const PROFILE_HEAVY_RPC_TIMEOUT_MS = 1200;
-/** Cap simple org config lookups to keep profile render responsive under DB pressure. */
-const PROFILE_ORG_CONFIG_TIMEOUT_MS = 900;
-const PROFILE_RPC_TTL_MS = 10_000;
-const PROFILE_RPC_STALE_WINDOW_MS = 45_000;
-
-type RpcCacheEntry<T> = {
-  value: T;
-  expiresAt: number;
-  staleUntil: number;
-  inFlight?: Promise<T>;
-  refreshInFlight?: Promise<void>;
-};
-
-const hrEmployeeFileCache = new Map<string, RpcCacheEntry<{ data: unknown[]; error: null }>>();
-
-async function getCachedHrEmployeeFile(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string
-): Promise<{ data: unknown[]; error: null }> {
-  const now = Date.now();
-  const key = userId;
-  const entry = hrEmployeeFileCache.get(key);
-
-  if (entry) {
-    if (now < entry.expiresAt) return entry.value;
-    if (now < entry.staleUntil) {
-      if (!entry.refreshInFlight) {
-        entry.refreshInFlight = (async () => {
-          try {
-            const refreshed = await resolveWithTimeout(
-              supabase.rpc('hr_employee_file', { p_user_id: userId }),
-              PROFILE_HEAVY_RPC_TIMEOUT_MS,
-              { data: [], error: null }
-            );
-            const refreshedAt = Date.now();
-            hrEmployeeFileCache.set(key, {
-              value: refreshed as { data: unknown[]; error: null },
-              expiresAt: refreshedAt + PROFILE_RPC_TTL_MS,
-              staleUntil: refreshedAt + PROFILE_RPC_STALE_WINDOW_MS,
-            });
-          } catch {
-            // Keep stale value when background refresh fails.
-          } finally {
-            const latest = hrEmployeeFileCache.get(key);
-            if (latest) latest.refreshInFlight = undefined;
-          }
-        })();
-      }
-      return entry.value;
-    }
-    if (entry.inFlight) return entry.inFlight;
-  }
-
-  const inFlight = resolveWithTimeout(
-    supabase.rpc('hr_employee_file', { p_user_id: userId }),
-    PROFILE_HEAVY_RPC_TIMEOUT_MS,
-    { data: [], error: null }
-  ) as Promise<{ data: unknown[]; error: null }>;
-
-  hrEmployeeFileCache.set(key, {
-    value: entry?.value ?? { data: [], error: null },
-    expiresAt: entry?.expiresAt ?? 0,
-    staleUntil: entry?.staleUntil ?? 0,
-    inFlight,
-  });
-
-  try {
-    const resolved = await inFlight;
-    const fetchedAt = Date.now();
-    hrEmployeeFileCache.set(key, {
-      value: resolved,
-      expiresAt: fetchedAt + PROFILE_RPC_TTL_MS,
-      staleUntil: fetchedAt + PROFILE_RPC_STALE_WINDOW_MS,
-    });
-    return resolved;
-  } finally {
-    const latest = hrEmployeeFileCache.get(key);
-    if (latest) latest.inFlight = undefined;
-  }
-}
-
-async function resolveWithTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: unknown): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  try {
-    return await Promise.race<T>([
-      Promise.resolve(promise),
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => resolve(fallback as T), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
+import {
+  getCachedProfilePageIdentityData,
+  getCachedProfilePageSectionsData,
+  updateProfileUiMode,
+} from '@/lib/profile/profilePageRouteData';
 
 function labelContract(value: string | null) {
   if (value === 'full_time') return 'Full-time';
@@ -169,61 +71,23 @@ function formatRoleLabel(roleKey: string | null | undefined): string {
 export default async function MyProfilePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ tab?: string }>;
+  searchParams?: Promise<{ tab?: string; set_mode?: string }>;
 }) {
   const pathStartedAtMs = Date.now();
-  const { tab = 'personal' } = (await searchParams) ?? {};
-  const supabase = await createClient();
+  const { tab = 'personal', set_mode } = (await searchParams) ?? {};
   const user = await getAuthUser();
   if (!user) redirect('/login');
+  const requestedUiMode =
+    set_mode === 'interactive' || set_mode === 'classic' ? set_mode : null;
+
+  if (requestedUiMode) {
+    await updateProfileUiMode(user.id, requestedUiMode);
+  }
 
   const shellBundle = await getCachedMainShellLayoutBundle().catch(() => null);
-  const shellOrgId =
-    shellBundle && typeof shellBundle.org_id === 'string' ? shellBundle.org_id : null;
-  const shellPermissions = Array.isArray(shellBundle?.permission_keys)
-    ? shellBundle.permission_keys.map((k) => String(k))
-    : null;
-
-  const profileFromShell =
-    shellBundle &&
-    typeof shellBundle.profile_full_name === 'string' &&
-    typeof shellBundle.email === 'string'
-      ? {
-          org_id: shellOrgId,
-          status: 'active',
-          full_name: shellBundle.profile_full_name,
-          preferred_name:
-            typeof shellBundle.profile_preferred_name === 'string'
-              ? shellBundle.profile_preferred_name
-              : null,
-          email: shellBundle.email,
-          avatar_url:
-            typeof shellBundle.profile_avatar_url === 'string'
-              ? shellBundle.profile_avatar_url
-              : null,
-          role:
-            typeof shellBundle.profile_role === 'string'
-              ? shellBundle.profile_role
-              : null,
-          pronouns: null,
-          show_pronouns: false,
-          reports_to_user_id: null,
-          ui_mode:
-            typeof shellBundle.ui_mode === 'string' ? shellBundle.ui_mode : null,
-        }
-      : null;
-
-  const { data: profile } = profileFromShell
-    ? { data: profileFromShell }
-    : await withServerPerf(
-    '/profile',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status, full_name, preferred_name, email, avatar_url, role, pronouns, show_pronouns, reports_to_user_id, ui_mode')
-      .eq('id', user.id)
-      .maybeSingle(),
-    300
+  const { profile, shellOrgId, shellPermissions } = await getCachedProfilePageIdentityData(
+    user.id,
+    shellBundle
   );
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
 
@@ -263,333 +127,25 @@ export default async function MyProfilePage({
   const canRecordExportOwn = permissionKeys.includes('hr.records_export.view_own');
   const canRecordExportCsv = permissionKeys.includes('hr.records_export.generate_csv');
   const canRecordExportPdf = permissionKeys.includes('hr.records_export.generate_pdf');
-  const uiMode = normalizeUiMode((profile.ui_mode as string | null) ?? null);
+  const uiMode = normalizeUiMode(
+    requestedUiMode ?? ((profile.ui_mode as string | null) ?? null)
+  );
   const isInteractiveMode = uiMode === 'interactive';
   const needsOtherTabData = tab === 'other' || isInteractiveMode;
   const needsUpcomingData = tab === 'personal' || tab === 'time-off' || isInteractiveMode;
   const needsRoleData = tab === 'personal' || isInteractiveMode;
   const needsOnboardingCount = tab === 'onboarding' || isInteractiveMode;
+  const timeoutFallbackLabels = new Set<string>();
 
-  const maybeLoad = <T,>(enabled: boolean, query: () => Promise<T>, fallback: unknown): Promise<T> =>
-    enabled ? query() : Promise.resolve(fallback as T);
-
-  const [leaveSettingsRes, orgTzRes] = await Promise.all([
-    withServerPerf(
-      '/profile',
-      'leave_settings_year',
-      resolveWithTimeout(
-        supabase
-          .from('org_leave_settings')
-          .select('leave_year_start_month, leave_year_start_day')
-          .eq('org_id', orgId)
-          .maybeSingle(),
-        PROFILE_ORG_CONFIG_TIMEOUT_MS,
-        { data: null, error: null },
-      ),
-      350
-    ),
-    withServerPerf(
-      '/profile',
-      'org_timezone_lookup',
-      resolveWithTimeout(
-        supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
-        PROFILE_ORG_CONFIG_TIMEOUT_MS,
-        { data: null, error: null },
-      ),
-      300
-    ),
-  ]);
-  const leaveSettingsForYear = leaveSettingsRes.data;
-  const orgForTz = orgTzRes.data;
-
-  const orgTz = (orgForTz?.timezone as string | null) ?? null;
-  const sm = Number(leaveSettingsForYear?.leave_year_start_month ?? 1);
-  const sd = Number(leaveSettingsForYear?.leave_year_start_day ?? 1);
-  const profileLeaveYearKey = orgTz
-    ? currentLeaveYearKeyForOrgCalendar(new Date(), orgTz, sm, sd)
-    : currentLeaveYearKeyUtc(new Date(), sm, sd);
-
-  const [
-    fileRows,
-    allowanceRow,
-    annualApprovedRes,
-    udRes,
-    directReportsRes,
-    onboardingCountRes,
-    probationAlertsRes,
-    ownDocsRes,
-    ownDependantsRes,
-    ownBankRowsRes,
-    ownUkTaxRowsRes,
-    ownTaxDocsRes,
-    ownEmploymentHistoryRes,
-    ownCaseRowsRes,
-    ownMedicalRowsRes,
-    ownMedicalEventsRes,
-    ownCustomFieldDefsRes,
-    ownCustomFieldValuesRes,
-    upcomingHolidayPeriodsRes,
-    ownRoleAssignmentsRes,
-    ownTrainingRowsRes,
-  ] = await Promise.all([
-    withServerPerf(
-      '/profile',
-      'rpc_hr_employee_file',
-      getCachedHrEmployeeFile(supabase, user.id),
-      450,
-    ),
-    supabase
-      .from('leave_allowances')
-      .select('annual_entitlement_days, toil_balance_days')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .eq('leave_year', profileLeaveYearKey)
-      .maybeSingle(),
-    supabase
-      .from('leave_requests')
-      .select('start_date, end_date')
-      .eq('org_id', orgId)
-      .eq('requester_id', user.id)
-      .eq('kind', 'annual')
-      .eq('status', 'approved'),
-    supabase
-      .from('user_departments')
-      .select('departments(name)')
-      .eq('user_id', user.id),
-    supabase
-      .from('profiles')
-      .select('id, full_name, preferred_name, email')
-      .eq('org_id', orgId)
-      .eq('status', 'active')
-      .eq('reports_to_user_id', user.id)
-      .order('full_name'),
-    maybeLoad(
+  const { fileRows, profileOverviewData, otherTabData, personalTabData } =
+    await getCachedProfilePageSectionsData({
+      orgId,
+      userId: user.id,
       needsOnboardingCount,
-      async () =>
-        supabase
-          .from('onboarding_runs')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'active'),
-      { count: 0, data: [], error: null },
-    ),
-    withServerPerf(
-      '/profile',
-      'rpc_my_probation_alerts',
-      resolveWithTimeout(supabase.rpc('my_probation_alerts'), PROFILE_HEAVY_RPC_TIMEOUT_MS, {
-        data: { items: [] },
-        error: null,
-      }),
-      350,
-    ),
-    maybeLoad(
       needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_hr_documents')
-        .select('id, category, document_kind, bucket_id, label, storage_path, file_name, byte_size, created_at, id_document_type, id_number_last4, expires_on, is_current')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .in('document_kind', ['employee_photo', 'id_document'])
-        .order('created_at', { ascending: false }),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_dependants')
-        .select('full_name, relationship, date_of_birth, is_student, is_disabled, is_beneficiary, beneficiary_percentage, phone, email, address, notes, is_emergency_contact')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false }),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_bank_details')
-        .select('id, status, is_active, account_holder_display, account_number_last4, sort_code_last4, iban_last4, bank_country, currency, effective_from, submitted_by, reviewed_by, reviewed_at, review_note, created_at')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_uk_tax_details')
-        .select('id, status, is_active, ni_number_masked, ni_number_last2, tax_code_masked, tax_code_last2, effective_from, review_note, created_at')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_tax_documents')
-        .select('id, document_type, tax_year, issue_date, payroll_period_end, status, finance_reference, wagesheet_id, payroll_run_reference, bucket_id, storage_path, file_name, byte_size, is_current, created_at')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_employment_history')
-        .select('role_title, department_name, team_name, manager_name, employment_type, contract_type, fte, location_type, start_date, end_date, change_reason, pay_grade, salary_band, notes, source')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('start_date', { ascending: false })
-        .order('created_at', { ascending: false }),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_case_records')
-        .select('id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, linked_documents, archived_at, created_at')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_medical_notes')
-        .select('id, case_ref, referral_reason, status, fit_for_work_outcome, recommended_adjustments, review_date, next_review_date, summary_for_employee, archived_at, created_at')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_medical_note_events')
-        .select('id, medical_note_id, event_type, reason, created_at')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('hr_custom_field_definitions')
-        .select('id, key, label, section, field_type, options, is_required, visible_to_manager, visible_to_self')
-        .eq('org_id', orgId)
-        .eq('is_active', true)
-        .eq('visible_to_self', true)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true }),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('hr_custom_field_values')
-        .select('definition_id, value')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
       needsUpcomingData,
-      () => resolveWithTimeout(
-      supabase
-        .from('org_leave_holiday_periods')
-        .select('id, name, holiday_kind, start_date, end_date')
-        .eq('org_id', orgId)
-        .eq('is_active', true)
-        .gte('end_date', new Date().toISOString().slice(0, 10))
-        .order('start_date', { ascending: true })
-        .limit(10),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
       needsRoleData,
-      () => resolveWithTimeout(
-      supabase
-        .from('user_org_role_assignments')
-        .select('role_id')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-    maybeLoad(
-      needsOtherTabData,
-      () => resolveWithTimeout(
-      supabase
-        .from('employee_training_records')
-        .select('id, title, provider, status, started_on, completed_on, expires_on, notes, certificate_document_url, created_at')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(120),
-      PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null }
-      ),
-      { data: [], error: null }
-    ),
-  ]);
+    });
 
   type EmployeeFileRow = {
     job_title?: string | null;
@@ -613,92 +169,41 @@ export default async function MyProfilePage({
     notes?: string | null;
   };
   const fileRow = ((fileRows.data ?? [])[0] ?? null) as EmployeeFileRow | null;
-  const deptNames: string[] = [];
-  for (const row of udRes.data ?? []) {
-    const raw = row.departments as { name: string } | { name: string }[] | null;
-    const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
-    for (const d of arr) {
-      if (d?.name) deptNames.push(d.name);
-    }
-  }
-
-  const annualUsed = (annualApprovedRes.data ?? []).reduce((sum, row) => {
-    const start = new Date(String(row.start_date));
-    const end = new Date(String(row.end_date));
-    const diff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return sum + Math.max(0, diff);
-  }, 0);
+  const deptNames = profileOverviewData.departmentNames;
+  const annualUsed = profileOverviewData.annualUsedDays;
+  const profileLeaveYearKey = profileOverviewData.profileLeaveYearKey;
+  const sm = profileOverviewData.leaveYearStartMonth;
+  const sd = profileOverviewData.leaveYearStartDay;
+  const annualEntitlementDays = profileOverviewData.allowanceAnnualEntitlementDays;
+  const toilBalanceDays = profileOverviewData.allowanceToilBalanceDays;
+  const annualApprovedRequests = profileOverviewData.annualApprovedRequests;
+  const directReportRows = profileOverviewData.directReportRows;
 
   const emailDisplay = (profile.email as string | null)?.trim() || user.email || '—';
   const profileDisplayName = getDisplayName(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
   const roleLabel = formatRoleLabel(profile.role as string | null);
   const pronounsValue = String((profile as { pronouns?: string | null }).pronouns ?? '').trim();
   const visiblePronouns = pronounsValue || null;
-  const onboardingActive = (onboardingCountRes.count ?? 0) > 0;
-
-  const probationItems = (
-    (probationAlertsRes.data as { items?: { role: string; alert_level: string; probation_end_date: string; display_name: string }[] } | null)
-      ?.items ?? []
-  ).filter((i) => i.role === 'self');
-
-  const directReports = (directReportsRes.data ?? []).map((r) =>
-    `${getDisplayName(r.full_name as string, (r.preferred_name as string | null) ?? null)}${r.email ? ` · ${String(r.email)}` : ''}`
-  );
-  const ownDocs = ownDocsRes.data ?? [];
-  const ownDependants = ownDependantsRes.data ?? [];
-  const ownBankRows = ownBankRowsRes.data ?? [];
-  const ownUkTaxRows = ownUkTaxRowsRes.data ?? [];
-  const ownTaxDocs = ownTaxDocsRes.data ?? [];
-  const ownEmploymentHistory = ownEmploymentHistoryRes.data ?? [];
-  const ownCases = ownCaseRowsRes.data ?? [];
-  const ownCaseIds = ownCases.map((r) => String(r.id));
-  const ownCaseEventsRes =
-    ownCaseIds.length === 0 || !needsOtherTabData
-      ? { data: [], error: null }
-      : await resolveWithTimeout(
-          supabase
-            .from('employee_case_record_events')
-            .select('id, case_id, event_type, old_status, new_status, created_at')
-            .eq('org_id', orgId)
-            .in('case_id', ownCaseIds)
-            .order('created_at', { ascending: false })
-            .limit(100),
-          PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-          { data: [], error: null }
-        );
-  const ownMedical = ownMedicalRowsRes.data ?? [];
-  const ownCustomDefs = ownCustomFieldDefsRes.data ?? [];
-  const ownRoleIds = Array.from(
-    new Set(
-      ((ownRoleAssignmentsRes.data ?? []) as { role_id: string }[])
-        .map((r) => String(r.role_id || '').trim())
-        .filter(Boolean)
-    )
-  );
-  const ownRolesRes =
-    ownRoleIds.length === 0 || !needsRoleData
-      ? { data: [], error: null }
-      : await resolveWithTimeout(
-          supabase
-            .from('org_roles')
-            .select('id, label, key')
-            .eq('org_id', orgId)
-            .eq('is_archived', false)
-            .in('id', ownRoleIds),
-          PROFILE_NON_CRITICAL_QUERY_TIMEOUT_MS,
-          { data: [], error: null }
-        );
-  const upcomingHolidayPeriods = (upcomingHolidayPeriodsRes.data ?? []) as {
-    id: string;
-    name: string;
-    holiday_kind: 'bank_holiday' | 'public_holiday' | 'org_break' | 'custom';
-    start_date: string;
-    end_date: string;
-  }[];
+  const onboardingActive = profileOverviewData.onboardingActive;
+  const probationItems = profileOverviewData.probationItems;
+  const directReports = profileOverviewData.directReports;
+  const ownDocs = otherTabData.ownDocs;
+  const ownDependants = otherTabData.ownDependants;
+  const ownBankRows = otherTabData.ownBankRows;
+  const ownUkTaxRows = otherTabData.ownUkTaxRows;
+  const ownTaxDocs = otherTabData.ownTaxDocs;
+  const ownEmploymentHistory = otherTabData.ownEmploymentHistory;
+  const ownCases = otherTabData.ownCases;
+  const ownCaseEventsRes = { data: otherTabData.ownCaseEvents, error: null };
+  const ownMedical = otherTabData.ownMedical;
+  const ownMedicalEventsRes = { data: otherTabData.ownMedicalEvents, error: null };
+  const ownCustomDefs = otherTabData.ownCustomDefs;
+  const ownCustomFieldValuesRes = { data: otherTabData.ownCustomValues, error: null };
+  const upcomingHolidayPeriods = personalTabData.upcomingHolidayPeriods;
   const ownRoleLabels = Array.from(
     new Set(
-      ((ownRolesRes.data ?? []) as { label?: string | null; key?: string | null }[])
-        .map((r) => formatRoleLabel(r.label || r.key || null))
+      personalTabData.ownRoleLabelsRaw
+        .map((label) => formatRoleLabel(label))
         .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
     )
   );
@@ -710,7 +215,7 @@ export default async function MyProfilePage({
         .map((label) => [label.toLowerCase(), label] as const)
     ).values()
   );
-  const ownTrainingRows = (ownTrainingRowsRes.data ?? []) as {
+  const ownTrainingRows = (otherTabData.ownTrainingRows ?? []) as {
     id: string;
     title: string;
     provider: string | null;
@@ -722,6 +227,15 @@ export default async function MyProfilePage({
     certificate_document_url: string | null;
     created_at: string;
   }[];
+  for (const label of otherTabData.partialSections ?? []) {
+    timeoutFallbackLabels.add(label);
+  }
+  for (const label of profileOverviewData.partialSections ?? []) {
+    timeoutFallbackLabels.add(label);
+  }
+  for (const label of personalTabData.partialSections ?? []) {
+    timeoutFallbackLabels.add(label);
+  }
 
   const interactiveNodes = isInteractiveMode ? [
     {
@@ -786,9 +300,9 @@ export default async function MyProfilePage({
           label: 'Leave year',
           value: `${profileLeaveYearKey} · ${formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}`,
         },
-        { label: 'Annual entitlement', value: `${Number(allowanceRow.data?.annual_entitlement_days ?? 0)} days` },
+        { label: 'Annual entitlement', value: `${Number(annualEntitlementDays ?? 0)} days` },
         { label: 'Annual leave used', value: `${annualUsed} days` },
-        { label: 'TOIL balance', value: `${Number(allowanceRow.data?.toil_balance_days ?? 0)} days` },
+        { label: 'TOIL balance', value: `${Number(toilBalanceDays ?? 0)} days` },
       ],
       actions: [{ id: 'open-leave', label: 'Open leave', href: '/leave' }],
     },
@@ -905,18 +419,69 @@ export default async function MyProfilePage({
     },
   ] : [];
 
+  const timelineIconKeys = [
+    'user',
+    'briefcase',
+    'calendar',
+    'users',
+    'sparkles',
+    'handshake',
+    'file',
+    'landmark',
+    'shield',
+    'heart',
+    'idcard',
+  ] as const;
+  const radialTimelineData = isInteractiveMode
+    ? interactiveNodes.map((node, index) => {
+        const relatedIds: number[] = [];
+        if (index > 0) relatedIds.push(index);
+        if (index < interactiveNodes.length - 1) relatedIds.push(index + 2);
+        return {
+          id: index + 1,
+          title: node.label,
+          date: `Node ${index + 1}`,
+          content: node.description,
+          category: node.label,
+          iconKey: timelineIconKeys[index % timelineIconKeys.length]!,
+          relatedIds,
+          status:
+            index < Math.ceil(interactiveNodes.length / 3)
+              ? ('completed' as const)
+              : index < Math.ceil((interactiveNodes.length * 2) / 3)
+                ? ('in-progress' as const)
+                : ('pending' as const),
+          energy: Math.max(20, 95 - index * 7),
+        };
+      })
+    : [];
+  const hasProfilePartialData = timeoutFallbackLabels.size > 0;
+  const profileFallbackSummary = [...timeoutFallbackLabels]
+    .map((label) => label.replaceAll('_', ' '))
+    .slice(0, 3)
+    .join(', ');
+
   if (uiMode === 'interactive') {
     const view = (
       <div className="min-h-[calc(100vh-60px)]">
         <ProfileUiModeSync initialMode={uiMode} />
-        <GraphExperience
-          title="My Profile Graph"
-          subtitle="Interactive view. Every profile area is represented as connected nodes."
-          centerLabel={profileDisplayName}
-          centerDescription="Select nodes to inspect details and jump to related actions."
-          nodes={interactiveNodes}
-          fullScreen
-        />
+        <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
+          {hasProfilePartialData ? (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+              Some profile sections are temporarily delayed and may be partially loaded.
+              {profileFallbackSummary ? ` Delayed areas include ${profileFallbackSummary}.` : ''}
+            </div>
+          ) : null}
+          <header className="mb-4 space-y-2">
+            <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[var(--org-brand-text,#121212)]">
+              {profileDisplayName}
+            </h1>
+            <p className="text-[13.5px] text-[var(--org-brand-muted,#6b6b6b)]">
+              Interactive profile orbit. Select any node to inspect that profile area.
+            </p>
+          </header>
+          <RadialOrbitalTimeline timelineData={radialTimelineData} />
+        </div>
       </div>
     );
     warnIfSlowServerPath('/profile', pathStartedAtMs);
@@ -924,7 +489,7 @@ export default async function MyProfilePage({
   }
 
   const initials = getProfileInitials(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
-  const leaveDaysLeft = Math.max(0, Number(allowanceRow.data?.annual_entitlement_days ?? 0) - annualUsed);
+  const leaveDaysLeft = Math.max(0, Number(annualEntitlementDays ?? 0) - annualUsed);
   const tenureLabel =
     typeof (fileRow as { length_of_service_years?: number } | undefined)?.length_of_service_years === 'number' &&
     typeof (fileRow as { length_of_service_months?: number } | undefined)?.length_of_service_months === 'number'
@@ -943,7 +508,7 @@ export default async function MyProfilePage({
   const toShortDate = (iso: string) =>
     new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const todayIso = new Date().toISOString().slice(0, 10);
-  const upcomingBookedLeave = (annualApprovedRes.data ?? [])
+  const upcomingBookedLeave = annualApprovedRequests
     .filter((row) => String(row.end_date) >= todayIso)
     .map((row) => ({
       id: `leave-${String(row.start_date)}-${String(row.end_date)}`,
@@ -968,6 +533,12 @@ export default async function MyProfilePage({
     <div className="min-h-[calc(100vh-60px)]">
       <ProfileUiModeSync initialMode={uiMode} />
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
+        {hasProfilePartialData ? (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+            Some profile sections are temporarily delayed and may be partially loaded.
+            {profileFallbackSummary ? ` Delayed areas include ${profileFallbackSummary}.` : ''}
+          </div>
+        ) : null}
         <header className="mb-7 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
           <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-3 sm:gap-4">
@@ -1005,7 +576,7 @@ export default async function MyProfilePage({
               </div>
               <div className="rounded-xl border border-[#e8e8e8] bg-white p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Reports</p>
-                <p className="mt-1 text-[22px] font-bold leading-none tracking-tight text-[#121212]">{(directReportsRes.data ?? []).length}</p>
+                <p className="mt-1 text-[22px] font-bold leading-none tracking-tight text-[#121212]">{directReportRows.length}</p>
               </div>
               <div className="rounded-xl border border-[#e8e8e8] bg-white p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Tenure</p>
@@ -1076,7 +647,7 @@ export default async function MyProfilePage({
                               100,
                               Math.max(
                                 0,
-                                (leaveDaysLeft / Math.max(1, Number(allowanceRow.data?.annual_entitlement_days ?? 0))) * 100
+                                (leaveDaysLeft / Math.max(1, Number(annualEntitlementDays ?? 0))) * 100
                               )
                             )}%`,
                           }}
@@ -1096,7 +667,7 @@ export default async function MyProfilePage({
                               100,
                               Math.max(
                                 0,
-                                (annualUsed / Math.max(1, Number(allowanceRow.data?.annual_entitlement_days ?? 0))) * 100
+                                (annualUsed / Math.max(1, Number(annualEntitlementDays ?? 0))) * 100
                               )
                             )}%`,
                           }}
@@ -1107,7 +678,7 @@ export default async function MyProfilePage({
                       <div className="mb-1 flex items-center justify-between text-[12px]">
                         <span className="text-[#6b6b6b]">TOIL balance</span>
                         <strong className="font-medium text-[#121212]">
-                          {Number(allowanceRow.data?.toil_balance_days ?? 0)} days
+                          {Number(toilBalanceDays ?? 0)} days
                         </strong>
                       </div>
                       <div className="h-[5px] rounded bg-[#f0f0f0]">
@@ -1186,15 +757,15 @@ export default async function MyProfilePage({
                   <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
                     <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Direct reports</span>
                     <Link href="?tab=reporting" className="text-[12px] text-[var(--org-brand-primary,#0f6e56)] hover:underline">
-                      View all {(directReportsRes.data ?? []).length}
+                      View all {directReportRows.length}
                     </Link>
                   </div>
                   <div className="p-4">
-                    {(directReportsRes.data ?? []).length === 0 ? (
+                    {directReportRows.length === 0 ? (
                       <p className="text-[12px] text-[#6b6b6b]">No direct reports.</p>
                     ) : (
                       <ul className="space-y-2">
-                        {(directReportsRes.data ?? []).slice(0, 5).map((r) => {
+                        {directReportRows.slice(0, 5).map((r) => {
                           const display = getDisplayName(r.full_name as string, (r.preferred_name as string | null) ?? null);
                           const personInitials = display
                             .split(' ')
@@ -1232,7 +803,7 @@ export default async function MyProfilePage({
                         {role}
                       </span>
                     ))}
-                    {(directReportsRes.data ?? []).length > 0 && !ownRoleLabels.includes('Manager') ? (
+                    {directReportRows.length > 0 && !ownRoleLabels.includes('Manager') ? (
                       <span className="rounded-full border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1 text-[12px] text-[#6b6b6b]">
                         Manager
                       </span>
@@ -1389,7 +960,7 @@ export default async function MyProfilePage({
                             100,
                             Math.max(
                               0,
-                              (leaveDaysLeft / Math.max(1, Number(allowanceRow.data?.annual_entitlement_days ?? 0))) * 100
+                              (leaveDaysLeft / Math.max(1, Number(annualEntitlementDays ?? 0))) * 100
                             )
                           )}%`,
                         }}
@@ -1409,7 +980,7 @@ export default async function MyProfilePage({
                             100,
                             Math.max(
                               0,
-                              (annualUsed / Math.max(1, Number(allowanceRow.data?.annual_entitlement_days ?? 0))) * 100
+                              (annualUsed / Math.max(1, Number(annualEntitlementDays ?? 0))) * 100
                             )
                           )}%`,
                         }}
@@ -1420,7 +991,7 @@ export default async function MyProfilePage({
                     <div className="mb-1 flex items-center justify-between text-[12px]">
                       <span className="text-[#6b6b6b]">TOIL balance</span>
                       <strong className="font-medium text-[#121212]">
-                        {Number(allowanceRow.data?.toil_balance_days ?? 0)} days
+                        {Number(toilBalanceDays ?? 0)} days
                       </strong>
                     </div>
                     <div className="h-[5px] rounded bg-[#f0f0f0]">
@@ -1463,15 +1034,15 @@ export default async function MyProfilePage({
                 <div className="flex items-center justify-between border-b border-[#f0f0f0] px-4 py-3">
                   <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Direct reports</span>
                   <Link href="?tab=reporting" className="text-[12px] text-[var(--org-brand-primary,#0f6e56)] hover:underline">
-                    View all {(directReportsRes.data ?? []).length}
+                    View all {directReportRows.length}
                   </Link>
                 </div>
                 <div className="p-4">
-                  {(directReportsRes.data ?? []).length === 0 ? (
+                  {directReportRows.length === 0 ? (
                     <p className="text-[12px] text-[#6b6b6b]">No direct reports.</p>
                   ) : (
                     <ul className="space-y-2">
-                      {(directReportsRes.data ?? []).slice(0, 3).map((r) => {
+                      {directReportRows.slice(0, 3).map((r) => {
                         const display = getDisplayName(r.full_name as string, (r.preferred_name as string | null) ?? null);
                         const personInitials = display
                           .split(' ')
@@ -1491,9 +1062,9 @@ export default async function MyProfilePage({
                           </li>
                         );
                       })}
-                      {(directReportsRes.data ?? []).length > 3 ? (
+                      {directReportRows.length > 3 ? (
                         <li className="pt-1 text-[12px] text-[#9b9b9b]">
-                          + {(directReportsRes.data ?? []).length - 3} more
+                          + {directReportRows.length - 3} more
                         </li>
                       ) : null}
                     </ul>
@@ -1512,11 +1083,11 @@ export default async function MyProfilePage({
               <div className="mt-4">
                 <p className="text-[#9b9b9b]">Direct reports</p>
                 <div className="mt-2">
-                  {(directReportsRes.data ?? []).length === 0 ? (
+                  {directReportRows.length === 0 ? (
                     <span className="text-[#6b6b6b]">None</span>
                   ) : (
                     <ul className="space-y-1">
-                      {(directReportsRes.data ?? []).map((r) => (
+                      {directReportRows.map((r) => (
                         <li key={r.id as string} className="text-[#121212]">
                           {getDisplayName(r.full_name as string, (r.preferred_name as string | null) ?? null)}
                           {r.email ? (
@@ -1578,7 +1149,7 @@ export default async function MyProfilePage({
                   title="Bank details (payroll)"
                   description="Masked by default. Changes require approval before activation."
                   subjectUserId={user.id}
-                  initialRows={(ownBankRowsRes.data ?? []).map((r) => ({
+                  initialRows={ownBankRows.map((r) => ({
                     id: r.id as string,
                     status: (r.status as 'pending' | 'approved' | 'rejected') ?? 'pending',
                     is_active: Boolean(r.is_active),
@@ -1607,7 +1178,7 @@ export default async function MyProfilePage({
               {(canUkTaxViewOwn || canUkTaxManageOwn) ? (
                 <UkTaxDetailsClient
                   subjectUserId={user.id}
-                  initialRows={(ownUkTaxRowsRes.data ?? []).map((r) => ({
+                  initialRows={ownUkTaxRows.map((r) => ({
                     id: r.id as string,
                     status: (r.status as 'pending' | 'approved' | 'rejected') ?? 'pending',
                     is_active: Boolean(r.is_active),
@@ -1633,7 +1204,7 @@ export default async function MyProfilePage({
                   orgId={orgId}
                   subjectUserId={user.id}
                   actorUserId={user.id}
-                  initialDocs={(ownTaxDocsRes.data ?? []).map((r) => ({
+                  initialDocs={ownTaxDocs.map((r) => ({
                     id: r.id as string,
                     document_type: ((r.document_type as string) ?? 'p60') as 'p45' | 'p60',
                     tax_year: (r.tax_year as string | null) ?? null,
@@ -1690,7 +1261,7 @@ export default async function MyProfilePage({
               <EmployeeSelfDocumentsClient
                 orgId={orgId}
                 userId={user.id}
-                docs={(ownDocsRes.data ?? []).map((d) => ({
+                docs={ownDocs.map((d) => ({
                   id: d.id as string,
                   category: d.category as string,
                   document_kind: (d.document_kind as string) ?? 'id_document',
@@ -1717,7 +1288,7 @@ export default async function MyProfilePage({
                 description="Manage your dependant and beneficiary information."
                 subjectUserId={user.id}
                 canEdit={true}
-                initialDependants={(ownDependantsRes.data ?? []).map((d) => ({
+                initialDependants={ownDependants.map((d) => ({
                   full_name: (d.full_name as string) ?? '',
                   relationship: (d.relationship as string) ?? 'other',
                   date_of_birth: (d.date_of_birth as string | null) ?? null,
@@ -1743,7 +1314,7 @@ export default async function MyProfilePage({
                   subjectUserId={user.id}
                   canEdit={Boolean(canEmploymentHistoryManageOwn)}
                   isSelf
-                  initialRows={(ownEmploymentHistoryRes.data ?? []).map((r) => ({
+                  initialRows={ownEmploymentHistory.map((r) => ({
                     role_title: (r.role_title as string) ?? '',
                     department_name: (r.department_name as string | null) ?? null,
                     team_name: (r.team_name as string | null) ?? null,
@@ -1767,7 +1338,7 @@ export default async function MyProfilePage({
                   orgId={orgId}
                   subjectUserId={user.id}
                   title="Disciplinary & grievance records"
-                  initialCases={(ownCaseRowsRes.data ?? []).map((r) => ({
+                  initialCases={ownCases.map((r) => ({
                     id: r.id as string,
                     case_type: ((r.case_type as string) ?? 'disciplinary') as 'disciplinary' | 'grievance',
                     case_ref: (r.case_ref as string) ?? '',
@@ -1811,7 +1382,7 @@ export default async function MyProfilePage({
               {(canMedicalViewOwnSummary || canMedicalManageOwn) ? (
                 <MedicalNotesClient
                   subjectUserId={user.id}
-                  initialRows={(ownMedicalRowsRes.data ?? []).map((r) => ({
+                  initialRows={ownMedical.map((r) => ({
                     id: r.id as string,
                     case_ref: (r.case_ref as string) ?? '',
                     referral_reason: (r.referral_reason as string | null) ?? null,
@@ -1846,7 +1417,7 @@ export default async function MyProfilePage({
                   orgId={orgId}
                   subjectUserId={user.id}
                   title="Custom HR fields"
-                  definitions={(ownCustomFieldDefsRes.data ?? []).map((d) => ({
+                  definitions={ownCustomDefs.map((d) => ({
                     id: d.id as string,
                     key: d.key as string,
                     label: d.label as string,

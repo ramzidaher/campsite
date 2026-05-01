@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
-import { Camera } from 'lucide-react';
+import { ArrowUpRight, Camera, CheckCircle2, Mail } from 'lucide-react';
 import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
 import { useCampfireAmbientPreferences } from '@/lib/sound/useCampfireAmbientPreferences';
 import { useUiSound, useUiSoundPreferences } from '@/lib/sound/useUiSound';
@@ -22,10 +22,7 @@ import {
   type CelebrationModeCategory,
   type CelebrationMode,
 } from '@/lib/holidayThemes';
-import {
-  normalizeUiMode,
-  type UiMode,
-} from '@/lib/uiMode';
+import { normalizeUiMode, type UiMode } from '@/lib/uiMode';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
 import {
   DEFAULT_ACCESSIBILITY_PREFERENCES,
@@ -66,14 +63,46 @@ type Tab =
   | 'account';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'profile', label: 'Profile', icon: 'M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z' },
-  { id: 'appearance', label: 'Appearance', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z' },
-  { id: 'accessibility', label: 'Accessibility', icon: 'M12 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 5h-4.5v15h-3V15h-1v7h-3V7H2V4h16v3z' },
-  { id: 'notifications', label: 'Notifications', icon: 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z' },
-  { id: 'channels', label: 'Channels', icon: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z' },
-  { id: 'integrations', label: 'Integrations', icon: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z' },
-  { id: 'security', label: 'Security', icon: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z' },
-  { id: 'account', label: 'Account', icon: 'M10.25 2.45L9 3.7 10.6 5.3C9.61 6.23 9 7.54 9 9c0 2.76 2.24 5 5 5s5-2.24 5-5-2.24-5-5-5c-.53 0-1.04.08-1.52.23L11.15 2.9l-.9-.45zM14 6c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zM3 5v2h6.06c.28.73.74 1.37 1.32 1.87L9.26 10H3v2h5.06L5.5 14.5 7 16l3.5-3.5h.5c2.76 0 5-2.24 5-5 0-.34-.04-.67-.1-1H17V5H3z' },
+  {
+    id: 'profile',
+    label: 'Profile',
+    icon: 'M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z',
+  },
+  {
+    id: 'appearance',
+    label: 'Appearance',
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z',
+  },
+  {
+    id: 'accessibility',
+    label: 'Accessibility',
+    icon: 'M12 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 5h-4.5v15h-3V15h-1v7h-3V7H2V4h16v3z',
+  },
+  {
+    id: 'notifications',
+    label: 'Notifications',
+    icon: 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z',
+  },
+  {
+    id: 'channels',
+    label: 'Channels',
+    icon: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z',
+  },
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    icon: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
+  },
+  {
+    id: 'security',
+    label: 'Security',
+    icon: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z',
+  },
+  {
+    id: 'account',
+    label: 'Account',
+    icon: 'M10.25 2.45L9 3.7 10.6 5.3C9.61 6.23 9 7.54 9 9c0 2.76 2.24 5 5 5s5-2.24 5-5-2.24-5-5-5c-.53 0-1.04.08-1.52.23L11.15 2.9l-.9-.45zM14 6c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zM3 5v2h6.06c.28.73.74 1.37 1.32 1.87L9.26 10H3v2h5.06L5.5 14.5 7 16l3.5-3.5h.5c2.76 0 5-2.24 5-5 0-.34-.04-.67-.1-1H17V5H3z',
+  },
 ];
 
 function profileRoleDisplay(role: string): string {
@@ -114,7 +143,63 @@ function initials(name: string) {
   return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
 }
 
+function GoogleCalendarLogo({ className = 'h-7 w-7' }: { className?: string }) {
+  return (
+    <img
+      src="https://img.icons8.com/color/144/google-calendar--v2.png"
+      alt=""
+      aria-hidden
+      className={className}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+function OutlookLogo({ className = 'h-7 w-7' }: { className?: string }) {
+  return (
+    <img
+      src="https://img.icons8.com/color/144/outlook-calendar.png"
+      alt=""
+      aria-hidden
+      className={className}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+function IntegrationStatusPill({ connected }: { connected: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-[#d8d8d8] bg-[#fafaf9] px-2.5 py-1 text-[11px] font-semibold text-[#121212]">
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-[#b7b7b1]'}`}
+        aria-hidden
+      />
+      {connected ? 'Connected' : 'Not connected'}
+    </span>
+  );
+}
+
 type PasswordStrength = { score: 0 | 1 | 2 | 3 | 4; label: string; color: string; width: string };
+
+type IntegrationConnectionState = {
+  connected: boolean;
+  accountEmail: string | null;
+  expiresAt: string | null;
+};
+
+type IntegrationConnections = {
+  googleCalendar: IntegrationConnectionState;
+  googleSheets: IntegrationConnectionState;
+  outlookCalendar: IntegrationConnectionState;
+};
+
+const EMPTY_INTEGRATION_CONNECTIONS: IntegrationConnections = {
+  googleCalendar: { connected: false, accountEmail: null, expiresAt: null },
+  googleSheets: { connected: false, accountEmail: null, expiresAt: null },
+  outlookCalendar: { connected: false, accountEmail: null, expiresAt: null },
+};
 
 function getPasswordStrength(pwd: string): PasswordStrength {
   if (!pwd) return { score: 0, label: '', color: '', width: '0%' };
@@ -126,7 +211,13 @@ function getPasswordStrength(pwd: string): PasswordStrength {
   if (/[^A-Za-z0-9]/.test(pwd)) score++;
   const s = Math.min(4, score) as 0 | 1 | 2 | 3 | 4;
   const labels: Record<number, string> = { 0: '', 1: 'Weak', 2: 'Fair', 3: 'Good', 4: 'Strong' };
-  const colors: Record<number, string> = { 0: '', 1: 'bg-red-400', 2: 'bg-orange-400', 3: 'bg-yellow-400', 4: 'bg-emerald-500' };
+  const colors: Record<number, string> = {
+    0: '',
+    1: 'bg-red-400',
+    2: 'bg-orange-400',
+    3: 'bg-yellow-400',
+    4: 'bg-emerald-500',
+  };
   const widths: Record<number, string> = { 0: '0%', 1: '25%', 2: '50%', 3: '75%', 4: '100%' };
   return { score: s, label: labels[s]!, color: colors[s]!, width: widths[s]! };
 }
@@ -230,12 +321,27 @@ const AVATAR_STYLE_GROUPS: AvatarStyleGroup[] = [
 ];
 
 const RINGS_PRESETS: AvatarPreset[] = [
-  { label: 'Soft', query: 'ringOne=quarter&ringTwo=quarter&ringThree=quarter&ringFour=quarter&ringFive=eighth' },
-  { label: 'Classic', query: 'ringOne=half&ringTwo=quarter&ringThree=quarter&ringFour=quarter&ringFive=full' },
-  { label: 'Balanced', query: 'ringOne=half&ringTwo=half&ringThree=quarter&ringFour=half&ringFive=half' },
-  { label: 'Open', query: 'ringOne=eighth&ringTwo=eighth&ringThree=eighth&ringFour=eighth&ringFive=eighth' },
+  {
+    label: 'Soft',
+    query: 'ringOne=quarter&ringTwo=quarter&ringThree=quarter&ringFour=quarter&ringFive=eighth',
+  },
+  {
+    label: 'Classic',
+    query: 'ringOne=half&ringTwo=quarter&ringThree=quarter&ringFour=quarter&ringFive=full',
+  },
+  {
+    label: 'Balanced',
+    query: 'ringOne=half&ringTwo=half&ringThree=quarter&ringFour=half&ringFive=half',
+  },
+  {
+    label: 'Open',
+    query: 'ringOne=eighth&ringTwo=eighth&ringThree=eighth&ringFour=eighth&ringFive=eighth',
+  },
   { label: 'Dense', query: 'ringOne=full&ringTwo=full&ringThree=half&ringFour=full&ringFive=full' },
-  { label: 'Mixed', query: 'ringOne=quarter&ringTwo=half&ringThree=full&ringFour=half&ringFive=quarter' },
+  {
+    label: 'Mixed',
+    query: 'ringOne=quarter&ringTwo=half&ringThree=full&ringFour=half&ringFive=quarter',
+  },
 ];
 
 function dicebearAvatarUrl(style: AvatarStyle, seed: string, presetQuery = ''): string {
@@ -243,7 +349,9 @@ function dicebearAvatarUrl(style: AvatarStyle, seed: string, presetQuery = ''): 
   return `https://api.dicebear.com/9.x/${style}/svg?seed=${s}${presetQuery ? `&${presetQuery}` : ''}`;
 }
 
-function dicebearAvatarPath(raw: string | null | undefined): { style: AvatarStyle; query: string } | null {
+function dicebearAvatarPath(
+  raw: string | null | undefined
+): { style: AvatarStyle; query: string } | null {
   const t = raw?.trim();
   if (!t) return null;
   try {
@@ -252,7 +360,9 @@ function dicebearAvatarPath(raw: string | null | undefined): { style: AvatarStyl
     const match = u.pathname.match(/^\/9\.x\/([^/]+)\/svg$/);
     if (!match) return null;
     const style = decodeURIComponent(match[1]!) as AvatarStyle;
-    const styles = AVATAR_STYLE_GROUPS.flatMap((group) => group.styles.map((styleItem) => styleItem.id));
+    const styles = AVATAR_STYLE_GROUPS.flatMap((group) =>
+      group.styles.map((styleItem) => styleItem.id)
+    );
     if (!styles.includes(style)) return null;
     return { style, query: u.searchParams.toString() };
   } catch {
@@ -276,6 +386,7 @@ export function ProfileSettings({
   googleFlashTone,
   outlookFlash,
   outlookFlashTone,
+  initialIntegrationConnections = EMPTY_INTEGRATION_CONNECTIONS,
   tenantOrgs,
   currentOrgId,
   initialBroadcastChannels = [],
@@ -287,6 +398,7 @@ export function ProfileSettings({
   googleFlashTone?: 'success' | 'error' | null;
   outlookFlash?: string | null;
   outlookFlashTone?: 'success' | 'error' | null;
+  initialIntegrationConnections?: IntegrationConnections;
   tenantOrgs?: LoginOrgOption[] | null;
   currentOrgId?: string | null;
   initialBroadcastChannels?: BroadcastChannelPref[];
@@ -333,7 +445,8 @@ export function ProfileSettings({
   const [showConfirm, setShowConfirm] = useState(false);
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
   const passwordsMatch = confirmPassword === '' || password === confirmPassword;
-  const passwordValid = password.length >= 8 && password === confirmPassword && confirmPassword !== '';
+  const passwordValid =
+    password.length >= 8 && password === confirmPassword && confirmPassword !== '';
 
   const [msg, setMsg] = useState<string | null>(googleFlash ?? null);
   const [msgTone, setMsgTone] = useState<'success' | 'error' | 'neutral'>(() => {
@@ -342,7 +455,9 @@ export function ProfileSettings({
     return 'neutral';
   });
   const [loading, setLoading] = useState(false);
-  const [shellMode, setShellMode] = useState<CelebrationMode>(normalizeCelebrationMode(initial?.celebration_mode));
+  const [shellMode, setShellMode] = useState<CelebrationMode>(
+    normalizeCelebrationMode(initial?.celebration_mode)
+  );
   const [shellModeAutoEnabled, setShellModeAutoEnabled] = useState<boolean>(
     initial?.celebration_auto_enabled ?? true
   );
@@ -353,17 +468,23 @@ export function ProfileSettings({
   const [avatarVariantQuery, setAvatarVariantQuery] = useState('');
   const [avatarSource, setAvatarSource] = useState<AvatarSource>('upload');
   const avatarUploadRef = useRef<HTMLInputElement | null>(null);
-  const [channelPrefs, setChannelPrefs] = useState<BroadcastChannelPref[]>(initialBroadcastChannels);
+  const [channelPrefs, setChannelPrefs] =
+    useState<BroadcastChannelPref[]>(initialBroadcastChannels);
   const [channelBusyId, setChannelBusyId] = useState<string | null>(null);
   const [channelsLoading, setChannelsLoading] = useState(false);
   const [channelsLoaded, setChannelsLoaded] = useState(initialBroadcastChannels.length > 0);
   const [canManageDiscountsState, setCanManageDiscountsState] = useState(canManageDiscounts);
   const [discountPermLoading, setDiscountPermLoading] = useState(false);
   const [discountPermLoaded, setDiscountPermLoaded] = useState(canManageDiscounts);
-  const [a11yPrefs, setA11yPrefs] = useState<AccessibilityPreferences>(DEFAULT_ACCESSIBILITY_PREFERENCES);
+  const [a11yPrefs, setA11yPrefs] = useState<AccessibilityPreferences>(
+    DEFAULT_ACCESSIBILITY_PREFERENCES
+  );
   const [shellIconStyle, setShellIconStyle] = useState<ShellIconStyle>('classic');
-  const { prefs: uiSoundPrefs, setEnabled: setUiSoundEnabled, setVolume: setUiSoundVolume } =
-    useUiSoundPreferences();
+  const {
+    prefs: uiSoundPrefs,
+    setEnabled: setUiSoundEnabled,
+    setVolume: setUiSoundVolume,
+  } = useUiSoundPreferences();
   const {
     prefs: campfirePrefs,
     setEnabled: setCampfireEnabled,
@@ -373,12 +494,18 @@ export function ProfileSettings({
 
   const safeAvatar = useMemo(() => safeHttpImageUrl(avatarUrl), [avatarUrl]);
   const dicebearAvatar = useMemo(
-    () => dicebearAvatarUrl(avatarStyle, preferredName.trim() || fullName.trim() || 'Member', avatarVariantQuery),
+    () =>
+      dicebearAvatarUrl(
+        avatarStyle,
+        preferredName.trim() || fullName.trim() || 'Member',
+        avatarVariantQuery
+      ),
     [avatarStyle, avatarVariantQuery, preferredName, fullName]
   );
   const dicebearSeed = preferredName.trim() || fullName.trim() || 'Member';
-
-  useEffect(() => { setAvatarPreviewFailed(false); }, [safeAvatar, avatarStyle, avatarVariantQuery, avatarSource]);
+  useEffect(() => {
+    setAvatarPreviewFailed(false);
+  }, [safeAvatar, avatarStyle, avatarVariantQuery, avatarSource]);
 
   useEffect(() => {
     setProfile(initial);
@@ -404,7 +531,9 @@ export function ProfileSettings({
     setShellModeAutoEnabled(initial?.celebration_auto_enabled ?? true);
   }, [initial]);
 
-  useEffect(() => { setChannelPrefs(initialBroadcastChannels); }, [initialBroadcastChannels]);
+  useEffect(() => {
+    setChannelPrefs(initialBroadcastChannels);
+  }, [initialBroadcastChannels]);
   useEffect(() => {
     setChannelsLoaded(initialBroadcastChannels.length > 0);
   }, [initialBroadcastChannels]);
@@ -485,7 +614,9 @@ export function ProfileSettings({
       // ignore storage errors and still update current session
     }
     window.dispatchEvent(
-      new CustomEvent('campsite:shell-mode-change', { detail: { mode, autoEnabled: nextAutoEnabled } })
+      new CustomEvent('campsite:shell-mode-change', {
+        detail: { mode, autoEnabled: nextAutoEnabled },
+      })
     );
   }
 
@@ -504,7 +635,10 @@ export function ProfileSettings({
   }
 
   const avatarStyleOptions = useMemo(
-    () => AVATAR_STYLE_GROUPS.flatMap((group) => group.styles.filter((style) => style.id !== 'initials')),
+    () =>
+      AVATAR_STYLE_GROUPS.flatMap((group) =>
+        group.styles.filter((style) => style.id !== 'initials')
+      ),
     []
   );
   const avatarVariantChoices = useMemo(() => {
@@ -550,8 +684,15 @@ export function ProfileSettings({
         return;
       }
       const [{ data: orgDepts }, { data: subs }] = await Promise.all([
-        supabase.from('departments').select('id, name').eq('org_id', currentOrgId).eq('is_archived', false),
-        supabase.from('user_subscriptions').select('channel_id, subscribed').eq('user_id', u.user.id),
+        supabase
+          .from('departments')
+          .select('id, name')
+          .eq('org_id', currentOrgId)
+          .eq('is_archived', false),
+        supabase
+          .from('user_subscriptions')
+          .select('channel_id, subscribed')
+          .eq('user_id', u.user.id),
       ]);
       if (cancelled) return;
       const deptIds = [...new Set((orgDepts ?? []).map((d) => d.id as string).filter(Boolean))];
@@ -566,7 +707,9 @@ export function ProfileSettings({
         .in('dept_id', deptIds)
         .order('name');
       if (cancelled) return;
-      const subMap = new Map((subs ?? []).map((s) => [s.channel_id as string, Boolean(s.subscribed)]));
+      const subMap = new Map(
+        (subs ?? []).map((s) => [s.channel_id as string, Boolean(s.subscribed)])
+      );
       const deptNameById = new Map<string, string>();
       for (const d of orgDepts ?? []) {
         const did = d.id as string;
@@ -598,14 +741,24 @@ export function ProfileSettings({
   useEffect(() => {
     let cancelled = false;
     async function loadDiscountPermission() {
-      if (activeTab !== 'integrations' || !currentOrgId || discountPermLoaded || discountPermLoading) return;
+      if (
+        activeTab !== 'integrations' ||
+        !currentOrgId ||
+        discountPermLoaded ||
+        discountPermLoading
+      )
+        return;
       setDiscountPermLoading(true);
       const supabase = createClient();
       const { data, error } = await supabase.rpc('get_my_permissions', { p_org_id: currentOrgId });
       if (cancelled) return;
       if (!error) {
         const hasDiscountsView = Array.isArray(data)
-          ? data.some((row) => String((row as { permission_key?: string }).permission_key ?? '') === 'discounts.view')
+          ? data.some(
+              (row) =>
+                String((row as { permission_key?: string }).permission_key ?? '') ===
+                'discounts.view'
+            )
           : false;
         setCanManageDiscountsState(hasDiscountsView);
       }
@@ -642,17 +795,28 @@ export function ProfileSettings({
 
   async function toggleBroadcastChannel(channelId: string, next: boolean) {
     const snapshot = channelPrefs;
-    setChannelPrefs((p) => p.map((c) => (c.channel_id === channelId ? { ...c, subscribed: next } : c)));
+    setChannelPrefs((p) =>
+      p.map((c) => (c.channel_id === channelId ? { ...c, subscribed: next } : c))
+    );
     setChannelBusyId(channelId);
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
-    if (!u.user) { setChannelPrefs(snapshot); setChannelBusyId(null); return; }
-    const { error } = await supabase.from('user_subscriptions').upsert(
-      { user_id: u.user.id, channel_id: channelId, subscribed: next },
-      { onConflict: 'user_id,channel_id' }
-    );
+    if (!u.user) {
+      setChannelPrefs(snapshot);
+      setChannelBusyId(null);
+      return;
+    }
+    const { error } = await supabase
+      .from('user_subscriptions')
+      .upsert(
+        { user_id: u.user.id, channel_id: channelId, subscribed: next },
+        { onConflict: 'user_id,channel_id' }
+      );
     setChannelBusyId(null);
-    if (error) { setChannelPrefs(snapshot); setFeedback(error.message, 'error'); }
+    if (error) {
+      setChannelPrefs(snapshot);
+      setFeedback(error.message, 'error');
+    }
   }
 
   async function uploadAvatarFile(file: File) {
@@ -674,7 +838,10 @@ export function ProfileSettings({
     setAvatarStyle('initials');
     setAvatarVariantQuery('');
     setAvatarSource('upload');
-    const { error } = await supabase.from('profiles').update({ avatar_url: up.publicUrl }).eq('id', u.user.id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: up.publicUrl })
+      .eq('id', u.user.id);
     setLoading(false);
     if (error) {
       setFeedback(error.message, 'error');
@@ -730,7 +897,10 @@ export function ProfileSettings({
       })
       .eq('id', u.user.id);
     setLoading(false);
-    if (error) { setFeedback(error.message, 'error'); return; }
+    if (error) {
+      setFeedback(error.message, 'error');
+      return;
+    }
     await invalidateOwnProfileCaches(u.user.id).catch(() => null);
     setFeedback('Saved.', 'success');
     router.refresh();
@@ -742,7 +912,10 @@ export function ProfileSettings({
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
-    if (error) { setFeedback(error.message, 'error'); return; }
+    if (error) {
+      setFeedback(error.message, 'error');
+      return;
+    }
     setPassword('');
     setConfirmPassword('');
     setFeedback('Password updated successfully.', 'success');
@@ -761,7 +934,10 @@ export function ProfileSettings({
     const supabase = createClient();
     const { error } = await supabase.rpc('set_my_active_org', { p_org_id: orgId });
     setTenantSwitching(null);
-    if (error) { setFeedback(error.message, 'error'); return; }
+    if (error) {
+      setFeedback(error.message, 'error');
+      return;
+    }
     const selectedOrg = tenantOrgs?.find((o) => o.org_id === orgId);
     const selectedSlug = selectedOrg?.slug?.trim();
     if (selectedSlug && !tenantHostMatchesOrg(selectedSlug, window.location.host)) {
@@ -791,9 +967,15 @@ export function ProfileSettings({
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const { error } = await supabase.from('profiles').update({ status: 'inactive' }).eq('id', u.user.id);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ status: 'inactive' })
+      .eq('id', u.user.id);
     setLoading(false);
-    if (error) { setFeedback(error.message, 'error'); return; }
+    if (error) {
+      setFeedback(error.message, 'error');
+      return;
+    }
     await invalidateOwnProfileCaches(u.user.id).catch(() => null);
     await supabase.auth.signOut();
     router.replace('/login');
@@ -863,7 +1045,10 @@ export function ProfileSettings({
       {/* Main content */}
       <div className="min-w-0 flex-1">
         {msg ? (
-          <div role="status" className={`mb-4 rounded-xl border px-4 py-3 text-[13px] ${flashClass}`}>
+          <div
+            role="status"
+            className={`mb-4 rounded-xl border px-4 py-3 text-[13px] ${flashClass}`}
+          >
             {msg}
           </div>
         ) : null}
@@ -872,7 +1057,9 @@ export function ProfileSettings({
         {activeTab === 'profile' && (
           <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
             <h2 className={sectionTitle}>Profile</h2>
-            <p className={sectionDesc}>Your public name, avatar, and role within the organisation.</p>
+            <p className={sectionDesc}>
+              Your public name, avatar, and role within the organisation.
+            </p>
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
               <div className="flex shrink-0 justify-center sm:justify-start">
                 <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#d8d8d8] bg-[#faf9f6] text-[22px] font-semibold text-[#6b6b6b] shadow-sm">
@@ -883,7 +1070,9 @@ export function ProfileSettings({
                       className="h-full w-full object-cover"
                       onError={() => setAvatarPreviewFailed(true)}
                     />
-                  ) : avatarSource === 'avatar' && avatarStyle !== 'initials' && !avatarPreviewFailed ? (
+                  ) : avatarSource === 'avatar' &&
+                    avatarStyle !== 'initials' &&
+                    !avatarPreviewFailed ? (
                     <img
                       src={dicebearAvatar}
                       alt=""
@@ -957,7 +1146,8 @@ export function ProfileSettings({
                       Profile image
                     </p>
                     <p className="mt-1 text-[13px] text-[#6b6b6b]">
-                      Keep it simple: upload your own photo or pick an avatar family and choose a variation.
+                      Keep it simple: upload your own photo or pick an avatar family and choose a
+                      variation.
                     </p>
                   </div>
 
@@ -992,7 +1182,11 @@ export function ProfileSettings({
                         Avatar family
                         <select
                           className={selectClass}
-                          value={avatarStyle === 'initials' ? (avatarStyleOptions[0]?.id ?? 'big-ears') : avatarStyle}
+                          value={
+                            avatarStyle === 'initials'
+                              ? (avatarStyleOptions[0]?.id ?? 'big-ears')
+                              : avatarStyle
+                          }
                           onChange={(e) => selectAvatarFamily(e.target.value as AvatarStyle)}
                         >
                           {avatarStyleOptions.map((style) => (
@@ -1014,10 +1208,13 @@ export function ProfileSettings({
                               key={variant.key}
                               type="button"
                               className={`overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-0.5 hover:shadow-sm ${
-                                isSelected ? 'border-[#121212] ring-1 ring-[#121212]' : 'border-[#d8d8d8] hover:border-[#c4b59f]'
+                                isSelected
+                                  ? 'border-[#121212] ring-1 ring-[#121212]'
+                                  : 'border-[#d8d8d8] hover:border-[#c4b59f]'
                               }`}
                               onClick={() => {
-                                if (avatarStyle === 'rings') selectAvatarStyle('rings', variant.query);
+                                if (avatarStyle === 'rings')
+                                  selectAvatarStyle('rings', variant.query);
                                 else {
                                   setAvatarSource('avatar');
                                   setAvatarVariantQuery('');
@@ -1026,10 +1223,16 @@ export function ProfileSettings({
                               }}
                             >
                               <div className="aspect-square bg-[#faf9f6] p-2">
-                                <img src={variant.imageUrl} alt="" className="h-full w-full rounded-xl object-cover" />
+                                <img
+                                  src={variant.imageUrl}
+                                  alt=""
+                                  className="h-full w-full rounded-xl object-cover"
+                                />
                               </div>
                               <div className="border-t border-[#ece8e0] px-3 py-2 text-left">
-                                <p className="text-[12px] font-medium text-[#121212]">{variant.label}</p>
+                                <p className="text-[12px] font-medium text-[#121212]">
+                                  {variant.label}
+                                </p>
                               </div>
                             </button>
                           );
@@ -1040,12 +1243,19 @@ export function ProfileSettings({
                 </div>
                 <div className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5">
                   <p className="text-[12.5px] leading-relaxed text-[#6b6b6b]">
-                    <span className="font-medium text-[#121212]">{profileRoleDisplay(profile.role)}</span>
+                    <span className="font-medium text-[#121212]">
+                      {profileRoleDisplay(profile.role)}
+                    </span>
                     <span className="text-[#9b9b9b]"> · </span>
                     Contact an admin if you need a different role or team.
                   </p>
                 </div>
-                <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnPrimary}>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void saveProfile()}
+                  className={btnPrimary}
+                >
                   {loading ? 'Saving…' : 'Save profile'}
                 </button>
               </div>
@@ -1061,7 +1271,11 @@ export function ProfileSettings({
             <div className="space-y-4">
               <label className={fieldLabel}>
                 Colour scheme
-                <select className={selectClass} value={scheme} onChange={(e) => setScheme(e.target.value)}>
+                <select
+                  className={selectClass}
+                  value={scheme}
+                  onChange={(e) => setScheme(e.target.value)}
+                >
                   <option value="system">System</option>
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
@@ -1097,7 +1311,8 @@ export function ProfileSettings({
                   <option value="interactive">Interactive mode</option>
                 </select>
                 <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
-                  Interactive mode enables graph-based and modern workflow experiences with quicker navigation.
+                  Interactive mode enables graph-based and modern workflow experiences with quicker
+                  navigation.
                 </span>
               </label>
               <label className={fieldLabel}>
@@ -1111,7 +1326,8 @@ export function ProfileSettings({
                   <option value="white">White</option>
                 </select>
                 <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
-                  Choose whether sidebar icons use the original color palette or a unified white style.
+                  Choose whether sidebar icons use the original color palette or a unified white
+                  style.
                 </span>
               </label>
               <label className={fieldLabel}>
@@ -1121,15 +1337,19 @@ export function ProfileSettings({
                   value={shellMode}
                   onChange={(e) => setShellModePref(normalizeCelebrationMode(e.target.value))}
                 >
-                  {Array.from(new Set(celebrationModeOptions.map((o) => o.category))).map((category) => (
-                    <optgroup key={category} label={category}>
-                      {celebrationModeOptions.filter((o) => o.category === category).map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
+                  {Array.from(new Set(celebrationModeOptions.map((o) => o.category))).map(
+                    (category) => (
+                      <optgroup key={category} label={category}>
+                        {celebrationModeOptions
+                          .filter((o) => o.category === category)
+                          .map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                      </optgroup>
+                    )
+                  )}
                 </select>
                 <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
                   Adds a themed color wash to the sidebar and app shell.
@@ -1158,11 +1378,17 @@ export function ProfileSettings({
                 <span className="text-[13px] leading-snug text-[#121212]">
                   <span className="font-medium">Auto holiday mode by date</span>
                   <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
-                    Automatically apply the current holiday theme when available. Manual selection still overrides.
+                    Automatically apply the current holiday theme when available. Manual selection
+                    still overrides.
                   </span>
                 </span>
               </label>
-              <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnPrimary}>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void saveProfile()}
+                className={btnPrimary}
+              >
                 {loading ? 'Saving…' : 'Save appearance'}
               </button>
             </div>
@@ -1173,7 +1399,8 @@ export function ProfileSettings({
           <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
             <h2 className={sectionTitle}>Accessibility</h2>
             <p className={sectionDesc}>
-              Adjust visual and motion settings to match your needs. Changes apply instantly across the app.
+              Adjust visual and motion settings to match your needs. Changes apply instantly across
+              the app.
             </p>
             <div className="space-y-4">
               <label className={fieldLabel}>
@@ -1270,7 +1497,9 @@ export function ProfileSettings({
                 <input
                   type="checkbox"
                   checked={a11yPrefs.differentiateWithoutColor}
-                  onChange={(e) => setAccessibilityPref('differentiateWithoutColor', e.target.checked)}
+                  onChange={(e) =>
+                    setAccessibilityPref('differentiateWithoutColor', e.target.checked)
+                  }
                   className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
                 />
                 <span className="text-[13px] leading-snug text-[#121212]">
@@ -1330,7 +1559,9 @@ export function ProfileSettings({
                 <input
                   type="checkbox"
                   checked={a11yPrefs.preferNonBlinkingCursor}
-                  onChange={(e) => setAccessibilityPref('preferNonBlinkingCursor', e.target.checked)}
+                  onChange={(e) =>
+                    setAccessibilityPref('preferNonBlinkingCursor', e.target.checked)
+                  }
                   className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
                 />
                 <span className="text-[13px] leading-snug text-[#121212]">
@@ -1342,7 +1573,11 @@ export function ProfileSettings({
               </label>
 
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className={btnSecondary} onClick={() => resetAccessibilityPrefs()}>
+                <button
+                  type="button"
+                  className={btnSecondary}
+                  onClick={() => resetAccessibilityPrefs()}
+                >
                   Reset accessibility defaults
                 </button>
               </div>
@@ -1354,7 +1589,9 @@ export function ProfileSettings({
         {activeTab === 'notifications' && (
           <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
             <h2 className={sectionTitle}>Notifications</h2>
-            <p className={sectionDesc}>Control when and how you receive alerts, sounds, and reminders.</p>
+            <p className={sectionDesc}>
+              Control when and how you receive alerts, sounds, and reminders.
+            </p>
             <div className="space-y-4">
               <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
                 <input
@@ -1416,7 +1653,8 @@ export function ProfileSettings({
                 <span className="text-[13px] leading-snug text-[#121212]">
                   <span className="font-medium">Notify me about new open bookable shifts</span>
                   <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
-                    You&apos;ll get rota notifications when a manager posts an open slot you can claim.
+                    You&apos;ll get rota notifications when a manager posts an open slot you can
+                    claim.
                   </span>
                 </span>
               </label>
@@ -1474,7 +1712,8 @@ export function ProfileSettings({
                   <span className="text-[13px] leading-snug text-[#121212]">
                     <span className="font-medium">Dashboard campfire ambience</span>
                     <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
-                      Soft crackling fire sound while you&apos;re on the home dashboard (separate from UI sounds).
+                      Soft crackling fire sound while you&apos;re on the home dashboard (separate
+                      from UI sounds).
                     </span>
                   </span>
                 </label>
@@ -1495,7 +1734,12 @@ export function ProfileSettings({
                 </label>
               </div>
 
-              <button type="button" disabled={loading} onClick={() => void saveProfile()} className={btnPrimary}>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void saveProfile()}
+                className={btnPrimary}
+              >
                 {loading ? 'Saving…' : 'Save preferences'}
               </button>
             </div>
@@ -1513,7 +1757,8 @@ export function ProfileSettings({
               </p>
             ) : channelPrefs.length === 0 ? (
               <p className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[13px] text-[#9b9b9b]">
-                No broadcast channels yet. Org admins add channels under Admin → Departments; then you can follow them here.
+                No broadcast channels yet. Org admins add channels under Admin → Departments; then
+                you can follow them here.
               </p>
             ) : (
               <div className="space-y-5">
@@ -1529,7 +1774,9 @@ export function ProfileSettings({
                               className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
                               checked={c.subscribed}
                               disabled={channelBusyId === c.channel_id}
-                              onChange={(e) => void toggleBroadcastChannel(c.channel_id, e.target.checked)}
+                              onChange={(e) =>
+                                void toggleBroadcastChannel(c.channel_id, e.target.checked)
+                              }
                             />
                             <span className="text-[13px] leading-snug text-[#121212]">
                               <span className="font-medium">{c.name}</span>
@@ -1551,58 +1798,220 @@ export function ProfileSettings({
         {/* Integrations tab */}
         {activeTab === 'integrations' && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
-              <h2 className={sectionTitle}>Integrations</h2>
-              <p className={sectionDesc}>
-                Connect third-party services to enable additional features across the platform.
-              </p>
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3.5">
-                  <div>
-                    <p className="text-[13px] font-medium text-[#121212]">Google Calendar</p>
-                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                      Sync interview slots, rota shifts and calendar events to your Google Calendar.
-                    </p>
+            <div className="grid gap-4 lg:grid-cols-2 xl:mx-auto xl:max-w-5xl">
+              <div className="rounded-2xl border border-[#d8d8d8] bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e3e3df] bg-[#f8fafc] shadow-sm">
+                      <GoogleCalendarLogo />
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-semibold text-[#121212]">Google Calendar</p>
+                      <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                        Push CampSite items into Google Calendar.
+                      </p>
+                    </div>
                   </div>
-                  <a href="/api/google/oauth/start?type=calendar" className={btnSecondary}>
-                    Connect
+                  <IntegrationStatusPill
+                    connected={initialIntegrationConnections.googleCalendar.connected}
+                  />
+                </div>
+                <div className="mt-4 rounded-2xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
+                  {initialIntegrationConnections.googleCalendar.connected ? (
+                    <>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                        Connected account
+                      </p>
+                      <div className="mt-1 flex items-start gap-2 text-[13px] text-[#121212]">
+                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                        <span className="font-medium">
+                          {initialIntegrationConnections.googleCalendar.accountEmail ??
+                            'Google account connected'}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-[12.5px] text-[#6b6b6b]">
+                        Reconnect if you want to switch to a different Google account.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                        Status
+                      </p>
+                      <p className="mt-1 text-[13px] text-[#121212]">Not connected yet.</p>
+                      <p className="mt-2 text-[12.5px] text-[#6b6b6b]">
+                        Connect once and CampSite can write your shifts, interviews and events into
+                        Google Calendar.
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="mt-4 space-y-2 text-[12.5px] text-[#4f4f4f]">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <span>Sync interview slots for panel and hiring workflows.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <span>Push rota shifts and manual calendar events from CampSite.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <span>Google events also appear in the in-app calendar view.</span>
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <a
+                    href="/api/google/oauth/start?type=calendar"
+                    className={
+                      initialIntegrationConnections.googleCalendar.connected
+                        ? btnSecondary
+                        : btnPrimary
+                    }
+                  >
+                    {initialIntegrationConnections.googleCalendar.connected
+                      ? 'Reconnect'
+                      : 'Connect Google'}
                   </a>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3.5">
-                  <div>
-                    <p className="text-[13px] font-medium text-[#121212]">Outlook Calendar</p>
-                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                      Sync interview slots, rota shifts and calendar events to your Outlook.
-                    </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#d8d8d8] bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e3e3df] bg-[#f8fafc] shadow-sm">
+                      <OutlookLogo />
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-semibold text-[#121212]">Outlook Calendar</p>
+                      <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                        Keep Microsoft 365 calendars in sync.
+                      </p>
+                    </div>
                   </div>
-                  <a href="/api/microsoft/oauth/start" className={btnSecondary}>
-                    Connect
+                  <IntegrationStatusPill
+                    connected={initialIntegrationConnections.outlookCalendar.connected}
+                  />
+                </div>
+                <div className="mt-4 rounded-2xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
+                  {initialIntegrationConnections.outlookCalendar.connected ? (
+                    <>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                        Connected account
+                      </p>
+                      <div className="mt-1 flex items-start gap-2 text-[13px] text-[#121212]">
+                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                        <span className="font-medium">
+                          {initialIntegrationConnections.outlookCalendar.accountEmail ??
+                            'Outlook account connected'}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-[12.5px] text-[#6b6b6b]">
+                        Reconnect if you need to swap Microsoft accounts or renew access manually.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                        Status
+                      </p>
+                      <p className="mt-1 text-[13px] text-[#121212]">Not connected yet.</p>
+                      <p className="mt-2 text-[12.5px] text-[#6b6b6b]">
+                        Ideal if your university or workplace runs on Outlook instead of Google
+                        Calendar.
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="mt-4 space-y-2 text-[12.5px] text-[#4f4f4f]">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <span>Sync interview slots, rota shifts and CampSite calendar events.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <span>
+                      Microsoft events appear alongside CampSite events in the calendar page.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <span>Best-fit option for Microsoft 365 and university-managed accounts.</span>
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <a
+                    href="/api/microsoft/oauth/start"
+                    className={
+                      initialIntegrationConnections.outlookCalendar.connected
+                        ? btnSecondary
+                        : btnPrimary
+                    }
+                  >
+                    {initialIntegrationConnections.outlookCalendar.connected
+                      ? 'Reconnect'
+                      : 'Connect Outlook'}
                   </a>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3.5">
-                  <div>
-                    <p className="text-[13px] font-medium text-[#121212]">Google Sheets</p>
-                    <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                      Import rota data from spreadsheets via Admin → Rota import.
-                    </p>
-                  </div>
-                  <a href="/api/google/oauth/start?type=sheets" className={btnSecondary}>
-                    Connect
-                  </a>
+              </div>
+
+            </div>
+
+            <div className="rounded-2xl border border-[#d8d8d8] bg-white p-5 xl:mx-auto xl:max-w-5xl">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="font-authSerif text-[20px] tracking-[-0.02em] text-[#121212]">
+                    What happens after you connect?
+                  </h3>
+                  <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                    CampSite uses these connections to reduce duplicate admin work, not to replace
+                    your existing tools.
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#d8d8d8] bg-[#fafaf9] px-3 py-1.5 text-[12px] font-medium text-[#121212]">
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                  Connect once, keep working as normal
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
+                  <p className="text-[12px] font-semibold text-[#121212]">
+                    1. Choose your provider
+                  </p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+                    Use Google Calendar or Outlook Calendar depending on your workflow.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
+                  <p className="text-[12px] font-semibold text-[#121212]">
+                    2. Authorise your account
+                  </p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+                    OAuth keeps access tied to your own CampSite account rather than the whole
+                    organisation.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
+                  <p className="text-[12px] font-semibold text-[#121212]">
+                    3. Let CampSite do the repeat work
+                  </p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+                    New shifts, events and interview slots can flow out automatically once the
+                    integration is ready.
+                  </p>
                 </div>
               </div>
             </div>
             {canManageDiscountsState ? (
               <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
                 <h2 className={sectionTitle}>Organisation tools</h2>
-                <p className={sectionDesc}>Configure staff discount tiers shown on discount cards.</p>
+                <p className={sectionDesc}>
+                  Configure staff discount tiers shown on discount cards.
+                </p>
                 <Link href="/settings/discount-tiers" className={btnSecondary}>
                   Discount tiers
                 </Link>
               </div>
-            ) : null}
-            {discountPermLoading ? (
-              <p className="px-1 text-[12.5px] text-[#9b9b9b]">Checking organisation tools access...</p>
             ) : null}
           </div>
         )}
@@ -1612,7 +2021,8 @@ export function ProfileSettings({
           <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
             <h2 className={sectionTitle}>Security</h2>
             <p className={sectionDesc}>
-              Update your password. This account password is shared across all organisations linked to your email.
+              Update your password. This account password is shared across all organisations linked
+              to your email.
             </p>
             <div className="space-y-4">
               {/* New password */}
@@ -1653,11 +2063,17 @@ export function ProfileSettings({
                   <div className="mb-1 flex items-center justify-between">
                     <span className="text-[12px] text-[#9b9b9b]">Password strength</span>
                     {passwordStrength.label && (
-                      <span className={`text-[12px] font-medium ${
-                        passwordStrength.score === 4 ? 'text-emerald-600' :
-                        passwordStrength.score === 3 ? 'text-yellow-600' :
-                        passwordStrength.score === 2 ? 'text-orange-500' : 'text-red-500'
-                      }`}>
+                      <span
+                        className={`text-[12px] font-medium ${
+                          passwordStrength.score === 4
+                            ? 'text-emerald-600'
+                            : passwordStrength.score === 3
+                              ? 'text-yellow-600'
+                              : passwordStrength.score === 2
+                                ? 'text-orange-500'
+                                : 'text-red-500'
+                        }`}
+                      >
                         {passwordStrength.label}
                       </span>
                     )}
@@ -1671,16 +2087,30 @@ export function ProfileSettings({
                   <ul className="mt-2 space-y-0.5">
                     {[
                       { ok: password.length >= 8, label: 'At least 8 characters' },
-                      { ok: /[A-Z]/.test(password) && /[a-z]/.test(password), label: 'Upper and lowercase letters' },
+                      {
+                        ok: /[A-Z]/.test(password) && /[a-z]/.test(password),
+                        label: 'Upper and lowercase letters',
+                      },
                       { ok: /[0-9]/.test(password), label: 'At least one number' },
-                      { ok: /[^A-Za-z0-9]/.test(password), label: 'At least one special character' },
+                      {
+                        ok: /[^A-Za-z0-9]/.test(password),
+                        label: 'At least one special character',
+                      },
                     ].map((rule) => (
-                      <li key={rule.label} className={`flex items-center gap-1.5 text-[12px] ${rule.ok ? 'text-emerald-600' : 'text-[#9b9b9b]'}`}>
-                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 fill-current" aria-hidden>
-                          {rule.ok
-                            ? <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            : <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z" />
-                          }
+                      <li
+                        key={rule.label}
+                        className={`flex items-center gap-1.5 text-[12px] ${rule.ok ? 'text-emerald-600' : 'text-[#9b9b9b]'}`}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-3.5 w-3.5 shrink-0 fill-current"
+                          aria-hidden
+                        >
+                          {rule.ok ? (
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                          ) : (
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z" />
+                          )}
                         </svg>
                         {rule.label}
                       </li>
@@ -1696,7 +2126,9 @@ export function ProfileSettings({
                   <input
                     type={showConfirm ? 'text' : 'password'}
                     className={`${inputClass} mt-0 pr-10 ${
-                      confirmPassword && !passwordsMatch ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''
+                      confirmPassword && !passwordsMatch
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                        : ''
                     }`}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -1746,7 +2178,8 @@ export function ProfileSettings({
               <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
                 <h2 className={sectionTitle}>Workspaces</h2>
                 <p className={sectionDesc}>
-                  Your account is linked to more than one organisation. Switch the active workspace to load the right dashboard, teams, and approvals.
+                  Your account is linked to more than one organisation. Switch the active workspace
+                  to load the right dashboard, teams, and approvals.
                 </p>
                 <ul className="flex flex-col gap-2">
                   {tenantOrgs.map((o) => {
@@ -1758,7 +2191,9 @@ export function ProfileSettings({
                       >
                         <div className="min-w-0">
                           <p className="text-[13px] font-medium text-[#121212]">{o.name}</p>
-                          <p className="truncate font-mono text-[11px] text-[#9b9b9b]">{o.slug ?? '-'}</p>
+                          <p className="truncate font-mono text-[11px] text-[#9b9b9b]">
+                            {o.slug ?? '-'}
+                          </p>
                         </div>
                         {isCurrent ? (
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-[#15803d]">
@@ -1798,7 +2233,12 @@ export function ProfileSettings({
               <p className="mb-4 text-[13px] text-red-950/70">
                 Deactivating removes your access until an administrator restores your account.
               </p>
-              <button type="button" onClick={() => void deactivate()} disabled={loading} className={btnDanger}>
+              <button
+                type="button"
+                onClick={() => void deactivate()}
+                disabled={loading}
+                className={btnDanger}
+              >
                 Deactivate account
               </button>
             </div>

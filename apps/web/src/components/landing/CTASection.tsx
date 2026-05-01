@@ -2,10 +2,17 @@
 
 import { FormEvent, useState } from 'react';
 import { CampfireLoaderInline } from '@/components/CampfireLoaderInline';
+import { useAnimeReveal } from '@/hooks/useAnimeReveal';
 
 export function CTASection() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const sectionRef = useAnimeReveal<HTMLElement>('[data-anime-reveal]', {
+    staggerMs: 100,
+    delay: 0,
+    translateY: 20,
+    threshold: 0.15,
+  });
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -14,12 +21,12 @@ export function CTASection() {
   };
 
   return (
-    <section id="contact" className="px-4 py-20 md:px-8 md:py-32">
+    <section ref={sectionRef} id="contact" className="px-4 py-20 md:px-8 md:py-32">
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="font-grot relative mx-auto text-[clamp(2.2rem,6.2vw,4.6rem)] leading-[0.96] whitespace-nowrap">
+        <h2 data-anime-reveal className="font-grot relative mx-auto text-[clamp(2.2rem,6.2vw,4.6rem)] leading-[0.96] whitespace-nowrap">
           Ready when your team is.
         </h2>
-        <div className="mt-3 flex justify-center">
+        <div data-anime-reveal className="mt-3 flex justify-center">
           <span className="cta-smoke-wrap relative inline-flex h-[84px] w-[84px] items-center justify-center overflow-visible align-middle md:h-[96px] md:w-[96px]">
             <CampfireLoaderInline
               label=""
@@ -31,7 +38,7 @@ export function CTASection() {
           </span>
         </div>
 
-        <div className="mx-auto mt-4 max-w-2xl">
+        <div data-anime-reveal className="mx-auto mt-4 max-w-2xl">
           <p className="mx-auto mb-8 max-w-[480px] text-base leading-relaxed text-[color:var(--lp-text-secondary)] md:text-lg">
             Get early access updates and a walkthrough invite tailored to your team setup.
           </p>

@@ -1,32 +1,24 @@
 import { ApplicationNotificationsClient } from '@/components/recruitment/ApplicationNotificationsClient';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { createClient } from '@/lib/supabase/server';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getCachedApplicationNotificationsPageData } from '@/lib/recruitment/getCachedApplicationNotificationsPageData';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
 
 export default async function ApplicationNotificationsPage() {
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-  const [{ data: notifications }, permissionKeys] = await Promise.all([
-    supabase.rpc('application_notifications_for_me'),
-    getMyPermissions(orgId),
-  ]);
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const userIdRaw = (bundle as Record<string, unknown>)['user_id'];
+  const userId = typeof userIdRaw === 'string' ? userIdRaw : '';
+  if (!userId) redirect('/login');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  const pageData = await getCachedApplicationNotificationsPageData(orgId, userId);
   const canManageApplications = permissionKeys.includes('applications.manage');
 
   return (
     <ApplicationNotificationsClient
-      notifications={(notifications ?? []) as Parameters<typeof ApplicationNotificationsClient>[0]['notifications']}
+      notifications={pageData.notifications}
       applicationsBasePath={canManageApplications ? '/admin/jobs' : '/hr/jobs'}
     />
   );

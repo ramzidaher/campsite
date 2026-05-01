@@ -133,23 +133,14 @@ export function PageInfoFab() {
         aria-expanded={isOpen}
         aria-controls={panelId}
         aria-label={isOpen ? 'Hide page information' : 'Show page information'}
-        className="pointer-events-auto inline-flex h-12 items-center gap-2 rounded-full pl-3 pr-4 shadow-[0_12px_35px_rgba(18,18,18,0.18)] transition-transform hover:-translate-y-0.5"
+        className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full shadow-[0_10px_24px_rgba(18,18,18,0.14)] transition-transform hover:-translate-y-0.5 sm:h-11 sm:w-11"
         style={{
-          border: '1px solid color-mix(in oklab, var(--org-brand-primary) 36%, var(--org-brand-border))',
-          background: 'color-mix(in oklab, var(--org-brand-primary) 14%, var(--org-brand-bg))',
-          color: 'var(--org-brand-text)',
+          border: '1px solid color-mix(in oklab, var(--org-brand-primary) 28%, var(--org-brand-border))',
+          background: 'color-mix(in oklab, var(--org-brand-primary) 10%, var(--org-brand-bg))',
+          color: 'var(--org-brand-primary)',
         }}
       >
-        <span
-          className="flex h-7 w-7 items-center justify-center rounded-full"
-          style={{
-            background: 'var(--org-brand-primary)',
-            color: 'var(--org-brand-on-primary, #faf9f6)',
-          }}
-        >
-          <Info className="h-4 w-4" aria-hidden />
-        </span>
-        <span className="text-[13px] font-medium">{isOpen ? 'Hide info' : 'Page info'}</span>
+        {isOpen ? <X className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden /> : <Info className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden />}
       </button>
     </div>
   );

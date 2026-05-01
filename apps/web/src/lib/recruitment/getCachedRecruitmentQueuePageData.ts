@@ -12,6 +12,11 @@ export type RecruitmentQueueRow = {
   archived_at: string | null;
   created_at: string | null;
   department_id: string | null;
+  start_date_needed: string | null;
+  advert_release_date: string | null;
+  advert_closing_date: string | null;
+  shortlisting_dates: unknown;
+  interview_schedule: unknown;
   departments: { name?: string } | { name?: string }[] | null;
   submitter: { full_name?: string } | { full_name?: string }[] | null;
 };
@@ -40,7 +45,7 @@ export const getCachedRecruitmentQueuePageData = cache(async (orgId: string): Pr
       const { data } = await supabase
         .from('recruitment_requests')
         .select(
-          'id, job_title, status, urgency, archived_at, created_at, department_id, departments(name), submitter:profiles!recruitment_requests_created_by_fkey(full_name)'
+          'id, job_title, status, urgency, archived_at, created_at, department_id, start_date_needed, advert_release_date, advert_closing_date, shortlisting_dates, interview_schedule, departments(name), submitter:profiles!recruitment_requests_created_by_fkey(full_name)'
         )
         .eq('org_id', orgId)
         .order('created_at', { ascending: false });

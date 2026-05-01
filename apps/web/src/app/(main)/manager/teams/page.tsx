@@ -1,54 +1,40 @@
 import { ManagerTeamsClient } from '@/components/manager/ManagerTeamsClient';
-import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
-import { loadWorkspaceDepartmentIds } from '@/lib/manager/workspaceDepartmentIds';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { createClient } from '@/lib/supabase/server';
+import { getCachedManagerWorkspaceDirectoryPageData } from '@/lib/manager/getCachedManagerWorkspaceDirectoryPageData';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 
 export default async function ManagerTeamsPage() {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
-    '/manager/teams',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, role, status')
-      .eq('id', user.id)
-      .single(),
-    300
-  );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const orgId = profile.org_id as string;
-  const permissionKeys = await withServerPerf('/manager/teams', 'get_my_permissions', getMyPermissions(orgId), 300);
-  if (!permissionKeys.includes('teams.view')) redirect('/broadcasts');
-
-  const managedDeptIds = await withServerPerf(
-    '/manager/teams',
-    'workspace_department_ids',
-    loadWorkspaceDepartmentIds(supabase, user.id, profile.role),
-    300
-  );
   const bundle = await withServerPerf(
     '/manager/teams',
-    'load_departments_directory',
-    loadDepartmentsDirectory(supabase, orgId, managedDeptIds),
-    500
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  const userId = typeof bundle.user_id === 'string' ? bundle.user_id : null;
+  const role = typeof bundle.profile_role === 'string' ? bundle.profile_role : null;
+  if (!orgId || !userId || !role) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!permissionKeys.includes('teams.view')) redirect('/broadcasts');
+
+  const pageData = await withServerPerf(
+    '/manager/teams',
+    'cached_manager_workspace_directory_page_data',
+    getCachedManagerWorkspaceDirectoryPageData(orgId, userId, role),
+    650
   );
 
   const view = (
     <ManagerTeamsClient
-      currentUserId={user.id}
-      departments={bundle.departments}
-      teamsByDept={bundle.teamsByDept}
-      teamMembersByTeamId={bundle.teamMembersByTeamId}
-      staffOptions={bundle.staffOptions}
+      currentUserId={userId}
+      departments={pageData.departments}
+      teamsByDept={pageData.teamsByDept}
+      teamMembersByTeamId={pageData.teamMembersByTeamId}
+      staffOptions={pageData.staffOptions}
     />
   );
   warnIfSlowServerPath('/manager/teams', pathStartedAtMs);

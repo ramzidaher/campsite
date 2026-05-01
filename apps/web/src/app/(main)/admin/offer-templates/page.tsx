@@ -1,7 +1,7 @@
 import { HideInHiringHub } from '@/app/(main)/hr/hiring/HideInHiringHub';
+import { getCachedAdminOfferTemplatesPageData } from '@/lib/admin/getCachedAdminOfferTemplatesPageData';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -24,15 +24,7 @@ export default async function OfferTemplatesPage() {
   const permissionKeys = parseShellPermissionKeys(bundle);
   if (!permissionKeys.includes('offers.view')) redirect('/broadcasts');
 
-  const supabase = await createClient();
-
-  const { data: rows } = await supabase
-    .from('offer_letter_templates')
-    .select('id, name, updated_at')
-    .eq('org_id', orgId)
-    .order('name', { ascending: true });
-
-  const templates = rows ?? [];
+  const { templates } = await getCachedAdminOfferTemplatesPageData(orgId);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">

@@ -1,76 +1,51 @@
 import { AdminOrgBulkApprove } from '@/components/admin/AdminOrgBulkApprove';
 import { AdminOverviewView } from '@/components/admin/AdminOverviewView';
-import { loadAdminOverview } from '@/lib/admin/loadAdminOverview';
-import { loadPendingApprovalsPreview } from '@/lib/dashboard/loadDashboardHome';
+import { getCachedAdminHomePageData } from '@/lib/admin/getCachedAdminHomePageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { createClient } from '@/lib/supabase/server';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import type { PermissionKey } from '@campsite/types';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminHomePage() {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
+  const bundle = await withServerPerf('/admin', 'shell_bundle_for_access', getCachedMainShellLayoutBundle(), 300);
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/broadcasts');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/pending');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  const viewerRoleRaw = (bundle as Record<string, unknown>)['profile_role'];
+  const viewerRole = typeof viewerRoleRaw === 'string' ? viewerRoleRaw : '';
+  const viewerNameRaw = (bundle as Record<string, unknown>)['profile_full_name'];
+  const viewerName = typeof viewerNameRaw === 'string' ? viewerNameRaw : null;
+  const viewerUserIdRaw = (bundle as Record<string, unknown>)['user_id'];
+  const viewerUserId = typeof viewerUserIdRaw === 'string' ? viewerUserIdRaw : '';
+  if (!viewerUserId) redirect('/login');
 
-  const { data: profile } = await withServerPerf(
-    '/admin',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('id, org_id, role, full_name, status')
-      .eq('id', user.id)
-      .single(),
-    300
-  );
-
-  if (!profile?.org_id) redirect('/broadcasts');
-  if (profile.status !== 'active') redirect('/pending');
-
-  const permissionKeys = await withServerPerf(
-    '/admin',
-    'get_my_permissions',
-    getMyPermissions(profile.org_id as string),
-    300
-  );
   const data = await withServerPerf(
     '/admin',
-    'load_admin_overview',
-    loadAdminOverview(supabase, profile.org_id as string, {
-      role: profile.role as string,
-      full_name: profile.full_name as string | null,
-      permissions: permissionKeys as PermissionKey[],
+    'cached_admin_home_page_data',
+    getCachedAdminHomePageData({
+      orgId,
+      userId: viewerUserId,
+      role: viewerRole,
+      fullName: viewerName,
+      permissionKeys: permissionKeys as PermissionKey[],
     }),
-    500
+    700
   );
 
   const showQuickApprove = permissionKeys.includes('members.edit_status' as PermissionKey);
-  const pendingPreview = showQuickApprove && data.pendingCount > 0
-    ? (
-        await withServerPerf(
-          '/admin',
-          'pending_approvals_preview',
-          loadPendingApprovalsPreview(
-            supabase,
-            user.id,
-            profile.org_id as string,
-            profile.role as string
-          ),
-          450
-        )
-      ).slice(0, 8)
-    : [];
+  const pendingPreview = data.pendingPreview;
 
   const view = (
     <div className="pb-10">
-      <AdminOverviewView data={data} />
-      {showQuickApprove && data.pendingCount > 0 ? (
+      <AdminOverviewView data={data.data} />
+      {showQuickApprove && data.data.pendingCount > 0 ? (
         <div className="mx-auto max-w-6xl px-5 sm:px-7">
           <AdminOrgBulkApprove
-            orgId={profile.org_id as string}
-            pendingCount={data.pendingCount}
+            orgId={orgId}
+            pendingCount={data.data.pendingCount}
             pendingPreview={pendingPreview}
           />
         </div>

@@ -8,18 +8,14 @@ import { EmploymentHistoryClient } from '@/components/hr/EmploymentHistoryClient
 import { MedicalNotesClient } from '@/components/hr/MedicalNotesClient';
 import { TaxDocumentsClient } from '@/components/hr/TaxDocumentsClient';
 import { UkTaxDetailsClient } from '@/components/hr/UkTaxDetailsClient';
-import { currentLeaveYearKeyForOrgCalendar, currentLeaveYearKeyUtc } from '@/lib/datetime';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { normalizeUiMode } from '@/lib/uiMode';
 import { withServerPerf, warnIfSlowServerPath } from '@/lib/perf/serverPerf';
-import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
-
-const ADMIN_HR_NON_CRITICAL_QUERY_TIMEOUT_MS = 1500;
+import { getCachedAdminHrEmployeePageData } from '@/lib/admin/getCachedAdminHrEmployeePageData';
+import { getCachedAdminHrEmployeeLimitedProfileData } from '@/lib/admin/getCachedAdminHrEmployeeLimitedProfileData';
 
 export default async function EmployeeHRFilePage({
   params,
@@ -38,53 +34,42 @@ export default async function EmployeeHRFilePage({
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
+  const viewerUserIdRaw = (bundle as Record<string, unknown>)['user_id'];
+  const viewerUserId = typeof viewerUserIdRaw === 'string' ? viewerUserIdRaw : '';
+  if (!viewerUserId) redirect('/login');
   const viewerUiMode =
     typeof bundle.ui_mode === 'string' ? normalizeUiMode(bundle.ui_mode) : normalizeUiMode(null);
-
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
 
   const canViewAll = permissionKeys.includes('hr.view_records');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
   const limitedProfileView = !canViewAll && !canViewTeam;
   if (limitedProfileView) {
-    const [{ data: targetProfile }, { data: targetDepts }] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('full_name, preferred_name, pronouns, show_pronouns, email, status')
-        .eq('id', userId)
-        .eq('org_id', orgId)
-        .maybeSingle(),
-      supabase
-        .from('user_departments')
-        .select('departments(name)')
-        .eq('user_id', userId),
-    ]);
-    if (!targetProfile || targetProfile.status !== 'active') redirect('/hr/records');
-    const deptNames: string[] = [];
-    for (const row of targetDepts ?? []) {
-      const raw = row.departments as { name: string } | { name: string }[] | null;
-      const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
-      for (const d of arr) if (d?.name) deptNames.push(d.name);
-    }
-    const pronouns = Boolean(targetProfile.show_pronouns) && String(targetProfile.pronouns ?? '').trim()
-      ? String(targetProfile.pronouns).trim()
+    const limitedData = await withServerPerf(
+      '/admin/hr/[userId]',
+      'cached_admin_hr_employee_limited_profile',
+      getCachedAdminHrEmployeeLimitedProfileData(orgId, userId),
+      500
+    );
+    if (!limitedData) redirect('/hr/records');
+    const pronouns =
+      Boolean(limitedData.targetProfile.show_pronouns) &&
+      String(limitedData.targetProfile.pronouns ?? '').trim()
+        ? String(limitedData.targetProfile.pronouns).trim()
       : '—';
     return (
       <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
         <div className="rounded-2xl border border-[#e8e8e8] bg-white p-6">
           <h1 className="font-authSerif text-[26px] leading-tight text-[#121212]">
-            {getDisplayName(targetProfile.full_name as string, null)}
+            {getDisplayName(limitedData.targetProfile.full_name, null)}
           </h1>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Full name</p>
-              <p className="text-[14px] text-[#121212]">{targetProfile.full_name}</p>
+              <p className="text-[14px] text-[#121212]">{limitedData.targetProfile.full_name}</p>
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Preferred name</p>
-              <p className="text-[14px] text-[#121212]">{targetProfile.preferred_name ?? '—'}</p>
+              <p className="text-[14px] text-[#121212]">{limitedData.targetProfile.preferred_name ?? '—'}</p>
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pronouns</p>
@@ -92,11 +77,13 @@ export default async function EmployeeHRFilePage({
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Work email</p>
-              <p className="text-[14px] text-[#121212]">{targetProfile.email ?? '—'}</p>
+              <p className="text-[14px] text-[#121212]">{limitedData.targetProfile.email ?? '—'}</p>
             </div>
             <div className="sm:col-span-2">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Department</p>
-              <p className="text-[14px] text-[#121212]">{deptNames.length ? deptNames.join(', ') : '—'}</p>
+              <p className="text-[14px] text-[#121212]">
+                {limitedData.deptNames.length ? limitedData.deptNames.join(', ') : '—'}
+              </p>
             </div>
           </div>
         </div>
@@ -144,261 +131,49 @@ export default async function EmployeeHRFilePage({
     canGrievanceManageAll
   );
 
-  // Wave 1: all queries that only need userId + orgId, run in parallel.
-  const [
-    [{ data: leaveSettingsForYear }, { data: orgForTz }],
-    { data: fileRows },
-    { data: sickScore },
-    { data: hrDocRows },
-    { data: dependantRows },
-    { data: bankRows },
-    { data: ukTaxRows },
-    { data: taxDocRows },
-    { data: employmentHistoryRows },
-    { data: caseRows },
-    { data: medicalRows },
-    { data: privacyRequestRows },
-    { data: customFieldDefs },
-    { data: customCategoryRows },
-    { data: applications },
-  ] = await Promise.all([
-    Promise.all([
-      supabase
-        .from('org_leave_settings')
-        .select('leave_year_start_month, leave_year_start_day')
-        .eq('org_id', orgId)
-        .maybeSingle(),
-      supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
-    ]),
-    supabase.rpc('hr_employee_file', { p_user_id: userId }),
-    supabase.rpc('bradford_factor_for_user', {
-      p_user_id: userId,
-      p_on: new Date().toISOString().slice(0, 10),
-    }),
-    supabase
-      .from('employee_hr_documents')
-      .select(
-        'id, org_id, user_id, category, document_kind, bucket_id, custom_category_id, label, storage_path, file_name, mime_type, byte_size, uploaded_by, created_at, id_document_type, id_number_last4, expires_on, verification_status, is_current'
-      )
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100),
-    supabase
-      .from('employee_dependants')
-      .select(
-        'full_name, relationship, date_of_birth, is_student, is_disabled, is_beneficiary, beneficiary_percentage, phone, email, address, notes, is_emergency_contact'
-      )
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('employee_bank_details')
-      .select(
-        'id, status, is_active, account_holder_display, account_number_last4, sort_code_last4, iban_last4, bank_country, currency, effective_from, submitted_by, reviewed_by, reviewed_at, review_note, created_at'
-      )
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('employee_uk_tax_details')
-      .select(
-        'id, status, is_active, ni_number_masked, ni_number_last2, tax_code_masked, tax_code_last2, effective_from, review_note, created_at'
-      )
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('employee_tax_documents')
-      .select(
-        'id, document_type, tax_year, issue_date, payroll_period_end, status, finance_reference, wagesheet_id, payroll_run_reference, bucket_id, storage_path, file_name, byte_size, is_current, created_at'
-      )
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('employee_employment_history')
-      .select(
-        'role_title, department_name, team_name, manager_name, employment_type, contract_type, fte, location_type, start_date, end_date, change_reason, pay_grade, salary_band, notes, source'
-      )
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .order('start_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(50),
-    canViewSensitiveCaseData
-      ? supabase
-          .from('employee_case_records')
-          .select(
-            'id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, allegations_details, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, witness_details, investigation_notes, internal_notes, linked_documents, archived_at, created_at'
-          )
-          .eq('org_id', orgId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(50)
-      : supabase
-          .from('employee_case_records')
-          .select(
-            'id, case_type, case_ref, category, severity, status, incident_date, reported_date, hearing_date, outcome_effective_date, review_date, summary, outcome_action, appeal_submitted, appeal_outcome, owner_user_id, investigator_user_id, linked_documents, archived_at, created_at'
-          )
-          .eq('org_id', orgId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(50),
-    supabase
-      .from('employee_medical_notes')
-      .select(
-        'id, case_ref, referral_reason, status, fit_for_work_outcome, recommended_adjustments, review_date, next_review_date, summary_for_employee, archived_at, created_at'
-      )
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('privacy_erasure_requests')
-      .select('id, status, created_at')
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .in('status', ['requested', 'legal_review', 'approved'])
-      .order('created_at', { ascending: false })
-      .limit(1),
-    supabase
-      .from('hr_custom_field_definitions')
-      .select(
-        'id, key, label, section, field_type, options, is_required, visible_to_manager, visible_to_self'
-      )
-      .eq('org_id', orgId)
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('employee_document_categories')
-      .select('id, name, document_kind_scope, is_active')
-      .eq('org_id', orgId)
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
-    resolveWithTimeout(
-      supabase
-        .from('job_applications')
-        .select('id, candidate_name, job_listing_id')
-        .eq('org_id', orgId)
-        .order('created_at', { ascending: false })
-        .limit(100),
-      ADMIN_HR_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null } as any
-    ),
-  ]);
+  const pageData = await withServerPerf(
+    '/admin/hr/[userId]',
+    'cached_admin_hr_employee_page_data',
+    getCachedAdminHrEmployeePageData(orgId, userId, canViewSensitiveCaseData),
+    900
+  );
 
-  // Sync computations from wave 1 results.
-  const orgTz = (orgForTz?.timezone as string | null) ?? null;
-  const sm = Number(leaveSettingsForYear?.leave_year_start_month ?? 1);
-  const sd = Number(leaveSettingsForYear?.leave_year_start_day ?? 1);
-  const hrFileLeaveYearKey = orgTz
-    ? currentLeaveYearKeyForOrgCalendar(new Date(), orgTz, sm, sd)
-    : currentLeaveYearKeyUtc(new Date(), sm, sd);
-
-  const fileRow = (fileRows ?? [])[0] ?? null;
+  const hrFileLeaveYearKey = pageData.hrFileLeaveYearKey;
+  const fileRow = pageData.fileRow;
   if (!fileRow) redirect('/hr/records');
 
   const canMarkProbationCheck =
-    canManage || (!!canViewTeam && (fileRow.reports_to_user_id as string | null) === user.id);
+    canManage || (!!canViewTeam && (fileRow.reports_to_user_id as string | null) === viewerUserId);
 
-  const hrRecordId = fileRow.hr_record_id as string | null;
-  const caseIds = (caseRows ?? []).map((r) => r.id as string).filter(Boolean);
-  const medicalIds = (medicalRows ?? []).map((r) => r.id as string).filter(Boolean);
-  const defIds = (customFieldDefs ?? []).map((d) => d.id as string);
-  const docUploaderIds = [...new Set((hrDocRows ?? []).map((d) => d.uploaded_by as string))];
+  const hrDocRows = pageData.hrDocRows;
+  const dependantRows = pageData.dependantRows;
+  const bankRows = pageData.bankRows;
+  const ukTaxRows = pageData.ukTaxRows;
+  const taxDocRows = pageData.taxDocRows;
+  const employmentHistoryRows = pageData.employmentHistoryRows;
+  const caseRows = pageData.caseRows;
+  const medicalRows = pageData.medicalRows;
+  const customFieldDefs = pageData.customFieldDefs;
+  const customCategoryRows = pageData.customCategoryRows;
+  const applications = pageData.applications;
+  const leaveData = pageData.leaveData;
+  const auditRows = pageData.auditRows;
+  const caseEventRows = pageData.caseEventRows;
+  const medicalEventRows = pageData.medicalEventRows;
+  const customFieldValues = pageData.customFieldValues;
+  const activePrivacyRequest = pageData.activePrivacyRequest;
+  const changerNames = pageData.changerNames;
+  const docUploaderNames = pageData.docUploaderNames;
+  const hasPartialData = pageData.partialData === true;
+  const partialSectionSummary = (pageData.partialSections ?? [])
+    .map((label) => String(label).replaceAll('_', ' '))
+    .slice(0, 3)
+    .join(', ');
+
   const categoryNameById = new Map<string, string>(
     (customCategoryRows ?? []).map((r) => [r.id as string, r.name as string])
   );
-  const activePrivacyRequest = (privacyRequestRows ?? [])[0] ?? null;
-
-  // Wave 2: dependent queries that need results from wave 1, run in parallel.
-  const [
-    { data: leaveData },
-    { data: auditRows },
-    { data: caseEventRows },
-    { data: medicalEventRows },
-    { data: customFieldValues },
-    { data: uploaders },
-  ] = await Promise.all([
-    supabase
-      .from('leave_allowances')
-      .select('leave_year, annual_entitlement_days, toil_balance_days')
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .eq('leave_year', hrFileLeaveYearKey)
-      .maybeSingle(),
-    hrRecordId
-      ? supabase
-          .from('employee_hr_record_events')
-          .select('id, field_name, old_value, new_value, created_at, changed_by')
-          .eq('org_id', orgId)
-          .eq('record_id', hrRecordId)
-          .order('created_at', { ascending: false })
-          .limit(50)
-      : Promise.resolve({ data: null, error: null }),
-    caseIds.length
-      ? supabase
-          .from('employee_case_record_events')
-          .select('id, case_id, event_type, old_status, new_status, created_at')
-          .eq('org_id', orgId)
-          .in('case_id', caseIds)
-          .order('created_at', { ascending: false })
-          .limit(100)
-      : Promise.resolve({ data: null, error: null }),
-    medicalIds.length
-      ? supabase
-          .from('employee_medical_note_events')
-          .select('id, medical_note_id, event_type, reason, created_at')
-          .eq('org_id', orgId)
-          .in('medical_note_id', medicalIds)
-          .order('created_at', { ascending: false })
-          .limit(100)
-      : Promise.resolve({ data: null, error: null }),
-    defIds.length
-      ? supabase
-          .from('hr_custom_field_values')
-          .select('definition_id, value')
-          .eq('org_id', orgId)
-          .eq('user_id', userId)
-          .in('definition_id', defIds)
-      : Promise.resolve({ data: null, error: null }),
-    docUploaderIds.length
-      ? supabase.from('profiles').select('id, full_name, preferred_name').in('id', docUploaderIds)
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-
-  // Changer names: depends on auditRows from wave 2, unavoidably sequential.
-  const changerIds = [...new Set((auditRows ?? []).map((e) => e.changed_by as string))];
-  const changerNames: Record<string, string> = {};
-  if (changerIds.length) {
-    const { data: changers } = await resolveWithTimeout(
-      supabase.from('profiles').select('id, full_name, preferred_name').in('id', changerIds),
-      ADMIN_HR_NON_CRITICAL_QUERY_TIMEOUT_MS,
-      { data: [], error: null } as any
-    );
-    for (const c of changers ?? []) {
-      changerNames[c.id as string] = getDisplayName(
-        c.full_name as string,
-        (c.preferred_name as string | null) ?? null
-      );
-    }
-  }
-
-  const docUploaderNames: Record<string, string> = {};
-  for (const c of uploaders ?? []) {
-    docUploaderNames[c.id as string] = getDisplayName(
-      c.full_name as string,
-      (c.preferred_name as string | null) ?? null
-    );
-  }
-
-  const b0 = Array.isArray(sickScore) ? sickScore[0] : sickScore;
+  const b0 = Array.isArray(pageData.sickScore) ? pageData.sickScore[0] : pageData.sickScore;
   const absenceScore =
     b0 && typeof b0 === 'object' && 'bradford_score' in b0
       ? {
@@ -602,7 +377,7 @@ export default async function EmployeeHRFilePage({
           <TaxDocumentsClient
             orgId={orgId}
             subjectUserId={userId}
-            actorUserId={user.id}
+            actorUserId={viewerUserId}
             initialDocs={(taxDocRows ?? []).map((r) => ({
               id: r.id as string,
               document_type: ((r.document_type as string) ?? 'p60') as 'p45' | 'p60',
@@ -808,10 +583,16 @@ export default async function EmployeeHRFilePage({
             (submitted {String(activePrivacyRequest.created_at).slice(0, 10)}).
           </div>
         ) : null}
+        {hasPartialData ? (
+          <div className="mx-auto mt-4 max-w-7xl rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[12.5px] text-[#854d0e]">
+            Some HR detail sections are temporarily delayed and may be partially loaded.
+            {partialSectionSummary ? ` Delayed areas include ${partialSectionSummary}.` : ''}
+          </div>
+        ) : null}
         <EmployeeHrRecordGenZClient
           orgId={orgId}
           subjectUserId={userId}
-          actorUserId={user.id}
+          actorUserId={viewerUserId}
           centerLabel={String(
             (fileRow.display_name as string | null) ??
               (fileRow.full_name as string | null) ??
@@ -1044,10 +825,16 @@ export default async function EmployeeHRFilePage({
           (submitted {String(activePrivacyRequest.created_at).slice(0, 10)}).
         </div>
       ) : null}
+      {hasPartialData ? (
+        <div className="mx-auto mt-4 max-w-7xl rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[12.5px] text-[#854d0e]">
+          Some HR detail sections are temporarily delayed and may be partially loaded.
+          {partialSectionSummary ? ` Delayed areas include ${partialSectionSummary}.` : ''}
+        </div>
+      ) : null}
       <div id="record-core" className="scroll-mt-24">
         <EmployeeHRFileClient
           orgId={orgId}
-          currentUserId={user.id}
+          currentUserId={viewerUserId}
           canManage={canManage}
           canManageEmployeePhotos={!!canPhotoManageAll}
           canViewEmployeePhotos={!!canPhotoViewAll || !!canPhotoManageAll}

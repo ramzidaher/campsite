@@ -1,8 +1,8 @@
 import { HrOneOnOneComplianceClient } from '@/components/one-on-one/HrOneOnOneComplianceClient';
+import { getCachedHrOneOnOneCompliancePageData } from '@/lib/hr/getCachedHrOneOnOneCompliancePageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 export default async function HrOneOnOnesPage() {
@@ -17,38 +17,23 @@ export default async function HrOneOnOnesPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  const supabase = await createClient();
   if (!permissionKeys.includes('hr.view_records')) redirect('/broadcasts');
 
-  const { data: rowsRaw, error } = await withServerPerf(
+  const pageData = await withServerPerf(
     '/admin/hr/one-on-ones',
-    'hr_one_on_one_compliance_list',
-    supabase.rpc('hr_one_on_one_compliance_list', {
-      p_filter: 'all',
-    }),
-    450
+    'cached_hr_one_on_one_compliance_page_data',
+    getCachedHrOneOnOneCompliancePageData(orgId, 'all'),
+    650
   );
-  if (error) {
+  if (pageData.errorMessage) {
     return (
       <div className="p-8">
-        <p className="text-[13px] text-[#b91c1c]">{error.message}</p>
+        <p className="text-[13px] text-[#b91c1c]">{pageData.errorMessage}</p>
       </div>
     );
   }
 
-  const rows = (Array.isArray(rowsRaw) ? rowsRaw : []) as Array<{
-    report_user_id: string;
-    report_name: string;
-    manager_user_id: string;
-    manager_name: string;
-    last_completed_at: string | null;
-    next_due_on: string;
-    cadence_days: number;
-    status: string;
-    days_overdue: number;
-  }>;
-
-  const view = <HrOneOnOneComplianceClient initialRows={rows} />;
+  const view = <HrOneOnOneComplianceClient initialRows={pageData.rows} />;
   warnIfSlowServerPath('/admin/hr/one-on-ones', pathStartedAtMs);
   return view;
 }

@@ -292,6 +292,31 @@ html[data-a11y-dim-flashing-lights='1'] video {
   color: #121212;
 }
 
+/* Orbital timeline support utilities */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.backdrop-blur-lg {
+  backdrop-filter: blur(16px);
+}
+
+.shadow-orbital {
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
 @layer components {
   .auth-title {
     @apply font-authSerif text-[30px] leading-tight tracking-tight text-[#121212];

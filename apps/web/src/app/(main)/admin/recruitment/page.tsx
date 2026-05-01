@@ -1,7 +1,8 @@
 import { AdminRecruitmentListClient } from '@/components/admin/AdminRecruitmentListClient';
+import { getCachedRecruitmentQueuePageData } from '@/lib/recruitment/getCachedRecruitmentQueuePageData';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { withServerPerf } from '@/lib/perf/serverPerf';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 export default async function AdminRecruitmentPage() {
@@ -15,15 +16,12 @@ export default async function AdminRecruitmentPage() {
   );
   if (!canViewQueue) redirect('/broadcasts');
 
-  const supabase = await createClient();
-
-  const { data: rows } = await supabase
-    .from('recruitment_requests')
-    .select(
-      'id, job_title, status, urgency, archived_at, created_at, department_id, start_date_needed, advert_release_date, advert_closing_date, shortlisting_dates, interview_schedule, departments(name), submitter:profiles!recruitment_requests_created_by_fkey(full_name)'
-    )
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false });
+  const rows = await withServerPerf(
+    '/admin/recruitment',
+    'recruitment_queue_bundle_cached',
+    getCachedRecruitmentQueuePageData(orgId),
+    700
+  );
 
   return <AdminRecruitmentListClient rows={(rows ?? []) as Parameters<typeof AdminRecruitmentListClient>[0]['rows']} />;
 }

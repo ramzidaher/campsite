@@ -7,6 +7,7 @@ import {
   invalidateJobRelatedCachesForOrg,
   invalidateLeaveAttendanceCachesForOrg,
   invalidateOnboardingForOrg,
+  invalidateOneOnOneComplianceForOrg,
   invalidateOrgSettingsCachesForOrg,
   invalidateOrgMemberCachesForOrg,
   invalidatePerformanceCyclesForOrg,
@@ -31,6 +32,7 @@ const ALLOWED_SCOPES = new Set([
   'interviews',
   'onboarding',
   'performance',
+  'one-on-ones',
   'hr-records',
   'leave-attendance',
   'attendance-self',
@@ -47,6 +49,7 @@ type CacheInvalidationScope =
   | 'interviews'
   | 'onboarding'
   | 'performance'
+  | 'one-on-ones'
   | 'hr-records'
   | 'leave-attendance'
   | 'attendance-self'
@@ -116,6 +119,14 @@ function canInvalidateScope(scope: CacheInvalidationScope, permissionKeys: strin
   }
   if (scope === 'performance') {
     return permissionKeys.includes('performance.manage_cycles');
+  }
+  if (scope === 'one-on-ones') {
+    return hasAnyPermission(permissionKeys, [
+      'one_on_one.view_own',
+      'one_on_one.view_all_checkins',
+      'one_on_one.manage_direct_reports',
+      'hr.view_records',
+    ]);
   }
   if (scope === 'hr-records') {
     return permissionKeys.includes('hr.manage_records');
@@ -220,6 +231,7 @@ export async function POST(req: NextRequest) {
     if (scope === 'interviews') tasks.push(invalidateInterviewRelatedCachesForOrg(orgId));
     if (scope === 'onboarding') tasks.push(invalidateOnboardingForOrg(orgId));
     if (scope === 'performance') tasks.push(invalidatePerformanceCyclesForOrg(orgId));
+    if (scope === 'one-on-ones') tasks.push(invalidateOneOnOneComplianceForOrg(orgId));
     if (scope === 'hr-records') tasks.push(invalidateProfileSurfaceForOrg(orgId));
     if (scope === 'leave-attendance') tasks.push(invalidateLeaveAttendanceCachesForOrg(orgId));
     if (scope === 'attendance-self') tasks.push(invalidateLeaveAttendanceCachesForOrg(orgId));

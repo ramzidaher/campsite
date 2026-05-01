@@ -1,23 +1,16 @@
 import { AdminRotaView } from '@/components/admin/AdminRotaView';
-import { loadAdminRotaDashboard } from '@/lib/admin/loadAdminRota';
-import { createClient } from '@/lib/supabase/server';
+import { getCachedAdminRotaPageData } from '@/lib/admin/getCachedAdminRotaPageData';
+import { shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminRotaPage() {
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const data = await loadAdminRotaDashboard(supabase, profile.org_id as string);
+  const data = await getCachedAdminRotaPageData(orgId);
 
   return <AdminRotaView data={data} />;
 }

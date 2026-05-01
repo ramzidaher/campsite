@@ -2,38 +2,35 @@ import { redirect } from 'next/navigation';
 import type { PermissionKey } from '@campsite/types';
 
 import { SystemOverviewGraphClient } from '@/components/system/SystemOverviewGraphClient';
-import { loadAdminOverview } from '@/lib/admin/loadAdminOverview';
-import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
+import { getCachedAdminSystemOverviewPageData } from '@/lib/admin/getCachedAdminSystemOverviewPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { buildSystemOverviewGraph } from '@/lib/systemOverview/buildSystemOverviewGraph';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { createClient } from '@/lib/supabase/server';
+import {
+  parseShellPermissionKeys,
+  shellBundleOrgId,
+  shellBundleProfileFullName,
+  shellBundleProfileRole,
+  shellBundleProfileStatus,
+} from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminSystemOverviewPage() {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await withServerPerf(
+  const shellBundle = await withServerPerf(
     '/admin/system-overview',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status, role, full_name')
-      .eq('id', user.id)
-      .maybeSingle(),
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
     300
   );
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const permissionKeys = (await withServerPerf(
-    '/admin/system-overview',
-    'get_my_permissions',
-    getMyPermissions(profile.org_id as string),
-    300
-  )) as PermissionKey[];
+  const orgId = shellBundleOrgId(shellBundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(shellBundle) !== 'active') redirect('/broadcasts');
+  const role = shellBundleProfileRole(shellBundle);
+  const fullName = shellBundleProfileFullName(shellBundle);
+  const permissionKeys = parseShellPermissionKeys(shellBundle) as PermissionKey[];
 
   const hasGraphAccess = permissionKeys.some(
     (k) =>
@@ -53,31 +50,12 @@ export default async function AdminSystemOverviewPage() {
   );
   if (!hasGraphAccess) redirect('/admin');
 
-  const [bundle, adminOverview] = await Promise.all([
-    withServerPerf(
-      '/admin/system-overview',
-      'load_departments_directory',
-      loadDepartmentsDirectory(supabase, profile.org_id as string, null),
-      500
-    ),
-    withServerPerf(
-      '/admin/system-overview',
-      'load_admin_overview',
-      loadAdminOverview(supabase, profile.org_id as string, {
-        role: String(profile.role ?? ''),
-        full_name: (profile.full_name as string | null) ?? null,
-        permissions: permissionKeys,
-      }),
-      500
-    ),
-  ]);
-
-  const graph = buildSystemOverviewGraph({
-    permissions: permissionKeys,
-    bundle,
-    adminOverview,
-    isManagerScoped: false,
-  });
+  const graph = await withServerPerf(
+    '/admin/system-overview',
+    'cached_admin_system_overview_page_data',
+    getCachedAdminSystemOverviewPageData(orgId, user.id, role, fullName, permissionKeys),
+    700
+  );
 
   const view = (
     <SystemOverviewGraphClient

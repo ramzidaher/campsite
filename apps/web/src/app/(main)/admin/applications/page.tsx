@@ -4,10 +4,9 @@ import { jobApplicationStageLabel } from '@/lib/jobs/labels';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import { JOB_APPLICATION_STAGES } from '@campsite/types';
 import Link from 'next/link';
-import { redirect, notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 function spVal(v: string | string[] | undefined): string {
   if (typeof v === 'string') return v.trim();
@@ -39,7 +38,6 @@ export default async function AdminApplicationsPage({
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   if (!permissionKeys.includes('applications.view')) redirect('/broadcasts');
 
-  const supabase = await createClient();
   const sp = await searchParams;
   const filterJobId = spVal(sp.job);
   const filterStage = spVal(sp.stage);
@@ -47,62 +45,21 @@ export default async function AdminApplicationsPage({
   const filterFrom = spVal(sp.from);
   const filterTo = spVal(sp.to);
   const hasFilters = Boolean(filterJobId || filterStage || filterDept || filterFrom || filterTo);
-
-  let jobs: Array<{ id: string; title: string; status: string }> = [];
-  let departments: Array<{ id: string; name: string }> = [];
-  let rows: Array<Record<string, unknown>> = [];
-
-  if (!hasFilters) {
-    const cachedData = await withServerPerf(
-      '/admin/applications',
-      'applications_bundle_cached',
-      getCachedAdminApplicationsPageData(orgId),
-      700
-    );
-    jobs = cachedData.jobs;
-    departments = cachedData.departments;
-    rows = cachedData.apps as Array<Record<string, unknown>>;
-  } else {
-    let applicationsQuery = supabase
-      .from('job_applications')
-      .select(
-        `
-            id,
-            candidate_name,
-            candidate_email,
-            stage,
-            submitted_at,
-            job_listing_id,
-            department_id,
-            job_listings ( title ),
-            departments ( name )
-          `
-      )
-      .eq('org_id', orgId)
-      .order('submitted_at', { ascending: false })
-      .limit(300);
-
-    if (filterJobId) applicationsQuery = applicationsQuery.eq('job_listing_id', filterJobId);
-    if (filterStage) applicationsQuery = applicationsQuery.eq('stage', filterStage);
-    if (filterDept) applicationsQuery = applicationsQuery.eq('department_id', filterDept);
-    if (filterFrom) applicationsQuery = applicationsQuery.gte('submitted_at', `${filterFrom}T00:00:00.000Z`);
-    if (filterTo) applicationsQuery = applicationsQuery.lte('submitted_at', `${filterTo}T23:59:59.999Z`);
-
-    const [{ data: jobsRes }, { data: departmentsRes }, { data: apps, error }] = await Promise.all([
-      supabase
-        .from('job_listings')
-        .select('id, title, status')
-        .eq('org_id', orgId)
-        .order('title', { ascending: true }),
-      supabase.from('departments').select('id, name').eq('org_id', orgId).order('name', { ascending: true }),
-      withServerPerf('/admin/applications', 'applications_query', applicationsQuery, 500),
-    ]);
-
-    if (error) notFound();
-    jobs = (jobsRes ?? []) as typeof jobs;
-    departments = (departmentsRes ?? []) as typeof departments;
-    rows = (apps ?? []) as Array<Record<string, unknown>>;
-  }
+  const cachedData = await withServerPerf(
+    '/admin/applications',
+    hasFilters ? 'applications_bundle_filtered_cached' : 'applications_bundle_cached',
+    getCachedAdminApplicationsPageData(orgId, {
+      jobId: filterJobId,
+      stage: filterStage,
+      deptId: filterDept,
+      from: filterFrom,
+      to: filterTo,
+    }),
+    700
+  );
+  const jobs = cachedData.jobs;
+  const departments = cachedData.departments;
+  const rows = cachedData.apps as Array<Record<string, unknown>>;
 
   const controlClass =
     'h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';

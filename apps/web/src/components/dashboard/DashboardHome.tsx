@@ -57,6 +57,7 @@ export function DashboardHome({
 
   const statScope = data.dashboardStatScope;
   const isStale = data.dashboardDataFreshness === 'stale';
+  const isPartial = data.dashboardPartialData === true;
   const lastUpdatedSeconds =
     typeof data.dashboardLastSuccessAt === 'number'
       ? Math.max(0, Math.round((Date.now() - data.dashboardLastSuccessAt) / 1000))
@@ -96,6 +97,11 @@ export function DashboardHome({
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
           Refreshing dashboard data...
           {lastUpdatedSeconds !== null ? ` Last updated ${lastUpdatedSeconds}s ago.` : ''}
+        </div>
+      ) : null}
+      {isPartial ? (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+          Some dashboard sections are temporarily delayed. Data may be partially loaded.
         </div>
       ) : null}
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

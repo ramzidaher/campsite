@@ -2,21 +2,11 @@ import { HrOverviewSnapshotClient } from '@/components/hr/HrOverviewSnapshotClie
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { getMainShellHrNavItemsByPermissions } from '@/lib/adminGates';
-import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
-import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
-import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import { getCachedHrOverviewPageData } from '@/lib/hr/getCachedHrOverviewPageData';
 
 export default async function HrOverviewPage() {
-  const bundle = await getCachedMainShellLayoutBundle();
-  const orgId = shellBundleOrgId(bundle);
-  if (!orgId) redirect('/login');
-  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
-
-  const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!getMainShellHrNavItemsByPermissions(permissionKeys)?.length) redirect('/broadcasts');
-
-  const badges = parseShellBadgeCounts(bundle);
+  const pageData = await getCachedHrOverviewPageData();
+  if (pageData.kind === 'redirect') redirect(pageData.to);
   return (
     <div className="font-sans text-[#121212]">
       <div className="mb-7">
@@ -29,7 +19,7 @@ export default async function HrOverviewPage() {
           for balances and requests.
         </p>
       </div>
-      <HrOverviewSnapshotClient permissionKeys={permissionKeys} badges={badges} />
+      <HrOverviewSnapshotClient permissionKeys={pageData.permissionKeys} badges={pageData.badges} />
     </div>
   );
 }

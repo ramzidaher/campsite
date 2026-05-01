@@ -1,34 +1,32 @@
 import { AdminTeamsClient } from '@/components/admin/AdminTeamsClient';
-import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
+import { getCachedAdminTeamsPageData } from '@/lib/admin/getCachedAdminTeamsPageData';
 import { hasPermission } from '@/lib/adminGates';
-import { createClient } from '@/lib/supabase/server';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import { withServerPerf } from '@/lib/perf/serverPerf';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminTeamsPage() {
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id });
-  const permissionKeys = ((perms ?? []) as Array<{ permission_key?: string }>).map((p) => String(p.permission_key ?? ''));
+  const bundle = await withServerPerf('/admin/teams', 'shell_bundle_for_access', getCachedMainShellLayoutBundle(), 300);
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
   if (!hasPermission(permissionKeys, 'departments.view')) redirect('/admin');
 
-  const bundle = await loadDepartmentsDirectory(supabase, profile.org_id as string, null);
+  const pageData = await withServerPerf(
+    '/admin/teams',
+    'cached_admin_teams_page_data',
+    getCachedAdminTeamsPageData(orgId),
+    650
+  );
 
   return (
     <AdminTeamsClient
-      initialDepartments={bundle.departments}
-      initialTeamsByDept={bundle.teamsByDept}
-      teamMembersByTeamId={bundle.teamMembersByTeamId}
-      staffOptions={bundle.staffOptions}
+      initialDepartments={pageData.departments}
+      initialTeamsByDept={pageData.teamsByDept}
+      teamMembersByTeamId={pageData.teamMembersByTeamId}
+      staffOptions={pageData.staffOptions}
     />
   );
 }

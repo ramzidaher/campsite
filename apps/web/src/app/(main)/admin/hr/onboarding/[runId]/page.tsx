@@ -1,14 +1,11 @@
 import { OnboardingRunClient } from '@/components/admin/hr/onboarding/OnboardingRunClient';
+import { getCachedOnboardingRunPageData } from '@/lib/hr/getCachedOnboardingRunPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
-
-const ONBOARDING_COMPLETERS_TIMEOUT_MS = 1200;
 
 export default async function OnboardingRunPage({ params }: { params: Promise<{ runId: string }> }) {
   const pathStartedAtMs = Date.now();
@@ -23,22 +20,16 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const runRes = await withServerPerf(
+  const pageData = await withServerPerf(
     '/admin/hr/onboarding/[runId]',
-    'onboarding_run_lookup',
-    supabase
-      .from('onboarding_runs')
-      .select('id, user_id, status, employment_start_date, created_at, template_id')
-      .eq('org_id', orgId)
-      .eq('id', runId)
-      .maybeSingle(),
-    350
+    'cached_onboarding_run_page_data',
+    getCachedOnboardingRunPageData(orgId, runId),
+    650
   );
-  const run = runRes.data;
+  const run = pageData.run;
   const canManageRuns       = permissionKeys.includes('onboarding.manage_runs');
   const canCompleteOwnTasks = permissionKeys.includes('onboarding.complete_own_tasks');
 
@@ -49,47 +40,9 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
   const canActAsEmployeeSelf = canCompleteOwnTasks && isSelfRun;
 
   if (!canActAsManager && !canActAsEmployeeSelf) redirect('/hr/onboarding');
-
-  const { data: tasks } = await withServerPerf(
-    '/admin/hr/onboarding/[runId]',
-    'onboarding_run_tasks',
-    supabase
-      .from('onboarding_run_tasks')
-      .select('id, title, description, assignee_type, category, due_date, sort_order, status, completed_at, completed_by')
-      .eq('run_id', runId)
-      .eq('org_id', orgId)
-      .order('sort_order'),
-    400
-  );
-
-  const { data: employee } = await withServerPerf(
-    '/admin/hr/onboarding/[runId]',
-    'employee_lookup',
-    supabase
-      .from('profiles')
-      .select('id, full_name, preferred_name, email, avatar_url')
-      .eq('id', run.user_id as string)
-      .maybeSingle(),
-    300
-  );
-
-  const completerIds = [...new Set((tasks ?? []).map((t) => t.completed_by as string).filter(Boolean))];
-  const completerNames: Record<string, string> = {};
-  if (completerIds.length) {
-    const { data: completers } = await resolveWithTimeout(
-      withServerPerf(
-        '/admin/hr/onboarding/[runId]',
-        'completer_names_lookup',
-        supabase.from('profiles').select('id, full_name, preferred_name').in('id', completerIds),
-        350
-      ),
-      ONBOARDING_COMPLETERS_TIMEOUT_MS,
-      { data: [], error: null } as any
-    );
-    for (const c of completers ?? []) {
-      completerNames[c.id as string] = getDisplayName(c.full_name as string, (c.preferred_name as string | null) ?? null);
-    }
-  }
+  const tasks = pageData.tasks;
+  const employee = pageData.employee;
+  const completerNames = pageData.completerNames;
 
   const view = (
     <OnboardingRunClient
@@ -106,22 +59,22 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
         created_at: run.created_at as string,
       }}
       employee={{
-        id: (employee?.id as string) ?? run.user_id as string,
-        display_name: getDisplayName((employee?.full_name as string) ?? null, (employee?.preferred_name as string | null) ?? null),
-        email: (employee?.email as string | null) ?? null,
-        avatar_url: (employee?.avatar_url as string | null) ?? null,
+        id: employee?.id ?? run.user_id,
+        display_name: getDisplayName(employee?.full_name ?? null, employee?.preferred_name ?? null),
+        email: employee?.email ?? null,
+        avatar_url: employee?.avatar_url ?? null,
       }}
       tasks={(tasks ?? []).map((t) => ({
-        id: t.id as string,
-        title: t.title as string,
-        description: (t.description as string | null) ?? null,
-        assignee_type: t.assignee_type as string,
-        category: t.category as string,
-        due_date: (t.due_date as string | null) ?? null,
-        sort_order: t.sort_order as number,
-        status: t.status as string,
-        completed_at: (t.completed_at as string | null) ?? null,
-        completer_name: t.completed_by ? (completerNames[t.completed_by as string] ?? 'Unknown') : null,
+        id: t.id,
+        title: t.title,
+        description: t.description ?? null,
+        assignee_type: t.assignee_type,
+        category: t.category,
+        due_date: t.due_date ?? null,
+        sort_order: t.sort_order,
+        status: t.status,
+        completed_at: t.completed_at ?? null,
+        completer_name: t.completed_by ? (completerNames[t.completed_by] ?? 'Unknown') : null,
       }))}
     />
   );

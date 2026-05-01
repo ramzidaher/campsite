@@ -1,11 +1,10 @@
 import { AdminDepartmentsClient } from '@/components/admin/AdminDepartmentsClient';
-import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
+import { getCachedAdminTeamsPageData } from '@/lib/admin/getCachedAdminTeamsPageData';
 import { hasPermission } from '@/lib/adminGates';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminDepartmentsPage({
   searchParams,
@@ -16,52 +15,43 @@ export default async function AdminDepartmentsPage({
   const sp = await searchParams;
   const openDeptId = typeof sp.dept === 'string' && sp.dept.trim() ? sp.dept.trim() : null;
 
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
-    '/admin/departments',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, role, status')
-      .eq('id', user.id)
-      .single(),
-    300
-  );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const permissionKeys = await withServerPerf(
-    '/admin/departments',
-    'get_my_permissions',
-    getMyPermissions(profile.org_id as string),
-    300
-  );
-  if (!hasPermission(permissionKeys, 'departments.view')) redirect('/admin');
-
   const bundle = await withServerPerf(
     '/admin/departments',
-    'load_departments_directory',
-    loadDepartmentsDirectory(supabase, profile.org_id as string, null),
-    500
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
+    300
+  );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!hasPermission(permissionKeys, 'departments.view')) redirect('/admin');
+  const userIdRaw = (bundle as Record<string, unknown>)['user_id'];
+  const userId = typeof userIdRaw === 'string' ? userIdRaw : '';
+  if (!userId) redirect('/login');
+
+  const pageData = await withServerPerf(
+    '/admin/departments',
+    'cached_admin_teams_page_data',
+    getCachedAdminTeamsPageData(orgId),
+    650
   );
 
   const view = (
     <AdminDepartmentsClient
-      orgId={profile.org_id}
-      currentUserId={user.id}
+      orgId={orgId}
+      currentUserId={userId}
       isOrgAdmin
       openDeptIdFromUrl={openDeptId}
-      initialDepartments={bundle.departments}
-      categoriesByDept={bundle.categoriesByDept}
-      teamsByDept={bundle.teamsByDept}
-      teamMembersByTeamId={bundle.teamMembersByTeamId}
-      managersByDept={bundle.managersByDept}
-      memberCountByDept={bundle.memberCountByDept}
-      membersByDept={bundle.membersByDept}
-      broadcastPermsByDept={bundle.broadcastPermsByDept}
-      staffOptions={bundle.staffOptions}
+      initialDepartments={pageData.departments}
+      categoriesByDept={pageData.categoriesByDept}
+      teamsByDept={pageData.teamsByDept}
+      teamMembersByTeamId={pageData.teamMembersByTeamId}
+      managersByDept={pageData.managersByDept}
+      memberCountByDept={pageData.memberCountByDept}
+      membersByDept={pageData.membersByDept}
+      broadcastPermsByDept={pageData.broadcastPermsByDept}
+      staffOptions={pageData.staffOptions}
     />
   );
   warnIfSlowServerPath('/admin/departments', pathStartedAtMs);

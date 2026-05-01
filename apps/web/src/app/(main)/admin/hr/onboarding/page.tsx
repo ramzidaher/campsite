@@ -1,12 +1,10 @@
 import { OnboardingHubClient } from '@/components/admin/hr/onboarding/OnboardingHubClient';
-import { getCachedOnboardingHubSharedData, getCachedOnboardingTemplateTasks } from '@/lib/hr/getCachedOnboardingHubData';
+import { getCachedOnboardingHubPageData } from '@/lib/hr/onboardingHubRouteData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import { getDisplayName } from '@/lib/names';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function OnboardingHubPage({
   searchParams,
@@ -24,9 +22,9 @@ export default async function OnboardingHubPage({
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
+  const userIdRaw = (bundle as Record<string, unknown>)['user_id'];
+  const userId = typeof userIdRaw === 'string' ? userIdRaw : '';
+  if (!userId) redirect('/login');
   const canTemplates        = permissionKeys.includes('onboarding.manage_templates');
   const canManageRuns       = permissionKeys.includes('onboarding.manage_runs');
   const canCompleteOwnTasks = permissionKeys.includes('onboarding.complete_own_tasks');
@@ -35,31 +33,23 @@ export default async function OnboardingHubPage({
   if (!canTemplates && !canViewRuns) redirect('/admin');
 
   const { template: rawTemplateId } = await searchParams;
+  const onlyOwnRuns = !canManageRuns && canCompleteOwnTasks;
 
-  let runsQuery = supabase
-    .from('onboarding_runs')
-    .select('id, user_id, status, employment_start_date, created_at, template_id')
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false })
-    .limit(100);
-  if (!canManageRuns && canCompleteOwnTasks) {
-    // Apply self-only scope in SQL instead of filtering in memory.
-    runsQuery = runsQuery.eq('user_id', user.id);
-  }
+  const pageData = await withServerPerf(
+    '/admin/hr/onboarding',
+    'cached_onboarding_hub_page_data',
+    getCachedOnboardingHubPageData({
+      orgId,
+      userId,
+      onlyOwnRuns,
+      selectedTemplateId: (rawTemplateId ?? '').trim() || null,
+    }),
+    650
+  );
 
-  const [sharedData, runsRes] = await Promise.all([
-    withServerPerf(
-      '/admin/hr/onboarding',
-      'shared_bundle_cached',
-      getCachedOnboardingHubSharedData(orgId),
-      500
-    ),
-    withServerPerf('/admin/hr/onboarding', 'runs_lookup', runsQuery, 450),
-  ]);
-
-  const templates = sharedData.templates ?? [];
-  const members = sharedData.members ?? [];
-  const runs = runsRes.data ?? [];
+  const templates = pageData.sharedData.templates ?? [];
+  const members = pageData.sharedData.members ?? [];
+  const runs = pageData.runs ?? [];
 
   // resolve names
   const memberMap: Record<string, { display_name: string; email: string | null }> = {};
@@ -74,20 +64,11 @@ export default async function OnboardingHubPage({
   for (const t of templates ?? []) templateMap[t.id as string] = t.name as string;
 
   const selectedTemplateId = (rawTemplateId ?? '').trim();
-  const validSelectedTemplateId =
-    selectedTemplateId && (templates ?? []).some((t) => (t.id as string) === selectedTemplateId)
-      ? selectedTemplateId
-      : null;
-
-  const templateTasks = validSelectedTemplateId
-    ? await withServerPerf(
-        '/admin/hr/onboarding',
-        'template_tasks_cached',
-        getCachedOnboardingTemplateTasks(orgId, validSelectedTemplateId),
-        350
-      )
-    : [];
-  const readinessRows = sharedData.readinessRows ?? [];
+  const validSelectedTemplateId = selectedTemplateId && templates.some((t) => (t.id as string) === selectedTemplateId)
+    ? selectedTemplateId
+    : null;
+  const templateTasks = validSelectedTemplateId ? pageData.templateTasks : [];
+  const readinessRows = pageData.sharedData.readinessRows ?? [];
 
   const enrichedRuns = (runs ?? []).map((r) => ({
     id: r.id as string,

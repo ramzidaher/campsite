@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 
 export type QuestionOwner = 'employee' | 'manager' | 'both';
@@ -191,6 +192,7 @@ export function OneOnOneMeetingDetailClient({
         setErr(error.message);
         return;
       }
+      await invalidateClientCaches({ scopes: ['one-on-ones'] }).catch(() => null);
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 2000);
       router.refresh();
@@ -250,6 +252,7 @@ export function OneOnOneMeetingDetailClient({
       setErr(error.message);
       return;
     }
+    await invalidateClientCaches({ scopes: ['one-on-ones'] }).catch(() => null);
     const { data } = await supabase.rpc('one_on_one_meeting_get', { p_meeting_id: meeting.id });
     if (data && typeof data === 'object') {
       const m2 = data as unknown as MeetingDetail;
@@ -269,6 +272,7 @@ export function OneOnOneMeetingDetailClient({
       setErr(error.message);
       return;
     }
+    await invalidateClientCaches({ scopes: ['one-on-ones'] }).catch(() => null);
     const nextLocked = status === 'completed';
     setMeeting((m) => ({
       ...m,

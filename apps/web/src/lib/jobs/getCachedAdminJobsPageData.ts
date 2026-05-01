@@ -22,6 +22,10 @@ function getJobsPageCacheKey(orgId: string): string {
   return `org:${orgId}`;
 }
 
+function getPanelJobsPageCacheKey(orgId: string, profileId: string): string {
+  return `org:${orgId}:panelist:${profileId}`;
+}
+
 export const getCachedAdminJobsPageData = cache(async (orgId: string): Promise<AdminJobsPageData> => {
   return getOrLoadSharedCachedValue({
     cache: jobsPageResponseCache,
@@ -51,3 +55,58 @@ export const getCachedAdminJobsPageData = cache(async (orgId: string): Promise<A
     },
   });
 });
+
+export const getCachedPanelJobsPageData = cache(
+  async (orgId: string, profileId: string): Promise<AdminJobsPageData> => {
+    return getOrLoadSharedCachedValue({
+      cache: jobsPageResponseCache,
+      inFlight: jobsPageInFlight,
+      key: getPanelJobsPageCacheKey(orgId, profileId),
+      cacheNamespace: 'campsite:jobs:listings',
+      ttlMs: JOBS_PAGE_RESPONSE_CACHE_TTL_MS,
+      load: async () => {
+        const supabase = await createClient();
+        const [{ data: orgRes }, { data: panelJobs }] = await Promise.all([
+          supabase.from('organisations').select('slug').eq('id', orgId).maybeSingle(),
+          supabase
+            .from('job_listing_panelists')
+            .select(
+              'job_listings!inner(id, title, slug, status, grade_level, salary_band, contract_type, published_at, applications_close_at, posted_year, department_id, departments(name))'
+            )
+            .eq('org_id', orgId)
+            .eq('profile_id', profileId)
+            .order('created_at', { ascending: false }),
+        ]);
+
+        const jobRows = (panelJobs ?? [])
+          .map(
+            (row) =>
+              (
+                row as {
+                  job_listings:
+                    | AdminJobsPageData['jobRows'][number]
+                    | AdminJobsPageData['jobRows'][number][];
+                }
+              ).job_listings
+          )
+          .flatMap((rel) => (Array.isArray(rel) ? rel : [rel]))
+          .filter(Boolean);
+
+        const deptMap = new Map<string, string>();
+        for (const job of jobRows as Array<{
+          department_id?: string | null;
+          departments?: { name?: string } | { name?: string }[] | null;
+        }>) {
+          const dept = Array.isArray(job.departments) ? job.departments[0] : job.departments;
+          if (job.department_id && dept?.name) deptMap.set(job.department_id, dept.name);
+        }
+
+        return {
+          orgSlug: (orgRes?.slug as string | undefined)?.trim() ?? '',
+          jobRows,
+          deptRows: [...deptMap.entries()].map(([id, name]) => ({ id, name })),
+        };
+      },
+    });
+  }
+);

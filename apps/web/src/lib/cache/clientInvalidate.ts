@@ -8,6 +8,7 @@ export type ClientCacheInvalidationScope =
   | 'interviews'
   | 'onboarding'
   | 'performance'
+  | 'one-on-ones'
   | 'hr-records'
   | 'leave-attendance'
   | 'attendance-self'

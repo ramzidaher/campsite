@@ -1,22 +1,11 @@
 import { ReportsHomeClient } from '@/components/reports/ReportsHomeClient';
-import {
-  parseShellPermissionKeys,
-  shellBundleOrgId,
-  shellBundleProfileStatus,
-} from '@/lib/shell/shellBundleAccess';
-import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import { getCachedReportsPageData } from '@/lib/reports/getCachedReportsPageData';
 import { redirect } from 'next/navigation';
 
 export default async function ReportsPage() {
-  const bundle = await getCachedMainShellLayoutBundle();
-  const orgId = shellBundleOrgId(bundle);
-  if (!orgId) redirect('/login');
-  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
-
-  const permissionKeys = parseShellPermissionKeys(bundle);
-  const canManage = permissionKeys.includes('reports.manage');
-  const canView = canManage || permissionKeys.includes('reports.view');
-  if (!canView) redirect('/dashboard');
+  const pageData = await getCachedReportsPageData();
+  if (pageData.kind === 'redirect') redirect(pageData.to);
+  const { canManage } = pageData;
 
   return (
     <div className="mx-auto w-full max-w-[90rem] px-5 py-8 sm:px-7 font-sans text-[#121212]">

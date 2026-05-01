@@ -1,8 +1,8 @@
 import { CustomHrFieldDefinitionsClient } from '@/components/hr/CustomHrFieldDefinitionsClient';
+import { getCachedAdminHrCustomFieldsPageData } from '@/lib/hr/getCachedAdminHrCustomFieldsPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 export default async function AdminHrCustomFieldsPage() {
@@ -17,21 +17,15 @@ export default async function AdminHrCustomFieldsPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  const supabase = await createClient();
   const canView       = permissionKeys.includes('hr.custom_fields.view');
   const canManageDefs = permissionKeys.includes('hr.custom_fields.manage_definitions');
   if (!canView && !canManageDefs) redirect('/admin');
 
-  const { data: defs } = await withServerPerf(
+  const { definitions } = await withServerPerf(
     '/admin/hr/custom-fields',
-    'custom_field_definitions',
-    supabase
-      .from('hr_custom_field_definitions')
-      .select('id, key, label, section, field_type, is_required, visible_to_manager, visible_to_self, is_active')
-      .eq('org_id', orgId)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true }),
-    350
+    'cached_admin_hr_custom_fields_page_data',
+    getCachedAdminHrCustomFieldsPageData(orgId),
+    550
   );
 
   const view = (
@@ -39,7 +33,7 @@ export default async function AdminHrCustomFieldsPage() {
       {canManageDefs ? (
         <CustomHrFieldDefinitionsClient
           orgId={orgId}
-          initialDefinitions={(defs ?? []).map((d) => ({
+          initialDefinitions={definitions.map((d) => ({
             id: d.id as string,
             key: d.key as string,
             label: d.label as string,

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 
 export type OneOnOneMeetingRow = {
@@ -80,6 +81,7 @@ export function OneOnOnesHubClient({
       setErr(error.message);
       return;
     }
+    await invalidateClientCaches({ scopes: ['one-on-ones'] }).catch(() => null);
     setShowNew(false);
     const id = data as string;
     if (id) {
