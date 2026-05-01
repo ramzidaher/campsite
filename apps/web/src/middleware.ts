@@ -40,6 +40,7 @@ export async function middleware(request: NextRequest) {
   const supabasePublicKey = getSupabasePublicKey();
 
   let user: User | null = null;
+  let authCheckTimedOut = false;
   if (supabaseUrl && supabasePublicKey) {
     const supabase = createServerClient(supabaseUrl, supabasePublicKey, {
       cookies: {
@@ -72,6 +73,7 @@ export async function middleware(request: NextRequest) {
         typeof error === 'object' && error !== null && 'code' in error
           ? String((error as { code?: unknown }).code ?? '')
           : '';
+      authCheckTimedOut = message.includes('middleware auth timeout');
       if (message.includes('Invalid Refresh Token') || code === 'refresh_token_not_found') {
         clearStaleSupabaseAuthCookies(request, response);
       }
@@ -130,6 +132,7 @@ export async function middleware(request: NextRequest) {
 
   if (
     !user &&
+    !authCheckTimedOut &&
     !isAuthPath(pathname) &&
     !isPublicPath(pathname) &&
     pathname !== '/' &&
