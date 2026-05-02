@@ -9,12 +9,16 @@ import { getSupabasePublicKey, getSupabaseUrl } from './lib/supabase/env';
 import { getPlatformAdminHost } from './lib/tenant/hostConfig';
 
 const MIDDLEWARE_AUTH_TIMEOUT_MS = 1500;
+const AUTH_COOKIE_NAME_PATTERNS = [
+  /^sb-[^-]+-auth-token(?:\.\d+)?$/,
+  /^sb-[^-]+-auth-token-code-verifier$/,
+];
 
 function clearStaleSupabaseAuthCookies(request: NextRequest, response: NextResponse): void {
   const staleCookieNames = request.cookies
     .getAll()
     .map((cookie) => cookie.name)
-    .filter((name) => name.startsWith('sb-'));
+    .filter((name) => AUTH_COOKIE_NAME_PATTERNS.some((pattern) => pattern.test(name)));
 
   for (const cookieName of staleCookieNames) {
     request.cookies.delete(cookieName);
@@ -33,6 +37,9 @@ export async function middleware(request: NextRequest) {
   const { orgSlug, isPlatformAdmin } = resolveHostRequestContext(host, url.searchParams.get('org'));
 
   const nextHeaders = new Headers(request.headers);
+  nextHeaders.delete('x-campsite-org-slug');
+  nextHeaders.delete('x-campsite-platform-admin');
+  nextHeaders.delete('x-campsite-pathname');
   if (orgSlug) {
     nextHeaders.set('x-campsite-org-slug', orgSlug);
   }
@@ -79,7 +86,14 @@ export async function middleware(request: NextRequest) {
           ? String((error as { code?: unknown }).code ?? '')
           : '';
       authCheckTimedOut = message.includes('middleware auth timeout');
-      if (message.includes('Invalid Refresh Token') || code === 'refresh_token_not_found') {
+      const isRefreshTokenAlreadyUsed =
+        code === 'refresh_token_already_used' || message.includes('Invalid Refresh Token: Already Used');
+      const isRefreshTokenNotFound = code === 'refresh_token_not_found';
+      if (isRefreshTokenAlreadyUsed) {
+        // Supabase refresh tokens rotate; concurrent requests can transiently race on refresh.
+        // Treat this as fail-open in middleware to avoid spurious logouts.
+        authCheckTimedOut = true;
+      } else if (message.includes('Invalid Refresh Token') || isRefreshTokenNotFound) {
         clearStaleSupabaseAuthCookies(request, response);
       }
       // Fail open on transient auth/provider stalls so public/login routes remain responsive.
@@ -153,7 +167,6 @@ export async function middleware(request: NextRequest) {
 
   if (
     !user &&
-    !authCheckTimedOut &&
     !isAuthPath(pathname) &&
     !isPublicPath(pathname) &&
     pathname !== '/' &&
@@ -162,6 +175,9 @@ export async function middleware(request: NextRequest) {
     const login = request.nextUrl.clone();
     login.pathname = '/login';
     login.searchParams.set('next', pathname);
+    if (authCheckTimedOut) {
+      login.searchParams.set('error', 'auth_temporarily_unavailable');
+    }
     return NextResponse.redirect(login);
   }
 
