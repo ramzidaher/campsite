@@ -16,7 +16,7 @@ export default async function ManagerDashboardPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(shellBundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(shellBundle);
-  const canViewDepartments   = permissionKeys.includes('departments.view');
+  const canViewDepartments = permissionKeys.includes('departments.view');
   const canCreateRecruitment = permissionKeys.includes('recruitment.create_request');
   if (!canViewDepartments && !canCreateRecruitment) redirect('/forbidden');
 
@@ -47,6 +47,9 @@ export default async function ManagerDashboardPage() {
       departmentNames={pageData.departmentNames}
       upcomingItems={pageData.upcomingItems}
       departmentBreakdown={pageData.departmentBreakdown}
+      staffTimelineRows={pageData.staffTimelineRows}
+      viewerUserId={user.id}
+      viewerFullName={pageData.viewerFullName}
     />
   );
   warnIfSlowServerPath('/manager', pathStartedAtMs);

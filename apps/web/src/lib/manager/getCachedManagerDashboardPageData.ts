@@ -6,6 +6,34 @@ import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { withServerPerf } from '@/lib/perf/serverPerf';
 import { createClient } from '@/lib/supabase/server';
 
+export type StaffTimelineItem = {
+  id: string;
+  title: string;
+  date: string;
+  category:
+    | 'new_starter'
+    | 'right_to_work'
+    | 'contract'
+    | 'induction'
+    | 'probation'
+    | 'check_in'
+    | 'offer'
+    | 'other';
+  source: string;
+  editable: boolean;
+  editHref: string | null;
+  completed: boolean;
+  recurring: boolean;
+  details: string;
+};
+
+export type StaffTimelineRow = {
+  userId: string;
+  fullName: string;
+  departmentName: string | null;
+  items: StaffTimelineItem[];
+};
+
 export type ManagerDashboardPageData = {
   deptIds: string[];
   pendingUsers: number;
@@ -19,6 +47,8 @@ export type ManagerDashboardPageData = {
   departmentNames: string[];
   upcomingItems: Array<{ id: string; title: string; start_time: string; kind: 'event' | 'shift' }>;
   departmentBreakdown: Array<{ id: string; name: string; members: number; shiftsWeek: number }>;
+  staffTimelineRows: StaffTimelineRow[];
+  viewerFullName: string;
 };
 
 const MANAGER_DASHBOARD_PAGE_RESPONSE_CACHE_TTL_MS = Number.parseInt(
@@ -43,8 +73,22 @@ export const getCachedManagerDashboardPageData = cache(
       ttlMs: MANAGER_DASHBOARD_PAGE_RESPONSE_CACHE_TTL_MS,
       load: async () => {
         const supabase = await createClient();
+        let viewerFullName = 'You';
+        const { data: viewerProf } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', userId)
+          .eq('org_id', orgId)
+          .maybeSingle();
+        if (typeof viewerProf?.full_name === 'string') {
+          const t = viewerProf.full_name.trim();
+          if (t) viewerFullName = t;
+        }
+
         const { data: managed } = await supabase.from('dept_managers').select('dept_id').eq('user_id', userId);
         const deptIds = (managed ?? []).map((m) => m.dept_id as string);
+
+        let staffTimelineRows: StaffTimelineRow[] = [];
 
         let pendingUsers = 0;
         let activeUsers = 0;
@@ -189,6 +233,322 @@ export const getCachedManagerDashboardPageData = cache(
           upcomingItems = [...upcomingEvents, ...upcomingShifts]
             .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
             .slice(0, 6);
+
+          const managedUsersByDept = new Map<string, string[]>();
+          for (const deptId of deptIds) managedUsersByDept.set(deptId, []);
+          for (const row of udRows ?? []) {
+            const deptId = String(row.dept_id ?? '');
+            const uid = String(row.user_id ?? '');
+            if (!deptId || !uid || !managedUsersByDept.has(deptId)) continue;
+            managedUsersByDept.get(deptId)?.push(uid);
+          }
+
+          if (memberIds.length) {
+            const { data: hrRecords } = await supabase
+              .from('employee_hr_records')
+              .select(
+                'user_id,employment_start_date,contract_start_date,probation_end_date,rtw_checked_on,rtw_expiry_date,hired_from_application_id'
+              )
+              .eq('org_id', orgId)
+              .in('user_id', memberIds);
+            const hiredFromApplicationIds = [
+              ...new Set((hrRecords ?? []).map((r) => String(r.hired_from_application_id ?? '')).filter(Boolean)),
+            ];
+
+            const [
+              { data: memberProfiles },
+              { data: onboardingRuns },
+              { data: onboardingTasks },
+              { data: probationCheckpoints },
+              { data: oneOnOneMeetingsRaw },
+              { data: jobApplications },
+              { data: applicationOffers },
+            ] = await Promise.all([
+              supabase.from('profiles').select('id,full_name').in('id', memberIds).eq('org_id', orgId),
+              supabase
+                .from('onboarding_runs')
+                .select('id,user_id,employment_start_date,status')
+                .eq('org_id', orgId)
+                .in('user_id', memberIds)
+                .in('status', ['active', 'completed']),
+              supabase
+                .from('onboarding_run_tasks')
+                .select('run_id,title,due_date,status')
+                .eq('org_id', orgId)
+                .in('status', ['pending', 'completed']),
+              supabase
+                .from('onboarding_probation_checkpoints')
+                .select('user_id,checkpoint_day,due_on,completed_at')
+                .eq('org_id', orgId)
+                .in('user_id', memberIds),
+              supabase.rpc('one_on_one_meeting_list', { p_limit: 400, p_include_cancelled: false }),
+              hiredFromApplicationIds.length
+                ? supabase.from('job_applications').select('id,org_id').in('id', hiredFromApplicationIds)
+                : Promise.resolve({ data: [] as Array<{ id: string; org_id: string }> }),
+              supabase
+                .from('application_offers')
+                .select('application_id,sent_at,status')
+                .eq('org_id', orgId)
+                .eq('status', 'sent')
+                .order('sent_at', { ascending: false }),
+            ]);
+
+            const oneOnOneMeetings = Array.isArray(oneOnOneMeetingsRaw)
+              ? oneOnOneMeetingsRaw
+                  .map((row) => ({
+                    report_user_id: String((row as { report_user_id?: string }).report_user_id ?? ''),
+                    starts_at: String((row as { starts_at?: string }).starts_at ?? ''),
+                    status: String((row as { status?: string }).status ?? ''),
+                  }))
+                  .filter((m) => memberIds.includes(m.report_user_id))
+              : [];
+
+            const nameByUserId = new Map((memberProfiles ?? []).map((m) => [String(m.id), String(m.full_name ?? 'Team member')]));
+            const deptByUserId = new Map<string, string>();
+            for (const [deptId, users] of managedUsersByDept.entries()) {
+              const deptName = deptNameById.get(deptId) ?? 'Department';
+              for (const uid of users) {
+                if (!deptByUserId.has(uid)) deptByUserId.set(uid, deptName);
+              }
+            }
+
+            const hrByUserId = new Map((hrRecords ?? []).map((r) => [String(r.user_id), r]));
+            const activeRunIds = new Set((onboardingRuns ?? []).filter((r) => r.status === 'active').map((r) => String(r.id)));
+            const runByUserId = new Map<string, { id: string; employment_start_date: string | null; status: string }>();
+            for (const run of onboardingRuns ?? []) {
+              const uid = String(run.user_id ?? '');
+              if (!uid) continue;
+              const existing = runByUserId.get(uid);
+              if (!existing || run.status === 'active') {
+                runByUserId.set(uid, {
+                  id: String(run.id),
+                  employment_start_date: run.employment_start_date ? String(run.employment_start_date) : null,
+                  status: String(run.status ?? ''),
+                });
+              }
+            }
+
+            const tasksByRunId = new Map<string, Array<{ title: string; due_date: string | null; status: string }>>();
+            for (const task of onboardingTasks ?? []) {
+              const runId = String(task.run_id ?? '');
+              if (!runId || !activeRunIds.has(runId)) continue;
+              if (!tasksByRunId.has(runId)) tasksByRunId.set(runId, []);
+              tasksByRunId.get(runId)?.push({
+                title: String(task.title ?? 'Onboarding task'),
+                due_date: task.due_date ? String(task.due_date) : null,
+                status: String(task.status ?? 'pending'),
+              });
+            }
+
+            const checkpointsByUserId = new Map<
+              string,
+              Array<{ checkpoint_day: number; due_on: string | null; completed_at: string | null }>
+            >();
+            for (const cp of probationCheckpoints ?? []) {
+              const uid = String(cp.user_id ?? '');
+              if (!uid) continue;
+              if (!checkpointsByUserId.has(uid)) checkpointsByUserId.set(uid, []);
+              checkpointsByUserId.get(uid)?.push({
+                checkpoint_day: Number(cp.checkpoint_day ?? 0),
+                due_on: cp.due_on ? String(cp.due_on) : null,
+                completed_at: cp.completed_at ? String(cp.completed_at) : null,
+              });
+            }
+
+            const checkinsByUserId = new Map<string, string[]>();
+            for (const m of oneOnOneMeetings ?? []) {
+              const uid = String(m.report_user_id ?? '');
+              const startsAt = m.starts_at ? String(m.starts_at) : '';
+              if (!uid || !startsAt) continue;
+              if (!checkinsByUserId.has(uid)) checkinsByUserId.set(uid, []);
+              checkinsByUserId.get(uid)?.push(startsAt);
+            }
+
+            const validApplicationIds = new Set((jobApplications ?? []).map((a) => String(a.id)));
+            const offerSentByApplicationId = new Map<string, string>();
+            for (const offer of applicationOffers ?? []) {
+              const appId = String(offer.application_id ?? '');
+              const sentAt = offer.sent_at ? String(offer.sent_at) : '';
+              if (!appId || !sentAt || !validApplicationIds.has(appId) || offerSentByApplicationId.has(appId)) continue;
+              offerSentByApplicationId.set(appId, sentAt);
+            }
+
+            staffTimelineRows = memberIds
+              .map((uid): StaffTimelineRow => {
+                const name = nameByUserId.get(uid) ?? 'Team member';
+                const deptName = deptByUserId.get(uid) ?? null;
+                const hr = hrByUserId.get(uid) as
+                  | {
+                      employment_start_date: string | null;
+                      contract_start_date: string | null;
+                      probation_end_date: string | null;
+                      rtw_checked_on: string | null;
+                      rtw_expiry_date: string | null;
+                      hired_from_application_id: string | null;
+                    }
+                  | undefined;
+                const run = runByUserId.get(uid);
+                const items: StaffTimelineItem[] = [];
+
+                if (hr?.hired_from_application_id) {
+                  const sentAt = offerSentByApplicationId.get(String(hr.hired_from_application_id));
+                  if (sentAt) {
+                    items.push({
+                      id: `offer-${uid}`,
+                      title: 'Job offer sent',
+                      date: sentAt,
+                      category: 'offer',
+                      source: 'Recruitment',
+                      editable: true,
+                      editHref: '/hr/hiring',
+                      completed: true,
+                      recurring: false,
+                      details: 'Offer dispatch milestone synced from recruitment records.',
+                    });
+                  }
+                }
+
+                const contractDate = hr?.contract_start_date ?? hr?.employment_start_date;
+                if (contractDate) {
+                  items.push({
+                    id: `contract-${uid}`,
+                    title: 'Contract start',
+                    date: contractDate,
+                    category: 'contract',
+                    source: 'HR Record',
+                    editable: true,
+                    editHref: `/admin/hr/${uid}`,
+                    completed: new Date(contractDate).getTime() < Date.now(),
+                    recurring: false,
+                    details: 'Primary contract start date from employee HR record.',
+                  });
+                }
+
+                if (hr?.rtw_checked_on) {
+                  items.push({
+                    id: `rtw-check-${uid}`,
+                    title: 'Right to work check',
+                    date: hr.rtw_checked_on,
+                    category: 'right_to_work',
+                    source: 'HR Record',
+                    editable: true,
+                    editHref: `/admin/hr/${uid}`,
+                    completed: true,
+                    recurring: false,
+                    details: 'Right-to-work verification completion date from HR record.',
+                  });
+                }
+                if (hr?.rtw_expiry_date) {
+                  items.push({
+                    id: `rtw-expiry-${uid}`,
+                    title: 'Right to work expiry',
+                    date: hr.rtw_expiry_date,
+                    category: 'right_to_work',
+                    source: 'HR Record',
+                    editable: true,
+                    editHref: `/admin/hr/${uid}`,
+                    completed: false,
+                    recurring: false,
+                    details: 'Right-to-work expiry date requiring periodic renewal tracking.',
+                  });
+                }
+
+                if (run?.employment_start_date) {
+                  items.push({
+                    id: `starter-${uid}`,
+                    title: run.status === 'active' ? 'New starter onboarding active' : 'Starter onboarding complete',
+                    date: run.employment_start_date,
+                    category: 'new_starter',
+                    source: 'Onboarding',
+                    editable: run.status !== 'completed',
+                    editHref: '/admin/hr/onboarding',
+                    completed: run.status === 'completed',
+                    recurring: false,
+                    details: 'Onboarding run status and start date from onboarding workflow.',
+                  });
+                }
+
+                if (run) {
+                  for (const task of tasksByRunId.get(run.id) ?? []) {
+                    if (!task.due_date) continue;
+                    const lower = task.title.toLowerCase();
+                    const inductionLike =
+                      lower.includes('induction') || lower.includes('new starter form') || lower.includes('orientation');
+                    if (!inductionLike) continue;
+                    items.push({
+                      id: `induction-${uid}-${task.title}-${task.due_date}`,
+                      title: task.title,
+                      date: task.due_date,
+                      category: 'induction',
+                      source: 'Onboarding task',
+                      editable: task.status !== 'completed',
+                      editHref: '/admin/hr/onboarding',
+                      completed: task.status === 'completed',
+                      recurring: false,
+                      details: `Induction/new starter task from onboarding checklist (${task.status}).`,
+                    });
+                  }
+                }
+
+                if (hr?.probation_end_date) {
+                  items.push({
+                    id: `probation-end-${uid}`,
+                    title: 'Probation review due',
+                    date: hr.probation_end_date,
+                    category: 'probation',
+                    source: 'HR Record',
+                    editable: true,
+                    editHref: `/admin/hr/${uid}`,
+                    completed: false,
+                    recurring: false,
+                    details: 'Primary probation review date from employee HR record.',
+                  });
+                }
+
+                for (const cp of checkpointsByUserId.get(uid) ?? []) {
+                  if (!cp.due_on) continue;
+                  items.push({
+                    id: `probation-checkpoint-${uid}-${cp.checkpoint_day}-${cp.due_on}`,
+                    title: `${cp.checkpoint_day}-day probation checkpoint`,
+                    date: cp.due_on,
+                    category: 'probation',
+                    source: 'Probation policy',
+                    editable: !cp.completed_at,
+                    editHref: '/admin/hr/onboarding',
+                    completed: Boolean(cp.completed_at),
+                    recurring: false,
+                    details: `Policy-driven checkpoint (day ${cp.checkpoint_day}) generated from probation policy settings.`,
+                  });
+                }
+
+                for (const startsAt of (checkinsByUserId.get(uid) ?? []).slice(0, 4)) {
+                  items.push({
+                    id: `checkin-${uid}-${startsAt}`,
+                    title: '1:1 check-in',
+                    date: startsAt,
+                    category: 'check_in',
+                    source: 'One-on-one',
+                    editable: true,
+                    editHref: '/one-on-one',
+                    completed: false,
+                    recurring: true,
+                    details: 'Scheduled recurring manager/report 1:1 pulled from one-on-one meetings.',
+                  });
+                }
+
+                items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                return {
+                  userId: uid,
+                  fullName: name,
+                  departmentName: deptName,
+                  items,
+                };
+              })
+              .filter((row) => row.userId === userId)
+              .filter((row) => row.items.length > 0)
+              .slice(0, 1);
+          }
         }
 
         return {
@@ -204,6 +564,8 @@ export const getCachedManagerDashboardPageData = cache(
           departmentNames,
           upcomingItems,
           departmentBreakdown,
+          staffTimelineRows,
+          viewerFullName,
         };
       },
     });
