@@ -1,61 +1,27 @@
 import { OrgLeaveAdminClient } from '@/components/admin/OrgLeaveAdminClient';
+import { getCachedAdminLeavePageData } from '@/lib/admin/getCachedAdminLeavePageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { createClient } from '@/lib/supabase/server';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminLeavePage() {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
+  const bundle = await withServerPerf('/admin/leave', 'shell_bundle_for_access', getCachedMainShellLayoutBundle(), 300);
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!permissionKeys.includes('leave.manage_org')) redirect('/forbidden');
 
-  const { data: profile } = await withServerPerf(
+  const pageData = await withServerPerf(
     '/admin/leave',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
-    300
+    'cached_admin_leave_page_data',
+    getCachedAdminLeavePageData(orgId),
+    650
   );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-
-  const permissionKeys = await withServerPerf('/admin/leave', 'get_my_permissions', getMyPermissions(orgId), 300);
-  if (!permissionKeys.includes('leave.manage_org')) redirect('/admin');
-
-  const [membersRes, settingsRes] = await Promise.all([
-    withServerPerf(
-      '/admin/leave',
-      'active_members_lookup',
-      supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .eq('org_id', orgId)
-        .eq('status', 'active')
-        .order('full_name'),
-      400
-    ),
-    withServerPerf(
-      '/admin/leave',
-      'org_leave_settings_lookup',
-      supabase
-        .from('org_leave_settings')
-        .select(
-          'bradford_window_days, leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, default_annual_entitlement_days, leave_use_working_days, non_working_iso_dows, use_uk_weekly_paid_leave_formula, statutory_weeks_annual_leave, ssp_flat_weekly_rate_gbp, ssp_lel_weekly_gbp, ssp_waiting_qualifying_days, ssp_reform_percent_of_earnings, carry_over_enabled, carry_over_requires_approval, carry_over_max_days, encashment_enabled, encashment_requires_approval, encashment_max_days, leave_accrual_enabled, leave_accrual_frequency, leave_law_country_code, leave_law_profile',
-        )
-        .eq('org_id', orgId)
-        .maybeSingle(),
-      350
-    ),
-  ]);
-  const members = membersRes.data;
-  const settings = settingsRes.data;
+  const members = pageData.members;
+  const settings = pageData.settings;
 
   const view = (
     <OrgLeaveAdminClient

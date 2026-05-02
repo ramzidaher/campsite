@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -82,6 +83,7 @@ export function OnboardingRunClient({
     const { error } = await supabase.rpc('onboarding_task_update', { p_task_id: taskId, p_status: status });
     setBusy(null);
     if (error) { setMsg(error.message); return; }
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.refresh();
   }
 
@@ -91,6 +93,7 @@ export function OnboardingRunClient({
     const { error } = await supabase.rpc('onboarding_run_cancel', { p_run_id: runId });
     setBusy(null);
     if (error) { setMsg(error.message); return; }
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.push('/hr/onboarding');
   }
 
@@ -113,6 +116,7 @@ export function OnboardingRunClient({
     if (error) { setMsg(error.message); return; }
     setShowAdd(false);
     setAddTitle(''); setAddDesc(''); setAddAssignee('hr'); setAddCategory('other'); setAddDue('');
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.refresh();
   }
 

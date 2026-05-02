@@ -1,35 +1,39 @@
 import { BroadcastEditForm } from '@/components/broadcasts/BroadcastEditForm';
-import { createClient } from '@/lib/supabase/server';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { getCachedBroadcastEditPageData } from '@/lib/broadcasts/getCachedBroadcastEditPageData';
+import { shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import { withServerPerf } from '@/lib/perf/serverPerf';
 import { notFound, redirect } from 'next/navigation';
 
 export default async function BroadcastEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
+  const bundle = await withServerPerf('/broadcasts/[id]/edit', 'shell_bundle_for_access', getCachedMainShellLayoutBundle(), 300);
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const viewerUserIdRaw = (bundle as Record<string, unknown>)['user_id'];
+  const viewerUserId = typeof viewerUserIdRaw === 'string' ? viewerUserIdRaw : '';
+  if (!viewerUserId) redirect('/login');
 
-  const [{ data: b, error }, mayEditRes] = await Promise.all([
-    supabase
-      .from('broadcasts')
-      .select('id, title, body, status, sent_at, cover_image_url, scheduled_at')
-      .eq('id', id)
-      .single(),
-    supabase.rpc('broadcast_may_edit_content', { p_broadcast_id: id }),
-  ]);
+  const pageData = await withServerPerf(
+    '/broadcasts/[id]/edit',
+    'cached_broadcast_edit_page_data',
+    getCachedBroadcastEditPageData(orgId, viewerUserId, id),
+    650
+  );
 
-  if (error || !b) notFound();
-  if (mayEditRes.data !== true) redirect(`/broadcasts/${id}`);
+  if (!pageData) notFound();
+  if (!pageData.mayEdit) redirect(`/broadcasts/${id}`);
 
   return (
     <BroadcastEditForm
-      broadcastId={b.id as string}
-      userId={user.id}
-      initialTitle={(b.title as string) ?? ''}
-      initialBody={(b.body as string) ?? ''}
-      initialCoverUrl={(b.cover_image_url as string | null) ?? null}
-      status={b.status as string}
-      initialScheduledAt={(b.scheduled_at as string | null) ?? null}
+      broadcastId={pageData.id}
+      userId={viewerUserId}
+      initialTitle={pageData.title}
+      initialBody={pageData.body}
+      initialCoverUrl={pageData.coverImageUrl}
+      status={pageData.status}
+      initialScheduledAt={pageData.scheduledAt}
     />
   );
 }

@@ -9,7 +9,7 @@ export type ApplicationQuestionTemplate = {
   description?: string;
   build: () => Omit<
     JobScreeningQuestionPersist,
-    'id' | 'sortOrder' | 'isPageBreak' | 'scoringEnabled' | 'initiallyHidden' | 'locked'
+    'id' | 'sortOrder' | 'isPageBreak' | 'scoringEnabled' | 'scoringScaleMax' | 'initiallyHidden' | 'locked'
   >;
 };
 

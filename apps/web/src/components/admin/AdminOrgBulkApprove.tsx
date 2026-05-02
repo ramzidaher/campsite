@@ -1,6 +1,7 @@
 'use client';
 
 import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -55,6 +56,7 @@ export function AdminOrgBulkApprove({
       }
     }
     setBusy(false);
+    await invalidateClientCaches({ scopes: ['org-members'], shellUserIds: ids }).catch(() => null);
     router.refresh();
   }
 

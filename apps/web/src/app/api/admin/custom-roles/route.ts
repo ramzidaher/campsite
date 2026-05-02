@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { invalidateShellCachesForOrg } from '@/lib/cache/cacheInvalidation';
 import {
   CUSTOM_ROLE_PICKER_SCHEMA_VERSION,
   type CustomRolesListResponse,
@@ -122,5 +123,6 @@ export async function POST(req: NextRequest) {
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  await invalidateShellCachesForOrg(me.org_id as string);
   return NextResponse.json({ ok: true, role_id: roleId }, { status: 201 });
 }

@@ -339,8 +339,8 @@ export function AdminJobEditClient({
           className={[
             'rounded-xl border px-4 py-3 text-[13px]',
             msg.type === 'err'
-              ? 'border-red-200 bg-red-50 text-red-900'
-              : 'border-emerald-200 bg-emerald-50 text-emerald-950',
+              ? 'status-banner-error'
+              : 'status-banner-success',
           ].join(' ')}
         >
           {msg.text}

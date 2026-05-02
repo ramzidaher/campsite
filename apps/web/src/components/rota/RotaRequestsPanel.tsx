@@ -232,7 +232,7 @@ export function RotaRequestsPanel({
   }
 
   function fmtShift(s: RequestShiftRef) {
-    const a = new Date(s.start_time).toLocaleString(undefined, {
+    const a = new Date(s.start_time).toLocaleString('en-GB', { timeZone: 'UTC', 
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -245,13 +245,13 @@ export function RotaRequestsPanel({
   function fmtWeekRange(weekStart: Date): string {
     const end = new Date(weekStart);
     end.setDate(end.getDate() + 6);
-    return `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    return `${weekStart.toLocaleDateString('en-GB', { timeZone: 'UTC',  month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-GB', { timeZone: 'UTC',  month: 'short', day: 'numeric', year: 'numeric' })}`;
   }
 
   function fmtShiftTime(isoStart: string, isoEnd: string): string {
     const s = new Date(isoStart);
     const e = new Date(isoEnd);
-    return `${s.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} - ${e.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+    return `${s.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })} - ${e.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })}`;
   }
 
   const weekDays = useMemo(() => {
@@ -302,7 +302,7 @@ export function RotaRequestsPanel({
           : 'Swaps need the other person to accept, then any manager or duty manager in the organisation can approve. Unassign requests go straight to those approvers.'}
       </p>
       {msg ? (
-        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-900">{msg}</p>
+        <p className="status-banner-error mt-4 rounded-xl px-4 py-3 text-[13px]">{msg}</p>
       ) : null}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:gap-10">
@@ -381,7 +381,7 @@ export function RotaRequestsPanel({
                           className="w-[126px] shrink-0 rounded-lg border border-[#ebe9e4] bg-[#faf9f6] p-2"
                         >
                           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">
-                            {day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}
+                            {day.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', day: 'numeric' })}
                           </div>
                           {dayRows.length === 0 ? (
                             <div className="text-[11px] text-[#9b9b9b]">No shifts</div>
@@ -564,7 +564,7 @@ export function RotaRequestsPanel({
                         {r.status.replaceAll('_', ' ')}
                       </span>
                       <span className="text-[11.5px] text-[#8a8a8a]">
-                        {new Date(r.created_at).toLocaleDateString(undefined, {
+                        {new Date(r.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',

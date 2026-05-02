@@ -10,6 +10,23 @@ import { getPlatformAdminHost } from './lib/tenant/hostConfig';
 
 const MIDDLEWARE_AUTH_TIMEOUT_MS = 1500;
 
+function clearStaleSupabaseAuthCookies(request: NextRequest, response: NextResponse): void {
+  const staleCookieNames = request.cookies
+    .getAll()
+    .map((cookie) => cookie.name)
+    .filter((name) => name.startsWith('sb-'));
+
+  for (const cookieName of staleCookieNames) {
+    request.cookies.delete(cookieName);
+    response.cookies.delete(cookieName);
+    response.cookies.set(cookieName, '', {
+      path: '/',
+      expires: new Date(0),
+      maxAge: 0,
+    });
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
   const url = request.nextUrl.clone();
@@ -28,6 +45,7 @@ export async function middleware(request: NextRequest) {
   const supabasePublicKey = getSupabasePublicKey();
 
   let user: User | null = null;
+  let authCheckTimedOut = false;
   if (supabaseUrl && supabasePublicKey) {
     const supabase = createServerClient(supabaseUrl, supabasePublicKey, {
       cookies: {
@@ -54,7 +72,16 @@ export async function middleware(request: NextRequest) {
         }),
       ]);
       user = authResult.data.user ?? null;
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error ?? '');
+      const code =
+        typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code?: unknown }).code ?? '')
+          : '';
+      authCheckTimedOut = message.includes('middleware auth timeout');
+      if (message.includes('Invalid Refresh Token') || code === 'refresh_token_not_found') {
+        clearStaleSupabaseAuthCookies(request, response);
+      }
       // Fail open on transient auth/provider stalls so public/login routes remain responsive.
       user = null;
     }
@@ -64,6 +91,22 @@ export async function middleware(request: NextRequest) {
   const accountType = (user?.user_metadata?.account_type as string | undefined) ?? '';
   const isAuthEmailReturn =
     pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm');
+
+  // Canonicalize legacy admin HR paths to the primary HR workspace routes.
+  // Keep query params intact to avoid breaking deep links and filters.
+  if (pathname === '/admin/hr' || pathname.startsWith('/admin/hr/')) {
+    const canonical = request.nextUrl.clone();
+    canonical.pathname =
+      pathname === '/admin/hr' ? '/hr' : pathname.replace(/^\/admin\/hr\//, '/hr/');
+    return NextResponse.redirect(canonical);
+  }
+
+  if (pathname === '/admin/jobs' || pathname.startsWith('/admin/jobs/')) {
+    const canonical = request.nextUrl.clone();
+    canonical.pathname =
+      pathname === '/admin/jobs' ? '/hr/jobs' : pathname.replace(/^\/admin\/jobs\//, '/hr/jobs/');
+    return NextResponse.redirect(canonical);
+  }
 
   if (pathname === '/founders' || pathname.startsWith('/founders/')) {
     if (!isPlatformAdmin) {
@@ -110,6 +153,7 @@ export async function middleware(request: NextRequest) {
 
   if (
     !user &&
+    !authCheckTimedOut &&
     !isAuthPath(pathname) &&
     !isPublicPath(pathname) &&
     pathname !== '/' &&
@@ -131,6 +175,13 @@ export async function middleware(request: NextRequest) {
     if (accountType === 'candidate') {
       const dest = request.nextUrl.clone();
       dest.pathname = '/jobs/me';
+      dest.search = '';
+      return NextResponse.redirect(dest);
+    }
+    const nextParam = request.nextUrl.searchParams.get('next');
+    if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('/login')) {
+      const dest = request.nextUrl.clone();
+      dest.pathname = nextParam;
       dest.search = '';
       return NextResponse.redirect(dest);
     }

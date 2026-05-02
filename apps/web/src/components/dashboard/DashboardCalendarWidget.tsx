@@ -87,7 +87,7 @@ export function DashboardCalendarWidget({
     const groups: G[] = [];
     for (const ev of sorted) {
       const d = new Date(ev.start_time);
-      const heading = d.toLocaleDateString(undefined, {
+      const heading = d.toLocaleDateString('en-GB', { timeZone: 'UTC', 
         weekday: 'long',
         day: 'numeric',
         month: 'short',

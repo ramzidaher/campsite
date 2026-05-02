@@ -68,7 +68,7 @@ async function autoMoveRecruitmentRequestToInProgress(opts: {
     .eq('org_id', opts.orgId)
     .maybeSingle();
   if (!req) return;
-  const st = String((req as any).status ?? '');
+  const st = String((req as { status?: string | null }).status ?? '');
   if (st !== 'approved') return;
 
   await admin
@@ -736,7 +736,7 @@ export async function updateJobAdminLegalSettings(
     if (tplErr || !tpl) return { ok: false, error: 'Selected contract template is invalid.' };
   }
 
-  let updateResult = await supabase
+  const updateResult = await supabase
     .from('job_listings')
     .update({
       success_email_body: String(fields.successEmailBody ?? '').trim() || null,

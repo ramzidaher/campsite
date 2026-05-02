@@ -21,7 +21,7 @@ export default async function OneOnOnesPage() {
   const permissionKeys = await getMyPermissions(orgId);
   const canView   = permissionKeys.includes('one_on_one.view_own');
   const canHr     = permissionKeys.includes('hr.view_records');
-  if (!canView && !canHr) redirect('/broadcasts');
+  if (!canView && !canHr) redirect('/forbidden');
 
   const canManage = permissionKeys.includes('one_on_one.manage_direct_reports');
 

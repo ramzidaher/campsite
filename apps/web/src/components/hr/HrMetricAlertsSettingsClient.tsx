@@ -131,12 +131,12 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
       </div>
 
       {msg ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-950">
+        <div className="status-banner-success rounded-lg px-3 py-2 text-[13px]">
           {msg}
         </div>
       ) : null}
       {err ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-900" role="alert">
+        <div className="status-banner-error rounded-lg px-3 py-2 text-[13px]" role="alert">
           {err}
         </div>
       ) : null}

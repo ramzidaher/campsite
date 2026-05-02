@@ -19,7 +19,7 @@ export default async function AdminDiscountPage() {
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
   const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id });
   const permissionKeys = ((perms ?? []) as Array<{ permission_key?: string }>).map((p) => String(p.permission_key ?? ''));
-  if (!hasPermission(permissionKeys, 'discounts.view')) redirect('/admin');
+  if (!hasPermission(permissionKeys, 'discounts.view')) redirect('/forbidden');
 
   const { data: tiers } = await supabase
     .from('discount_tiers')

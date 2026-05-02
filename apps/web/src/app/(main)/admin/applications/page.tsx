@@ -1,12 +1,12 @@
 import { HideInHiringHub } from '@/app/(main)/hr/hiring/HideInHiringHub';
+import { getCachedAdminApplicationsPageData } from '@/lib/jobs/getCachedAdminApplicationsPageData';
 import { jobApplicationStageLabel } from '@/lib/jobs/labels';
 import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
-import { createClient } from '@/lib/supabase/server';
 import { JOB_APPLICATION_STAGES } from '@campsite/types';
 import Link from 'next/link';
-import { redirect, notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 function spVal(v: string | string[] | undefined): string {
   if (typeof v === 'string') return v.trim();
@@ -36,54 +36,30 @@ export default async function AdminApplicationsPage({
   const permissionKeys = parseShellPermissionKeys(bundle);
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
-  if (!permissionKeys.includes('applications.view')) redirect('/broadcasts');
+  if (!permissionKeys.includes('applications.view')) redirect('/forbidden');
 
-  const supabase = await createClient();
   const sp = await searchParams;
   const filterJobId = spVal(sp.job);
   const filterStage = spVal(sp.stage);
   const filterDept = spVal(sp.dept);
   const filterFrom = spVal(sp.from);
   const filterTo = spVal(sp.to);
-
-  let applicationsQuery = supabase
-    .from('job_applications')
-    .select(
-      `
-          id,
-          candidate_name,
-          candidate_email,
-          stage,
-          submitted_at,
-          job_listing_id,
-          department_id,
-          job_listings ( title, slug, status ),
-          departments ( name )
-        `
-    )
-    .eq('org_id', orgId)
-    .order('submitted_at', { ascending: false })
-    .limit(300);
-
-  if (filterJobId) applicationsQuery = applicationsQuery.eq('job_listing_id', filterJobId);
-  if (filterStage) applicationsQuery = applicationsQuery.eq('stage', filterStage);
-  if (filterDept) applicationsQuery = applicationsQuery.eq('department_id', filterDept);
-  if (filterFrom) applicationsQuery = applicationsQuery.gte('submitted_at', `${filterFrom}T00:00:00.000Z`);
-  if (filterTo) applicationsQuery = applicationsQuery.lte('submitted_at', `${filterTo}T23:59:59.999Z`);
-
-  const [{ data: jobs }, { data: departments }, { data: apps, error }] = await Promise.all([
-    supabase
-      .from('job_listings')
-      .select('id, title, status')
-      .eq('org_id', orgId)
-      .order('title', { ascending: true }),
-    supabase.from('departments').select('id, name').eq('org_id', orgId).order('name', { ascending: true }),
-    withServerPerf('/admin/applications', 'applications_query', applicationsQuery, 500),
-  ]);
-
-  if (error) notFound();
-
-  const rows = apps ?? [];
+  const hasFilters = Boolean(filterJobId || filterStage || filterDept || filterFrom || filterTo);
+  const cachedData = await withServerPerf(
+    '/admin/applications',
+    hasFilters ? 'applications_bundle_filtered_cached' : 'applications_bundle_cached',
+    getCachedAdminApplicationsPageData(orgId, {
+      jobId: filterJobId,
+      stage: filterStage,
+      deptId: filterDept,
+      from: filterFrom,
+      to: filterTo,
+    }),
+    700
+  );
+  const jobs = cachedData.jobs;
+  const departments = cachedData.departments;
+  const rows = cachedData.apps as Array<Record<string, unknown>>;
 
   const controlClass =
     'h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
@@ -114,7 +90,7 @@ export default async function AdminApplicationsPage({
             className={`min-w-[180px] ${controlClass}`}
           >
             <option value="">All jobs</option>
-            {(jobs ?? []).map((j) => (
+            {jobs.map((j) => (
               <option key={j.id as string} value={j.id as string}>
                 {(j.title as string)?.trim() || 'Untitled'}{' '}
                 {j.status !== 'live' ? ` (${String(j.status)})` : ''}
@@ -151,7 +127,7 @@ export default async function AdminApplicationsPage({
             className={`min-w-[160px] ${controlClass}`}
           >
             <option value="">All departments</option>
-            {(departments ?? []).map((d) => (
+            {departments.map((d) => (
               <option key={d.id as string} value={d.id as string}>
                 {(d.name as string)?.trim() || '—'}
               </option>
@@ -234,7 +210,7 @@ export default async function AdminApplicationsPage({
                     <td className="px-4 py-3">{jobApplicationStageLabel(String(r.stage))}</td>
                     <td className="px-4 py-3 text-[#505050]">
                       {r.submitted_at
-                        ? new Date(r.submitted_at as string).toLocaleDateString(undefined, {
+                        ? new Date(r.submitted_at as string).toLocaleDateString('en-GB', { timeZone: 'UTC', 
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',

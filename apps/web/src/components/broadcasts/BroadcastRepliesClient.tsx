@@ -107,7 +107,7 @@ export function BroadcastRepliesClient({
               </div>
               <p className="mt-2 whitespace-pre-wrap leading-relaxed">{r.body}</p>
               <time className="mt-2 block text-[11px] text-[#9b9b9b]" dateTime={r.created_at}>
-                {new Date(r.created_at).toLocaleString(undefined, {
+                {new Date(r.created_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                   dateStyle: 'medium',
                   timeStyle: 'short',
                 })}

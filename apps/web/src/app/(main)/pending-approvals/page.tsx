@@ -21,7 +21,7 @@ export default async function PendingApprovalsPage() {
   const canViewManagerTeams     = permissionKeys.includes('teams.view');
   const canManageManagerWorkspace = permissionKeys.includes('recruitment.create_request');
   if (!canReviewApprovals) {
-    redirect('/dashboard');
+    redirect('/forbidden');
   }
 
   const full = await loadPendingApprovalRows(supabase, user.id, me.org_id as string, me.role as string);

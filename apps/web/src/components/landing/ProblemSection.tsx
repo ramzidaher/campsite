@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { animate, splitText } from 'animejs';
+import { useAnimeReveal } from '@/hooks/useAnimeReveal';
 
 const ISSUES = [
   { quote: 'Can you re-send the rota? I cannot find it.', source: 'WhatsApp group' },
@@ -11,14 +14,92 @@ const ISSUES = [
 ];
 
 export function ProblemSection() {
+  // Simple fade-up for the kicker label and the bottom panels
+  const sectionRef = useAnimeReveal<HTMLElement>('[data-anime-reveal]', {
+    staggerMs: 75,
+    translateY: 24,
+    threshold: 0.06,
+  });
+
+  // Separate ref for the quote block — gets the deep word-split treatment
+  const chaosRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const chaos = chaosRef.current;
+    if (!chaos) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const quoteEls = Array.from(chaos.querySelectorAll<HTMLElement>('.problem-quote'));
+    if (!quoteEls.length) return;
+
+    // Split every quote into individual word spans
+    const splitters = quoteEls.map((el) => splitText(el, { words: true }));
+
+    // Pre-hide all words + assign staggered delays that leave a visible gap between quotes
+    const allWords: HTMLElement[] = [];
+    let cursor = 80; // initial delay before first word
+    splitters.forEach((s) => {
+      (s.words as HTMLElement[]).forEach((w, wi) => {
+        w.style.opacity = '0';
+        w.style.display = 'inline-block'; // needed for translateY
+        w.dataset.wd = String(cursor + wi * 22);
+        allWords.push(w);
+      });
+      cursor += (s.words as HTMLElement[]).length * 22 + 90; // inter-quote pause
+    });
+
+    // Hide the row numbers + source tags too so they reveal together with the first word
+    const sideTags = Array.from(chaos.querySelectorAll<HTMLElement>('.problem-index, .problem-source'));
+    sideTags.forEach((t, i) => {
+      t.style.opacity = '0';
+      t.dataset.wd = String(i * 22); // approximate — aligns with first word of each row
+    });
+
+    let triggered = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (triggered || !entries.some((e) => e.isIntersecting)) return;
+        triggered = true;
+        observer.disconnect();
+
+        // Animate all words using the precomputed per-word delay
+        animate(allWords, {
+          opacity: [0, 1],
+          translateY: [12, 0],
+          duration: 560,
+          delay: (el: HTMLElement) => parseInt(el.dataset.wd ?? '0'),
+          ease: 'outCubic',
+        });
+
+        // Row side-labels fade in aligned to each quote
+        animate(sideTags, {
+          opacity: [0, 1],
+          duration: 400,
+          delay: (el: HTMLElement) => parseInt(el.dataset.wd ?? '0') + 60,
+          ease: 'outExpo',
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -60px 0px' }
+    );
+
+    observer.observe(chaos);
+    return () => {
+      observer.disconnect();
+      splitters.forEach((s) => s.revert());
+    };
+  }, []);
+
   return (
-    <section className="problem-section px-4 py-16 md:px-8 md:py-20">
+    <section ref={sectionRef} className="problem-section px-4 py-16 md:px-8 md:py-20">
       <h2 className="lp-sr-only">Operations problems we solve</h2>
       <div className="mx-auto max-w-7xl">
-        <p className="font-mono mb-10 text-xs tracking-wider text-[color:var(--lp-text-muted)]">SOUND FAMILIAR?</p>
+        <p data-anime-reveal className="font-mono mb-10 text-xs tracking-wider text-[color:var(--lp-text-muted)]">
+          SOUND FAMILIAR?
+        </p>
 
-        <div className="problem-chaos">
+        <div ref={chaosRef} className="problem-chaos">
           {ISSUES.map((item, index) => (
+            // No data-anime-reveal — the word-split useEffect owns this block
             <div key={item.quote} className="problem-line">
               <span className="problem-index">{String(index + 1).padStart(2, '0')}</span>
               <p className="problem-quote">{item.quote}</p>
@@ -28,7 +109,7 @@ export function ProblemSection() {
         </div>
 
         <div className="problem-pivot">
-          <article className="problem-panel problem-panel-left">
+          <article data-anime-reveal className="problem-panel problem-panel-left">
             <p className="font-mono problem-eyebrow">The problem</p>
             <h3 className="problem-heading">Your team runs on tools that were never built for teams.</h3>
             <p className="problem-body">
@@ -41,16 +122,20 @@ export function ProblemSection() {
             </div>
           </article>
 
-          <article className="problem-panel problem-panel-right">
+          <article data-anime-reveal className="problem-panel problem-panel-right">
             <div>
               <p className="font-mono problem-eyebrow problem-eyebrow-fix">The fix</p>
-              <h3 className="problem-heading problem-heading-fix">One place for everything your team actually needs.</h3>
+              <h3 className="problem-heading problem-heading-fix">
+                One place for everything your team actually needs.
+              </h3>
               <p className="problem-body problem-body-fix">
                 Announcements, rota, HR, hiring, and approvals in a single workspace your whole team can use from day
                 one.
               </p>
             </div>
-            <Link href="/login" className="problem-enter-link">Enter Camp &rarr;</Link>
+            <Link href="/login" className="problem-enter-link">
+              Enter Camp &rarr;
+            </Link>
           </article>
         </div>
       </div>

@@ -87,7 +87,7 @@ export default async function CandidateApplicationDetailPage({
   const trackerHref = `/jobs/status/new/${encodeURIComponent(applicationId)}`;
 
   const submittedLabel = row.submitted_at
-    ? new Date(row.submitted_at).toLocaleString(undefined, {
+    ? new Date(row.submitted_at).toLocaleString('en-GB', { timeZone: 'UTC', 
         dateStyle: 'medium',
         timeStyle: 'short',
       })

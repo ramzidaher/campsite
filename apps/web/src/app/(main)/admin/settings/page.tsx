@@ -1,40 +1,21 @@
 import { OrgSettingsClient } from '@/components/admin/OrgSettingsClient';
-import { createClient } from '@/lib/supabase/server';
+import { getCachedAdminSettingsPageData } from '@/lib/admin/getCachedAdminSettingsPageData';
 import { hasPermission } from '@/lib/adminGates';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function OrgAdminSettingsPage() {
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!hasPermission(permissionKeys, 'roles.manage')) redirect('/forbidden');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: profile.org_id });
-  const permissionKeys = ((perms ?? []) as Array<{ permission_key?: string }>).map((p) => String(p.permission_key ?? ''));
-  if (!hasPermission(permissionKeys, 'roles.manage')) redirect('/admin');
-
-  const { data: org } = await supabase
-    .from('organisations')
-    .select(
-      'id, name, slug, logo_url, default_notifications_enabled, deactivation_requested_at, timezone, brand_preset_key, brand_tokens, brand_policy'
-    )
-    .eq('id', profile.org_id)
-    .single();
-  const { data: orgCelebrationModes } = await supabase
-    .from('org_celebration_modes')
-    .select(
-      'id,mode_key,label,is_enabled,display_order,auto_start_month,auto_start_day,auto_end_month,auto_end_day,gradient_override,emoji_primary,emoji_secondary'
-    )
-    .eq('org_id', profile.org_id)
-    .order('display_order', { ascending: true })
-    .order('label', { ascending: true });
+  const pageData = await getCachedAdminSettingsPageData(orgId);
+  const org = pageData.org;
+  const orgCelebrationModes = pageData.orgCelebrationModes;
 
   if (!org) redirect('/admin');
 

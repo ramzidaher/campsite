@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 
 export type OneOnOneMeetingRow = {
@@ -36,6 +37,7 @@ export function OneOnOnesHubClient({
   directReports: DirectReportOption[];
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const [isClient, setIsClient] = useState(false);
   const [meetings, setMeetings] = useState(initialMeetings);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -47,6 +49,10 @@ export function OneOnOnesHubClient({
     return d.toISOString().slice(0, 16);
   });
   const [templateId, setTemplateId] = useState<string>('');
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -80,6 +86,7 @@ export function OneOnOnesHubClient({
       setErr(error.message);
       return;
     }
+    await invalidateClientCaches({ scopes: ['one-on-ones'] }).catch(() => null);
     setShowNew(false);
     const id = data as string;
     if (id) {
@@ -166,13 +173,7 @@ export function OneOnOnesHubClient({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-[14px] font-medium text-[#121212]">
                     {m.manager_user_id === userId ? m.report_name : m.manager_name} ·{' '}
-                    {new Date(m.starts_at).toLocaleString(undefined, {
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatMeetingDateLabel(m.starts_at, isClient)}
                   </span>
                   <span
                     className={[
@@ -264,6 +265,23 @@ export function OneOnOnesHubClient({
       </div>
     </div>
   );
+}
+
+function formatMeetingDateLabel(startsAt: string, isClient: boolean): string {
+  const date = new Date(startsAt);
+  if (Number.isNaN(date.getTime())) return startsAt;
+  if (isClient) {
+    return date.toLocaleString('en-GB', {
+      timeZone: 'UTC',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+  const iso = date.toISOString();
+  return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 }
 
 function TemplatePicker({

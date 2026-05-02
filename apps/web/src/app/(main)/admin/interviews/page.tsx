@@ -1,73 +1,35 @@
 import { InterviewScheduleClient } from '@/app/(main)/admin/interviews/InterviewScheduleClient';
-import { viewerHasPermission } from '@/lib/authz/serverGuards';
-import { createClient } from '@/lib/supabase/server';
+import { getCachedInterviewSchedulePageData } from '@/lib/interviews/getCachedInterviewSchedulePageData';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import { withServerPerf } from '@/lib/perf/serverPerf';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function AdminInterviewsPage() {
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, role, status')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const [canViewInterviews, canBookInterviewSlot] = await Promise.all([
-    viewerHasPermission('interviews.view'),
-    viewerHasPermission('interviews.book_slot'),
-  ]);
-  if (!canViewInterviews && !canBookInterviewSlot) redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-  const [canCreateSlot, canCompleteSlot] = await Promise.all([
-    viewerHasPermission('interviews.create_slot'),
-    viewerHasPermission('interviews.complete_slot'),
-  ]);
-  const fromPast = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-  const [{ data: jobs }, { data: profiles }, { data: slots }] = await Promise.all([
-    supabase
-      .from('job_listings')
-      .select('id, title, status')
-      .eq('org_id', orgId)
-      .order('title', { ascending: true }),
-    supabase
-      .from('profiles')
-      .select('id, full_name, email')
-      .eq('org_id', orgId)
-      .eq('status', 'active')
-      .order('full_name', { ascending: true }),
-    supabase
-      .from('interview_slots')
-      .select(
-        `
-        id,
-        title,
-        starts_at,
-        ends_at,
-        status,
-        job_listing_id,
-        job_listings ( title ),
-        interview_slot_panelists ( profile_id, profiles ( full_name ) )
-      `
-      )
-      .eq('org_id', orgId)
-      .gte('starts_at', fromPast)
-      .order('starts_at', { ascending: true })
-      .limit(80),
-  ]);
+  const bundle = await getCachedMainShellLayoutBundle();
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  const canViewInterviews = permissionKeys.includes('interviews.view');
+  const canBookInterviewSlot = permissionKeys.includes('interviews.book_slot');
+  if (!canViewInterviews && !canBookInterviewSlot) redirect('/forbidden');
+  const canCreateSlot = permissionKeys.includes('interviews.create_slot');
+  const canCompleteSlot = permissionKeys.includes('interviews.complete_slot');
+  const { jobs, profiles, slots } = await withServerPerf(
+    '/admin/interviews',
+    'interview_schedule_bundle_cached',
+    getCachedInterviewSchedulePageData(orgId),
+    700
+  );
 
   return (
     <InterviewScheduleClient
       canCreateSlot={canCreateSlot}
       canCompleteSlot={canCompleteSlot}
-      jobs={(jobs ?? []) as { id: string; title: string; status: string }[]}
-      profiles={(profiles ?? []) as { id: string; full_name: string | null; email: string | null }[]}
-      initialSlots={(slots ?? []) as Parameters<typeof InterviewScheduleClient>[0]['initialSlots']}
+      jobs={jobs}
+      profiles={profiles}
+      initialSlots={slots as Parameters<typeof InterviewScheduleClient>[0]['initialSlots']}
     />
   );
 }

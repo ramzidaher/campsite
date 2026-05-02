@@ -111,7 +111,7 @@ export function formatLeaveYearPeriodRange(
   const end = new Date(Date.UTC(y + 1, sm - 1, sd));
   end.setUTCDate(end.getUTCDate() - 1);
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
-  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
+  return `${start.toLocaleDateString('en-GB', { ...(opts ?? {}), timeZone: 'UTC' })} – ${end.toLocaleDateString('en-GB', { ...(opts ?? {}), timeZone: 'UTC' })}`;
 }
 
 /** Monday 00:00:00 local time for the week containing `d`. */
@@ -151,7 +151,7 @@ export function startOfDayLocal(d: Date): Date {
 }
 
 export function formatDayLabel(d: Date): string {
-  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 export function startOfMonth(d: Date): Date {
@@ -207,10 +207,10 @@ export function formatShiftTimeRange(startIso: string, endIso: string, iana?: st
   const start = new Date(startIso);
   const end = new Date(endIso);
   const o = safeTimeZoneOptions(iana);
-  return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', ...o })}-${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', ...o })}`;
+  return `${start.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit', ...o })}-${end.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit', ...o })}`;
 }
 
 export function formatDateTimeRangeLocal(start: Date, end: Date, iana?: string | null): string {
   const o = safeTimeZoneOptions(iana);
-  return `${start.toLocaleString(undefined, { ...o })} - ${end.toLocaleString(undefined, { ...o })}`;
+  return `${start.toLocaleString('en-GB', { timeZone: 'UTC',  ...o })} - ${end.toLocaleString('en-GB', { timeZone: 'UTC',  ...o })}`;
 }

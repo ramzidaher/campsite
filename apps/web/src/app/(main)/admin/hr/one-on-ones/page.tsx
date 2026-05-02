@@ -1,67 +1,39 @@
 import { HrOneOnOneComplianceClient } from '@/components/one-on-one/HrOneOnOneComplianceClient';
+import { getCachedHrOneOnOneCompliancePageData } from '@/lib/hr/getCachedHrOneOnOneCompliancePageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { createClient } from '@/lib/supabase/server';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function HrOneOnOnesPage() {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
+  const bundle = await withServerPerf(
     '/admin/hr/one-on-ones',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
     300
   );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
+  if (!permissionKeys.includes('hr.view_records')) redirect('/forbidden');
 
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const orgId = profile.org_id as string;
-
-  const permissionKeys = await withServerPerf(
+  const pageData = await withServerPerf(
     '/admin/hr/one-on-ones',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
+    'cached_hr_one_on_one_compliance_page_data',
+    getCachedHrOneOnOneCompliancePageData(orgId, 'all'),
+    650
   );
-  if (!permissionKeys.includes('hr.view_records')) redirect('/broadcasts');
-
-  const { data: rowsRaw, error } = await withServerPerf(
-    '/admin/hr/one-on-ones',
-    'hr_one_on_one_compliance_list',
-    supabase.rpc('hr_one_on_one_compliance_list', {
-      p_filter: 'all',
-    }),
-    450
-  );
-  if (error) {
+  if (pageData.errorMessage) {
     return (
       <div className="p-8">
-        <p className="text-[13px] text-[#b91c1c]">{error.message}</p>
+        <p className="text-[13px] text-[#b91c1c]">{pageData.errorMessage}</p>
       </div>
     );
   }
 
-  const rows = (Array.isArray(rowsRaw) ? rowsRaw : []) as Array<{
-    report_user_id: string;
-    report_name: string;
-    manager_user_id: string;
-    manager_name: string;
-    last_completed_at: string | null;
-    next_due_on: string;
-    cadence_days: number;
-    status: string;
-    days_overdue: number;
-  }>;
-
-  const view = <HrOneOnOneComplianceClient initialRows={rows} />;
+  const view = <HrOneOnOneComplianceClient initialRows={pageData.rows} />;
   warnIfSlowServerPath('/admin/hr/one-on-ones', pathStartedAtMs);
   return view;
 }

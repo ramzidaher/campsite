@@ -595,7 +595,7 @@ export function BroadcastDetailView({
             <>
               <span className="mx-2 text-[#9b9b9b]">·</span>
               <time dateTime={initial.sent_at} suppressHydrationWarning>
-                {new Date(initial.sent_at).toLocaleString(undefined, {
+                {new Date(initial.sent_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                   dateStyle: 'medium',
                   timeStyle: 'short',
                 })}
@@ -688,11 +688,11 @@ export function BroadcastDetailView({
           <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-4 text-sm text-amber-950">
             <p className="font-medium text-amber-950">Date or time in this message</p>
             <p className="mt-1 text-amber-950/90" suppressHydrationWarning>
-              {parsedRange.start.toLocaleString(undefined, {
+              {parsedRange.start.toLocaleString('en-GB', { timeZone: 'UTC', 
                 dateStyle: 'full',
                 timeStyle: 'short',
               })}{' '}
-              - {parsedRange.end.toLocaleTimeString(undefined, { timeStyle: 'short' })}
+              - {parsedRange.end.toLocaleTimeString('en-GB', { timeZone: 'UTC',  timeStyle: 'short' })}
             </p>
             <button
               type="button"

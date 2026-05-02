@@ -163,7 +163,7 @@ function parsePrompt(text: string, durationMin: number): ParsedSlot[] {
       const startsAt = new Date(base);
       startsAt.setHours(Math.floor(timeMin / 60), timeMin % 60, 0, 0);
       const endsAt = new Date(startsAt.getTime() + durationMin * 60_000);
-      const label = `${base.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at ${minutesToHHMM(timeMin)}`;
+      const label = `${base.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', month: 'short', day: 'numeric' })} at ${minutesToHHMM(timeMin)}`;
       slots.push({ startsAt, endsAt, label });
     }
   } else if (dedupedDays.length === 1) {
@@ -174,7 +174,7 @@ function parsePrompt(text: string, durationMin: number): ParsedSlot[] {
       const startsAt = new Date(base);
       startsAt.setHours(Math.floor(timeMin / 60), timeMin % 60, 0, 0);
       const endsAt = new Date(startsAt.getTime() + durationMin * 60_000);
-      const label = `${base.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at ${minutesToHHMM(timeMin)}`;
+      const label = `${base.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', month: 'short', day: 'numeric' })} at ${minutesToHHMM(timeMin)}`;
       slots.push({ startsAt, endsAt, label });
     }
   } else {
@@ -185,7 +185,7 @@ function parsePrompt(text: string, durationMin: number): ParsedSlot[] {
       const startsAt = new Date(base);
       startsAt.setHours(Math.floor(timeMin / 60), timeMin % 60, 0, 0);
       const endsAt = new Date(startsAt.getTime() + durationMin * 60_000);
-      const label = `${base.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at ${minutesToHHMM(timeMin)}`;
+      const label = `${base.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', month: 'short', day: 'numeric' })} at ${minutesToHHMM(timeMin)}`;
       slots.push({ startsAt, endsAt, label });
     }
   }
@@ -249,7 +249,7 @@ export function InterviewScheduleClient({
   const slotsByDay = useMemo(() => {
     const map = new Map<string, SlotListRow[]>();
     for (const slot of initialSlots) {
-      const key = new Date(slot.starts_at).toLocaleDateString(undefined, {
+      const key = new Date(slot.starts_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
         weekday: 'short', month: 'short', day: 'numeric',
       });
       const arr = map.get(key) ?? [];
@@ -326,8 +326,8 @@ export function InterviewScheduleClient({
           className={[
             'rounded-lg border px-3 py-2 text-[13px]',
             msg.type === 'err'
-              ? 'border-red-200 bg-red-50 text-red-900'
-              : 'border-emerald-200 bg-emerald-50 text-emerald-950',
+              ? 'status-banner-error'
+              : 'status-banner-success',
           ].join(' ')}
         >
           {msg.text}
@@ -407,12 +407,12 @@ export function InterviewScheduleClient({
                   <li key={i} className="flex items-center justify-between px-4 py-3">
                     <div className="text-[13px]">
                       <span className="font-medium text-[#121212]">
-                        {s.startsAt.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                        {s.startsAt.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'long', month: 'short', day: 'numeric' })}
                       </span>
                       <span className="ml-2 text-[#6b6b6b]">
-                        {s.startsAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {s.startsAt.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })}
                         {' – '}
-                        {s.endsAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {s.endsAt.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <span className="ml-2 text-[11px] text-[#9b9b9b]">({durationMin} min)</span>
                     </div>
@@ -566,11 +566,11 @@ export function InterviewScheduleClient({
                     const panNames = pan
                       .map((p) => relOne(p.profiles)?.full_name?.trim() || '—')
                       .join(', ');
-                    const when = new Date(s.starts_at).toLocaleString(undefined, {
+                    const when = new Date(s.starts_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                       weekday: 'short', month: 'short', day: 'numeric',
                       hour: '2-digit', minute: '2-digit',
                     });
-                    const endTime = new Date(s.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const endTime = new Date(s.ends_at).toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' });
                     return (
                       <tr key={s.id} className="border-b border-[#f5f5f5] last:border-0">
                         <td className="py-3 pr-4 align-top text-[#121212]">{when} – {endTime}</td>
@@ -645,9 +645,9 @@ export function InterviewScheduleClient({
                         <div key={s.id} className="rounded-lg border border-[#e4e4e4] bg-white p-3">
                           <div className="flex items-center justify-between">
                             <p className="text-[12px] font-medium text-[#121212]">
-                              {new Date(s.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(s.starts_at).toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })}
                               {' – '}
-                              {new Date(s.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(s.ends_at).toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })}
                             </p>
                             {slotStatusPill(s.status)}
                           </div>

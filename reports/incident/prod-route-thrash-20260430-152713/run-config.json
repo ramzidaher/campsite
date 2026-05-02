@@ -1,0 +1,113 @@
+{
+  "baseUrl": "https://camp-site.co.uk",
+  "usersCsv": "scripts/ussu-provision-output/ussu-password-import.csv",
+  "routesFile": null,
+  "concurrency": 3,
+  "maxUsers": 6,
+  "iterationsPerUser": 12,
+  "tabsPerUser": 3,
+  "pageTimeoutMs": 12000,
+  "shellTimeoutMs": 8000,
+  "minThinkMs": 100,
+  "maxThinkMs": 450,
+  "tabStartJitterMs": 250,
+  "slowMs": 1200,
+  "shellEvery": 1,
+  "seed": 1590257923,
+  "selectedUsers": [
+    {
+      "name": "camp-site.co.uk",
+      "email": "james.hann@camp-site.co.uk",
+      "loginUrl": "https://camp-site.co.uk/login",
+      "note": "University of Sussex Student Union (USSU) seed; shared password for all rows unless you changed CAMPSITE_USSU_PASSWORD when seeding."
+    },
+    {
+      "name": "camp-site.co.uk",
+      "email": "lindsay.horler@camp-site.co.uk",
+      "loginUrl": "https://camp-site.co.uk/login",
+      "note": "University of Sussex Student Union (USSU) seed; shared password for all rows unless you changed CAMPSITE_USSU_PASSWORD when seeding."
+    },
+    {
+      "name": "camp-site.co.uk",
+      "email": "rachael.wall@camp-site.co.uk",
+      "loginUrl": "https://camp-site.co.uk/login",
+      "note": "University of Sussex Student Union (USSU) seed; shared password for all rows unless you changed CAMPSITE_USSU_PASSWORD when seeding."
+    },
+    {
+      "name": "camp-site.co.uk",
+      "email": "olga.saskova@camp-site.co.uk",
+      "loginUrl": "https://camp-site.co.uk/login",
+      "note": "University of Sussex Student Union (USSU) seed; shared password for all rows unless you changed CAMPSITE_USSU_PASSWORD when seeding."
+    },
+    {
+      "name": "camp-site.co.uk",
+      "email": "sarthak.peshin@camp-site.co.uk",
+      "loginUrl": "https://camp-site.co.uk/login",
+      "note": "University of Sussex Student Union (USSU) seed; shared password for all rows unless you changed CAMPSITE_USSU_PASSWORD when seeding."
+    },
+    {
+      "name": "camp-site.co.uk",
+      "email": "aarun.palmer@camp-site.co.uk",
+      "loginUrl": "https://camp-site.co.uk/login",
+      "note": "University of Sussex Student Union (USSU) seed; shared password for all rows unless you changed CAMPSITE_USSU_PASSWORD when seeding."
+    }
+  ],
+  "selectedRoutes": [
+    {
+      "label": "tenant_dashboard",
+      "target": "$tenantDashboard"
+    },
+    {
+      "label": "profile",
+      "target": "/profile"
+    },
+    {
+      "label": "hr_home",
+      "target": "/hr"
+    },
+    {
+      "label": "hr_records",
+      "target": "/hr/records"
+    },
+    {
+      "label": "hr_performance",
+      "target": "/hr/performance"
+    },
+    {
+      "label": "hr_onboarding",
+      "target": "/hr/onboarding"
+    },
+    {
+      "label": "hr_org_chart",
+      "target": "/hr/org-chart"
+    },
+    {
+      "label": "hr_hiring",
+      "target": "/hr/hiring"
+    },
+    {
+      "label": "hr_hiring_requests",
+      "target": "/hr/hiring/requests"
+    },
+    {
+      "label": "hr_hiring_jobs",
+      "target": "/hr/hiring/jobs"
+    },
+    {
+      "label": "hr_hiring_applications",
+      "target": "/hr/hiring/applications"
+    },
+    {
+      "label": "hr_hiring_interviews",
+      "target": "/hr/hiring/interviews"
+    },
+    {
+      "label": "hr_hiring_templates",
+      "target": "/hr/hiring/templates"
+    },
+    {
+      "label": "hr_metric_alerts",
+      "target": "/hr/hr-metric-alerts"
+    }
+  ]
+}

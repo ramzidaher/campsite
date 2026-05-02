@@ -2,38 +2,28 @@ import { redirect } from 'next/navigation';
 import type { PermissionKey } from '@campsite/types';
 
 import { SystemOverviewGraphClient } from '@/components/system/SystemOverviewGraphClient';
-import { loadDepartmentsDirectory } from '@/lib/departments/loadDepartmentsDirectory';
-import { loadWorkspaceDepartmentIds } from '@/lib/manager/workspaceDepartmentIds';
+import { getCachedManagerSystemOverviewPageData } from '@/lib/manager/getCachedManagerSystemOverviewPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { buildSystemOverviewGraph } from '@/lib/systemOverview/buildSystemOverviewGraph';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { createClient } from '@/lib/supabase/server';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileRole, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function ManagerSystemOverviewPage() {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await withServerPerf(
+  const shellBundle = await withServerPerf(
     '/manager/system-overview',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status, role')
-      .eq('id', user.id)
-      .maybeSingle(),
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
     300
   );
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const permissionKeys = (await withServerPerf(
-    '/manager/system-overview',
-    'get_my_permissions',
-    getMyPermissions(profile.org_id as string),
-    300
-  )) as PermissionKey[];
+  const orgId = shellBundleOrgId(shellBundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(shellBundle) !== 'active') redirect('/broadcasts');
+  const role = shellBundleProfileRole(shellBundle);
+  const permissionKeys = parseShellPermissionKeys(shellBundle) as PermissionKey[];
 
   const canAccessManagerWorkspace = permissionKeys.some(
     (k) =>
@@ -45,30 +35,14 @@ export default async function ManagerSystemOverviewPage() {
       k === 'teams.view' ||
       k === 'approvals.members.review'
   );
-  if (!canAccessManagerWorkspace) redirect('/manager');
+  if (!canAccessManagerWorkspace) redirect('/forbidden');
 
-  const scopeDeptIds = await withServerPerf(
+  const graph = await withServerPerf(
     '/manager/system-overview',
-    'workspace_department_ids',
-    loadWorkspaceDepartmentIds(
-      supabase,
-      user.id,
-      (profile.role as string | null | undefined) ?? null
-    ),
-    350
+    'cached_manager_system_overview_page_data',
+    getCachedManagerSystemOverviewPageData(orgId, user.id, role, permissionKeys),
+    700
   );
-  const bundle = await withServerPerf(
-    '/manager/system-overview',
-    'load_departments_directory',
-    loadDepartmentsDirectory(supabase, profile.org_id as string, scopeDeptIds),
-    500
-  );
-
-  const graph = buildSystemOverviewGraph({
-    permissions: permissionKeys,
-    bundle,
-    isManagerScoped: true,
-  });
 
   const view = (
     <div className="-mx-5 -my-7 sm:-mx-[28px]">

@@ -38,7 +38,7 @@ const RATING_COLORS: Record<string, string> = {
 };
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function statusInfo(status: string, isReviewee: boolean): { label: string; dot: string; hint: string } {

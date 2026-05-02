@@ -1,6 +1,10 @@
 'use server';
 
 import {
+  invalidateAdminApplicationsForOrg,
+  invalidateHrOverviewForOrg,
+} from '@/lib/cache/cacheInvalidation';
+import {
   sendApplicationSubmittedEmail,
 } from '@/lib/recruitment/sendApplicationCandidateEmails';
 import { cvUploadValidationMessage } from '@/lib/recruitment/cvUploadConstraints';
@@ -166,18 +170,26 @@ export async function submitPublicJobApplication(
   const row = submitRows[0] as { application_id: string; portal_token: string };
   const applicationId = row.application_id;
   const portalToken = row.portal_token;
+  let applicationOrgId: string | null = null;
 
   let cvUploadWarning: string | null = null;
+
+  try {
+    const admin = createServiceRoleClient();
+    const { data: appRow } = await admin
+      .from('job_applications')
+      .select('org_id')
+      .eq('id', applicationId)
+      .maybeSingle();
+    applicationOrgId = (appRow?.org_id as string | undefined) ?? null;
+  } catch {
+    applicationOrgId = null;
+  }
 
   if (expectCvUpload && hasCvFile && cvFile instanceof File) {
     try {
       const admin = createServiceRoleClient();
-      const { data: appRow } = await admin
-        .from('job_applications')
-        .select('org_id')
-        .eq('id', applicationId)
-        .maybeSingle();
-      const orgId = appRow?.org_id as string | undefined;
+      const orgId = applicationOrgId ?? undefined;
       if (!orgId) {
         cvUploadWarning =
           'Your application was saved, but we could not attach your CV automatically. HR may contact you for a copy.';
@@ -202,6 +214,13 @@ export async function submitPublicJobApplication(
       cvUploadWarning =
         'Your application was saved, but the CV upload failed. HR may contact you for a copy of your CV.';
     }
+  }
+
+  if (applicationOrgId) {
+    await Promise.all([
+      invalidateAdminApplicationsForOrg(applicationOrgId),
+      invalidateHrOverviewForOrg(applicationOrgId),
+    ]);
   }
 
   await sendApplicationSubmittedEmail({

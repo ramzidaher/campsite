@@ -136,7 +136,7 @@ export function GenerateOfferModal({
             role={msg.type === 'err' ? 'alert' : 'status'}
             className={[
               'mt-3 rounded-lg border px-3 py-2 text-[13px]',
-              msg.type === 'err' ? 'border-red-200 bg-red-50 text-red-900' : 'border-[#d8d8d8] bg-[#f5f4f1] text-[#121212]',
+              msg.type === 'err' ? 'status-banner-error' : 'status-banner-warning',
             ].join(' ')}
           >
             {msg.text}

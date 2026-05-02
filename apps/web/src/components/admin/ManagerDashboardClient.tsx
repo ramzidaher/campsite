@@ -706,7 +706,7 @@ export function ManagerDashboardClient({
       {!hasDepartments ? (
         <div
           role="status"
-          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950"
+          className="status-banner-warning rounded-xl px-4 py-3 text-[13px]"
         >
           You are not assigned as a department manager yet.
         </div>
@@ -836,7 +836,7 @@ export function ManagerDashboardClient({
                         <li key={item.id} className="rounded-md border border-white bg-white/80 px-2.5 py-2 text-[12.5px]">
                           <p className="font-medium text-[#121212]">{item.title}</p>
                           <p className="mt-0.5 text-[11.5px] text-[#6b6b6b]">
-                            {new Date(item.start_time).toLocaleString(undefined, {
+                            {new Date(item.start_time).toLocaleString('en-GB', { timeZone: 'UTC', 
                               weekday: 'short',
                               month: 'short',
                               day: 'numeric',
@@ -859,7 +859,7 @@ export function ManagerDashboardClient({
                         <li key={item.id} className="rounded-md border border-white bg-white/80 px-2.5 py-2 text-[12.5px]">
                           <p className="font-medium text-[#121212]">{item.title}</p>
                           <p className="mt-0.5 text-[11.5px] text-[#6b6b6b]">
-                            {new Date(item.start_time).toLocaleString(undefined, {
+                            {new Date(item.start_time).toLocaleString('en-GB', { timeZone: 'UTC', 
                               weekday: 'short',
                               month: 'short',
                               day: 'numeric',
@@ -879,7 +879,7 @@ export function ManagerDashboardClient({
                   <li key={item.id} className="rounded-lg border border-[#ececec] bg-[#faf9f6] px-3 py-2.5">
                     <p className="text-[13px] font-medium text-[#121212]">{item.title}</p>
                     <p className="mt-0.5 text-[12px] text-[#6b6b6b]">
-                      {new Date(item.start_time).toLocaleString(undefined, {
+                      {new Date(item.start_time).toLocaleString('en-GB', { timeZone: 'UTC', 
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric',

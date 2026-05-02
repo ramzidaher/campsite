@@ -1,9 +1,9 @@
 import { BradfordReportClient } from '@/components/admin/hr/BradfordReportClient';
 import type { BradfordReportRow } from '@/components/admin/hr/BradfordReportClient';
+import { getCachedAbsenceReportingPageData } from '@/lib/hr/getCachedAbsenceReportingPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { createClient } from '@/lib/supabase/server';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
 
 function mapReportRows(raw: unknown): BradfordReportRow[] {
@@ -64,61 +64,45 @@ function mapHighAbsenceRows(raw: unknown): Array<{
 
 export default async function AbsenceReportingPage() {
   const pathStartedAtMs = Date.now();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const supabase = await createClient();
-  const { data: profile } = await withServerPerf(
+  const bundle = await withServerPerf(
     '/admin/hr/absence-reporting',
-    'profile_lookup',
-    supabase.from('profiles').select('org_id, status').eq('id', user.id).maybeSingle(),
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
     300
   );
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-  const permissionKeys = await withServerPerf(
-    '/admin/hr/absence-reporting',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
-  );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
   const canViewAll =
     permissionKeys.includes('hr.view_records') || permissionKeys.includes('leave.manage_org');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
-  if (!canViewAll && !canViewTeam) redirect('/broadcasts');
+  if (!canViewAll && !canViewTeam) redirect('/forbidden');
 
   const asOf = new Date().toISOString().slice(0, 10);
-  const [{ data: reportData, error }, { data: settings }, { data: trendData }, { data: highAbsenceData }] = await Promise.all([
-    withServerPerf('/admin/hr/absence-reporting', 'hr_bradford_report', supabase.rpc('hr_bradford_report', { p_on: asOf }), 450),
-    withServerPerf(
-      '/admin/hr/absence-reporting',
-      'leave_settings_lookup',
-      supabase.from('org_leave_settings').select('bradford_window_days').eq('org_id', orgId).maybeSingle(),
-      300
-    ),
-    withServerPerf('/admin/hr/absence-reporting', 'hr_leave_usage_trends', supabase.rpc('hr_leave_usage_trends', { p_on: asOf }), 400),
-    withServerPerf('/admin/hr/absence-reporting', 'hr_high_absence_triggers', supabase.rpc('hr_high_absence_triggers', { p_on: asOf }), 400),
-  ]);
+  const pageData = await withServerPerf(
+    '/admin/hr/absence-reporting',
+    'cached_absence_reporting_page_data',
+    getCachedAbsenceReportingPageData(orgId, asOf),
+    650
+  );
 
-  if (error) {
+  if (pageData.reportErrorMessage) {
     return (
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-7">
-        <p className="text-[13px] text-[#b91c1c]">Could not load absence report: {error.message}</p>
+        <p className="text-[13px] text-[#b91c1c]">Could not load absence report: {pageData.reportErrorMessage}</p>
       </div>
     );
   }
 
-  const bradfordWindowDays = Number(settings?.bradford_window_days ?? 365) || 365;
-
   const view = (
     <BradfordReportClient
-      initialRows={mapReportRows(reportData)}
+      initialRows={mapReportRows(pageData.reportData)}
       initialAsOf={asOf}
-      bradfordWindowDays={bradfordWindowDays}
+      bradfordWindowDays={pageData.bradfordWindowDays}
       canViewAll={canViewAll}
-      initialTrends={mapTrendRows(trendData)}
-      initialHighAbsence={mapHighAbsenceRows(highAbsenceData)}
+      initialTrends={mapTrendRows(pageData.trendData)}
+      initialHighAbsence={mapHighAbsenceRows(pageData.highAbsenceData)}
     />
   );
   warnIfSlowServerPath('/admin/hr/absence-reporting', pathStartedAtMs);

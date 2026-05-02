@@ -710,7 +710,7 @@ export function JobPipelineClient({
                   return (
                     <tr key={session.id} className="bg-[#fafaf9]">
                       <td className="px-3 py-2.5 font-medium text-[#121212]">
-                        {starts.toLocaleString([], { hour: '2-digit', minute: '2-digit' })}{' '}
+                        {starts.toLocaleString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })}{' '}
                         {starts.toLocaleDateString('en-GB')}
                       </td>
                       <td className="px-3 py-2.5 text-[#505050]">
@@ -963,9 +963,9 @@ export function JobPipelineClient({
                 <h2 className="font-authSerif text-[20px] leading-tight text-[#121212]">Interview Slot</h2>
                 <p className="mt-1 text-[12px] text-[#6b6b6b]">
                   {new Date(slotDetail.starts_at).toLocaleDateString('en-GB')} ·{' '}
-                  {new Date(slotDetail.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(slotDetail.starts_at).toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })}
                   {' - '}
-                  {new Date(slotDetail.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(slotDetail.ends_at).toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
               <button
@@ -1644,7 +1644,7 @@ export function JobPipelineClient({
                           <li key={n.id} className="rounded-md border border-[#f0f0f0] bg-[#fafafa] p-2 text-[13px]">
                             <p className="text-[11px] text-[#9b9b9b]">
                               {n.created_at
-                                ? new Date(n.created_at).toLocaleString(undefined, {
+                                ? new Date(n.created_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                                     dateStyle: 'short',
                                     timeStyle: 'short',
                                   })
@@ -1753,7 +1753,7 @@ export function JobPipelineClient({
                         <li key={m.id} className="rounded-md border border-[#e8f5f0] bg-[#f6fdfb] p-2 text-[13px]">
                           <p className="text-[11px] text-[#9b9b9b]">
                             {m.created_at
-                              ? new Date(m.created_at).toLocaleString(undefined, {
+                              ? new Date(m.created_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                                   dateStyle: 'short',
                                   timeStyle: 'short',
                                 })

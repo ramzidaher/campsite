@@ -26,7 +26,7 @@ export default async function OneOnOneMeetingPage({ params }: { params: Promise<
   const permissionKeys = await getMyPermissions(orgId);
   const canView   = permissionKeys.includes('one_on_one.view_own');
   const canHrPeek = permissionKeys.includes('hr.view_records');
-  if (!canView && !canHrPeek) redirect('/broadcasts');
+  if (!canView && !canHrPeek) redirect('/forbidden');
 
   const { data: meetingRaw, error: mErr } = await supabase.rpc('one_on_one_meeting_get', {
     p_meeting_id: meetingId,

@@ -1,5 +1,6 @@
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { createClient } from '@/lib/supabase/server';
+import { invalidateSettingsPageDataForUser } from '@/lib/settings/getCachedSettingsPageData';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
@@ -10,9 +11,7 @@ export async function GET(req: Request) {
   const tenantId = (process.env.MICROSOFT_TENANT_ID ?? process.env.TENANT_ID)?.trim();
 
   if (!clientId || !clientSecret || !tenantId) {
-    return NextResponse.redirect(
-      new URL('/settings?outlook_error=not_configured', req.url)
-    );
+    return NextResponse.redirect(new URL('/settings?outlook_error=not_configured', req.url));
   }
 
   const { searchParams } = new URL(req.url);
@@ -51,21 +50,18 @@ export async function GET(req: Request) {
   const origin = new URL(req.url).origin;
   const redirectUri = `${origin}/auth/outlook/callback`;
 
-  const tokenRes = await fetch(
-    `https://login.microsoftonline.com/common/oauth2/v2.0/token`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-        client_id: clientId,
-        client_secret: clientSecret,
-        scope: 'Calendars.ReadWrite offline_access',
-      }),
-    }
-  );
+  const tokenRes = await fetch(`https://login.microsoftonline.com/common/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: 'Calendars.ReadWrite offline_access',
+    }),
+  });
 
   if (!tokenRes.ok) {
     const t = await tokenRes.text().catch(() => '');
@@ -83,7 +79,10 @@ export async function GET(req: Request) {
 
   if (!tokens.access_token) {
     return NextResponse.redirect(
-      new URL(`/settings?outlook_error=${encodeURIComponent(tokens.error ?? 'no_access_token')}`, req.url)
+      new URL(
+        `/settings?outlook_error=${encodeURIComponent(tokens.error ?? 'no_access_token')}`,
+        req.url
+      )
     );
   }
   if (!tokens.refresh_token) {
@@ -103,7 +102,9 @@ export async function GET(req: Request) {
       const me = (await meRes.json()) as { mail?: string; userPrincipalName?: string };
       microsoftEmail = me.mail ?? me.userPrincipalName ?? null;
     }
-  } catch { /* non-fatal */ }
+  } catch {
+    /* non-fatal */
+  }
 
   const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000).toISOString();
   const supabase = await createClient();
@@ -125,6 +126,8 @@ export async function GET(req: Request) {
       new URL(`/settings?outlook_error=${encodeURIComponent(error.message)}`, req.url)
     );
   }
+
+  await invalidateSettingsPageDataForUser(user.id).catch(() => null);
 
   return NextResponse.redirect(new URL('/settings?outlook_connected=1', req.url));
 }

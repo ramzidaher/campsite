@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -94,6 +95,7 @@ export function PerformanceCyclesClient({
     setShowForm(false);
     setName(''); setType('annual'); setPeriodStart(''); setPeriodEnd(''); setSelfDue(''); setManagerDue('');
     setMsg({ type: 'success', text: 'Review cycle created.' });
+    await invalidateClientCaches({ scopes: ['performance'] }).catch(() => null);
     router.refresh();
   }
 

@@ -1,9 +1,10 @@
 import { OrgChartClient } from '@/components/admin/hr/OrgChartClient';
 import type { HRDirectoryRow } from '@/components/admin/hr/HRDirectoryClient';
+import { getCachedOrgChartPageData } from '@/lib/hr/getCachedOrgChartPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { createClient } from '@/lib/supabase/server';
+import { shellBundleOrgId, shellBundleOrgName, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 function AccessMessage({ message }: { message: string }) {
   return (
@@ -18,45 +19,34 @@ function AccessMessage({ message }: { message: string }) {
 
 export default async function HROrgChartPage() {
   const pathStartedAtMs = Date.now();
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
+  const bundle = await withServerPerf(
     '/admin/hr/org-chart',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
     300
   );
-
-  if (!profile?.org_id || profile.status !== 'active') {
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') {
     return <AccessMessage message="Your account needs an active organisation membership to view the org chart." />;
   }
-  const orgId = profile.org_id as string;
 
-  const [rowsRes, orgRes] = await Promise.all([
-    withServerPerf('/admin/hr/org-chart', 'org_chart_directory_list', supabase.rpc('org_chart_directory_list'), 450),
-    withServerPerf(
+  let pageData;
+  try {
+    pageData = await withServerPerf(
       '/admin/hr/org-chart',
-      'org_name_lookup',
-      supabase.from('organisations').select('name').eq('id', orgId).maybeSingle(),
-      300
-    ),
-  ]);
-  const rows = rowsRes.data;
-  const org = orgRes.data;
-  if (rowsRes.error) {
+      'org_chart_bundle_cached',
+      getCachedOrgChartPageData(orgId),
+      500
+    );
+  } catch {
     return <AccessMessage message="You do not have access to this org chart right now." />;
   }
-  const chartTitle = `${org?.name?.trim() || 'Organisation'} Chart`;
+  const chartTitle = `${shellBundleOrgName(bundle) ?? 'Organisation'} Chart`;
 
   const view = (
     <div style={{ height: 'calc(100dvh - 60px)', background: '#0a0a0c' }}>
-      <OrgChartClient rows={(rows ?? []) as HRDirectoryRow[]} chartTitle={chartTitle} />
+      <OrgChartClient rows={(pageData.rows ?? []) as HRDirectoryRow[]} chartTitle={chartTitle} />
     </div>
   );
   warnIfSlowServerPath('/admin/hr/org-chart', pathStartedAtMs);

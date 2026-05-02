@@ -20,7 +20,7 @@ export default async function NewOfferTemplatePage({
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('offers.manage'))) redirect('/broadcasts');
+  if (!(await viewerHasPermission('offers.manage'))) redirect('/forbidden');
 
   const { name } = await searchParams;
   const initialName = typeof name === 'string' ? name.trim().slice(0, 240) : '';

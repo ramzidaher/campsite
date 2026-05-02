@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -159,6 +160,7 @@ export function OnboardingHubClient({
     setShowTemplateForm(false);
     setTplName(''); setTplDesc(''); setTplDefault(false);
     setMsg({ type: 'success', text: 'Template created.' });
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.refresh();
   }
 
@@ -195,6 +197,7 @@ export function OnboardingHubClient({
     setTaskAssignee('hr');
     setTaskDueOffset('1');
     setTaskMsg({ type: 'success', text: editTaskId ? 'Task updated.' : 'Task added.' });
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.refresh();
   }
 
@@ -226,6 +229,7 @@ export function OnboardingHubClient({
       setTaskDueOffset('1');
     }
     setTaskMsg({ type: 'success', text: 'Task deleted.' });
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.refresh();
   }
 
@@ -264,6 +268,7 @@ export function OnboardingHubClient({
       return;
     }
     setTaskMsg({ type: 'success', text: 'Task order updated.' });
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.refresh();
   }
 
@@ -279,6 +284,7 @@ export function OnboardingHubClient({
       return;
     }
     setMsg({ type: 'success', text: 'Start confirmed.' });
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.refresh();
   }
 
@@ -303,6 +309,7 @@ export function OnboardingHubClient({
       return;
     }
     setMsg({ type: 'success', text: 'Pre-start checks marked complete.' });
+    await invalidateClientCaches({ scopes: ['onboarding'] }).catch(() => null);
     router.refresh();
   }
 

@@ -137,7 +137,7 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
             role={msg.type === 'err' ? 'alert' : 'status'}
             className={[
               'mb-4 rounded-lg border px-3 py-2 text-[14px]',
-              msg.type === 'err' ? 'border-red-200 bg-red-50 text-red-900' : 'border-emerald-200 bg-emerald-50 text-emerald-950',
+              msg.type === 'err' ? 'status-banner-error' : 'status-banner-success',
             ].join(' ')}
           >
             {msg.text}

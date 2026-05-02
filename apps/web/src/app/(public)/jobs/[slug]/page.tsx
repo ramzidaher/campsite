@@ -81,14 +81,14 @@ function formatDateValue(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function formatDateTimeValue(iso: string | null | undefined): string {
   if (!iso) return 'Rolling — apply while listed';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return 'Rolling — apply while listed';
-  return d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function parseDateList(value: unknown): string[] {
@@ -274,7 +274,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   const jobsIndexHref = tenantPublicJobsIndexRelativePath(orgSlug, host);
 
   const postedLong = job.published_at
-    ? new Date(job.published_at).toLocaleDateString(undefined, {
+    ? new Date(job.published_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
         day: 'numeric',
         month: 'long',
         year: 'numeric',

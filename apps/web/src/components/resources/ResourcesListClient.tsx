@@ -230,19 +230,25 @@ export function ResourcesListClient({
 
   const fetchFolderRows = useCallback(
     async (mode: 'match_view' | 'active_only'): Promise<StaffResourceFolderRow[]> => {
-      const selectCols = folderHierarchyOk
-        ? 'id, name, sort_order, parent_id, archived_at'
-        : 'id, name, sort_order';
-      let q = supabase.from('staff_resource_folders').select(selectCols).eq('org_id', orgId);
-      if (folderHierarchyOk) {
-        const wantArchivedFolders = mode === 'match_view' && archiveOnly;
-        // Supabase query builder types get overly strict when conditionally
-        // adding filters based on a dynamic select list.
-        if (wantArchivedFolders) q = (q as any).not('archived_at', 'is', null);
-        else q = (q as any).is('archived_at', null);
-      }
-      q = q.order('sort_order', { ascending: true }).order('name', { ascending: true });
-      const { data, error } = await q;
+      const q = folderHierarchyOk
+        ? (() => {
+            const wantArchivedFolders = mode === 'match_view' && archiveOnly;
+            let base = supabase
+              .from('staff_resource_folders')
+              .select('id, name, sort_order, parent_id, archived_at')
+              .eq('org_id', orgId);
+            base = wantArchivedFolders
+              ? base.not('archived_at', 'is', null)
+              : base.is('archived_at', null);
+            return base;
+          })()
+        : supabase
+            .from('staff_resource_folders')
+            .select('id, name, sort_order')
+            .eq('org_id', orgId);
+      const { data, error } = await q
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as StaffResourceFolderRow[];
     },
@@ -1440,7 +1446,7 @@ export function ResourcesListClient({
       ) : null}
 
       {err ? (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800">{err}</p>
+        <p className="status-banner-error mb-4 rounded-lg px-3 py-2 text-[13px]">{err}</p>
       ) : null}
 
       {busy ? (
@@ -1662,7 +1668,7 @@ function ResourceRow({
   const updated = new Date(r.updated_at);
   const updatedLabel = Number.isNaN(updated.getTime())
     ? ''
-    : `Updated ${updated.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    : `Updated ${updated.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   return (
     <li className="relative">

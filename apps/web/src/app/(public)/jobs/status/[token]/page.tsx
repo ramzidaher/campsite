@@ -55,7 +55,7 @@ export default async function CandidatePortalPage({ params }: { params: Promise<
   const orgLogoUrl = (orgBrand as { logo_url?: string | null } | null)?.logo_url ?? null;
 
   const submittedLabel = row.submitted_at
-    ? new Date(row.submitted_at).toLocaleString(undefined, {
+    ? new Date(row.submitted_at).toLocaleString('en-GB', { timeZone: 'UTC', 
         dateStyle: 'medium',
         timeStyle: 'short',
       })

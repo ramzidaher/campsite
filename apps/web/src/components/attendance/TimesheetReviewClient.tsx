@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -61,6 +62,10 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
     }
     setApproveMinutes(am);
   }, [orgId, supabase]);
+
+  const invalidateAttendanceCaches = useCallback(async () => {
+    await invalidateClientCaches({ scopes: ['leave-attendance'] });
+  }, []);
 
   useEffect(() => {
     void load();
@@ -124,6 +129,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
       setErr(error.message);
       return;
     }
+    await invalidateAttendanceCaches().catch(() => null);
     await load();
   }
 
@@ -166,6 +172,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
       return;
     }
     setProxyReason('');
+    await invalidateAttendanceCaches().catch(() => null);
   }
 
   async function voidSickness(absenceId: string) {
@@ -182,6 +189,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
       return;
     }
     setVoidNotes('');
+    await invalidateAttendanceCaches().catch(() => null);
     void (async () => {
       const { data } = await supabase
         .from('sickness_absences')
@@ -197,7 +205,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
 
   return (
     <div className="space-y-8">
-      {err ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-900">{err}</p> : null}
+      {err ? <p className="status-banner-error rounded-lg px-3 py-2 text-[13px]">{err}</p> : null}
 
       <section>
         <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Submitted timesheets</h2>

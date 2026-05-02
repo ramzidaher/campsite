@@ -1,5 +1,6 @@
 'use server';
 
+import { invalidateOnboardingForOrg } from '@/lib/cache/cacheInvalidation';
 import { buildSignedOfferPdfBytes } from '@/lib/offers/buildSignedOfferPdf';
 import { htmlToPlainTextForPdf } from '@/lib/offers/mergeOfferTemplate';
 import { sendSignedOfferPdfEmail } from '@/lib/recruitment/sendOfferLetterEmails';
@@ -182,7 +183,7 @@ export async function submitOfferSignature(
       .select('id, org_id, recruitment_request_id, created_by')
       .eq('id', listingId)
       .maybeSingle();
-    const rid = String((listing as any)?.recruitment_request_id ?? '').trim();
+    const rid = String((listing as { recruitment_request_id?: string | null } | null)?.recruitment_request_id ?? '').trim();
     if (rid) {
       const { data: req } = await admin
         .from('recruitment_requests')
@@ -190,7 +191,7 @@ export async function submitOfferSignature(
         .eq('id', rid)
         .eq('org_id', orgId)
         .maybeSingle();
-      const prev = String((req as any)?.status ?? '').trim();
+      const prev = String((req as { status?: string | null } | null)?.status ?? '').trim();
       if (prev && prev !== 'filled') {
         await admin
           .from('recruitment_requests')
@@ -202,7 +203,7 @@ export async function submitOfferSignature(
           org_id: orgId,
           from_status: prev,
           to_status: 'filled',
-          changed_by: (listing as any)?.created_by ?? (ja.id as string),
+          changed_by: (listing as { created_by?: string | null } | null)?.created_by ?? (ja.id as string),
           note: 'Auto: offer accepted (signed)',
         });
       }
@@ -286,6 +287,7 @@ export async function submitOfferSignature(
     filename: `signed-offer-${offerId.slice(0, 8)}.pdf`,
   });
 
+  await invalidateOnboardingForOrg(orgId);
   if (listingId) {
     revalidatePath(`/admin/jobs/${listingId}/applications`);
     revalidatePath(`/hr/jobs/${listingId}/applications`);

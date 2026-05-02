@@ -20,7 +20,7 @@ export default async function EditOfferTemplatePage({ params }: { params: Promis
     .single();
 
   if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  if (!(await viewerHasPermission('offers.manage'))) redirect('/broadcasts');
+  if (!(await viewerHasPermission('offers.manage'))) redirect('/forbidden');
 
   const orgId = profile.org_id as string;
 

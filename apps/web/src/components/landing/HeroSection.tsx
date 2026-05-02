@@ -2,9 +2,17 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { animate, stagger } from 'animejs';
+import { useAnimeReveal } from '@/hooks/useAnimeReveal';
 
 export function HeroSection() {
   const heroCardsRef = useRef<HTMLDivElement | null>(null);
+  const heroLeftRef = useAnimeReveal<HTMLDivElement>('[data-anime-reveal]', {
+    immediate: true,
+    staggerMs: 110,
+    delay: 60,
+    translateY: 22,
+  });
 
   useEffect(() => {
     const cards = heroCardsRef.current;
@@ -33,6 +41,19 @@ export function HeroSection() {
     window.addEventListener('scroll', onScroll, { passive: true });
     media.addEventListener('change', onMotionPrefChange);
 
+    // Stagger the UI cards in — opacity only, so parallax transforms are untouched
+    if (!media.matches) {
+      const cardEls = Array.from(cards.querySelectorAll<HTMLElement>('.v5-ui-card'));
+      if (cardEls.length) {
+        animate(cardEls, {
+          opacity: [0, 1],
+          duration: 900,
+          delay: stagger(180, { start: 280 }),
+          ease: 'outExpo',
+        });
+      }
+    }
+
     return () => {
       window.removeEventListener('scroll', onScroll);
       media.removeEventListener('change', onMotionPrefChange);
@@ -47,16 +68,16 @@ export function HeroSection() {
   return (
     <section className="v5-hero-shell">
       <div className="v5-hero">
-        <div className="v5-hero-left">
-          <h1 className="v5-hero-title">
+        <div ref={heroLeftRef} className="v5-hero-left">
+          <h1 data-anime-reveal className="v5-hero-title">
             Run your team.
             <em> Not your tools.</em>
           </h1>
-          <p className="v5-hero-desc">
+          <p data-anime-reveal className="v5-hero-desc">
             Replace daily coordination chaos with one clear workflow your whole team can follow from shift planning to
             people ops.
           </p>
-          <div className="v5-hero-actions">
+          <div data-anime-reveal className="v5-hero-actions">
             <Link href="/register" className="v5-btn-primary">Start your workspace</Link>
             <button type="button" className="v5-btn-secondary" onClick={handleSeeHowItWorks}>See how it works</button>
           </div>

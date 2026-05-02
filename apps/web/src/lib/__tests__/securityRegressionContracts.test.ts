@@ -77,7 +77,7 @@ describe('coworker public projection vs sensitive profile access', () => {
       'apps/web/src/components/broadcasts/BroadcastsClient.tsx',
       'apps/web/src/components/leave/LeaveHubClient.tsx',
       'apps/web/src/components/attendance/TimesheetReviewClient.tsx',
-      'apps/web/src/app/(main)/performance/page.tsx',
+      'apps/web/src/lib/performance/getCachedPerformanceIndexPageData.ts',
       'apps/web/src/components/rota/RotaClient.tsx',
     ];
     for (const rel of files) {

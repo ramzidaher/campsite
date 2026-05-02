@@ -1,0 +1,55 @@
+import { cache } from 'react';
+
+import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
+import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
+import { createClient } from '@/lib/supabase/server';
+
+export type RecruitmentQueueRow = {
+  id: string;
+  job_title: string | null;
+  status: string | null;
+  urgency: string | null;
+  archived_at: string | null;
+  created_at: string | null;
+  department_id: string | null;
+  start_date_needed: string | null;
+  advert_release_date: string | null;
+  advert_closing_date: string | null;
+  shortlisting_dates: unknown;
+  interview_schedule: unknown;
+  departments: { name?: string } | { name?: string }[] | null;
+  submitter: { full_name?: string } | { full_name?: string }[] | null;
+};
+
+const RECRUITMENT_QUEUE_RESPONSE_CACHE_TTL_MS = Number.parseInt(
+  process.env.CAMPSITE_RECRUITMENT_QUEUE_RESPONSE_CACHE_TTL_MS ?? '30000',
+  10
+);
+const recruitmentQueueResponseCache = new Map<string, TtlCacheEntry<RecruitmentQueueRow[]>>();
+const recruitmentQueueInFlight = new Map<string, Promise<RecruitmentQueueRow[]>>();
+registerSharedCacheStore('campsite:jobs:recruitment', recruitmentQueueResponseCache, recruitmentQueueInFlight);
+
+function getRecruitmentQueueCacheKey(orgId: string): string {
+  return `org:${orgId}`;
+}
+
+export const getCachedRecruitmentQueuePageData = cache(async (orgId: string): Promise<RecruitmentQueueRow[]> => {
+  return getOrLoadSharedCachedValue({
+    cache: recruitmentQueueResponseCache,
+    inFlight: recruitmentQueueInFlight,
+    key: getRecruitmentQueueCacheKey(orgId),
+    cacheNamespace: 'campsite:jobs:recruitment',
+    ttlMs: RECRUITMENT_QUEUE_RESPONSE_CACHE_TTL_MS,
+    load: async () => {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from('recruitment_requests')
+        .select(
+          'id, job_title, status, urgency, archived_at, created_at, department_id, start_date_needed, advert_release_date, advert_closing_date, shortlisting_dates, interview_schedule, departments(name), submitter:profiles!recruitment_requests_created_by_fkey(full_name)'
+        )
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as RecruitmentQueueRow[];
+    },
+  });
+});

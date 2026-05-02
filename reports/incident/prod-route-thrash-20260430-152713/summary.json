@@ -1,0 +1,529 @@
+{
+  "run": {
+    "startedAt": "2026-04-30T14:27:13.995Z",
+    "finishedAt": "2026-04-30T14:27:35.549Z",
+    "durationMs": 21554,
+    "outDir": "reports/incident/prod-route-thrash-20260430-152713",
+    "baseUrl": "https://camp-site.co.uk",
+    "usersCsv": "scripts/ussu-provision-output/ussu-password-import.csv",
+    "routeCount": 14,
+    "selectedUsers": [
+      "james.hann@camp-site.co.uk",
+      "lindsay.horler@camp-site.co.uk",
+      "rachael.wall@camp-site.co.uk",
+      "olga.saskova@camp-site.co.uk",
+      "sarthak.peshin@camp-site.co.uk",
+      "aarun.palmer@camp-site.co.uk"
+    ],
+    "selectedRoutes": [
+      "tenant_dashboard",
+      "profile",
+      "hr_home",
+      "hr_records",
+      "hr_performance",
+      "hr_onboarding",
+      "hr_org_chart",
+      "hr_hiring",
+      "hr_hiring_requests",
+      "hr_hiring_jobs",
+      "hr_hiring_applications",
+      "hr_hiring_interviews",
+      "hr_hiring_templates",
+      "hr_metric_alerts"
+    ],
+    "seed": 1590257923,
+    "tabsPerUser": 3,
+    "tabStartJitterMs": 250
+  },
+  "logins": {
+    "attempts": 6,
+    "ok": 6,
+    "failed": 0,
+    "avgDurationMs": 2970
+  },
+  "pages": {
+    "count": 72,
+    "avgDurationMs": 936,
+    "p95DurationMs": 3092,
+    "slowThresholdMs": 1200,
+    "slowCount": 19,
+    "timeoutCount": 0,
+    "loginRedirectCount": 0,
+    "inactiveRedirectCount": 0,
+    "statusDist": {
+      "200": 72
+    },
+    "topSlow": [
+      {
+        "userEmail": "lindsay.horler@camp-site.co.uk",
+        "routeLabel": "profile",
+        "finalStatus": 200,
+        "totalDurationMs": 3653,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/profile",
+        "vercelIds": [
+          "lhr1::fra1::9tcw8-1777559237700-35042723563a"
+        ]
+      },
+      {
+        "userEmail": "rachael.wall@camp-site.co.uk",
+        "routeLabel": "hr_performance",
+        "finalStatus": 200,
+        "totalDurationMs": 3449,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr/performance",
+        "vercelIds": [
+          "lhr1::fra1::wffb8-1777559237739-52593d3044f2"
+        ]
+      },
+      {
+        "userEmail": "lindsay.horler@camp-site.co.uk",
+        "routeLabel": "hr_hiring_interviews",
+        "finalStatus": 200,
+        "totalDurationMs": 3361,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr/hiring/interviews",
+        "vercelIds": [
+          "lhr1::fra1::r8ssm-1777559237738-ce9e2182094c"
+        ]
+      },
+      {
+        "userEmail": "rachael.wall@camp-site.co.uk",
+        "routeLabel": "hr_home",
+        "finalStatus": 200,
+        "totalDurationMs": 3092,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr",
+        "vercelIds": [
+          "lhr1::fra1::nfnvw-1777559237711-2838c761ee28"
+        ]
+      },
+      {
+        "userEmail": "rachael.wall@camp-site.co.uk",
+        "routeLabel": "hr_hiring_jobs",
+        "finalStatus": 200,
+        "totalDurationMs": 2721,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr/hiring/jobs",
+        "vercelIds": [
+          "lhr1::fra1::wgwwl-1777559237710-4832a065d7e3"
+        ]
+      },
+      {
+        "userEmail": "james.hann@camp-site.co.uk",
+        "routeLabel": "hr_org_chart",
+        "finalStatus": 200,
+        "totalDurationMs": 2665,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr/org-chart",
+        "vercelIds": [
+          "lhr1::fra1::jhjql-1777559237714-e388d93ae283"
+        ]
+      },
+      {
+        "userEmail": "olga.saskova@camp-site.co.uk",
+        "routeLabel": "hr_hiring_templates",
+        "finalStatus": 200,
+        "totalDurationMs": 2469,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/dashboard",
+        "vercelIds": [
+          "lhr1::srdvn-1777559251835-3fd288d20f1e",
+          "lhr1::bbk56-1777559253434-074efb5d96f6",
+          "lhr1::fra1::z29kd-1777559253569-58e89aadb072",
+          "lhr1::fra1::5mxs7-1777559253959-18437664018c"
+        ]
+      },
+      {
+        "userEmail": "james.hann@camp-site.co.uk",
+        "routeLabel": "hr_hiring_templates",
+        "finalStatus": 200,
+        "totalDurationMs": 2326,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr/hiring/templates",
+        "vercelIds": [
+          "lhr1::fra1::hfnrm-1777559237710-09343ecfbcc4"
+        ]
+      },
+      {
+        "userEmail": "lindsay.horler@camp-site.co.uk",
+        "routeLabel": "hr_metric_alerts",
+        "finalStatus": 200,
+        "totalDurationMs": 2142,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr/hr-metric-alerts",
+        "vercelIds": [
+          "lhr1::fra1::jk48t-1777559237738-9d2ee48cf0bd"
+        ]
+      },
+      {
+        "userEmail": "james.hann@camp-site.co.uk",
+        "routeLabel": "hr_metric_alerts",
+        "finalStatus": 200,
+        "totalDurationMs": 2011,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr/hr-metric-alerts",
+        "vercelIds": [
+          "lhr1::fra1::6ghws-1777559237700-a5865e4078c2"
+        ]
+      },
+      {
+        "userEmail": "aarun.palmer@camp-site.co.uk",
+        "routeLabel": "hr_home",
+        "finalStatus": 200,
+        "totalDurationMs": 1796,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr",
+        "vercelIds": [
+          "lhr1::fra1::9px7g-1777559247431-98d7ba60308a"
+        ]
+      },
+      {
+        "userEmail": "olga.saskova@camp-site.co.uk",
+        "routeLabel": "hr_hiring_requests",
+        "finalStatus": 200,
+        "totalDurationMs": 1776,
+        "finalUrl": "https://university-of-sussex-student-union.camp-site.co.uk/hr/hiring/requests",
+        "vercelIds": [
+          "lhr1::fra1::c94kj-1777559247967-b749f5773740"
+        ]
+      }
+    ],
+    "byRoute": [
+      {
+        "routeLabel": "profile",
+        "count": 3,
+        "avgMs": 1592,
+        "p95Ms": 3653,
+        "maxMs": 3653,
+        "non200": 0,
+        "slow": 1,
+        "statusDist": {
+          "200": 3
+        }
+      },
+      {
+        "routeLabel": "hr_performance",
+        "count": 8,
+        "avgMs": 1018,
+        "p95Ms": 3449,
+        "maxMs": 3449,
+        "non200": 0,
+        "slow": 3,
+        "statusDist": {
+          "200": 8
+        }
+      },
+      {
+        "routeLabel": "hr_hiring_interviews",
+        "count": 5,
+        "avgMs": 1206,
+        "p95Ms": 3361,
+        "maxMs": 3361,
+        "non200": 0,
+        "slow": 2,
+        "statusDist": {
+          "200": 5
+        }
+      },
+      {
+        "routeLabel": "hr_home",
+        "count": 4,
+        "avgMs": 1733,
+        "p95Ms": 3092,
+        "maxMs": 3092,
+        "non200": 0,
+        "slow": 3,
+        "statusDist": {
+          "200": 4
+        }
+      },
+      {
+        "routeLabel": "hr_hiring_jobs",
+        "count": 4,
+        "avgMs": 832,
+        "p95Ms": 2721,
+        "maxMs": 2721,
+        "non200": 0,
+        "slow": 1,
+        "statusDist": {
+          "200": 4
+        }
+      },
+      {
+        "routeLabel": "hr_org_chart",
+        "count": 7,
+        "avgMs": 908,
+        "p95Ms": 2665,
+        "maxMs": 2665,
+        "non200": 0,
+        "slow": 2,
+        "statusDist": {
+          "200": 7
+        }
+      },
+      {
+        "routeLabel": "hr_hiring_templates",
+        "count": 6,
+        "avgMs": 1073,
+        "p95Ms": 2469,
+        "maxMs": 2469,
+        "non200": 0,
+        "slow": 2,
+        "statusDist": {
+          "200": 6
+        }
+      },
+      {
+        "routeLabel": "hr_metric_alerts",
+        "count": 7,
+        "avgMs": 888,
+        "p95Ms": 2142,
+        "maxMs": 2142,
+        "non200": 0,
+        "slow": 2,
+        "statusDist": {
+          "200": 7
+        }
+      },
+      {
+        "routeLabel": "hr_hiring_requests",
+        "count": 5,
+        "avgMs": 786,
+        "p95Ms": 1776,
+        "maxMs": 1776,
+        "non200": 0,
+        "slow": 1,
+        "statusDist": {
+          "200": 5
+        }
+      },
+      {
+        "routeLabel": "hr_onboarding",
+        "count": 1,
+        "avgMs": 1743,
+        "p95Ms": 1743,
+        "maxMs": 1743,
+        "non200": 0,
+        "slow": 1,
+        "statusDist": {
+          "200": 1
+        }
+      },
+      {
+        "routeLabel": "hr_records",
+        "count": 7,
+        "avgMs": 858,
+        "p95Ms": 1669,
+        "maxMs": 1669,
+        "non200": 0,
+        "slow": 1,
+        "statusDist": {
+          "200": 7
+        }
+      },
+      {
+        "routeLabel": "tenant_dashboard",
+        "count": 2,
+        "avgMs": 718,
+        "p95Ms": 1176,
+        "maxMs": 1176,
+        "non200": 0,
+        "slow": 0,
+        "statusDist": {
+          "200": 2
+        }
+      },
+      {
+        "routeLabel": "hr_hiring",
+        "count": 7,
+        "avgMs": 443,
+        "p95Ms": 813,
+        "maxMs": 813,
+        "non200": 0,
+        "slow": 0,
+        "statusDist": {
+          "200": 7
+        }
+      },
+      {
+        "routeLabel": "hr_hiring_applications",
+        "count": 6,
+        "avgMs": 488,
+        "p95Ms": 745,
+        "maxMs": 745,
+        "non200": 0,
+        "slow": 0,
+        "statusDist": {
+          "200": 6
+        }
+      }
+    ]
+  },
+  "shell": {
+    "count": 72,
+    "avgDurationMs": 507,
+    "degradedCount": 0,
+    "timeoutCount": 0,
+    "statusDist": {
+      "200": 72
+    },
+    "cacheStatusDist": {
+      "miss": 22,
+      "coalesced": 8,
+      "hit": 42
+    },
+    "cacheModeDist": {
+      "single-rpc": 72
+    },
+    "authValidationSourceDist": {
+      "cookie_session": 72
+    },
+    "guardrailReasonDist": {},
+    "slowPageWithDegradedShell": 0,
+    "topSlow": [
+      {
+        "userEmail": "james.hann@camp-site.co.uk",
+        "durationMs": 2860,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "miss",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::lbkx8-1777559239827-181ef8e0862c",
+        "afterPageEventId": "page_00005"
+      },
+      {
+        "userEmail": "lindsay.horler@camp-site.co.uk",
+        "durationMs": 2713,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "miss",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::r88xh-1777559239640-65b284d4e971",
+        "afterPageEventId": "page_00006"
+      },
+      {
+        "userEmail": "james.hann@camp-site.co.uk",
+        "durationMs": 2292,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "miss",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::w5p5s-1777559239832-37415dbad2f4",
+        "afterPageEventId": "page_00007"
+      },
+      {
+        "userEmail": "james.hann@camp-site.co.uk",
+        "durationMs": 2139,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "miss",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::c94kj-1777559239886-be53e1a1149f",
+        "afterPageEventId": "page_00008"
+      },
+      {
+        "userEmail": "sarthak.peshin@camp-site.co.uk",
+        "durationMs": 1950,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "hit",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::x8cwn-1777559251668-c7fbde39e9b6",
+        "afterPageEventId": "page_00115"
+      },
+      {
+        "userEmail": "rachael.wall@camp-site.co.uk",
+        "durationMs": 1894,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "coalesced",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::w6zm2-1777559240232-f067b8987ca1",
+        "afterPageEventId": "page_00009"
+      },
+      {
+        "userEmail": "rachael.wall@camp-site.co.uk",
+        "durationMs": 1649,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "miss",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::6rddg-1777559240139-9cf4e80df400",
+        "afterPageEventId": "page_00010"
+      },
+      {
+        "userEmail": "rachael.wall@camp-site.co.uk",
+        "durationMs": 1126,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "coalesced",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::wffb8-1777559240659-32dd6a9e196e",
+        "afterPageEventId": "page_00011"
+      },
+      {
+        "userEmail": "james.hann@camp-site.co.uk",
+        "durationMs": 1103,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "hit",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::nfnvw-1777559243667-dc6ffe6336f4",
+        "afterPageEventId": "page_00057"
+      },
+      {
+        "userEmail": "lindsay.horler@camp-site.co.uk",
+        "durationMs": 997,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "miss",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::p5n5w-1777559240668-b4890597b9a7",
+        "afterPageEventId": "page_00012"
+      },
+      {
+        "userEmail": "sarthak.peshin@camp-site.co.uk",
+        "durationMs": 967,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "miss",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::nfnvw-1777559251663-d839b4225727",
+        "afterPageEventId": "page_00116"
+      },
+      {
+        "userEmail": "lindsay.horler@camp-site.co.uk",
+        "durationMs": 823,
+        "status": 200,
+        "shellDegraded": false,
+        "cacheStatus": "coalesced",
+        "cacheMode": "single-rpc",
+        "vercelId": "lhr1::fra1::j7ltb-1777559240856-97ec781da031",
+        "afterPageEventId": "page_00013"
+      }
+    ]
+  },
+  "timeline": {
+    "firstSlowPage": {
+      "offsetMs": 0,
+      "userEmail": "james.hann@camp-site.co.uk",
+      "routeLabel": "hr_metric_alerts",
+      "tabIndex": 3,
+      "status": 200,
+      "durationMs": 2011
+    },
+    "firstDegradedShell": null,
+    "firstPageTimeout": null,
+    "firstShellTimeout": null,
+    "buckets": [
+      {
+        "windowStartMs": 0,
+        "windowLabel": "0-10s",
+        "pages": 36,
+        "slowPages": 12,
+        "pageTimeouts": 0,
+        "degradedShells": 0,
+        "shellTimeouts": 0
+      },
+      {
+        "windowStartMs": 10000,
+        "windowLabel": "10-20s",
+        "pages": 36,
+        "slowPages": 7,
+        "pageTimeouts": 0,
+        "degradedShells": 0,
+        "shellTimeouts": 0
+      }
+    ]
+  }
+}

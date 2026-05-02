@@ -1,93 +1,53 @@
 import { PerformanceCycleDetailClient } from '@/components/admin/hr/performance/PerformanceCycleDetailClient';
-import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
+import { getCachedPerformanceCycleDetailPageData } from '@/lib/hr/getCachedPerformanceCycleDetailPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { createClient } from '@/lib/supabase/server';
+import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
-
-const PERF_CYCLE_MEMBERS_TIMEOUT_MS = 1200;
 
 export default async function PerformanceCycleDetailPage({ params }: { params: Promise<{ cycleId: string }> }) {
   const pathStartedAtMs = Date.now();
   const { cycleId } = await params;
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await withServerPerf(
+  const bundle = await withServerPerf(
     '/admin/hr/performance/[cycleId]',
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status')
-      .eq('id', user.id)
-      .maybeSingle(),
+    'shell_bundle_for_access',
+    getCachedMainShellLayoutBundle(),
     300
   );
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
 
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-  const orgId = profile.org_id as string;
+  if (!permissionKeys.includes('performance.manage_cycles')) redirect('/admin/hr/performance');
 
-  const permissionKeys = await withServerPerf(
+  const pageData = await withServerPerf(
     '/admin/hr/performance/[cycleId]',
-    'get_my_permissions',
-    getMyPermissions(orgId),
-    300
+    'cached_performance_cycle_detail_page_data',
+    getCachedPerformanceCycleDetailPageData(orgId, cycleId),
+    650
   );
+  const cycle = pageData.cycle;
+  const reviews = pageData.reviews;
+  const members = pageData.members;
+  if (!cycle) redirect('/admin/hr/performance');
 
-  if (!permissionKeys.includes('performance.manage_cycles')) redirect('/hr/performance');
-
-  const [{ data: cycle }, { data: reviews }, { data: members }] = await Promise.all([
-    withServerPerf(
-      '/admin/hr/performance/[cycleId]',
-      'review_cycle_lookup',
-      supabase
-        .from('review_cycles')
-        .select('id, name, type, status, period_start, period_end, self_assessment_due, manager_assessment_due, created_at')
-        .eq('org_id', orgId)
-        .eq('id', cycleId)
-        .maybeSingle(),
-      350
-    ),
-    withServerPerf(
-      '/admin/hr/performance/[cycleId]',
-      'review_cycle_reviews',
-      supabase.rpc('review_cycle_reviews', { p_cycle_id: cycleId }),
-      450
-    ),
-    withServerPerf(
-      '/admin/hr/performance/[cycleId]',
-      'active_members_lookup',
-      resolveWithTimeout(
-        supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .eq('org_id', orgId)
-          .eq('status', 'active')
-          .order('full_name'),
-        PERF_CYCLE_MEMBERS_TIMEOUT_MS,
-        { data: [], error: null } as any
-      ),
-      350
-    ),
-  ]);
-  if (!cycle) redirect('/hr/performance');
-
-  const enrolledIds = new Set((reviews ?? []).map((r: { reviewee_id: unknown }) => r.reviewee_id as string));
+  const enrolledIds = new Set(
+    (reviews ?? []).map((r: Record<string, unknown>) => String(r.reviewee_id ?? ''))
+  );
 
   const view = (
     <PerformanceCycleDetailClient
       cycleId={cycleId}
       cycle={{
-        id: cycle.id as string,
-        name: cycle.name as string,
-        type: cycle.type as string,
-        status: cycle.status as string,
-        period_start: cycle.period_start as string,
-        period_end: cycle.period_end as string,
-        self_assessment_due: (cycle.self_assessment_due as string | null) ?? null,
-        manager_assessment_due: (cycle.manager_assessment_due as string | null) ?? null,
+        id: cycle.id,
+        name: cycle.name,
+        type: cycle.type,
+        status: cycle.status,
+        period_start: cycle.period_start,
+        period_end: cycle.period_end,
+        self_assessment_due: cycle.self_assessment_due,
+        manager_assessment_due: cycle.manager_assessment_due,
       }}
       reviews={(reviews ?? []).map((r: Record<string, unknown>) => ({
         review_id: r.review_id as string,
@@ -104,11 +64,11 @@ export default async function PerformanceCycleDetailPage({ params }: { params: P
         goal_count: Number(r.goal_count ?? 0),
       }))}
       members={(members ?? [])
-        .filter((m: Record<string, unknown>) => !enrolledIds.has(m.id as string))
-        .map((m: Record<string, unknown>) => ({
-          id: m.id as string,
-          full_name: m.full_name as string,
-          email: (m.email as string | null) ?? null,
+        .filter((m) => !enrolledIds.has(m.id))
+        .map((m) => ({
+          id: m.id,
+          full_name: m.full_name,
+          email: m.email ?? null,
         }))}
     />
   );

@@ -5,11 +5,13 @@ import { createClient } from '@/lib/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
 
-type BadgeRealtimeProfile = {
-  org_id: string | null;
-};
-
-export function ShellBadgeRealtime() {
+export function ShellBadgeRealtime({
+  userId,
+  orgId,
+}: {
+  userId?: string | null;
+  orgId?: string | null;
+}) {
   const queryClient = useQueryClient();
   const supabase = useMemo(() => createClient(), []);
   const debounceRef = useRef<number | null>(null);
@@ -54,32 +56,9 @@ export function ShellBadgeRealtime() {
       });
     };
 
-    const getCurrentUserId = async (): Promise<string | null> => {
-      try {
-        const { data: authData } = await supabase.auth.getUser();
-        return authData.user?.id ?? null;
-      } catch {
-        // Non-fatal: getUser can occasionally race on browser lock management.
-      }
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        return sessionData.session?.user?.id ?? null;
-      } catch {
-        return null;
-      }
-    };
-
     const init = async () => {
-      const uid = await getCurrentUserId();
+      const uid = userId ?? null;
       if (!uid || cancelled) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('org_id')
-        .eq('id', uid)
-        .single<BadgeRealtimeProfile>();
-
-      if (cancelled) return;
 
       channel = supabase.channel(`shell-badges-${uid}`);
 
@@ -132,7 +111,6 @@ export function ShellBadgeRealtime() {
         );
 
       // Org-scoped tables used by badge RPC.
-      const orgId = profile?.org_id ?? null;
       if (orgId) {
         channel
           .on(
@@ -160,11 +138,8 @@ export function ShellBadgeRealtime() {
             { event: '*', schema: 'public', table: 'rota_change_requests', filter: `org_id=eq.${orgId}` },
             scheduleRefresh,
           )
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'profiles', filter: `org_id=eq.${orgId}` },
-            scheduleRefresh,
-          )
+          // Do not subscribe to org-wide profile writes: high-churn profile touches
+          // (presence, metadata updates) create invalidation storms on hot paths.
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'dept_managers', filter: `user_id=eq.${uid}` },
@@ -201,7 +176,7 @@ export function ShellBadgeRealtime() {
         void supabase.removeChannel(channel);
       }
     };
-  }, [queryClient, supabase]);
+  }, [queryClient, supabase, userId, orgId]);
 
   return null;
 }

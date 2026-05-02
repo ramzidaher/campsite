@@ -11,40 +11,14 @@ import {
 import { calendarYmdInTimeZone } from '@/lib/datetime';
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
+import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
+import {
+  getOrLoadSharedCachedValue,
+  invalidateSharedCache,
+  registerSharedCacheStore,
+} from '@/lib/cache/sharedCache';
 import type { FeedRow, RawBroadcast } from '@/lib/broadcasts/feedTypes';
 import { withServerPerf } from '@/lib/perf/serverPerf';
-const DASHBOARD_NON_CRITICAL_TIMEOUT_MS = 2200;
-
-async function resolveWithTimeout<T>(
-  promise: PromiseLike<T>,
-  timeoutMs: number,
-  fallback: T,
-  label: string,
-): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let didTimeout = false;
-  try {
-    return await Promise.race<T>([
-      Promise.resolve(promise),
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => {
-          didTimeout = true;
-          // #region agent log
-          fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'post-fix',hypothesisId:'H1',location:'loadDashboardHome.ts:resolveWithTimeout',message:'Dashboard timeout fallback fired',data:{timeoutMs,label},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
-          resolve(fallback);
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-    if (!didTimeout) {
-      // #region agent log
-      fetch('http://127.0.0.1:7879/ingest/38107b8d-e094-4a22-bf69-bb908cf9d00f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4c1d19'},body:JSON.stringify({sessionId:'4c1d19',runId:'post-fix',hypothesisId:'H1',location:'loadDashboardHome.ts:resolveWithTimeout',message:'Dashboard timeout fallback not used',data:{timeoutMs,label},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
-  }
-}
 
 export type PendingPreviewRow = {
   id: string;
@@ -88,23 +62,17 @@ export type DashboardHomeModel = {
   showBroadcastUnreadCount?: boolean;
   dashboardDataFreshness?: 'fresh' | 'stale' | 'unknown';
   dashboardLastSuccessAt?: number | null;
+  dashboardPartialData?: boolean;
+  dashboardPartialSections?: string[];
 };
 
-type DashboardCacheEntry = {
-  value: DashboardHomeModel;
-  fetchedAt: number;
-  expiresAt: number;
-  staleUntil: number;
-  inFlight?: Promise<DashboardHomeModel>;
-  refreshInFlight?: Promise<void>;
-  lastManualRefreshAt?: number;
-  abortController?: AbortController;
-};
-
-const DASHBOARD_TTL_MS = 8_000;
-const DASHBOARD_STALE_WINDOW_MS = 45_000;
-const DASHBOARD_MANUAL_REFRESH_DEBOUNCE_MS = 1_500;
-const dashboardCache = new Map<string, DashboardCacheEntry>();
+const DASHBOARD_HOME_RESPONSE_CACHE_TTL_MS = Number.parseInt(
+  process.env.CAMPSITE_DASHBOARD_HOME_RESPONSE_CACHE_TTL_MS ?? '8000',
+  10
+);
+const dashboardHomeResponseCache = new Map<string, TtlCacheEntry<DashboardHomeModel>>();
+const dashboardHomeInFlight = new Map<string, Promise<DashboardHomeModel>>();
+registerSharedCacheStore('campsite:dashboard:home', dashboardHomeResponseCache, dashboardHomeInFlight);
 
 function dashboardCacheKey(userId: string, orgId: string, role: string): string {
   return `${orgId}:${userId}:${role}`;
@@ -206,104 +174,74 @@ export async function loadDashboardHome(
       withServerPerf(
         '/dashboard',
         'fetch_dashboard_stat_counts',
-        resolveWithTimeout(
-          fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
-          null,
-          'fetch_dashboard_stat_counts',
-        ),
+        fetchDashboardStatCounts(supabase, { userId, orgId, role: profile.role }),
         1500
       ),
       withServerPerf(
         '/dashboard',
         'rota_shifts_week_count',
-        resolveWithTimeout(
-          supabase
-            .from('rota_shifts')
-            .select('id', { count: 'planned', head: true })
-            .eq('user_id', userId)
-            .gte('start_time', w0.toISOString())
-            .lt('start_time', w1.toISOString())
-            .abortSignal(abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
-          { data: null, error: null, count: 0 } as any,
-          'rota_shifts_week_count',
-        ),
+        supabase
+          .from('rota_shifts')
+          .select('id', { count: 'planned', head: true })
+          .eq('user_id', userId)
+          .gte('start_time', w0.toISOString())
+          .lt('start_time', w1.toISOString())
+          .abortSignal(abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf(
         '/dashboard',
         'next_shift_lookup',
-        resolveWithTimeout(
-          supabase
-            .from('rota_shifts')
-            .select('start_time,end_time,role_label')
-            .eq('user_id', userId)
-            .gte('start_time', now.toISOString())
-            .order('start_time', { ascending: true })
-            .limit(1)
-            .abortSignal(abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
-          { data: [], error: null } as any,
-          'next_shift_lookup',
-        ),
+        supabase
+          .from('rota_shifts')
+          .select('start_time,end_time,role_label')
+          .eq('user_id', userId)
+          .gte('start_time', now.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(1)
+          .abortSignal(abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf(
         '/dashboard',
         'recent_broadcasts',
-        resolveWithTimeout(
-          supabase
-            .from('broadcasts')
-            .select(
-              'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
-            )
-            .eq('org_id', orgId)
-            .eq('status', 'sent')
-            .order('sent_at', { ascending: false })
-            .limit(3)
-            .abortSignal(options?.abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
-          { data: [], error: null } as any,
-          'recent_broadcasts',
-        ),
+        supabase
+          .from('broadcasts')
+          .select(
+            'id,title,body,sent_at,dept_id,channel_id,team_id,created_by,is_mandatory,is_pinned,is_org_wide'
+          )
+          .eq('org_id', orgId)
+          .eq('status', 'sent')
+          .order('sent_at', { ascending: false })
+          .limit(3)
+          .abortSignal(options?.abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf(
         '/dashboard',
         'upcoming_calendar_events',
-        resolveWithTimeout(
-          supabase
-            .from('calendar_events')
-            .select('id,title,start_time')
-            .eq('org_id', orgId)
-            .gte('start_time', now.toISOString())
-            .order('start_time', { ascending: true })
-            .limit(5)
-            .abortSignal(abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
-          { data: [], error: null } as any,
-          'upcoming_calendar_events',
-        ),
+        supabase
+          .from('calendar_events')
+          .select('id,title,start_time')
+          .eq('org_id', orgId)
+          .gte('start_time', now.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(5)
+          .abortSignal(abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf(
         '/dashboard',
         'upcoming_shifts_calendar',
-        resolveWithTimeout(
-          supabase
-            .from('rota_shifts')
-            .select('id,start_time,role_label')
-            .eq('user_id', userId)
-            .gte('start_time', now.toISOString())
-            .lt('start_time', monthEnd.toISOString())
-            .order('start_time', { ascending: true })
-            .limit(8)
-            .abortSignal(abortSignal ?? new AbortController().signal),
-          DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
-          { data: [], error: null } as any,
-          'upcoming_shifts_calendar',
-        ),
+        supabase
+          .from('rota_shifts')
+          .select('id,start_time,role_label')
+          .eq('user_id', userId)
+          .gte('start_time', now.toISOString())
+          .lt('start_time', monthEnd.toISOString())
+          .order('start_time', { ascending: true })
+          .limit(8)
+          .abortSignal(abortSignal ?? new AbortController().signal),
         2300
       ),
       withServerPerf('/dashboard', 'unread_count', unreadRpcPromise, 1200),
@@ -333,14 +271,9 @@ export async function loadDashboardHome(
       pendingCount =
         navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
     } else {
-      const navRes = await resolveWithTimeout(
-        supabase
-          .rpc('pending_approvals_nav_count')
-          .abortSignal(abortSignal ?? new AbortController().signal),
-        DASHBOARD_NON_CRITICAL_TIMEOUT_MS,
-        { data: 0, error: null } as any,
-        'pending_approvals_nav_count',
-      );
+      const navRes = await supabase
+        .rpc('pending_approvals_nav_count')
+        .abortSignal(abortSignal ?? new AbortController().signal);
       const navN = navRes?.data;
       pendingCount =
         navN === null || navN === undefined ? 0 : typeof navN === 'number' ? navN : Number(navN);
@@ -356,7 +289,7 @@ export async function loadDashboardHome(
         : Number(unreadRaw);
 
   const eventColors = ['#44403c', '#059669', '#7C3AED', '#C2410C', '#E11D48'];
-  const upcomingCalendarEvents: UpcomingEventRow[] = (eventsRaw ?? []).map((e: any, i: number) => ({
+  const upcomingCalendarEvents: UpcomingEventRow[] = (eventsRaw ?? []).map((e: { id: string; title: string; start_time: string }, i: number) => ({
     id: e.id as string,
     title: e.title as string,
     start_time: e.start_time as string,
@@ -364,7 +297,7 @@ export async function loadDashboardHome(
     kind: 'event',
   }));
 
-  const upcomingShiftRows: UpcomingEventRow[] = (shiftCalendarRaw ?? []).map((s: any) => ({
+  const upcomingShiftRows: UpcomingEventRow[] = (shiftCalendarRaw ?? []).map((s: { id: string; start_time: string; role_label: string | null }) => ({
     id: `shift-${String(s.id)}`,
     title: ((s.role_label as string | null)?.trim() || 'Upcoming shift'),
     start_time: s.start_time as string,
@@ -391,7 +324,7 @@ export async function loadDashboardHome(
   if (ns) {
     const st = new Date(ns.start_time);
     const label = ns.role_label?.trim() || 'Shift';
-    nextShiftSummary = `${label} · ${st.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`;
+    nextShiftSummary = `${label} · ${st.toLocaleString('en-GB', { timeZone: 'UTC',  weekday: 'short', hour: 'numeric', minute: '2-digit' })}`;
   }
 
   return {
@@ -420,6 +353,8 @@ export async function loadDashboardHome(
     calendarTodayD: calToday.d,
     dashboardDataFreshness: 'fresh',
     dashboardLastSuccessAt: Date.now(),
+    dashboardPartialData: false,
+    dashboardPartialSections: [],
   };
 }
 
@@ -431,118 +366,19 @@ export async function loadDashboardHomeGuarded(
   options?: { initialBroadcastUnread?: number; initialPendingApprovals?: number; manualRefresh?: boolean }
 ): Promise<DashboardHomeModel> {
   const key = dashboardCacheKey(userId, orgId, profile.role);
-  const now = Date.now();
-  const entry = dashboardCache.get(key);
   const manualRefresh = options?.manualRefresh === true;
-
-  if (entry) {
-    // Manual refresh debounce: prevent repeated refresh-triggered fetch bursts.
-    if (
-      manualRefresh &&
-      entry.lastManualRefreshAt &&
-      now - entry.lastManualRefreshAt < DASHBOARD_MANUAL_REFRESH_DEBOUNCE_MS
-    ) {
-      if (entry.value) return entry.value;
-      if (entry.inFlight) return entry.inFlight;
-    }
-
-    // Fresh cache hit.
-    if (now < entry.expiresAt) {
-      if (manualRefresh) entry.lastManualRefreshAt = now;
-      return {
-        ...entry.value,
-        dashboardDataFreshness: 'fresh',
-        dashboardLastSuccessAt: entry.fetchedAt || null,
-      };
-    }
-
-    // Stale-while-revalidate: return stale value and refresh in background.
-    if (now < entry.staleUntil) {
-      if (!entry.refreshInFlight) {
-        entry.refreshInFlight = (async () => {
-          // Abort stale background run if we supersede it.
-          entry.abortController?.abort();
-          const controller = new AbortController();
-          entry.abortController = controller;
-          try {
-            const nextValue = await loadDashboardHome(
-              supabase,
-              userId,
-              orgId,
-              profile,
-              { ...options, abortSignal: controller.signal }
-            );
-            const refreshedAt = Date.now();
-            dashboardCache.set(key, {
-              value: nextValue,
-              fetchedAt: refreshedAt,
-              expiresAt: refreshedAt + DASHBOARD_TTL_MS,
-              staleUntil: refreshedAt + DASHBOARD_STALE_WINDOW_MS,
-              lastManualRefreshAt: manualRefresh ? refreshedAt : entry.lastManualRefreshAt,
-              abortController: controller,
-            });
-          } catch {
-            // Keep stale value on refresh failure.
-          } finally {
-            const latest = dashboardCache.get(key);
-            if (latest) {
-              latest.refreshInFlight = undefined;
-            }
-          }
-        })();
-      }
-      if (manualRefresh) entry.lastManualRefreshAt = now;
-      return {
-        ...entry.value,
-        dashboardDataFreshness: 'stale',
-        dashboardLastSuccessAt: entry.fetchedAt || null,
-      };
-    }
-
-    // Hard-expired but in-flight exists: dedupe.
-    if (entry.inFlight) {
-      if (manualRefresh) entry.lastManualRefreshAt = now;
-      const inFlightValue = await entry.inFlight;
-      return {
-        ...inFlightValue,
-        dashboardDataFreshness: 'fresh',
-        dashboardLastSuccessAt: Date.now(),
-      };
-    }
+  if (manualRefresh) {
+    await invalidateSharedCache('campsite:dashboard:home', key);
   }
 
-  const nextAbortController = new AbortController();
-  const inFlight = loadDashboardHome(supabase, userId, orgId, profile, {
-    ...options,
-    abortSignal: nextAbortController.signal,
+  return getOrLoadSharedCachedValue({
+    cache: dashboardHomeResponseCache,
+    inFlight: dashboardHomeInFlight,
+    key,
+    cacheNamespace: 'campsite:dashboard:home',
+    ttlMs: DASHBOARD_HOME_RESPONSE_CACHE_TTL_MS,
+    load: async () => {
+      return loadDashboardHome(supabase, userId, orgId, profile, options);
+    },
   });
-
-  dashboardCache.set(key, {
-    value: entry?.value ?? ({} as DashboardHomeModel),
-    fetchedAt: entry?.fetchedAt ?? 0,
-    expiresAt: entry?.expiresAt ?? 0,
-    staleUntil: entry?.staleUntil ?? 0,
-    inFlight,
-    lastManualRefreshAt: manualRefresh ? now : entry?.lastManualRefreshAt,
-    abortController: nextAbortController,
-  });
-
-  try {
-    const value = await inFlight;
-    const fetchedAt = Date.now();
-    dashboardCache.set(key, {
-      value,
-      fetchedAt,
-      expiresAt: fetchedAt + DASHBOARD_TTL_MS,
-      staleUntil: fetchedAt + DASHBOARD_STALE_WINDOW_MS,
-      lastManualRefreshAt: manualRefresh ? fetchedAt : entry?.lastManualRefreshAt,
-      abortController: nextAbortController,
-    });
-    return value;
-  } finally {
-    const latest = dashboardCache.get(key);
-    if (latest) {
-      latest.inFlight = undefined;
-    }
-  }
 }

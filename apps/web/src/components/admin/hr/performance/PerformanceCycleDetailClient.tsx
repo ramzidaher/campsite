@@ -1,5 +1,6 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -82,6 +83,7 @@ export function PerformanceCycleDetailClient({
     const { error } = await supabase.from('review_cycles').update({ status: 'active' }).eq('id', cycleId);
     setBusy(false);
     if (error) { setMsg(error.message); return; }
+    await invalidateClientCaches({ scopes: ['performance'] }).catch(() => null);
     router.refresh();
   }
 
@@ -91,6 +93,7 @@ export function PerformanceCycleDetailClient({
     const { error } = await supabase.from('review_cycles').update({ status: 'closed' }).eq('id', cycleId);
     setBusy(false);
     if (error) { setMsg(error.message); return; }
+    await invalidateClientCaches({ scopes: ['performance'] }).catch(() => null);
     router.refresh();
   }
 
@@ -106,6 +109,7 @@ export function PerformanceCycleDetailClient({
     if (error) { setMsg(error.message); return; }
     setShowEnroll(false);
     setSelected(new Set());
+    await invalidateClientCaches({ scopes: ['performance'] }).catch(() => null);
     router.refresh();
   }
 

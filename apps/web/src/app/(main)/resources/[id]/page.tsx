@@ -61,7 +61,7 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
   const canManage = permissionKeys.includes('resources.manage');
 
   return (
-    <div className={`${resourceDetailSans.className} min-h-0 bg-[#f5f4f0]`}>
+    <div className={`${resourceDetailSans.className} min-h-0 bg-[var(--campsite-bg,#faf9f6)] text-[var(--campsite-text,#121212)]`}>
       <ResourceDetailClient
         canManage={canManage}
         archiveSupported={archiveSupported}

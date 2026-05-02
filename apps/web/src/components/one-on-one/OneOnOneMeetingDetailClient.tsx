@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 
 export type QuestionOwner = 'employee' | 'manager' | 'both';
@@ -190,6 +191,7 @@ export function OneOnOneMeetingDetailClient({
         setErr(error.message);
         return;
       }
+      await invalidateClientCaches({ scopes: ['one-on-ones'] }).catch(() => null);
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 2000);
       router.refresh();
@@ -249,6 +251,7 @@ export function OneOnOneMeetingDetailClient({
       setErr(error.message);
       return;
     }
+    await invalidateClientCaches({ scopes: ['one-on-ones'] }).catch(() => null);
     const { data } = await supabase.rpc('one_on_one_meeting_get', { p_meeting_id: meeting.id });
     if (data && typeof data === 'object') {
       const m2 = data as unknown as MeetingDetail;
@@ -268,6 +271,7 @@ export function OneOnOneMeetingDetailClient({
       setErr(error.message);
       return;
     }
+    await invalidateClientCaches({ scopes: ['one-on-ones'] }).catch(() => null);
     const nextLocked = status === 'completed';
     setMeeting((m) => ({
       ...m,
@@ -441,7 +445,7 @@ export function OneOnOneMeetingDetailClient({
           <span className="opacity-50" aria-hidden>
             ◫
           </span>
-          {new Date(meeting.starts_at).toLocaleDateString(undefined, {
+          {new Date(meeting.starts_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
             weekday: 'long',
             day: 'numeric',
             month: 'short',
@@ -735,7 +739,7 @@ export function OneOnOneMeetingDetailClient({
             />
           ) : meeting.next_session_at ? (
             <span>
-              {new Date(meeting.next_session_at).toLocaleString(undefined, {
+              {new Date(meeting.next_session_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                 weekday: 'short',
                 day: 'numeric',
                 month: 'short',

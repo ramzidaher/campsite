@@ -34,7 +34,8 @@
     "security:medical-notes:rotate-key": "node scripts/rotate-medical-notes-key.mjs",
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
+    "lint": "npm run lint:dates && turbo run lint",
+    "lint:dates": "node scripts/check-stable-dates.mjs",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "security:secrets": "npx gitleaks@latest detect --source . --redact --no-banner",
@@ -47,7 +48,8 @@
     "loadtest:k6:shell": "k6 run load-tests/k6-shell-rpc.js",
     "loadtest:k6:shell:50": "k6 run --vus 50 --duration 5m load-tests/k6-shell-rpc.js",
     "loadtest:k6:shell:100": "k6 run --vus 100 --duration 5m load-tests/k6-shell-rpc.js",
-    "loadtest:k6:shell:200": "k6 run --vus 200 --duration 5m load-tests/k6-shell-rpc.js"
+    "loadtest:k6:shell:200": "k6 run --vus 200 --duration 5m load-tests/k6-shell-rpc.js",
+    "probe:prod:routes": "node scripts/prod-route-thrash.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

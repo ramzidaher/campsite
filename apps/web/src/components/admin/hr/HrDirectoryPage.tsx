@@ -1,13 +1,16 @@
 import { HRDirectoryClient } from '@/components/admin/hr/HRDirectoryClient';
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
+import { getCachedHrDirectoryPageData } from '@/lib/hr/getCachedHrDirectoryPageData';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
-import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
 import { normalizeUiMode } from '@/lib/uiMode';
-
-const HR_DASH_STATS_TIMEOUT_MS = 1200;
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
+import {
+  parseShellPermissionKeys,
+  shellBundleOrgId,
+  shellBundleProfileStatus,
+  shellBundleUiMode,
+} from '@/lib/shell/shellBundleAccess';
 
 /**
  * Shared server page for the HR employee directory (canonical URL `/hr/people`).
@@ -23,25 +26,11 @@ export async function HrDirectoryPage({
   const pathStartedAtMs = Date.now();
   const user = await getAuthUser();
   if (!user) redirect('/login');
-
-  const supabase = await createClient();
-
-  const { data: profile } = await withServerPerf(
-    perfPath,
-    'profile_lookup',
-    supabase
-      .from('profiles')
-      .select('org_id, status, ui_mode')
-      .eq('id', user.id)
-      .maybeSingle(),
-    300
-  );
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-
-  const permissionKeys = await withServerPerf(perfPath, 'get_my_permissions', getMyPermissions(orgId), 300);
+  const bundle = await withServerPerf(perfPath, 'shell_bundle_for_access', getCachedMainShellLayoutBundle(), 300);
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const permissionKeys = parseShellPermissionKeys(bundle);
 
   const canViewAll = permissionKeys.includes('hr.view_records');
   const canViewTeam = permissionKeys.includes('hr.view_direct_reports');
@@ -49,27 +38,12 @@ export async function HrDirectoryPage({
 
   const canManage = permissionKeys.includes('hr.manage_records');
   const canManagePerformanceCycles = permissionKeys.includes('performance.manage_cycles');
-
-  const [rows, dashStats] = await Promise.all([
-    withServerPerf(
-      perfPath,
-      'hr_directory_list',
-      supabase.rpc('hr_directory_list').then(({ data }) => data ?? []),
-      500
-    ),
-    canViewAll
-      ? resolveWithTimeout(
-          withServerPerf(
-            perfPath,
-            'hr_dashboard_stats',
-            supabase.rpc('hr_dashboard_stats').then(({ data }) => data ?? null),
-            400
-          ),
-          HR_DASH_STATS_TIMEOUT_MS,
-          null
-        )
-      : Promise.resolve(null),
-  ]);
+  const { rows, dashStats } = await withServerPerf(
+    perfPath,
+    'hr_directory_bundle_cached',
+    getCachedHrDirectoryPageData(orgId, user.id, canViewAll, false),
+    800
+  );
 
   const params = (await searchParams) ?? {};
   const qRaw = params.q;
@@ -84,7 +58,7 @@ export async function HrDirectoryPage({
       initialRows={(rows ?? []) as Parameters<typeof HRDirectoryClient>[0]['initialRows']}
       dashStats={(dashStats ?? null) as Record<string, unknown> | null}
       initialQuery={initialQuery}
-      initialUiMode={normalizeUiMode(profile.ui_mode)}
+      initialUiMode={normalizeUiMode(shellBundleUiMode(bundle))}
     />
   );
   warnIfSlowServerPath(perfPath, pathStartedAtMs);

@@ -1,0 +1,15 @@
+[
+  { "label": "tenant_dashboard", "target": "$tenantDashboard" },
+  { "label": "hr_home", "target": "/hr" },
+  { "label": "hr_records", "target": "/hr/records" },
+  { "label": "hr_performance", "target": "/hr/performance" },
+  { "label": "hr_onboarding", "target": "/hr/onboarding" },
+  { "label": "hr_org_chart", "target": "/hr/org-chart" },
+  { "label": "hr_hiring", "target": "/hr/hiring" },
+  { "label": "hr_hiring_requests", "target": "/hr/hiring/requests" },
+  { "label": "hr_hiring_jobs", "target": "/hr/hiring/jobs" },
+  { "label": "hr_hiring_applications", "target": "/hr/hiring/applications" },
+  { "label": "hr_hiring_interviews", "target": "/hr/hiring/interviews" },
+  { "label": "hr_hiring_templates", "target": "/hr/hiring/templates" },
+  { "label": "hr_metric_alerts", "target": "/hr/hr-metric-alerts" }
+]

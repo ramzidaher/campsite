@@ -1,11 +1,12 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { DependantsEditorClient, type DependantRow } from '@/components/hr/DependantsEditorClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { EmployeeRecordHeroActionMenu } from '@/components/admin/hr/EmployeeRecordHeroActionMenu';
 import { getProfileInitials } from '@/lib/names';
 
@@ -446,6 +447,9 @@ export function EmployeeHRFileClient({
   tabBadges?: Partial<Record<Tab, TabBadge>>;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const invalidateHrRecordCaches = useCallback(async () => {
+    await invalidateClientCaches({ scopes: ['hr-records'] });
+  }, []);
   const router = useRouter();
 
   const [documents, setDocuments] = useState(initialDocuments);
@@ -748,6 +752,7 @@ export function EmployeeHRFileClient({
       return;
     }
     setEditing(false);
+    await invalidateHrRecordCaches().catch(() => null);
     setMsg({ type: 'success', text: 'HR record saved.' });
     router.refresh();
   }
@@ -770,6 +775,7 @@ export function EmployeeHRFileClient({
       type: 'success',
       text: clear ? 'Probation completion cleared.' : 'Probation review marked complete.',
     });
+    await invalidateHrRecordCaches().catch(() => null);
     router.refresh();
   }
 

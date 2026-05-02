@@ -687,7 +687,7 @@ export function ManagerRecruitmentClient({
                       </td>
                       <td className="px-4 py-3">{recruitmentUrgencyLabel(r.urgency)}</td>
                       <td className="px-4 py-3 text-[#505050]">
-                        {new Date(r.created_at).toLocaleDateString(undefined, {
+                        {new Date(r.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',

@@ -29,7 +29,7 @@ export default async function AdminRolesPage() {
     getMyPermissions(profile.org_id as string),
     300
   );
-  if (!permissionKeys.includes('roles.view')) redirect('/admin');
+  if (!permissionKeys.includes('roles.view')) redirect('/forbidden');
   const canManageRoles = permissionKeys.includes('roles.manage');
 
   const view = <AdminRolesAndPermissionsView canManageRoles={Boolean(canManageRoles)} />;

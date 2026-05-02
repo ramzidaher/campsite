@@ -3,8 +3,10 @@
 import { Navigation } from '@/components/landing/Navigation';
 import { BottomBar } from '@/components/landing/BottomBar';
 import { HeroSection } from '@/components/landing/HeroSection';
+import { MarqueeRail } from '@/components/landing/MarqueeRail';
 import { StatementSection } from '@/components/landing/StatementSection';
 import { ProblemSection } from '@/components/landing/ProblemSection';
+import { StatsSection } from '@/components/landing/StatsSection';
 import { CTASection } from '@/components/landing/CTASection';
 import { Footer } from '@/components/landing/Footer';
 import { CookieBanner } from '@/components/landing/CookieBanner';
@@ -18,8 +20,10 @@ export function LandingPage() {
       <BottomBar />
       <main className="min-h-screen pb-[calc(var(--bottom-bar-height)+10px)]">
         <HeroSection />
+        <MarqueeRail />
         <StatementSection />
         <ProblemSection />
+        <StatsSection />
         <CTASection />
         <Footer />
       </main>
@@ -109,6 +113,15 @@ export function LandingPage() {
         }
         .landing-page a { transition: opacity 0.2s ease; }
         .landing-page a:hover { opacity: 0.7; }
+        /* anime.js scroll-reveal initial states */
+        [data-anime-reveal] {
+          opacity: 0;
+          transform: translateY(28px);
+        }
+        [data-anime-reveal-fade] {
+          opacity: 0;
+        }
+
         @keyframes cta-smoke-rise {
           0% { transform: translateY(0) scale(1); opacity: 0; }
           15% { opacity: 0.45; }

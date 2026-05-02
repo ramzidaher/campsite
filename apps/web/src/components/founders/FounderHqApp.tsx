@@ -10,6 +10,7 @@ import {
   publishPermissionCatalogVersion,
   setFounderProfileStatus,
   startSupportViewAsSession,
+  updatePlatformOrgSettings,
   updateOrganisationGovernance,
   upsertPermissionDraftEntry,
   upsertRolePreset,
@@ -594,19 +595,16 @@ export function FounderHqApp({
       return;
     }
     setBusySaveOrg(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from('organisations')
-      .update({
-        name: settingsDraft.name.trim(),
-        slug,
-        logo_url: settingsDraft.logo_url.trim() ? settingsDraft.logo_url.trim() : null,
-        is_active: settingsDraft.is_active,
-      })
-      .eq('id', selectedOrgId);
+    const result = await updatePlatformOrgSettings({
+      orgId: selectedOrgId,
+      name: settingsDraft.name.trim(),
+      slug,
+      logoUrl: settingsDraft.logo_url.trim() ? settingsDraft.logo_url.trim() : null,
+      isActive: settingsDraft.is_active,
+    });
     setBusySaveOrg(false);
-    if (error) {
-      showToast(error.message);
+    if (!result.ok) {
+      showToast(result.error);
       return;
     }
     setOrgs((prev) =>

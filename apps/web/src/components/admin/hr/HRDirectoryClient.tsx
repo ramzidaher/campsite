@@ -137,7 +137,7 @@ function HRQuickViewSummary({
         </div>
       </div>
       {!r.hr_record_id ? (
-        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-950">
+        <p className="status-banner-warning mb-4 rounded-lg px-3 py-2 text-[12.5px]">
           No HR record on file yet. Open the full file to create one.
         </p>
       ) : null}
@@ -315,7 +315,11 @@ export function HRDirectoryClient({
   };
   const columnPrefsKey = 'hr-directory-visible-columns-v1';
 
-  const stats = dashStats as DashStats | null;
+  const [stats, setStats] = useState<DashStats | null>(() => (dashStats as DashStats | null));
+  const [dashboardStatsState, setDashboardStatsState] = useState<'idle' | 'loading' | 'ready' | 'error'>(
+    dashStats ? 'ready' : 'idle'
+  );
+  const [dashboardStatsError, setDashboardStatsError] = useState<string | null>(null);
 
   const probationCriticalCount = useMemo(() => {
     const list = stats?.probation_ending_soon;
@@ -345,6 +349,7 @@ export function HRDirectoryClient({
   const [isColumnsMenuOpen, setIsColumnsMenuOpen] = useState(false);
   const columnsMenuRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<'dashboard' | 'directory'>(stats ? 'dashboard' : 'directory');
+  const [dashboardRequested, setDashboardRequested] = useState(Boolean(stats));
   const [previewRow, setPreviewRow] = useState<HRDirectoryRow | null>(null);
   const deferredQ = useDeferredValue(q);
   const { uiMode } = useUiModePreference(initialUiMode);
@@ -353,6 +358,48 @@ export function HRDirectoryClient({
   useEffect(() => {
     if (tab !== 'directory') setPreviewRow(null);
   }, [tab]);
+
+  useEffect(() => {
+    if (!canViewAll) return;
+    if (!dashboardRequested) return;
+    if (stats) return;
+    if (dashboardStatsState !== 'idle') return;
+
+    let active = true;
+    const controller = new AbortController();
+    setDashboardStatsState('loading');
+    setDashboardStatsError(null);
+
+    async function loadDashboardStats() {
+      try {
+        const response = await fetch('/api/hr/dashboard-stats', {
+          cache: 'no-store',
+          credentials: 'include',
+          signal: controller.signal,
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: string;
+          stats?: Record<string, unknown> | null;
+        };
+        if (!response.ok) throw new Error(payload.error ?? 'Failed to load HR overview.');
+        if (!active) return;
+        setStats((payload.stats as DashStats | null) ?? null);
+        setDashboardStatsState('ready');
+      } catch (error) {
+        if (!active) return;
+        const message = error instanceof Error ? error.message : 'Failed to load HR overview.';
+        setDashboardStatsError(message);
+        setDashboardStatsState('error');
+      }
+    }
+
+    void loadDashboardStats();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [canViewAll, dashboardRequested, dashboardStatsState, stats]);
 
   useEffect(() => {
     if (!isColumnsMenuOpen) return;
@@ -414,9 +461,17 @@ export function HRDirectoryClient({
 
       {/* Tabs */}
       <div className={isInteractiveDirectoryView ? 'mt-4 flex border-b border-[#ececec] px-5 sm:px-7' : 'mb-6 flex border-b border-[#ececec]'}>
-        {stats ? (
-          <button type="button" onClick={() => setTab('dashboard')} className={['px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors', tab === 'dashboard' ? 'border-[#121212] text-[#121212]' : 'border-transparent text-[#9b9b9b] hover:text-[#4a4a4a]'].join(' ')}>
+        {canViewAll ? (
+          <button
+            type="button"
+            onClick={() => {
+              setDashboardRequested(true);
+              setTab('dashboard');
+            }}
+            className={['px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors', tab === 'dashboard' ? 'border-[#121212] text-[#121212]' : 'border-transparent text-[#9b9b9b] hover:text-[#4a4a4a]'].join(' ')}
+          >
             Overview
+            {dashboardStatsState === 'loading' ? '...' : ''}
           </button>
         ) : null}
         <button type="button" onClick={() => setTab('directory')} className={['px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors', tab === 'directory' ? 'border-[#121212] text-[#121212]' : 'border-transparent text-[#9b9b9b] hover:text-[#4a4a4a]'].join(' ')}>
@@ -641,6 +696,28 @@ export function HRDirectoryClient({
               )}
             </div>
           </div>
+        </div>
+      ) : tab === 'dashboard' && canViewAll ? (
+        <div className="rounded-2xl border border-[#ececec] bg-white px-5 py-6 text-[13px] text-[#6b6b6b] sm:px-6">
+          {dashboardStatsState === 'loading' ? (
+            <p>Loading the HR overview...</p>
+          ) : dashboardStatsState === 'error' ? (
+            <div className="space-y-3">
+              <p>{dashboardStatsError ?? 'The HR overview could not be loaded right now.'}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setDashboardStatsError(null);
+                  setDashboardStatsState('idle');
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] text-[#121212] transition-colors hover:bg-[#f5f4f1]"
+              >
+                Retry overview
+              </button>
+            </div>
+          ) : (
+            <p>Open the overview tab to load live HR metrics.</p>
+          )}
         </div>
       ) : null}
 

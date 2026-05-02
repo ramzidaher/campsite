@@ -1,94 +1,51 @@
 import { LeaveHubClient } from '@/components/leave/LeaveHubClient';
-import { currentLeaveYearKeyForOrgCalendar, currentLeaveYearKeyUtc } from '@/lib/datetime';
-import { createClient } from '@/lib/supabase/server';
+import { getCachedLeavePageData } from '@/lib/leave/getCachedLeavePageData';
+import {
+  parseShellPermissionKeys,
+  shellBundleOrgId,
+  shellBundleProfileStatus,
+} from '@/lib/shell/shellBundleAccess';
+import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
 export default async function LeavePage() {
-  const supabase = await createClient();
-  const user = await getAuthUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id, status')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile?.org_id || profile.status !== 'active') redirect('/broadcasts');
-
-  const orgId = profile.org_id as string;
-
-  const { data: perms } = await supabase.rpc('get_my_permissions', { p_org_id: orgId });
-  const keys = ((perms ?? []) as Array<{ permission_key?: string }>).map((p) => String(p.permission_key ?? ''));
+  const bundle = await getCachedMainShellLayoutBundle();
+  const userIdRaw = (bundle as Record<string, unknown>)['user_id'];
+  const userId = typeof userIdRaw === 'string' ? userIdRaw : '';
+  if (!userId) redirect('/login');
+  const orgId = shellBundleOrgId(bundle);
+  if (!orgId) redirect('/login');
+  if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
+  const keys = parseShellPermissionKeys(bundle);
 
   const canView =
     keys.includes('leave.view_own') ||
     keys.includes('leave.approve_direct_reports') ||
     keys.includes('leave.manage_org');
-  if (!canView) redirect('/broadcasts');
+  if (!canView) redirect('/forbidden');
 
   const canSubmit = keys.includes('leave.submit');
   const canApprove = keys.includes('leave.approve_direct_reports') || keys.includes('leave.manage_org');
   const canManage = keys.includes('leave.manage_org');
 
-  const [{ data: leaveSettings }, { data: orgRow }, { data: holidayPeriods }] = await Promise.all([
-    supabase
-      .from('org_leave_settings')
-      .select(
-        'leave_year_start_month, leave_year_start_day, approved_request_change_window_hours, leave_use_working_days, non_working_iso_dows, toil_minutes_per_day',
-      )
-      .eq('org_id', orgId)
-      .maybeSingle(),
-    supabase.from('organisations').select('timezone').eq('id', orgId).maybeSingle(),
-    supabase
-      .from('org_leave_holiday_periods')
-      .select('id, name, holiday_kind, start_date, end_date, is_active')
-      .eq('org_id', orgId)
-      .eq('is_active', true)
-      .order('start_date', { ascending: true }),
-  ]);
-
-  const orgTimezone = (orgRow?.timezone as string | null) ?? null;
-  const leaveYearStartMonth = Number(leaveSettings?.leave_year_start_month ?? 1);
-  const leaveYearStartDay = Number(leaveSettings?.leave_year_start_day ?? 1);
-  const approvedChangeWindowHours = Number(leaveSettings?.approved_request_change_window_hours ?? 48);
-  const initialYear = orgTimezone
-    ? currentLeaveYearKeyForOrgCalendar(new Date(), orgTimezone, leaveYearStartMonth, leaveYearStartDay)
-    : currentLeaveYearKeyUtc(new Date(), leaveYearStartMonth, leaveYearStartDay);
-  const leaveUseWorkingDays = Boolean(leaveSettings?.leave_use_working_days);
-  const nonWorkingIsoDowsRaw = Array.isArray(leaveSettings?.non_working_iso_dows)
-    ? (leaveSettings.non_working_iso_dows as number[]).map((n) => Number(n))
-    : [6, 7];
-  // Normalize legacy JS weekday values (Sun=0) to ISO weekday values (Sun=7).
-  const nonWorkingIsoDows = [...new Set(nonWorkingIsoDowsRaw.map((n) => (n === 0 ? 7 : n)).filter((n) => n >= 1 && n <= 7))];
-  const toilMinutesPerDay = Math.max(1, Number(leaveSettings?.toil_minutes_per_day ?? 480));
+  const pageData = await getCachedLeavePageData(orgId);
 
   return (
     <LeaveHubClient
       orgId={orgId}
-      userId={user.id}
+      userId={userId}
       canSubmit={canSubmit}
       canApprove={canApprove}
       canManage={canManage}
-      initialYear={initialYear}
-      orgTimezone={orgTimezone}
-      leaveYearStartMonth={leaveYearStartMonth}
-      leaveYearStartDay={leaveYearStartDay}
-      approvedChangeWindowHours={approvedChangeWindowHours}
-      leaveUseWorkingDays={leaveUseWorkingDays}
-      nonWorkingIsoDows={nonWorkingIsoDows}
-      toilMinutesPerDay={toilMinutesPerDay}
-      initialHolidayPeriods={
-        (holidayPeriods ?? []) as Array<{
-          id: string;
-          name: string;
-          holiday_kind: string;
-          start_date: string;
-          end_date: string;
-          is_active: boolean;
-        }>
-      }
+      initialYear={pageData.initialYear}
+      orgTimezone={pageData.orgTimezone}
+      leaveYearStartMonth={pageData.leaveYearStartMonth}
+      leaveYearStartDay={pageData.leaveYearStartDay}
+      approvedChangeWindowHours={pageData.approvedChangeWindowHours}
+      leaveUseWorkingDays={pageData.leaveUseWorkingDays}
+      nonWorkingIsoDows={pageData.nonWorkingIsoDows}
+      toilMinutesPerDay={pageData.toilMinutesPerDay}
+      initialHolidayPeriods={pageData.initialHolidayPeriods}
     />
   );
 }

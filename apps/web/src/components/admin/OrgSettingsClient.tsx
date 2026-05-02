@@ -1,7 +1,12 @@
 'use client';
 
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
-import { CELEBRATION_MODE_OPTIONS, getCelebrationModeAdminDefaults } from '@/lib/holidayThemes';
+import {
+  CELEBRATION_MODE_OPTIONS,
+  getCelebrationModeAdminDefaults,
+  getCelebrationModeDef,
+} from '@/lib/holidayThemes';
 import {
   enforceAccessibleBrandTokens,
   getBrandAccessibilityIssues,
@@ -13,7 +18,13 @@ import {
   type OrgBrandTokenKey,
 } from '@/lib/orgBranding';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 
 type TabId = 'branding' | 'general' | 'celebrations' | 'danger';
 type OrgCelebrationMode = {
@@ -30,6 +41,141 @@ type OrgCelebrationMode = {
   emoji_primary: string | null;
   emoji_secondary: string | null;
 };
+
+const MONTH_OPTIONS = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+] as const;
+
+const DAY_OPTIONS = Array.from({ length: 31 }, (_, idx) => idx + 1);
+
+const DEFAULT_CUSTOM_CELEBRATION_GRADIENT =
+  'linear-gradient(180deg,#f97316 0%,#ec4899 50%,#8b5cf6 100%)';
+
+const GRADIENT_DIRECTION_OPTIONS = [
+  { angle: 180, label: 'Top to bottom' },
+  { angle: 135, label: 'Diagonal' },
+  { angle: 90, label: 'Left to right' },
+  { angle: 45, label: 'Diagonal reverse' },
+] as const;
+
+const FALLBACK_GRADIENT_COLOR = '#f97316';
+
+type CelebrationGradientBuilderValue = {
+  angle: number;
+  start: string;
+  middle: string;
+  end: string;
+  hasMiddle: boolean;
+  sourceStopCount: number;
+};
+
+function expandHexColor(input: string) {
+  const trimmed = input.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed.toLowerCase();
+  if (!/^#[0-9a-fA-F]{3}$/.test(trimmed)) return null;
+  return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`.toLowerCase();
+}
+
+function clampGradientAngle(input: number) {
+  if (!Number.isFinite(input)) return 180;
+  const normalized = Math.round(input) % 360;
+  return normalized < 0 ? normalized + 360 : normalized;
+}
+
+function gradientColorFromStop(stop: string) {
+  const match = stop.match(/#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\b/);
+  return match ? expandHexColor(match[0]) : null;
+}
+
+function parseCelebrationGradient(
+  gradient: string | null | undefined
+): CelebrationGradientBuilderValue | null {
+  if (!gradient) return null;
+  const match = gradient.trim().match(/^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(.+)\)$/i);
+  if (!match) return null;
+  const rawStops = match[2]
+    .split(',')
+    .map((stop) => stop.trim())
+    .filter(Boolean);
+  const colors = rawStops
+    .map((stop) => gradientColorFromStop(stop))
+    .filter((color): color is string => !!color);
+  if (colors.length < 2) return null;
+  const start = colors[0] ?? FALLBACK_GRADIENT_COLOR;
+  const lastColor = colors[colors.length - 1] ?? FALLBACK_GRADIENT_COLOR;
+  const end =
+    lastColor === start && colors.length > 1 ? (colors[colors.length - 2] ?? lastColor) : lastColor;
+  const middleIndex = colors.length >= 3 ? Math.floor(colors.length / 2) : 1;
+  return {
+    angle: clampGradientAngle(Number(match[1])),
+    start,
+    middle: colors[middleIndex] ?? end,
+    end,
+    hasMiddle: colors.length >= 3,
+    sourceStopCount: colors.length,
+  };
+}
+
+function buildCelebrationGradient(
+  angle: number,
+  colors: readonly [string, string] | readonly [string, string, string]
+) {
+  const stops =
+    colors.length === 2
+      ? [`${colors[0]} 0%`, `${colors[1]} 100%`]
+      : [`${colors[0]} 0%`, `${colors[1]} 50%`, `${colors[2]} 100%`];
+  return `linear-gradient(${clampGradientAngle(angle)}deg,${stops.join(',')})`;
+}
+
+function gradientStringFromBuilder(value: CelebrationGradientBuilderValue) {
+  return buildCelebrationGradient(
+    value.angle,
+    value.hasMiddle
+      ? ([value.start, value.middle, value.end] as const)
+      : ([value.start, value.end] as const)
+  );
+}
+
+function hasManualCelebrationWindow(
+  mode: Pick<
+    OrgCelebrationMode,
+    'auto_start_month' | 'auto_start_day' | 'auto_end_month' | 'auto_end_day'
+  >
+) {
+  return (
+    mode.auto_start_month !== null &&
+    mode.auto_start_day !== null &&
+    mode.auto_end_month !== null &&
+    mode.auto_end_day !== null
+  );
+}
+
+function monthLabel(month: number | null) {
+  return MONTH_OPTIONS.find((option) => option.value === month)?.label ?? null;
+}
+
+function formatCelebrationWindow(
+  startMonth: number | null,
+  startDay: number | null,
+  endMonth: number | null,
+  endDay: number | null
+) {
+  const startMonthLabel = monthLabel(startMonth);
+  const endMonthLabel = monthLabel(endMonth);
+  if (!startMonthLabel || !endMonthLabel || !startDay || !endDay) return null;
+  return `${startMonthLabel} ${startDay} - ${endMonthLabel} ${endDay}`;
+}
 
 function orgInitials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -95,7 +241,15 @@ async function cropSquareImageFile(
   });
 }
 
-function Toggle({ on, onToggle, disabled }: { on: boolean; onToggle: () => void; disabled?: boolean }) {
+function Toggle({
+  on,
+  onToggle,
+  disabled,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -125,6 +279,41 @@ function tabClass(active: boolean) {
       ? 'border-[#121212] bg-[#121212] font-medium text-[#faf9f6]'
       : 'border-transparent text-[#6b6b6b] hover:bg-[#f5f4f1] hover:text-[#121212]',
   ].join(' ');
+}
+
+function GradientColorInput({
+  label,
+  value,
+  onChange,
+  hideLabel = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  hideLabel?: boolean;
+}) {
+  return (
+    <label className="block w-full min-w-0 rounded-xl border border-[#e4e0da] bg-white p-3">
+      {hideLabel ? null : <span className="text-[12px] font-medium text-[#121212]">{label}</span>}
+      <div className={[hideLabel ? 'mt-0' : 'mt-3', 'flex items-center gap-3'].join(' ')}>
+        <span className="flex h-11 w-14 shrink-0 overflow-hidden rounded-lg border border-[#d8d8d8] bg-white p-1">
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="block h-full w-full cursor-pointer appearance-none border-0 bg-transparent p-0"
+            aria-label={`${label} colour`}
+          />
+        </span>
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#121212]">
+            {value}
+          </div>
+          <div className="mt-0.5 text-[11px] text-[#8a867f]">Pick a colour visually</div>
+        </div>
+      </div>
+    </label>
+  );
 }
 
 const tabs: { id: TabId; label: string }[] = [
@@ -167,7 +356,9 @@ export function OrgSettingsClient({
   const [cropY, setCropY] = useState(0);
   const [cropZoom, setCropZoom] = useState(1);
   const [isDraggingCrop, setIsDraggingCrop] = useState(false);
-  const cropDragStartRef = useRef<{ x: number; y: number; cropX: number; cropY: number } | null>(null);
+  const cropDragStartRef = useRef<{ x: number; y: number; cropX: number; cropY: number } | null>(
+    null
+  );
   const [notif, setNotif] = useState(initial.default_notifications_enabled);
   const [timezone, setTimezone] = useState(initial.timezone ?? '');
   const [msg, setMsg] = useState<string | null>(null);
@@ -175,18 +366,25 @@ export function OrgSettingsClient({
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [logoPreviewFailed, setLogoPreviewFailed] = useState(false);
-  const [celebrationModes, setCelebrationModes] = useState<OrgCelebrationMode[]>(initialCelebrationModes);
+  const [celebrationModes, setCelebrationModes] =
+    useState<OrgCelebrationMode[]>(initialCelebrationModes);
   const [newModeKey, setNewModeKey] = useState('');
   const [newModeLabel, setNewModeLabel] = useState('');
+  const [selectedCelebrationModeKey, setSelectedCelebrationModeKey] = useState<string>(
+    () => CELEBRATION_MODE_OPTIONS.find((mode) => mode.id !== 'off')?.id ?? ''
+  );
   const [brandPresetKey, setBrandPresetKey] = useState(initial.brand_preset_key ?? 'campfire');
-  const [brandPolicy, setBrandPolicy] = useState(initial.brand_policy ?? 'brand_base_with_celebration_accents');
+  const [brandPolicy, setBrandPolicy] = useState(
+    initial.brand_policy ?? 'brand_base_with_celebration_accents'
+  );
   const [brandTokens, setBrandTokens] = useState<Record<OrgBrandTokenKey, string>>(() => {
     const incoming = (initial.brand_tokens ?? {}) as Record<string, string>;
     const base = ORG_BRAND_PRESETS.campfire;
     const next: Record<OrgBrandTokenKey, string> = { ...base };
     for (const key of ORG_BRAND_TOKEN_KEYS) {
       const value = incoming[key];
-      if (typeof value === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(value.trim())) next[key] = value.trim();
+      if (typeof value === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(value.trim()))
+        next[key] = value.trim();
     }
     return next;
   });
@@ -225,7 +423,8 @@ export function OrgSettingsClient({
       const next: Record<OrgBrandTokenKey, string> = { ...base };
       for (const key of ORG_BRAND_TOKEN_KEYS) {
         const value = incoming[key];
-        if (typeof value === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(value.trim())) next[key] = value.trim();
+        if (typeof value === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(value.trim()))
+          next[key] = value.trim();
       }
       return next;
     });
@@ -234,19 +433,108 @@ export function OrgSettingsClient({
     setCelebrationModes(initialCelebrationModes);
   }, [initialCelebrationModes]);
 
-  const builtInModes = useMemo(
-    () => CELEBRATION_MODE_OPTIONS.filter((m) => m.id !== 'off'),
-    []
+  const builtInModes = useMemo(() => CELEBRATION_MODE_OPTIONS.filter((m) => m.id !== 'off'), []);
+  const celebrationModeEntries = useMemo(
+    () => [
+      ...builtInModes,
+      ...celebrationModes
+        .filter((mode) => mode.mode_key.startsWith('org_custom:'))
+        .map((mode) => ({
+          id: mode.mode_key,
+          label: mode.label,
+          category: 'Organisation custom' as const,
+        })),
+    ],
+    [builtInModes, celebrationModes]
   );
+
+  function getCelebrationEditorRow(modeKey: string, fallbackLabel: string, fallbackOrder: number) {
+    const existing = celebrationModes.find((mode) => mode.mode_key === modeKey);
+    if (existing) return existing;
+    return {
+      id: `base-${modeKey}`,
+      mode_key: modeKey,
+      label: fallbackLabel,
+      is_enabled: true,
+      display_order: fallbackOrder,
+      ...getCelebrationModeAdminDefaults(
+        modeKey as Parameters<typeof getCelebrationModeAdminDefaults>[0]
+      ),
+    };
+  }
+
+  const selectedCelebrationIndex = useMemo(
+    () => celebrationModeEntries.findIndex((mode) => mode.id === selectedCelebrationModeKey),
+    [celebrationModeEntries, selectedCelebrationModeKey]
+  );
+  const selectedCelebrationMeta =
+    selectedCelebrationIndex >= 0 ? celebrationModeEntries[selectedCelebrationIndex] : null;
+  const selectedCelebrationRow = selectedCelebrationMeta
+    ? getCelebrationEditorRow(
+        selectedCelebrationMeta.id,
+        selectedCelebrationMeta.label,
+        selectedCelebrationIndex + 1
+      )
+    : null;
+  const selectedCelebrationDef = selectedCelebrationMeta
+    ? getCelebrationModeDef(
+        selectedCelebrationMeta.id as Parameters<typeof getCelebrationModeAdminDefaults>[0],
+        celebrationModes
+      )
+    : null;
+  const celebrationModeGroups = useMemo(() => {
+    const grouped = new Map<string, typeof celebrationModeEntries>();
+    for (const mode of celebrationModeEntries) {
+      const list = grouped.get(mode.category) ?? [];
+      list.push(mode);
+      grouped.set(mode.category, list);
+    }
+    return Array.from(grouped.entries());
+  }, [celebrationModeEntries]);
+
+  useEffect(() => {
+    if (!celebrationModeEntries.some((mode) => mode.id === selectedCelebrationModeKey)) {
+      setSelectedCelebrationModeKey(celebrationModeEntries[0]?.id ?? '');
+    }
+  }, [celebrationModeEntries, selectedCelebrationModeKey]);
+
+  function getCelebrationTimingSummary(row: OrgCelebrationMode) {
+    if (hasManualCelebrationWindow(row)) {
+      return (
+        formatCelebrationWindow(
+          row.auto_start_month,
+          row.auto_start_day,
+          row.auto_end_month,
+          row.auto_end_day
+        ) ?? 'Custom dates'
+      );
+    }
+    if (row.mode_key.startsWith('org_custom:')) return 'Dates not set yet';
+    const defaults = getCelebrationModeAdminDefaults(
+      row.mode_key as Parameters<typeof getCelebrationModeAdminDefaults>[0]
+    );
+    const defaultWindow = formatCelebrationWindow(
+      defaults.auto_start_month,
+      defaults.auto_start_day,
+      defaults.auto_end_month,
+      defaults.auto_end_day
+    );
+    return defaultWindow ?? 'Follows the holiday automatically each year';
+  }
 
   function flash(message: string, tone: 'ok' | 'err') {
     setMsg(message);
     setMsgTone(tone);
   }
 
+  async function invalidateOrgSettingsCaches() {
+    await invalidateClientCaches({ scopes: ['org-settings'] }).catch(() => null);
+  }
+
   async function persistBrandingPatch(patch: Record<string, unknown>) {
     const { error } = await supabase.from('organisations').update(patch).eq('id', initial.id);
     if (error) throw new Error(error.message);
+    await invalidateOrgSettingsCaches();
   }
 
   function toLogoDevDomain(input: string): string | null {
@@ -423,6 +711,7 @@ export function OrgSettingsClient({
       flash(error.message, 'err');
       return;
     }
+    await invalidateOrgSettingsCaches();
     flash(
       enforced.adjusted
         ? 'Branding saved. Some colors were adjusted for accessibility.'
@@ -532,6 +821,7 @@ export function OrgSettingsClient({
       flash(error.message, 'err');
       return;
     }
+    await invalidateOrgSettingsCaches();
     flash('Settings saved.', 'ok');
     router.refresh();
   }
@@ -552,6 +842,7 @@ export function OrgSettingsClient({
     setLoading(false);
     if (error) flash(error.message, 'err');
     else {
+      await invalidateOrgSettingsCaches();
       flash('Deactivation request recorded.', 'ok');
       router.refresh();
     }
@@ -579,13 +870,9 @@ export function OrgSettingsClient({
           label: fallbackLabel ?? modeKey,
           is_enabled: true,
           display_order: fallbackOrder,
-          auto_start_month: null,
-          auto_start_day: null,
-          auto_end_month: null,
-          auto_end_day: null,
-          gradient_override: null,
-          emoji_primary: null,
-          emoji_secondary: null,
+          ...getCelebrationModeAdminDefaults(
+            modeKey as Parameters<typeof getCelebrationModeAdminDefaults>[0]
+          ),
           [key]: value,
         },
       ];
@@ -617,6 +904,7 @@ export function OrgSettingsClient({
       flash(error.message, 'err');
       return;
     }
+    await invalidateOrgSettingsCaches();
     flash('Celebration settings saved.', 'ok');
     router.refresh();
   }
@@ -636,12 +924,17 @@ export function OrgSettingsClient({
       return;
     }
     setCelebrationModes((prev) => prev.filter((row) => row.mode_key !== modeKey));
+    await invalidateOrgSettingsCaches();
     flash('Custom mode removed.', 'ok');
     router.refresh();
   }
 
   function addCustomModeDraft() {
-    const keyPart = newModeKey.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+    const keyPart = newModeKey
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
     if (!keyPart) {
       flash('Custom mode key is required.', 'err');
       return;
@@ -663,13 +956,14 @@ export function OrgSettingsClient({
         auto_start_day: null,
         auto_end_month: null,
         auto_end_day: null,
-        gradient_override: null,
+        gradient_override: DEFAULT_CUSTOM_CELEBRATION_GRADIENT,
         emoji_primary: '✨',
         emoji_secondary: '🎉',
       },
     ]);
     setNewModeKey('');
     setNewModeLabel('');
+    setSelectedCelebrationModeKey(modeKey);
     setTab('celebrations');
   }
 
@@ -710,19 +1004,64 @@ export function OrgSettingsClient({
     flash('Export downloaded.', 'ok');
   }
 
+  const selectedCelebrationUsesCustomWindow = selectedCelebrationRow
+    ? selectedCelebrationRow.mode_key.startsWith('org_custom:') ||
+      hasManualCelebrationWindow(selectedCelebrationRow)
+    : false;
+  const selectedCelebrationTheme = selectedCelebrationRow?.gradient_override?.trim() || null;
+  const selectedCelebrationGradientBuilder = useMemo(() => {
+    const gradientSource =
+      selectedCelebrationTheme ??
+      selectedCelebrationDef?.gradient ??
+      DEFAULT_CUSTOM_CELEBRATION_GRADIENT;
+    return (
+      parseCelebrationGradient(gradientSource) ??
+      parseCelebrationGradient(DEFAULT_CUSTOM_CELEBRATION_GRADIENT) ?? {
+        angle: 180,
+        start: '#f97316',
+        middle: '#ec4899',
+        end: '#8b5cf6',
+        hasMiddle: true,
+        sourceStopCount: 3,
+      }
+    );
+  }, [selectedCelebrationDef?.gradient, selectedCelebrationTheme]);
+  const selectedCelebrationGradientPreview =
+    selectedCelebrationDef?.gradient ??
+    gradientStringFromBuilder(selectedCelebrationGradientBuilder);
+
+  function updateCelebrationGradient(
+    patch: Partial<
+      Pick<CelebrationGradientBuilderValue, 'angle' | 'start' | 'middle' | 'end' | 'hasMiddle'>
+    >
+  ) {
+    if (!selectedCelebrationRow) return;
+    const next = {
+      ...selectedCelebrationGradientBuilder,
+      ...patch,
+    };
+    setModeField(
+      selectedCelebrationRow.mode_key,
+      'gradient_override',
+      gradientStringFromBuilder(next),
+      selectedCelebrationRow.label,
+      selectedCelebrationIndex + 1
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+    <div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-7 xl:px-9">
       <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           Organisation settings
         </h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Configure your organisation&apos;s branding and general settings
+          Configure your organisation&apos;s branding and general settings.
         </p>
       </div>
 
-      <div className="grid max-w-[860px] gap-6 md:grid-cols-[200px_1fr]">
-        <nav className="flex flex-col gap-0.5" aria-label="Settings sections">
+      <div className="grid items-start gap-6 xl:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
+        <nav className="flex flex-col gap-0.5 xl:sticky xl:top-24" aria-label="Settings sections">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -738,11 +1077,13 @@ export function OrgSettingsClient({
           ))}
         </nav>
 
-        <div>
+        <div className="min-w-0">
           {tab === 'branding' ? (
             <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
               <div className="font-authSerif text-[17px] text-[#121212]">Branding</div>
-              <p className="mt-1 text-[13px] text-[#6b6b6b]">Customise how your organisation appears in Campsite.</p>
+              <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                Customise how your organisation appears in Campsite.
+              </p>
 
               <div className="mt-5 flex flex-col gap-4 rounded-[10px] border border-[#d8d8d8] bg-[#f5f4f1] p-4 sm:flex-row sm:items-center">
                 <div className="mx-auto h-16 w-16 shrink-0 sm:mx-0">
@@ -763,14 +1104,16 @@ export function OrgSettingsClient({
                 <div className="min-w-0 flex-1 text-center sm:text-left">
                   <div className="text-[13.5px] font-medium text-[#121212]">Organisation logo</div>
                   <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
-                    Use a <strong className="font-medium text-[#6b6b6b]">direct image URL</strong> (PNG, SVG, JPG, or
-                    WebP) - not a website homepage. The link should usually end in{' '}
-                    <span className="font-mono">.png</span>, <span className="font-mono">.svg</span>, etc.
+                    Use a <strong className="font-medium text-[#6b6b6b]">direct image URL</strong>{' '}
+                    (PNG, SVG, JPG, or WebP) - not a website homepage. The link should usually end
+                    in <span className="font-mono">.png</span>,{' '}
+                    <span className="font-mono">.svg</span>, etc.
                   </p>
                   {trimmedLogoUrl && logoPreviewFailed ? (
                     <p className="mt-2 text-[11.5px] font-medium text-[#b45309]">
-                      We couldn&apos;t load an image from this URL. Try opening it in a new tab - if you see a page
-                      instead of a picture, paste the image file&apos;s address instead.
+                      We couldn&apos;t load an image from this URL. Try opening it in a new tab - if
+                      you see a page instead of a picture, paste the image file&apos;s address
+                      instead.
                     </p>
                   ) : null}
                   <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
@@ -798,7 +1141,9 @@ export function OrgSettingsClient({
               </div>
 
               <label className="mt-5 block">
-                <span className="mb-1.5 block text-[12.5px] font-medium text-[#6b6b6b]">Organisation name</span>
+                <span className="mb-1.5 block text-[12.5px] font-medium text-[#6b6b6b]">
+                  Organisation name
+                </span>
                 <input
                   className="w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   value={name}
@@ -807,7 +1152,9 @@ export function OrgSettingsClient({
               </label>
 
               <label className="mt-4 block">
-                <span className="mb-1.5 block text-[12.5px] font-medium text-[#6b6b6b]">Subdomain</span>
+                <span className="mb-1.5 block text-[12.5px] font-medium text-[#6b6b6b]">
+                  Subdomain
+                </span>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     readOnly
@@ -817,12 +1164,15 @@ export function OrgSettingsClient({
                   <span className="shrink-0 text-[13px] text-[#9b9b9b]">.camp-site.co.uk</span>
                 </div>
                 <span className="mt-1 block text-[11.5px] text-[#9b9b9b]">
-                  Slug is set when the organisation is created; contact support to change invite links.
+                  Slug is set when the organisation is created; contact support to change invite
+                  links.
                 </span>
               </label>
 
               <div className="mt-4 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] p-3">
-                <div className="text-[12.5px] font-medium text-[#121212]">Find from website domain</div>
+                <div className="text-[12.5px] font-medium text-[#121212]">
+                  Find from website domain
+                </div>
                 <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
                   Enter the organisation website domain and we&apos;ll try to fetch the latest logo.
                 </p>
@@ -1012,13 +1362,14 @@ export function OrgSettingsClient({
                       Accessibility warning
                     </div>
                     <p className="mt-1 text-[11.5px] text-[#b45309]">
-                      Some color pairs have low contrast and may be hard to read. Saving will auto-adjust them.
+                      Some color pairs have low contrast and may be hard to read. Saving will
+                      auto-adjust them.
                     </p>
                     <ul className="mt-2 space-y-1 text-[11.5px] text-[#7c2d12]">
                       {brandAccessibilityIssues.map((issue) => (
                         <li key={`${issue.token}-${issue.against}`}>
-                          `{issue.token}` vs `{issue.against}` contrast {issue.ratio.toFixed(2)} (needs at least{' '}
-                          {issue.minimum.toFixed(1)})
+                          `{issue.token}` vs `{issue.against}` contrast {issue.ratio.toFixed(2)}{' '}
+                          (needs at least {issue.minimum.toFixed(1)})
                         </li>
                       ))}
                     </ul>
@@ -1048,14 +1399,19 @@ export function OrgSettingsClient({
           {tab === 'general' ? (
             <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
               <div className="font-authSerif text-[17px] text-[#121212]">General settings</div>
-              <p className="mt-1 text-[13px] text-[#6b6b6b]">System-wide defaults for your organisation.</p>
+              <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                System-wide defaults for your organisation.
+              </p>
 
               <div className="mt-2 border-t border-[#d8d8d8]">
                 <label className="block border-b border-[#d8d8d8] py-4">
-                  <span className="text-[13.5px] font-medium text-[#121212]">Default timezone (rota &amp; calendar)</span>
+                  <span className="text-[13.5px] font-medium text-[#121212]">
+                    Default timezone (rota &amp; calendar)
+                  </span>
                   <p className="mt-0.5 text-[12px] leading-relaxed text-[#9b9b9b]">
-                    IANA name (e.g. <span className="font-mono">Europe/London</span>). Leave empty to use each
-                    viewer&apos;s device time. Used when displaying shift times on web and mobile.
+                    IANA name (e.g. <span className="font-mono">Europe/London</span>). Leave empty
+                    to use each viewer&apos;s device time. Used when displaying shift times on web
+                    and mobile.
                   </p>
                   <input
                     className="mt-2 w-full max-w-md rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
@@ -1067,10 +1423,12 @@ export function OrgSettingsClient({
                 </label>
                 <div className="flex items-start justify-between gap-5 border-b border-[#d8d8d8] py-4">
                   <div className="min-w-0">
-                    <div className="text-[13.5px] font-medium text-[#121212]">Default in-app notifications</div>
+                    <div className="text-[13.5px] font-medium text-[#121212]">
+                      Default in-app notifications
+                    </div>
                     <p className="mt-0.5 text-[12px] leading-relaxed text-[#9b9b9b]">
-                      New members start with notifications enabled for broadcasts and updates unless they change this in
-                      their profile.
+                      New members start with notifications enabled for broadcasts and updates unless
+                      they change this in their profile.
                     </p>
                   </div>
                   <Toggle on={notif} onToggle={() => setNotif((v) => !v)} disabled={loading} />
@@ -1078,8 +1436,8 @@ export function OrgSettingsClient({
               </div>
 
               <p className="mt-4 text-[12px] leading-relaxed text-[#9b9b9b]">
-                Member approvals, broadcast approval queues, and role capabilities are enforced by permissions today  - 
-                additional organisation policy toggles may appear here later.
+                Member approvals, broadcast approval queues, and role capabilities are enforced by
+                permissions today - additional organisation policy toggles may appear here later.
               </p>
 
               <button
@@ -1094,139 +1452,603 @@ export function OrgSettingsClient({
           ) : null}
 
           {tab === 'celebrations' ? (
-            <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
-              <div className="font-authSerif text-[17px] text-[#121212]">Celebration modes</div>
-              <p className="mt-1 text-[13px] text-[#6b6b6b]">
-                Override auto-date windows, emoji, and gradients for built-in holidays, or create custom organisation
-                modes.
-              </p>
-
-              <div className="mt-4 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] p-3">
-                <div className="text-[12.5px] font-medium text-[#121212]">Create custom mode</div>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <input
-                    className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
-                    placeholder="Key (e.g. founders_day)"
-                    value={newModeKey}
-                    onChange={(e) => setNewModeKey(e.target.value)}
-                  />
-                  <input
-                    className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
-                    placeholder="Label (e.g. Founders Day)"
-                    value={newModeLabel}
-                    onChange={(e) => setNewModeLabel(e.target.value)}
-                  />
+            <div className="grid items-start gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
+              <div className="space-y-5">
+                <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
+                  <div className="font-authSerif text-[17px] text-[#121212]">Celebration modes</div>
+                  <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                    Edit one celebration at a time so timing, colours, and emoji are easier to
+                    manage.
+                  </p>
+                  <div className="mt-4 rounded-xl border border-[#e8e6e3] bg-[#faf9f7] p-4">
+                    <div className="text-[12.5px] font-medium text-[#121212]">
+                      Create custom mode
+                    </div>
+                    <p className="mt-1 text-[11.5px] text-[#6b6b6b]">
+                      Add your own organisation-specific celebration if the built-in list does not
+                      fit.
+                    </p>
+                    <div className="mt-3 grid gap-2">
+                      <input
+                        className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
+                        placeholder="Short key (e.g. founders_day)"
+                        value={newModeKey}
+                        onChange={(e) => setNewModeKey(e.target.value)}
+                      />
+                      <input
+                        className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
+                        placeholder="Label (e.g. Founders Day)"
+                        value={newModeLabel}
+                        onChange={(e) => setNewModeLabel(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addCustomModeDraft}
+                      className="mt-3 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#faf9f6]"
+                    >
+                      Add custom mode
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={addCustomModeDraft}
-                  className="mt-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#faf9f6]"
-                >
-                  Add custom mode
-                </button>
+
+                <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
+                  <div className="border-b border-[#eceae6] px-5 py-4">
+                    <div className="text-[13px] font-semibold text-[#121212]">
+                      Choose a celebration
+                    </div>
+                    <p className="mt-1 text-[11.5px] text-[#6b6b6b]">
+                      Select a mode to edit its timing, look, and emoji.
+                    </p>
+                  </div>
+                  <div className="max-h-[60vh] overflow-y-auto px-3 py-3">
+                    {celebrationModeGroups.map(([category, modes]) => (
+                      <div key={category} className="mb-4 last:mb-0">
+                        <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                          {category}
+                        </div>
+                        <div className="space-y-2">
+                          {modes.map((mode) => {
+                            const modeIndex = celebrationModeEntries.findIndex(
+                              (entry) => entry.id === mode.id
+                            );
+                            const row = getCelebrationEditorRow(mode.id, mode.label, modeIndex + 1);
+                            const def = getCelebrationModeDef(
+                              mode.id as Parameters<typeof getCelebrationModeAdminDefaults>[0],
+                              celebrationModes
+                            );
+                            const isSelected = mode.id === selectedCelebrationModeKey;
+
+                            return (
+                              <button
+                                key={mode.id}
+                                type="button"
+                                onClick={() => setSelectedCelebrationModeKey(mode.id)}
+                                className={[
+                                  'w-full rounded-xl border p-3 text-left transition-colors',
+                                  isSelected
+                                    ? 'border-[#121212] bg-[#faf9f7]'
+                                    : 'border-[#eceae6] bg-white hover:border-[#cfcac3] hover:bg-[#fcfbf8]',
+                                ].join(' ')}
+                              >
+                                <div
+                                  className="h-9 rounded-lg border border-black/5"
+                                  style={
+                                    def.gradient
+                                      ? { backgroundImage: def.gradient }
+                                      : { background: '#f3f4f6' }
+                                  }
+                                />
+                                <div className="mt-3 flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="truncate text-[13px] font-semibold text-[#121212]">
+                                      {row.label}
+                                    </div>
+                                    <div className="mt-0.5 text-[11px] text-[#9b9b9b]">
+                                      {getCelebrationTimingSummary(row)}
+                                    </div>
+                                  </div>
+                                  <span
+                                    className={[
+                                      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]',
+                                      row.is_enabled
+                                        ? 'bg-[#ecfdf3] text-[#166534]'
+                                        : 'bg-[#f3f4f6] text-[#6b7280]',
+                                    ].join(' ')}
+                                  >
+                                    {row.is_enabled ? 'On' : 'Off'}
+                                  </span>
+                                </div>
+                                <div className="mt-2 flex gap-1.5 text-[15px]">
+                                  {def.decorations.slice(0, 2).map((emoji, idx) => (
+                                    <span
+                                      key={`${mode.id}-emoji-${idx}`}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#faf5ef]"
+                                    >
+                                      {emoji}
+                                    </span>
+                                  ))}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#e8e6e3] bg-[#faf9f7] p-4">
+                  <p className="text-[11.5px] leading-relaxed text-[#6b6b6b]">
+                    Keep labels human-friendly, and only create custom celebrations when the
+                    built-in list does not cover what your organisation needs.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => void saveCelebrations()}
+                    className="mt-4 w-full rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    Save celebrations
+                  </button>
+                </div>
               </div>
 
-              <div className="mt-4 space-y-3">
-                {[...builtInModes, ...celebrationModes.filter((m) => m.mode_key.startsWith('org_custom:')).map((m) => ({ id: m.mode_key, label: m.label }))].map((mode, idx) => {
-                  const row = celebrationModes.find((m) => m.mode_key === mode.id) ?? {
-                    id: `base-${mode.id}`,
-                    mode_key: mode.id,
-                    label: mode.label,
-                    is_enabled: true,
-                    display_order: idx + 1,
-                    ...getCelebrationModeAdminDefaults(mode.id as Parameters<typeof getCelebrationModeAdminDefaults>[0]),
-                  };
-                  const isCustom = row.mode_key.startsWith('org_custom:');
-                  return (
-                    <div key={row.mode_key} className="rounded-lg border border-[#d8d8d8] p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-[13px] font-semibold text-[#121212]">{row.label}</div>
-                          <div className="text-[11px] text-[#9b9b9b]">{row.mode_key}</div>
+              <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+                {selectedCelebrationRow && selectedCelebrationDef ? (
+                  <>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="font-authSerif text-[17px] text-[#121212]">
+                          {selectedCelebrationRow.label}
                         </div>
+                        <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                          Make simple updates to this celebration&apos;s timing, look, and emoji.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 rounded-full border border-[#eceae6] bg-[#faf9f7] px-3 py-2">
+                        <span className="text-[12px] font-medium text-[#121212]">
+                          {selectedCelebrationRow.is_enabled ? 'Enabled' : 'Disabled'}
+                        </span>
                         <Toggle
-                          on={row.is_enabled}
-                          onToggle={() => setModeField(row.mode_key, 'is_enabled', !row.is_enabled, row.label, idx + 1)}
+                          on={selectedCelebrationRow.is_enabled}
+                          onToggle={() =>
+                            setModeField(
+                              selectedCelebrationRow.mode_key,
+                              'is_enabled',
+                              !selectedCelebrationRow.is_enabled,
+                              selectedCelebrationRow.label,
+                              selectedCelebrationIndex + 1
+                            )
+                          }
                         />
                       </div>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        <input
-                          className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[12px] text-[#121212] outline-none focus:border-[#121212]"
-                          value={row.label}
-                          onChange={(e) => setModeField(row.mode_key, 'label', e.target.value, row.label, idx + 1)}
-                          placeholder="Label"
-                        />
-                        <input
-                          className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[12px] text-[#121212] outline-none focus:border-[#121212]"
-                          value={row.gradient_override ?? ''}
-                          onChange={(e) => setModeField(row.mode_key, 'gradient_override', e.target.value || null, row.label, idx + 1)}
-                          placeholder="Gradient CSS override"
-                        />
+                    </div>
+
+                    <div
+                      className="mt-5 overflow-hidden rounded-2xl border border-[#e8e6e3]"
+                      style={
+                        selectedCelebrationDef.gradient
+                          ? { backgroundImage: selectedCelebrationDef.gradient }
+                          : { background: '#f3f4f6' }
+                      }
+                    >
+                      <div className="bg-black/15 px-5 py-6 text-white backdrop-blur-[1px]">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/80">
+                          {selectedCelebrationMeta?.category}
+                        </div>
+                        <div className="mt-2 font-authSerif text-[30px] leading-tight">
+                          {selectedCelebrationRow.label}
+                        </div>
+                        <p className="mt-2 text-[13px] text-white/90">
+                          {getCelebrationTimingSummary(selectedCelebrationRow)}
+                        </p>
+                        <div className="mt-4 flex gap-2 text-[22px]">
+                          {selectedCelebrationDef.decorations.slice(0, 2).map((emoji, idx) => (
+                            <span
+                              key={`${selectedCelebrationRow.mode_key}-preview-${idx}`}
+                              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/20"
+                            >
+                              {emoji}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    </div>
+
+                    <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                      <label className="rounded-xl border border-[#eceae6] bg-[#faf9f7] p-4">
+                        <span className="text-[13px] font-medium text-[#121212]">Name</span>
+                        <p className="mt-1 text-[11.5px] text-[#6b6b6b]">
+                          This is what admins and staff will see in the interface.
+                        </p>
                         <input
-                          className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-2 py-1.5 text-[12px]"
-                          value={row.auto_start_month ?? ''}
-                          onChange={(e) => setModeField(row.mode_key, 'auto_start_month', e.target.value ? Number(e.target.value) : null, row.label, idx + 1)}
-                          placeholder="Start month"
+                          className="mt-3 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
+                          value={selectedCelebrationRow.label}
+                          onChange={(e) =>
+                            setModeField(
+                              selectedCelebrationRow.mode_key,
+                              'label',
+                              e.target.value,
+                              selectedCelebrationRow.label,
+                              selectedCelebrationIndex + 1
+                            )
+                          }
+                          placeholder="Celebration name"
                         />
-                        <input
-                          className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-2 py-1.5 text-[12px]"
-                          value={row.auto_start_day ?? ''}
-                          onChange={(e) => setModeField(row.mode_key, 'auto_start_day', e.target.value ? Number(e.target.value) : null, row.label, idx + 1)}
-                          placeholder="Start day"
-                        />
-                        <input
-                          className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-2 py-1.5 text-[12px]"
-                          value={row.auto_end_month ?? ''}
-                          onChange={(e) => setModeField(row.mode_key, 'auto_end_month', e.target.value ? Number(e.target.value) : null, row.label, idx + 1)}
-                          placeholder="End month"
-                        />
-                        <input
-                          className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-2 py-1.5 text-[12px]"
-                          value={row.auto_end_day ?? ''}
-                          onChange={(e) => setModeField(row.mode_key, 'auto_end_day', e.target.value ? Number(e.target.value) : null, row.label, idx + 1)}
-                          placeholder="End day"
-                        />
-                      </div>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        <input
-                          className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[12px]"
-                          value={row.emoji_primary ?? ''}
-                          onChange={(e) => setModeField(row.mode_key, 'emoji_primary', e.target.value || null, row.label, idx + 1)}
-                          placeholder="Emoji primary"
-                        />
-                        <input
-                          className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[12px]"
-                          value={row.emoji_secondary ?? ''}
-                          onChange={(e) => setModeField(row.mode_key, 'emoji_secondary', e.target.value || null, row.label, idx + 1)}
-                          placeholder="Emoji secondary"
-                        />
-                      </div>
-                      {isCustom ? (
-                        <div className="mt-2">
+                      </label>
+
+                      <div className="rounded-xl border border-[#eceae6] bg-[#faf9f7] p-4">
+                        <span className="text-[13px] font-medium text-[#121212]">
+                          When it shows
+                        </span>
+                        <p className="mt-1 text-[11.5px] text-[#6b6b6b]">
+                          {selectedCelebrationRow.mode_key.startsWith('org_custom:')
+                            ? 'Custom celebrations need a start and end date before they can appear.'
+                            : 'Leave these blank to use the standard holiday timing. Set your own dates only when you want a custom window.'}
+                        </p>
+                        {!selectedCelebrationRow.mode_key.startsWith('org_custom:') ? (
                           <button
                             type="button"
-                            onClick={() => void removeMode(row.mode_key)}
-                            className="rounded-lg border border-[#fecaca] bg-[#fef2f2] px-2.5 py-1.5 text-[12px] font-medium text-[#b91c1c] hover:bg-[#fee2e2]"
+                            onClick={() => {
+                              setModeField(
+                                selectedCelebrationRow.mode_key,
+                                'auto_start_month',
+                                null,
+                                selectedCelebrationRow.label,
+                                selectedCelebrationIndex + 1
+                              );
+                              setModeField(
+                                selectedCelebrationRow.mode_key,
+                                'auto_start_day',
+                                null,
+                                selectedCelebrationRow.label,
+                                selectedCelebrationIndex + 1
+                              );
+                              setModeField(
+                                selectedCelebrationRow.mode_key,
+                                'auto_end_month',
+                                null,
+                                selectedCelebrationRow.label,
+                                selectedCelebrationIndex + 1
+                              );
+                              setModeField(
+                                selectedCelebrationRow.mode_key,
+                                'auto_end_day',
+                                null,
+                                selectedCelebrationRow.label,
+                                selectedCelebrationIndex + 1
+                              );
+                            }}
+                            className="mt-3 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
                           >
-                            Remove custom mode
+                            Use standard holiday dates
+                          </button>
+                        ) : null}
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <label className="text-[12px] text-[#6b6b6b]">
+                            Start month
+                            <select
+                              className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                              value={selectedCelebrationRow.auto_start_month ?? ''}
+                              onChange={(e) =>
+                                setModeField(
+                                  selectedCelebrationRow.mode_key,
+                                  'auto_start_month',
+                                  e.target.value ? Number(e.target.value) : null,
+                                  selectedCelebrationRow.label,
+                                  selectedCelebrationIndex + 1
+                                )
+                              }
+                            >
+                              <option value="">Default / unset</option>
+                              {MONTH_OPTIONS.map((month) => (
+                                <option key={month.value} value={month.value}>
+                                  {month.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-[12px] text-[#6b6b6b]">
+                            Start day
+                            <select
+                              className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                              value={selectedCelebrationRow.auto_start_day ?? ''}
+                              onChange={(e) =>
+                                setModeField(
+                                  selectedCelebrationRow.mode_key,
+                                  'auto_start_day',
+                                  e.target.value ? Number(e.target.value) : null,
+                                  selectedCelebrationRow.label,
+                                  selectedCelebrationIndex + 1
+                                )
+                              }
+                            >
+                              <option value="">Default / unset</option>
+                              {DAY_OPTIONS.map((day) => (
+                                <option key={day} value={day}>
+                                  {day}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-[12px] text-[#6b6b6b]">
+                            End month
+                            <select
+                              className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                              value={selectedCelebrationRow.auto_end_month ?? ''}
+                              onChange={(e) =>
+                                setModeField(
+                                  selectedCelebrationRow.mode_key,
+                                  'auto_end_month',
+                                  e.target.value ? Number(e.target.value) : null,
+                                  selectedCelebrationRow.label,
+                                  selectedCelebrationIndex + 1
+                                )
+                              }
+                            >
+                              <option value="">Default / unset</option>
+                              {MONTH_OPTIONS.map((month) => (
+                                <option key={month.value} value={month.value}>
+                                  {month.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-[12px] text-[#6b6b6b]">
+                            End day
+                            <select
+                              className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                              value={selectedCelebrationRow.auto_end_day ?? ''}
+                              onChange={(e) =>
+                                setModeField(
+                                  selectedCelebrationRow.mode_key,
+                                  'auto_end_day',
+                                  e.target.value ? Number(e.target.value) : null,
+                                  selectedCelebrationRow.label,
+                                  selectedCelebrationIndex + 1
+                                )
+                              }
+                            >
+                              <option value="">Default / unset</option>
+                              {DAY_OPTIONS.map((day) => (
+                                <option key={day} value={day}>
+                                  {day}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        <p className="mt-3 text-[11.5px] text-[#6b6b6b]">
+                          {selectedCelebrationUsesCustomWindow
+                            ? `Current custom window: ${getCelebrationTimingSummary(selectedCelebrationRow)}`
+                            : `Current schedule: ${getCelebrationTimingSummary(selectedCelebrationRow)}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 rounded-xl border border-[#eceae6] bg-[#faf9f7] p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="text-[13px] font-medium text-[#121212]">
+                            Look and feel
+                          </div>
+                          <p className="mt-1 text-[11.5px] text-[#6b6b6b]">
+                            Pick your own colours and direction. We&apos;ll build the gradient for
+                            you.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setModeField(
+                              selectedCelebrationRow.mode_key,
+                              'gradient_override',
+                              selectedCelebrationRow.mode_key.startsWith('org_custom:')
+                                ? DEFAULT_CUSTOM_CELEBRATION_GRADIENT
+                                : null,
+                              selectedCelebrationRow.label,
+                              selectedCelebrationIndex + 1
+                            )
+                          }
+                          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                        >
+                          {selectedCelebrationRow.mode_key.startsWith('org_custom:')
+                            ? 'Reset custom colours'
+                            : 'Use standard colours'}
+                        </button>
+                      </div>
+                      <div className="mt-4 overflow-hidden rounded-2xl border border-[#e4e0da] bg-white">
+                        <div
+                          className="h-24 w-full"
+                          style={{
+                            backgroundImage: selectedCelebrationGradientPreview,
+                          }}
+                        />
+                        <div className="flex flex-wrap items-center gap-2 border-t border-[#eceae6] px-4 py-3">
+                          {[
+                            selectedCelebrationGradientBuilder.start,
+                            ...(selectedCelebrationGradientBuilder.hasMiddle
+                              ? [selectedCelebrationGradientBuilder.middle]
+                              : []),
+                            selectedCelebrationGradientBuilder.end,
+                          ].map((color, idx) => (
+                            <span
+                              key={`${selectedCelebrationRow.mode_key}-gradient-chip-${idx}`}
+                              className="inline-flex items-center gap-2 rounded-full border border-[#e4e0da] bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-[#121212]"
+                            >
+                              <span
+                                className="h-3 w-3 rounded-full border border-black/10"
+                                style={{ backgroundColor: color }}
+                              />
+                              {color}
+                            </span>
+                          ))}
+                          <span className="text-[11px] text-[#8a867f]">
+                            Direction: {selectedCelebrationGradientBuilder.angle}deg
+                          </span>
+                        </div>
+                      </div>
+                      {selectedCelebrationGradientBuilder.sourceStopCount > 3 ? (
+                        <p className="mt-3 text-[11.5px] text-[#6b6b6b]">
+                          This celebration currently uses a more detailed multi-colour gradient. If
+                          you change it here, it will be simplified into an easy-to-edit blend.
+                        </p>
+                      ) : null}
+                      <div className="mt-4 rounded-xl border border-[#e4e0da] bg-white p-4">
+                        <div className="text-[12px] font-medium text-[#121212]">Direction</div>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                          {GRADIENT_DIRECTION_OPTIONS.map((option) => {
+                            const isActive =
+                              selectedCelebrationGradientBuilder.angle === option.angle;
+                            return (
+                              <button
+                                key={option.angle}
+                                type="button"
+                                onClick={() => updateCelebrationGradient({ angle: option.angle })}
+                                className={[
+                                  'rounded-lg border px-3 py-2 text-left text-[12px] font-medium transition-colors',
+                                  isActive
+                                    ? 'border-[#121212] bg-[#121212] text-[#faf9f6]'
+                                    : 'border-[#dedad4] bg-[#faf9f7] text-[#121212] hover:bg-[#f5f4f1]',
+                                ].join(' ')}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <label className="mt-4 block text-[12px] text-[#6b6b6b]">
+                          Fine tune angle
+                          <input
+                            type="range"
+                            min={0}
+                            max={360}
+                            step={1}
+                            value={selectedCelebrationGradientBuilder.angle}
+                            onChange={(e) =>
+                              updateCelebrationGradient({ angle: Number(e.target.value) })
+                            }
+                            className="mt-2 w-full accent-[#121212]"
+                          />
+                        </label>
+                      </div>
+                      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        <GradientColorInput
+                          label="First colour"
+                          value={selectedCelebrationGradientBuilder.start}
+                          onChange={(value) =>
+                            updateCelebrationGradient({ start: value.toLowerCase() })
+                          }
+                        />
+                        <GradientColorInput
+                          label="Last colour"
+                          value={selectedCelebrationGradientBuilder.end}
+                          onChange={(value) =>
+                            updateCelebrationGradient({ end: value.toLowerCase() })
+                          }
+                        />
+                      </div>
+                      <div className="mt-4 rounded-xl border border-[#e4e0da] bg-white p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <div className="text-[12px] font-medium text-[#121212]">
+                              Middle colour
+                            </div>
+                            <p className="mt-1 text-[11px] text-[#8a867f]">
+                              Add a third colour if you want a richer gradient.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateCelebrationGradient({
+                                hasMiddle: !selectedCelebrationGradientBuilder.hasMiddle,
+                              })
+                            }
+                            className="rounded-lg border border-[#d8d8d8] bg-[#faf9f7] px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                          >
+                            {selectedCelebrationGradientBuilder.hasMiddle
+                              ? 'Use 2 colours'
+                              : 'Add third colour'}
                           </button>
                         </div>
-                      ) : null}
+                        {selectedCelebrationGradientBuilder.hasMiddle ? (
+                          <div className="mt-4">
+                            <GradientColorInput
+                              label="Middle colour"
+                              value={selectedCelebrationGradientBuilder.middle}
+                              hideLabel
+                              onChange={(value) =>
+                                updateCelebrationGradient({ middle: value.toLowerCase() })
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
 
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => void saveCelebrations()}
-                className="mt-4 rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                Save celebrations
-              </button>
+                    <div className="mt-6 rounded-xl border border-[#eceae6] bg-[#faf9f7] p-4">
+                      <div className="text-[13px] font-medium text-[#121212]">Emoji</div>
+                      <p className="mt-1 text-[11.5px] text-[#6b6b6b]">
+                        These are used for the celebration accents and quick preview chips.
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="text-[12px] text-[#6b6b6b]">
+                          Primary emoji
+                          <input
+                            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                            value={selectedCelebrationRow.emoji_primary ?? ''}
+                            onChange={(e) =>
+                              setModeField(
+                                selectedCelebrationRow.mode_key,
+                                'emoji_primary',
+                                e.target.value || null,
+                                selectedCelebrationRow.label,
+                                selectedCelebrationIndex + 1
+                              )
+                            }
+                            placeholder={selectedCelebrationDef.decorations[0] ?? '✨'}
+                          />
+                        </label>
+                        <label className="text-[12px] text-[#6b6b6b]">
+                          Secondary emoji
+                          <input
+                            className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                            value={selectedCelebrationRow.emoji_secondary ?? ''}
+                            onChange={(e) =>
+                              setModeField(
+                                selectedCelebrationRow.mode_key,
+                                'emoji_secondary',
+                                e.target.value || null,
+                                selectedCelebrationRow.label,
+                                selectedCelebrationIndex + 1
+                              )
+                            }
+                            placeholder={selectedCelebrationDef.decorations[1] ?? '🎉'}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {selectedCelebrationRow.mode_key.startsWith('org_custom:') ? (
+                      <div className="mt-6 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => void removeMode(selectedCelebrationRow.mode_key)}
+                          className="rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[12px] font-medium text-[#b91c1c] hover:bg-[#fee2e2]"
+                        >
+                          Remove custom mode
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[#d8d8d8] bg-[#faf9f7] p-8 text-center text-[13px] text-[#6b6b6b]">
+                    Choose a celebration from the left to edit it.
+                  </div>
+                )}
+              </div>
             </div>
           ) : null}
 
@@ -1240,7 +2062,9 @@ export function OrgSettingsClient({
               <div className="mt-2 border-t border-[#d8d8d8]">
                 <div className="flex flex-col gap-4 border-b border-[#d8d8d8] py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <div className="text-[13.5px] font-medium text-[#121212]">Export all member data</div>
+                    <div className="text-[13.5px] font-medium text-[#121212]">
+                      Export all member data
+                    </div>
                     <p className="mt-0.5 text-[12px] text-[#9b9b9b]">
                       Download a CSV of members (up to 5000 rows) for your records.
                     </p>
@@ -1257,10 +2081,12 @@ export function OrgSettingsClient({
 
                 <div className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <div className="text-[13.5px] font-medium text-[#121212]">Request deactivation</div>
+                    <div className="text-[13.5px] font-medium text-[#121212]">
+                      Request deactivation
+                    </div>
                     <p className="mt-0.5 text-[12px] text-[#9b9b9b]">
-                      Records a request to wind down the org. Common Ground Studios follows up off-platform; data is not
-                      immediately deleted.
+                      Records a request to wind down the org. Common Ground Studios follows up
+                      off-platform; data is not immediately deleted.
                     </p>
                     {initial.deactivation_requested_at ? (
                       <p className="mt-2 text-[11px] text-[#9b9b9b]">
@@ -1355,7 +2181,9 @@ export function OrgSettingsClient({
                 </label>
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <p className="text-[11px] text-[#9b9b9b]">Tip: keep key details near the center crosshair.</p>
+                <p className="text-[11px] text-[#9b9b9b]">
+                  Tip: keep key details near the center crosshair.
+                </p>
                 <button
                   type="button"
                   className="rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
@@ -1394,7 +2222,18 @@ export function OrgSettingsClient({
       ) : null}
 
       {msg ? (
-        <p className={`mt-4 text-[13px] ${msgTone === 'err' ? 'text-[#b91c1c]' : 'text-[#15803d]'}`}>{msg}</p>
+        <div className="pointer-events-none fixed inset-x-0 top-5 z-[140] flex justify-end px-5 sm:px-7 xl:px-9">
+          <div
+            className={[
+              'pointer-events-auto max-w-[360px] rounded-xl border px-4 py-3 text-[13px] shadow-[0_18px_40px_rgba(0,0,0,0.12)]',
+              msgTone === 'err'
+                ? 'border-[#fecaca] bg-[#fff5f5] text-[#b91c1c]'
+                : 'border-[#bbf7d0] bg-white text-[#166534]',
+            ].join(' ')}
+          >
+            {msg}
+          </div>
+        </div>
       ) : null}
     </div>
   );

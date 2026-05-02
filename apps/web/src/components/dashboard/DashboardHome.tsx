@@ -94,7 +94,7 @@ export function DashboardHome({
       {variant === 'dashboard' ? <DashboardCampfireAmbient /> : null}
       {variant === 'dashboard' ? <h1 className="sr-only">Dashboard</h1> : null}
       {isStale ? (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+        <div className="status-banner-warning mb-4 rounded-lg px-3 py-2 text-[12px]">
           Refreshing dashboard data...
           {lastUpdatedSeconds !== null ? ` Last updated ${lastUpdatedSeconds}s ago.` : ''}
         </div>
@@ -105,7 +105,7 @@ export function DashboardHome({
             {greetingLine}
           </h2>
           <p className="campsite-subheading">
-            {now.toLocaleDateString(undefined, {
+            {now.toLocaleDateString('en-GB', { timeZone: 'UTC', 
               weekday: 'long',
               day: 'numeric',
               month: 'long',
@@ -280,7 +280,7 @@ export function DashboardHome({
                 const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
                 const previewImage = broadcastFirstImage(b.body);
                 const sentLabel = b.sent_at
-                  ? new Date(b.sent_at).toLocaleString(undefined, {
+                  ? new Date(b.sent_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                       dateStyle: 'medium',
                       timeStyle: 'short',
                     })

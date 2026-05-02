@@ -154,7 +154,7 @@ export function ScanLogsClient({ initialRows }: { initialRows: ScanLogRow[] }) {
               const staff = r.scanned_display_name ?? 'Unknown member';
               const role = r.scanned_role?.replace(/_/g, ' ') ?? null;
               const meta = [role, r.scanned_department, r.discount_label_snapshot].filter(Boolean).join(' · ');
-              const when = new Date(r.created_at).toLocaleString(undefined, {
+              const when = new Date(r.created_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                 dateStyle: 'medium',
                 timeStyle: 'short',
               });

@@ -2,6 +2,7 @@
 
 import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewModal';
 import { MemberPermissionOverridesPanel } from '@/components/admin/MemberPermissionOverridesPanel';
+import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { Lock } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -182,6 +183,10 @@ export function AdminUsersClient({
     if (!bulkApproveRole) setBulkApproveRole(defaultInviteRole);
   }, [bulkApproveRole, defaultInviteRole, inviteRole]);
 
+  async function invalidateOrgMemberViews(userIds: string[] = []) {
+    await invalidateClientCaches({ scopes: ['org-members'], shellUserIds: userIds });
+  }
+
   const filterHref = useCallback(
     (patch: Record<string, string | undefined>) => {
       const p = new URLSearchParams(searchParams?.toString() ?? '');
@@ -287,6 +292,7 @@ export function AdminUsersClient({
     }
     setBusy(null);
     setSelected(new Set());
+    await invalidateOrgMemberViews(ids);
     router.refresh();
   }
 
@@ -304,6 +310,7 @@ export function AdminUsersClient({
     }
     setBusy(null);
     setSelected(new Set());
+    await invalidateOrgMemberViews([...selected]);
     router.refresh();
   }
 
@@ -497,6 +504,7 @@ export function AdminUsersClient({
       setMsg(error.message);
       return;
     }
+    await invalidateOrgMemberViews([id]);
     router.refresh();
   }
 
@@ -514,6 +522,7 @@ export function AdminUsersClient({
       setMsg(error.message);
       return;
     }
+    await invalidateOrgMemberViews([r.id]);
     setSelected((s) => {
       const n = new Set(s);
       n.delete(r.id);

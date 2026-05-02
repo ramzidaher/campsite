@@ -7,6 +7,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { AppTopBar } from '@/components/shell/AppTopBar';
 import type { TopBarNotificationItem } from '@/components/shell/AppTopBar';
+import { PageInfoFab } from '@/components/shell/PageInfoFab';
 import { ShellNavIcon } from '@/components/shell/ShellNavIcon';
 import type { MainShellAdminNavItem, ShellNavIconId } from '@/lib/adminGates';
 import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
@@ -1407,6 +1408,7 @@ export function AppShell({
           </div>
         ) : null}
         <GlobalActionFeedbackBridge />
+        <PageInfoFab />
         <main id="main-content" tabIndex={-1} className="workspace-fluid flex-1 overflow-x-hidden overflow-y-auto">
           {globalBackLink ? (
             <div className="px-5 pt-3 sm:px-7">
