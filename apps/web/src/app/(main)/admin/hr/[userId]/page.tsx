@@ -50,7 +50,7 @@ export default async function EmployeeHRFilePage({
       getCachedAdminHrEmployeeLimitedProfileData(orgId, userId),
       500
     );
-    if (!limitedData) redirect('/hr/records');
+    if (!limitedData) redirect('/admin/hr');
     const pronouns =
       Boolean(limitedData.targetProfile.show_pronouns) &&
       String(limitedData.targetProfile.pronouns ?? '').trim()
@@ -140,7 +140,7 @@ export default async function EmployeeHRFilePage({
 
   const hrFileLeaveYearKey = pageData.hrFileLeaveYearKey;
   const fileRow = pageData.fileRow;
-  if (!fileRow) redirect('/hr/records');
+  if (!fileRow) redirect('/admin/hr');
 
   const canMarkProbationCheck =
     canManage || (!!canViewTeam && (fileRow.reports_to_user_id as string | null) === viewerUserId);

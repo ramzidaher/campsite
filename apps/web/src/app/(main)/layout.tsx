@@ -294,12 +294,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ].filter((item) => item.count > 0);
 
   const profileReauthRequiredAt = str('profile_reauth_required_at');
+  const shellRealtimeUserId = str('user_id');
 
   const view = (
     <ThemeRoot>
       <MainProviders
         reauthRequiredAt={profileReauthRequiredAt}
         skipTenantReauth={isPlatformOperator}
+        shellRealtimeUserId={shellRealtimeUserId}
+        shellRealtimeOrgId={currentOrgId}
       >
         <AppShell
           orgName={orgName}

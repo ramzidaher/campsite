@@ -85,10 +85,10 @@ export async function loadAdminRotaDashboard(
     const fin = logRow.finished_at as string | null;
     const st = logRow.started_at as string;
     if (fin && !err) {
-      lastSyncLabel = new Date(fin).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      lastSyncLabel = new Date(fin).toLocaleString('en-GB', { timeZone: 'UTC',  dateStyle: 'medium', timeStyle: 'short' });
       lastSyncSub = `${logRow.rows_imported as number} rows · ${logRow.source as string}`;
     } else if (st) {
-      lastSyncLabel = new Date(st).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      lastSyncLabel = new Date(st).toLocaleString('en-GB', { timeZone: 'UTC',  dateStyle: 'medium', timeStyle: 'short' });
       lastSyncSub = err ? 'Last run reported errors' : fin ? '-' : 'In progress';
     }
   }

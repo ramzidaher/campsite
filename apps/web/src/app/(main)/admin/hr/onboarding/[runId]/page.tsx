@@ -33,13 +33,13 @@ export default async function OnboardingRunPage({ params }: { params: Promise<{ 
   const canManageRuns       = permissionKeys.includes('onboarding.manage_runs');
   const canCompleteOwnTasks = permissionKeys.includes('onboarding.complete_own_tasks');
 
-  if (!run) redirect('/hr/onboarding');
+  if (!run) redirect('/admin/hr/onboarding');
 
   const isSelfRun = (run.user_id as string) === user.id;
   const canActAsManager = canManageRuns;
   const canActAsEmployeeSelf = canCompleteOwnTasks && isSelfRun;
 
-  if (!canActAsManager && !canActAsEmployeeSelf) redirect('/hr/onboarding');
+  if (!canActAsManager && !canActAsEmployeeSelf) redirect('/admin/hr/onboarding');
   const tasks = pageData.tasks;
   const employee = pageData.employee;
   const completerNames = pageData.completerNames;

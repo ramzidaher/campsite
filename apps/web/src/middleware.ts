@@ -14,11 +14,16 @@ function clearStaleSupabaseAuthCookies(request: NextRequest, response: NextRespo
   const staleCookieNames = request.cookies
     .getAll()
     .map((cookie) => cookie.name)
-    .filter((name) => name.startsWith('sb-') && (name.includes('-auth-token') || name.includes('-code-verifier')));
+    .filter((name) => name.startsWith('sb-'));
 
   for (const cookieName of staleCookieNames) {
     request.cookies.delete(cookieName);
     response.cookies.delete(cookieName);
+    response.cookies.set(cookieName, '', {
+      path: '/',
+      expires: new Date(0),
+      maxAge: 0,
+    });
   }
 }
 
@@ -86,6 +91,22 @@ export async function middleware(request: NextRequest) {
   const accountType = (user?.user_metadata?.account_type as string | undefined) ?? '';
   const isAuthEmailReturn =
     pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm');
+
+  // Canonicalize legacy admin HR paths to the primary HR workspace routes.
+  // Keep query params intact to avoid breaking deep links and filters.
+  if (pathname === '/admin/hr' || pathname.startsWith('/admin/hr/')) {
+    const canonical = request.nextUrl.clone();
+    canonical.pathname =
+      pathname === '/admin/hr' ? '/hr' : pathname.replace(/^\/admin\/hr\//, '/hr/');
+    return NextResponse.redirect(canonical);
+  }
+
+  if (pathname === '/admin/jobs' || pathname.startsWith('/admin/jobs/')) {
+    const canonical = request.nextUrl.clone();
+    canonical.pathname =
+      pathname === '/admin/jobs' ? '/hr/jobs' : pathname.replace(/^\/admin\/jobs\//, '/hr/jobs/');
+    return NextResponse.redirect(canonical);
+  }
 
   if (pathname === '/founders' || pathname.startsWith('/founders/')) {
     if (!isPlatformAdmin) {

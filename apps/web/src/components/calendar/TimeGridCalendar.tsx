@@ -107,7 +107,7 @@ export function TimeGridCalendar({
         <div />
         {days.map((d) => (
           <div key={d.toISOString()} className="border-l border-[#e8e8e8] px-1 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-[#6b6b6b]">
-            {d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+            {d.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', month: 'short', day: 'numeric' })}
           </div>
         ))}
       </div>

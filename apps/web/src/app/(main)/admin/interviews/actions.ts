@@ -964,8 +964,8 @@ export async function bookInterviewForApplication(opts: {
     }
   }
 
-  const startsLabel = startsAt.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
-  const endsLabel = endsAt.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
+  const startsLabel = startsAt.toLocaleString('en-GB', { timeZone: 'UTC',  dateStyle: 'full', timeStyle: 'short' });
+  const endsLabel = endsAt.toLocaleString('en-GB', { timeZone: 'UTC',  dateStyle: 'full', timeStyle: 'short' });
 
   if (canNotifyCandidate) {
     const candidatePortalToken = await issueCandidatePortalToken(admin, { applicationId: appId, orgId });

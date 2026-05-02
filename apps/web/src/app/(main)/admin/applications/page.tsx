@@ -210,7 +210,7 @@ export default async function AdminApplicationsPage({
                     <td className="px-4 py-3">{jobApplicationStageLabel(String(r.stage))}</td>
                     <td className="px-4 py-3 text-[#505050]">
                       {r.submitted_at
-                        ? new Date(r.submitted_at as string).toLocaleDateString(undefined, {
+                        ? new Date(r.submitted_at as string).toLocaleDateString('en-GB', { timeZone: 'UTC', 
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',

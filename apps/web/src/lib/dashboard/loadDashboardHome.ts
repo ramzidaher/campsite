@@ -324,7 +324,7 @@ export async function loadDashboardHome(
   if (ns) {
     const st = new Date(ns.start_time);
     const label = ns.role_label?.trim() || 'Shift';
-    nextShiftSummary = `${label} · ${st.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`;
+    nextShiftSummary = `${label} · ${st.toLocaleString('en-GB', { timeZone: 'UTC',  weekday: 'short', hour: 'numeric', minute: '2-digit' })}`;
   }
 
   return {

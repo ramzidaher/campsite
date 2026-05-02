@@ -110,10 +110,10 @@ function formatWeekRange(weekStart: Date): string {
   const d1 = weekStart.getDate();
   const d2 = end.getDate();
   if (m1 === m2 && y1 === y2) {
-    const month = weekStart.toLocaleString(undefined, { month: 'long' });
+    const month = weekStart.toLocaleString('en-GB', { timeZone: 'UTC',  month: 'long' });
     return `${d1}-${d2} ${month} ${y1}`;
   }
-  return `${weekStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  return `${weekStart.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 
 const NAV_BTN =
@@ -536,7 +536,7 @@ export function RotaClient({ profile }: { profile: Profile }) {
       const ymd = localYmd(d);
       if (!groups.has(ymd)) {
         groups.set(ymd, {
-          label: d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'long' }),
+          label: d.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', day: 'numeric', month: 'long' }),
           rows: [],
         });
       }

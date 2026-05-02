@@ -714,7 +714,7 @@ function MySubmissionsPendingList({
             <p className="mt-1 text-xs text-[#6b6b6b]">
               Last updated{' '}
               {r.updated_at
-                ? new Date(r.updated_at).toLocaleString(undefined, {
+                ? new Date(r.updated_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   })

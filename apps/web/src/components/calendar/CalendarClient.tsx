@@ -433,24 +433,24 @@ export function CalendarClient({
     }, 0);
   }
 
-  const subtitleMonthYear = anchor.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+  const subtitleMonthYear = anchor.toLocaleString('en-GB', { timeZone: 'UTC',  month: 'long', year: 'numeric' });
 
   const cardTitleLabel = useMemo(() => {
     if (view === 'month') {
-      return anchor.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+      return anchor.toLocaleString('en-GB', { timeZone: 'UTC',  month: 'long', year: 'numeric' });
     }
     if (view === 'time7') {
       return `Week of ${formatDayLabel(startOfWeekMonday(gridStart))}`;
     }
     if (view === 'time1') {
-      return gridStart.toLocaleDateString(undefined, {
+      return gridStart.toLocaleDateString('en-GB', { timeZone: 'UTC', 
         weekday: 'long',
         month: 'long',
         day: 'numeric',
         year: 'numeric',
       });
     }
-    return selectedDay.toLocaleDateString(undefined, {
+    return selectedDay.toLocaleDateString('en-GB', { timeZone: 'UTC', 
       weekday: 'long',
       month: 'long',
       day: 'numeric',

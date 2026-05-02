@@ -6,11 +6,11 @@ function fmtShiftTime(startIso: string, endIso: string) {
   const s = new Date(startIso);
   const e = new Date(endIso);
   const opt: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
-  return `${s.toLocaleTimeString(undefined, opt)}-${e.toLocaleTimeString(undefined, opt)}`;
+  return `${s.toLocaleTimeString('en-GB', { ...(opt ?? {}), timeZone: 'UTC' })}-${e.toLocaleTimeString('en-GB', { ...(opt ?? {}), timeZone: 'UTC' })}`;
 }
 
 function fmtShiftDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function StatCard({

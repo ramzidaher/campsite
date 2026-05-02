@@ -31,12 +31,12 @@ const STATUS_STYLE = recruitmentStatusChips;
 const URGENCY_STYLE = recruitmentUrgencyChips;
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function fmtDateOnly(iso: string | null | undefined): string {
   if (!iso) return 'TBC';
-  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString(undefined, {
+  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', 
     day: 'numeric',
     month: 'short',
     year: 'numeric',

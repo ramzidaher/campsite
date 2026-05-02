@@ -105,7 +105,7 @@ export function DashboardHome({
             {greetingLine}
           </h2>
           <p className="campsite-subheading">
-            {now.toLocaleDateString(undefined, {
+            {now.toLocaleDateString('en-GB', { timeZone: 'UTC', 
               weekday: 'long',
               day: 'numeric',
               month: 'long',
@@ -280,7 +280,7 @@ export function DashboardHome({
                 const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
                 const previewImage = broadcastFirstImage(b.body);
                 const sentLabel = b.sent_at
-                  ? new Date(b.sent_at).toLocaleString(undefined, {
+                  ? new Date(b.sent_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                       dateStyle: 'medium',
                       timeStyle: 'short',
                     })

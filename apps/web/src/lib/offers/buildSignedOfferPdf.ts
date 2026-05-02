@@ -106,7 +106,7 @@ export async function buildSignedOfferPdfBytes(opts: {
 
   y -= 4;
   draw(`Signed electronically by: ${opts.signerName}`, 11, true);
-  draw(`Date: ${opts.signedAt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`, 9);
+  draw(`Date: ${opts.signedAt.toLocaleString('en-GB', { timeZone: 'UTC',  dateStyle: 'medium', timeStyle: 'short' })}`, 9);
 
   return pdf.save();
 }

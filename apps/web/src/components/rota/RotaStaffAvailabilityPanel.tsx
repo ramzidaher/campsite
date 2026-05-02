@@ -325,7 +325,7 @@ export function RotaStaffAvailabilityPanel({
             return (
               <DayOverrideCard
                 key={`${ymd}-${slotKey}`}
-                label={d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                label={d.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', month: 'short', day: 'numeric' })}
                 ymd={ymd}
                 initialSlots={
                   dayRows.length > 0

@@ -1668,7 +1668,7 @@ function ResourceRow({
   const updated = new Date(r.updated_at);
   const updatedLabel = Number.isNaN(updated.getTime())
     ? ''
-    : `Updated ${updated.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    : `Updated ${updated.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   return (
     <li className="relative">

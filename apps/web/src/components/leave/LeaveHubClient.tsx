@@ -222,7 +222,7 @@ function leaveRequestOverlapsLeaveYear(
 }
 
 function fmtDate(iso: string) {
-  return new Date(`${iso}T12:00:00Z`).toLocaleDateString(undefined, {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', 
     day: 'numeric', month: 'short', year: 'numeric',
   });
 }
@@ -1306,7 +1306,7 @@ export function LeaveHubClient({
       const rows = teamAbsencesFiltered.filter((a) => a.start_date <= iso && a.end_date >= iso);
       return { iso, day, rows };
     });
-    return { start, end, leadingBlanks, days, monthLabel: new Date(`${start}T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
+    return { start, end, leadingBlanks, days, monthLabel: new Date(`${start}T12:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC',  month: 'long', year: 'numeric' }) };
   }, [calendarMonth, teamAbsencesFiltered]);
 
   return (

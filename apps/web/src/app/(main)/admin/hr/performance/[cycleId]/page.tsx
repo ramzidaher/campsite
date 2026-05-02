@@ -19,7 +19,7 @@ export default async function PerformanceCycleDetailPage({ params }: { params: P
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
 
-  if (!permissionKeys.includes('performance.manage_cycles')) redirect('/hr/performance');
+  if (!permissionKeys.includes('performance.manage_cycles')) redirect('/admin/hr/performance');
 
   const pageData = await withServerPerf(
     '/admin/hr/performance/[cycleId]',
@@ -30,7 +30,7 @@ export default async function PerformanceCycleDetailPage({ params }: { params: P
   const cycle = pageData.cycle;
   const reviews = pageData.reviews;
   const members = pageData.members;
-  if (!cycle) redirect('/hr/performance');
+  if (!cycle) redirect('/admin/hr/performance');
 
   const enrolledIds = new Set(
     (reviews ?? []).map((r: Record<string, unknown>) => String(r.reviewee_id ?? ''))

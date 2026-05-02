@@ -12,7 +12,7 @@ export function CandidateApplicationMessages({ messages }: { messages: PortalMes
             <li key={`${m.created_at}-${i}`} className="border-t border-[#f0f0f0] pt-3 first:border-t-0 first:pt-0">
               <p className="text-[11px] text-[#9b9b9b]">
                 {m.created_at
-                  ? new Date(m.created_at).toLocaleString(undefined, {
+                  ? new Date(m.created_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                       dateStyle: 'medium',
                       timeStyle: 'short',
                     })

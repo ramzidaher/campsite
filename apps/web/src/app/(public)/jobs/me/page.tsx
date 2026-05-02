@@ -125,7 +125,7 @@ export default async function CandidateApplicationsPage() {
           <ul className="mt-6 space-y-3">
             {rows.map((row) => {
               const detailHref = tenantJobMeApplicationRelativePath(row.application_id, orgSlug, host);
-              const submittedLabel = new Date(row.submitted_at).toLocaleDateString(undefined, {
+              const submittedLabel = new Date(row.submitted_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',

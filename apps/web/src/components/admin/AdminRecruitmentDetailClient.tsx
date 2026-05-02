@@ -81,18 +81,18 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 function fmtDate(iso: string) {
-  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function fmtCreatedAt(iso: string) {
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) return '-';
-  return dt.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  return dt.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function fmtDateOnly(iso: string | null | undefined) {
   if (!iso) return 'TBC';
-  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString(undefined, {
+  return new Date(`${iso}T12:00:00.000Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', 
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -117,7 +117,7 @@ function parseInterviewSchedule(value: unknown): Array<{ date: string; startTime
 }
 
 function fmtDateTime(iso: string) {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  return new Date(iso).toLocaleString('en-GB', { timeZone: 'UTC',  dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function humanizeToken(value: string | null | undefined): string {

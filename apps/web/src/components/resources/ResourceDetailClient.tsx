@@ -71,7 +71,7 @@ export function ResourceDetailClient({
 
   const updatedLabel = useMemo(() => {
     try {
-      return new Date(initial.updated_at).toLocaleDateString(undefined, {
+      return new Date(initial.updated_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -83,7 +83,7 @@ export function ResourceDetailClient({
 
   const monthTag = useMemo(() => {
     try {
-      return new Date(initial.updated_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      return new Date(initial.updated_at).toLocaleDateString('en-GB', { timeZone: 'UTC',  month: 'long', year: 'numeric' });
     } catch {
       return null;
     }

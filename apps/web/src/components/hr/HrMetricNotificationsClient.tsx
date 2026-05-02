@@ -26,7 +26,7 @@ function formatTime(iso: string): string {
   if (diff < 60) return 'Just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short' });
 }
 
 export function HrMetricNotificationsClient({

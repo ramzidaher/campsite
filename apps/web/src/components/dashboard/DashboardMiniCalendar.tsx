@@ -48,7 +48,7 @@ export function DashboardMiniCalendar({
     return new Set(eventDays);
   }, [cursor.y, cursor.m, initialYear, initialMonth, eventDays]);
 
-  const label = new Date(cursor.y, cursor.m, 1).toLocaleString(undefined, {
+  const label = new Date(cursor.y, cursor.m, 1).toLocaleString('en-GB', { timeZone: 'UTC', 
     month: 'long',
     year: 'numeric',
   });

@@ -36,7 +36,7 @@ const ASSIGNEE_LABELS: Record<string, string> = {
 };
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function EmployeeOnboardingClient({

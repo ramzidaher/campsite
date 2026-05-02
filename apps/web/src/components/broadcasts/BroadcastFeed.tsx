@@ -60,6 +60,22 @@ type Props = {
 };
 
 const pageSize = 20;
+const sentDateLabelFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'UTC',
+});
+
+function formatSentDateLabel(sentAt: string | null): string {
+  if (!sentAt) return 'Send time unavailable';
+  const dt = new Date(sentAt);
+  if (Number.isNaN(dt.getTime())) return 'Send time unavailable';
+  return sentDateLabelFormatter.format(dt);
+}
 
 /** Persisted so we skip Plan 02 REST shape after first failure (avoids a 400 on every refresh). */
 const BROADCAST_FEED_LEGACY_LS = 'campsite.bf.feed_legacy_select';
@@ -195,12 +211,7 @@ function FeedBroadcastCard({
   const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
   const previewImage = broadcastFirstImage(b.body);
   const previewText = bodyPreview(b.body);
-  const sentLabel = b.sent_at
-    ? new Date(b.sent_at).toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
-    : 'Send time unavailable';
+  const sentLabel = formatSentDateLabel(b.sent_at);
 
   const clearLongPressTimer = () => {
     if (!longPressTimerRef.current) return;

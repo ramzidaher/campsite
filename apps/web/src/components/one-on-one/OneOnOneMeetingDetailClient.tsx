@@ -445,7 +445,7 @@ export function OneOnOneMeetingDetailClient({
           <span className="opacity-50" aria-hidden>
             ◫
           </span>
-          {new Date(meeting.starts_at).toLocaleDateString(undefined, {
+          {new Date(meeting.starts_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
             weekday: 'long',
             day: 'numeric',
             month: 'short',
@@ -739,7 +739,7 @@ export function OneOnOneMeetingDetailClient({
             />
           ) : meeting.next_session_at ? (
             <span>
-              {new Date(meeting.next_session_at).toLocaleString(undefined, {
+              {new Date(meeting.next_session_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                 weekday: 'short',
                 day: 'numeric',
                 month: 'short',

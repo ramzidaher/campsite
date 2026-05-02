@@ -392,7 +392,7 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
         const ds = new Date(start_time);
         const de = new Date(end_time);
         const { startMin, endMin } = gridBandMinutesForShiftOnStartDay(ds, de);
-        const label = `${ds.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} - ${de.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+        const label = `${ds.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: 'numeric', minute: '2-digit' })} - ${de.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: 'numeric', minute: '2-digit' })}`;
         const le = layout.find((x) => x.shiftId === s.shift.id);
         const lane = le?.lane ?? 0;
         const laneCount = Math.max(1, le?.laneCount ?? 1);
@@ -652,7 +652,7 @@ export function RotaWeekTimeGrid<T extends WeekGridShiftBase>({
           return (
             <div key={d.toISOString()} className="rounded-t-lg bg-[#f5f4f1] px-1 py-2 text-center">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-                {d.toLocaleDateString(undefined, { weekday: 'short' })}
+                {d.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short' })}
               </div>
               {dayIsToday ? (
                 <div className="mx-auto mt-0.5 flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[#121212] font-authSerif text-[18px] text-[#faf9f6]">

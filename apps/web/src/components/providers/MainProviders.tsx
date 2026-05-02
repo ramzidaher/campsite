@@ -18,12 +18,18 @@ export function MainProviders({
   children,
   reauthRequiredAt = null,
   skipTenantReauth = false,
+  shellRealtimeUserId = null,
+  shellRealtimeOrgId = null,
 }: {
   children: React.ReactNode;
   /** ISO timestamp from main_shell_layout_bundle.profile_reauth_required_at */
   reauthRequiredAt?: string | null;
   /** When true, do not force sign-out (e.g. platform operator). */
   skipTenantReauth?: boolean;
+  /** Pre-resolved identity from shell bundle to avoid client auth bootstrap calls. */
+  shellRealtimeUserId?: string | null;
+  /** Pre-resolved org from shell bundle to avoid client profile lookup calls. */
+  shellRealtimeOrgId?: string | null;
 }) {
   const [queryClient] = useState(
     () =>
@@ -63,7 +69,7 @@ export function MainProviders({
       <TenantReauthEnforcer reauthRequiredAt={reauthRequiredAt} skip={skipTenantReauth} />
       <NetworkStatusBanner />
       <OfflineReadQueueSync />
-      <ShellBadgeRealtime />
+      <ShellBadgeRealtime userId={shellRealtimeUserId} orgId={shellRealtimeOrgId} />
       {children}
     </QueryClientProvider>
   );
