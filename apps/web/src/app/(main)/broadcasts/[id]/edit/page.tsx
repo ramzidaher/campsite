@@ -1,6 +1,10 @@
 import { BroadcastEditForm } from '@/components/broadcasts/BroadcastEditForm';
 import { getCachedBroadcastEditPageData } from '@/lib/broadcasts/getCachedBroadcastEditPageData';
-import { shellBundleOrgId, shellBundleProfileStatus } from '@/lib/shell/shellBundleAccess';
+import {
+  shellBundleOrgId,
+  shellBundleProfileFullName,
+  shellBundleProfileStatus,
+} from '@/lib/shell/shellBundleAccess';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { withServerPerf } from '@/lib/perf/serverPerf';
 import { notFound, redirect } from 'next/navigation';
@@ -34,6 +38,7 @@ export default async function BroadcastEditPage({ params }: { params: Promise<{ 
       initialCoverUrl={pageData.coverImageUrl}
       status={pageData.status}
       initialScheduledAt={pageData.scheduledAt}
+      viewerDisplayName={shellBundleProfileFullName(bundle)}
     />
   );
 }

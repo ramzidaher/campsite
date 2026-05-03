@@ -5,6 +5,7 @@ import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import { broadcastFirstImage, broadcastMarkdownPreview } from '@/lib/broadcasts/markdownPreview';
+import { departmentColorTagStyle } from '@/lib/departments/departmentColor';
 import { relTime } from '@/lib/format/relTime';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -205,6 +206,7 @@ function FeedBroadcastCard({
   const longPressTriggeredRef = useRef(false);
   const [showQuickPreview, setShowQuickPreview] = useState(false);
   const deptName = b.departments?.name ?? 'General';
+  const deptColorStyle = departmentColorTagStyle(b.departments?.color_hex);
   const channelName = b.broadcast_channels?.name ?? '';
   const teamName = b.department_teams?.name ?? '';
   const collabDepartments = b.collab_departments ?? [];
@@ -326,6 +328,7 @@ function FeedBroadcastCard({
             'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium',
             deptTagClass(deptName),
           ].join(' ')}
+          style={deptColorStyle}
         >
           {deptName}
         </span>
@@ -351,6 +354,7 @@ function FeedBroadcastCard({
           <span
             key={`${b.id}-collab-${d.id}`}
             className="inline-flex items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2.5 py-0.5 text-[11px] font-medium text-[#1d4ed8]"
+            style={departmentColorTagStyle(d.color_hex)}
           >
             {d.name}
           </span>

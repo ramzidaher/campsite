@@ -45,7 +45,6 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
   const canBroadcastsAdmin = data.canManageBroadcasts;
   const canDepts = data.canManageDepartments;
   const canSettings = data.canManageSettings;
-  const activityLogHref = '/admin/scan-logs';
 
   const bcPrev = data.broadcastsPrev30d || 0;
   const bcCur = data.broadcasts30d || 0;
@@ -71,12 +70,6 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
           <p className="mt-1 text-[13px] text-[#6b6b6b]">{data.accessLine}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={activityLogHref}
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
-          >
-            📋 Activity log
-          </Link>
           {canUsers ? (
             <Link
               href="/admin/users"
@@ -185,14 +178,8 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
         <div>
-          <div className="mb-3.5 flex items-center justify-between gap-3">
+          <div className="mb-3.5 flex items-center gap-3">
             <h2 className="font-authSerif text-[17px] tracking-tight text-[#121212]">Recent activity</h2>
-            <Link
-              href={activityLogHref}
-              className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-            >
-              View full log →
-            </Link>
           </div>
           <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
             <div className="px-1.5 py-1">

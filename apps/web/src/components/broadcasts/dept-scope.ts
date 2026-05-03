@@ -5,6 +5,7 @@ export type DeptRow = {
   org_id: string;
   name: string;
   type: 'department' | 'society' | 'club';
+  color_hex?: string | null;
   is_archived: boolean;
 };
 

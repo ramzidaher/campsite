@@ -26,7 +26,7 @@ export const composeChannelExplainer =
 export const composeManageChannelsInSettings = 'Manage which channels you follow in Settings.';
 
 export const composeNoChannelsHint = (deptLabel: string) =>
-  `Add broadcast channels in Admin → Departments for “${deptLabel}”, then refresh this page.`;
+  `Ask an organisation admin to add broadcast channels for “${deptLabel}” (Admin → Broadcast channels or Admin → Departments), then refresh this page.`;
 
 export const adminDepartmentsChannelsHeading = 'Broadcast channels';
 

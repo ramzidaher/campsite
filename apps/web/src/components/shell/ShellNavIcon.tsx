@@ -31,7 +31,6 @@ import {
   Settings,
   Tag,
   Timer,
-  Ticket,
   UserCog,
   UserPlus,
   Users,
@@ -79,8 +78,6 @@ function tone(name: ShellNavIconId, style: ShellIconStyle) {
       return ICON_TONE.violet;
     case 'rota':
       return ICON_TONE.cyan;
-    case 'discount':
-      return ICON_TONE.teal;
     case 'leave':
       return ICON_TONE.green;
     case 'performance':
@@ -205,8 +202,6 @@ export function ShellNavIcon({ name, open }: { name: ShellNavIconId; open?: bool
       return <CalendarDays {...p} />;
     case 'rota':
       return <Clock3 {...p} />;
-    case 'discount':
-      return <Ticket {...p} />;
     case 'resources':
       return <FileLock {...p} />;
     case 'home':

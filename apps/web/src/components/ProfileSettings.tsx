@@ -238,7 +238,7 @@ const btnPrimary =
 const btnSecondary =
   'inline-flex items-center justify-center rounded-lg border border-campsite-border bg-campsite-elevated px-4 py-2.5 text-[13px] font-medium text-campsite-text transition hover:bg-campsite-surface disabled:pointer-events-none disabled:opacity-45';
 const btnDanger =
-  'inline-flex items-center justify-center rounded-lg border border-campsite-warning/35 bg-campsite-warning px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-45';
+  'inline-flex items-center justify-center rounded-lg border border-[color:color-mix(in_srgb,var(--campsite-warning)_35%,#ffffff)] bg-[var(--campsite-warning)] px-4 py-2.5 text-[13px] font-medium text-white shadow-sm transition hover:opacity-92 disabled:pointer-events-none disabled:bg-[color:color-mix(in_srgb,var(--campsite-warning)_72%,#ffffff)] disabled:text-white/90 disabled:opacity-100';
 const soundVolumeRangeClass =
   'mt-2 h-2 w-full cursor-pointer appearance-none rounded-full bg-[#d8d8d8] accent-campsite-text disabled:opacity-50 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-campsite-border [&::-moz-range-thumb]:bg-campsite-elevated [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-[#d8d8d8] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-campsite-border [&::-webkit-slider-thumb]:bg-campsite-elevated [&::-webkit-slider-thumb]:shadow-sm';
 const SHELL_MODE_STORAGE_KEY = 'campsite_shell_mode';
@@ -397,7 +397,6 @@ export function ProfileSettings({
   tenantOrgs,
   currentOrgId,
   initialBroadcastChannels = [],
-  canManageDiscounts = false,
   celebrationModeOptions = CELEBRATION_MODE_OPTIONS,
   orgCelebrationOverrides = [],
 }: {
@@ -410,7 +409,6 @@ export function ProfileSettings({
   tenantOrgs?: LoginOrgOption[] | null;
   currentOrgId?: string | null;
   initialBroadcastChannels?: BroadcastChannelPref[];
-  canManageDiscounts?: boolean;
   celebrationModeOptions?: Array<{
     id: CelebrationMode;
     label: string;
@@ -476,9 +474,6 @@ export function ProfileSettings({
   const [channelBusyId, setChannelBusyId] = useState<string | null>(null);
   const [channelsLoading, setChannelsLoading] = useState(false);
   const [channelsLoaded, setChannelsLoaded] = useState(initialBroadcastChannels.length > 0);
-  const [canManageDiscountsState, setCanManageDiscountsState] = useState(canManageDiscounts);
-  const [discountPermLoading, setDiscountPermLoading] = useState(false);
-  const [discountPermLoaded, setDiscountPermLoaded] = useState(canManageDiscounts);
   const [a11yPrefs, setA11yPrefs] = useState<AccessibilityPreferences>(
     DEFAULT_ACCESSIBILITY_PREFERENCES
   );
@@ -540,10 +535,6 @@ export function ProfileSettings({
   useEffect(() => {
     setChannelsLoaded(initialBroadcastChannels.length > 0);
   }, [initialBroadcastChannels]);
-  useEffect(() => {
-    setCanManageDiscountsState(canManageDiscounts);
-    setDiscountPermLoaded(canManageDiscounts);
-  }, [canManageDiscounts]);
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(SHELL_MODE_STORAGE_KEY);
@@ -767,39 +758,6 @@ export function ProfileSettings({
       cancelled = true;
     };
   }, [activeTab, channelsLoaded, channelsLoading, currentOrgId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadDiscountPermission() {
-      if (
-        activeTab !== 'integrations' ||
-        !currentOrgId ||
-        discountPermLoaded ||
-        discountPermLoading
-      )
-        return;
-      setDiscountPermLoading(true);
-      const supabase = createClient();
-      const { data, error } = await supabase.rpc('get_my_permissions', { p_org_id: currentOrgId });
-      if (cancelled) return;
-      if (!error) {
-        const hasDiscountsView = Array.isArray(data)
-          ? data.some(
-              (row) =>
-                String((row as { permission_key?: string }).permission_key ?? '') ===
-                'discounts.view'
-            )
-          : false;
-        setCanManageDiscountsState(hasDiscountsView);
-      }
-      setDiscountPermLoaded(true);
-      setDiscountPermLoading(false);
-    }
-    void loadDiscountPermission();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, currentOrgId, discountPermLoaded, discountPermLoading]);
 
   function setAccessibilityPref<K extends keyof AccessibilityPreferences>(
     key: K,
@@ -2093,17 +2051,6 @@ export function ProfileSettings({
                 </div>
               </div>
             </div>
-            {canManageDiscountsState ? (
-              <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
-                <h2 className={sectionTitle}>Organisation tools</h2>
-                <p className={sectionDesc}>
-                  Configure staff discount tiers shown on discount cards.
-                </p>
-                <Link href="/settings/discount-tiers" className={btnSecondary}>
-                  Discount tiers
-                </Link>
-              </div>
-            ) : null}
           </div>
         )}
 

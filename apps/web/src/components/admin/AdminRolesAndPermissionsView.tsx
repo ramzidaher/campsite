@@ -43,7 +43,6 @@ const PERMISSION_GROUPS: { key: string; title: string }[] = [
   { key: 'teams', title: 'Teams' },
   { key: 'broadcasts', title: 'Broadcasts' },
   { key: 'rota', title: 'Rota' },
-  { key: 'discounts', title: 'Discounts' },
   { key: 'org.settings', title: 'Organisation Settings' },
   { key: 'integrations', title: 'Integrations' },
   { key: 'recruitment', title: 'Recruitment' },
@@ -142,11 +141,11 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
 
   const matrixPermissions = useMemo(
-    () => permissions.filter((p) => !p.is_founder_only),
+    () => permissions.filter((p) => !p.is_founder_only && !p.key.startsWith('discounts.')),
     [permissions]
   );
   const createAssignable = useMemo(
-    () => createPickerItems.filter((p) => p.assignable_into_custom_role),
+    () => createPickerItems.filter((p) => p.assignable_into_custom_role && !p.key.startsWith('discounts.')),
     [createPickerItems],
   );
 

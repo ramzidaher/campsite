@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-/** Staff discount card is not ready for general release; keep route stable for bookmarks. */
+/** Legacy route kept only to redirect old bookmarks. */
 export default function DiscountPage() {
   redirect('/dashboard');
 }

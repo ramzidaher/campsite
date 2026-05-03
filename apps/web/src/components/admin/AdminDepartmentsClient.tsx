@@ -4,6 +4,7 @@ import { FormSelect } from '@campsite/ui/web';
 import { adminDepartmentsChannelsHeading, adminDepartmentsChannelsHint } from '@/lib/broadcasts/channelCopy';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
+import { departmentColorTagStyle, normalizeDepartmentColorHex } from '@/lib/departments/departmentColor';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -15,6 +16,7 @@ type Dept = {
   name: string;
   type: string;
   description: string | null;
+  color_hex: string | null;
   is_archived: boolean;
 };
 
@@ -149,6 +151,7 @@ export function AdminDepartmentsClient({
   const [nName, setNName] = useState('');
   const [nType, setNType] = useState<'department' | 'society' | 'club'>('department');
   const [nDesc, setNDesc] = useState('');
+  const [nColorHex, setNColorHex] = useState('#121212');
 
   const [detailDept, setDetailDept] = useState<Dept | null>(null);
 
@@ -206,6 +209,7 @@ export function AdminDepartmentsClient({
       name: nName.trim(),
       type: nType,
       description: nDesc.trim() || null,
+      color_hex: normalizeDepartmentColorHex(nColorHex),
     });
     setBusy(false);
     if (error) {
@@ -216,6 +220,7 @@ export function AdminDepartmentsClient({
     setCreateOpen(false);
     setNName('');
     setNDesc('');
+    setNColorHex('#121212');
     void refresh();
   }
 
@@ -224,10 +229,11 @@ export function AdminDepartmentsClient({
     setMsg(null);
     const { error } = await supabase
       .from('departments')
-      .update({
+        .update({
         name: d.name,
         type: d.type as 'department' | 'society' | 'club',
         description: d.description,
+        color_hex: normalizeDepartmentColorHex(d.color_hex),
         is_archived: d.is_archived,
       })
       .eq('id', d.id);
@@ -566,6 +572,23 @@ export function AdminDepartmentsClient({
                 onChange={(e) => setNDesc(e.target.value)}
               />
             </label>
+            <label className="text-[13px] text-[#121212]">
+              Department colour
+              <div className="mt-1 flex items-center gap-3">
+                <input
+                  type="color"
+                  className="h-10 w-14 rounded-lg border border-[#d8d8d8] bg-white p-1"
+                  value={nColorHex}
+                  onChange={(e) => setNColorHex(e.target.value)}
+                />
+                <input
+                  className="h-10 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] uppercase outline-none focus:border-[#121212]"
+                  value={nColorHex}
+                  onChange={(e) => setNColorHex(e.target.value)}
+                  placeholder="#121212"
+                />
+              </div>
+            </label>
           </div>
           <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-[#d8d8d8] pt-4">
             <button
@@ -651,6 +674,7 @@ function DeptGridCard({
   const catNames = categories.map((c) => c.name);
   const show = catNames.slice(0, 3);
   const more = catNames.length - show.length;
+  const deptColorStyle = departmentColorTagStyle(dept.color_hex);
 
   return (
     <button
@@ -689,6 +713,17 @@ function DeptGridCard({
       <div className="mt-1 text-[12px] text-[#6b6b6b]">
         {managers.length ? <>Managed by {managers.map((m) => m.full_name).join(', ')}</> : 'No assigned manager'}
       </div>
+      {dept.color_hex ? (
+        <div className="mt-2">
+          <span
+            className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium"
+            style={deptColorStyle}
+          >
+            <span className="h-2 w-2 rounded-full bg-current" aria-hidden />
+            {dept.color_hex}
+          </span>
+        </div>
+      ) : null}
       {catNames.length > 0 ? (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {show.map((c) => (
@@ -878,8 +913,10 @@ function DeptDetailForm({
     <>
       {!isOrgAdmin ? (
         <p className="mb-4 text-[12px] leading-snug text-[#6b6b6b]">
-          Name, broadcast channels, broadcast rules and department managers are managed by an org admin. You can add or
-          remove department members and edit who is on each team below.
+          Department name, merge, broadcast permission presets, and assigned managers are managed by an organisation
+          admin. You can add or remove department members and edit teams below.{' '}
+          <span className="font-medium text-[#121212]">Broadcast channels</span> for this department are listed after
+          members — only an org admin can add or remove them (Admin → Broadcast channels or Admin → Departments).
         </p>
       ) : null}
 
@@ -905,6 +942,23 @@ function DeptDetailForm({
                 <option value="society">Society</option>
                 <option value="club">Club</option>
               </FormSelect>
+            </label>
+            <label className="text-[13px] text-[#121212]">
+              Department colour
+              <div className="mt-1 flex items-center gap-3">
+                <input
+                  type="color"
+                  className="h-10 w-14 rounded-lg border border-[#d8d8d8] bg-white p-1"
+                  value={normalizeDepartmentColorHex(edit.color_hex) ?? '#121212'}
+                  onChange={(e) => setEdit({ ...edit, color_hex: e.target.value })}
+                />
+                <input
+                  className="h-10 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] uppercase outline-none focus:border-[#121212]"
+                  value={edit.color_hex ?? ''}
+                  onChange={(e) => setEdit({ ...edit, color_hex: e.target.value || null })}
+                  placeholder="#121212"
+                />
+              </div>
             </label>
             <label className="flex items-center gap-2 text-[13px] text-[#121212]">
               <input
@@ -1246,67 +1300,67 @@ function DeptDetailForm({
       </div>
 
       {isOrgAdmin ? (
-        <>
-          <div className="mt-6 border-t border-[#d8d8d8] pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast permissions</p>
-        <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
-          Off by default. Grants extra broadcast powers for this department; baseline role rules still apply.
-        </p>
-        <ul className="mt-3 space-y-3">
-          {DEPT_BROADCAST_PERM_DEFS.map((def) => {
-            const row = broadcastPerms.find((p) => p.permission === def.permission);
-            const enabled = Boolean(row);
-            const minRole = (row?.min_role as MinRoleOpt | undefined) ?? def.minRoleOptions[0];
-            const safeMin = def.minRoleOptions.includes(minRole) ? minRole : def.minRoleOptions[0];
-            return (
-              <li
-                key={def.permission}
-                className="rounded-lg border border-[#eceae6] bg-[#faf9f6] px-3 py-2.5"
-              >
-                <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap sm:items-center sm:justify-between">
-                  <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 rounded border-[#d8d8d8]"
-                      checked={enabled}
-                      disabled={busy}
-                      onChange={(e) => {
-                        if (e.target.checked) onUpsertBroadcastPerm(def.permission, def.minRoleOptions[0]);
-                        else onRevokeBroadcastPerm(def.permission);
-                      }}
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-[13px] font-medium text-[#121212]">{def.label}</span>
-                      <span className="mt-0.5 block text-[12px] leading-snug text-[#6b6b6b]">{def.hint}</span>
-                    </span>
-                  </label>
-                  {enabled && def.minRoleOptions.length > 1 ? (
-                    <FormSelect
-                      className="w-full shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[12px] text-[#121212] sm:w-[200px]"
-                      value={safeMin}
-                      disabled={busy}
-                      onChange={(e) =>
-                        onUpsertBroadcastPerm(def.permission, e.target.value as MinRoleOpt)
-                      }
-                      aria-label={`Minimum role for ${def.label}`}
-                    >
-                      {def.minRoleOptions.map((r) => (
-                        <option key={r} value={r}>
-                          {minRoleLabel(r)}
-                        </option>
-                      ))}
-                    </FormSelect>
-                  ) : enabled ? (
-                    <span className="shrink-0 rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11px] text-[#6b6b6b]">
-                      {minRoleLabel(def.minRoleOptions[0])}
-                    </span>
-                  ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+        <div className="mt-6 border-t border-[#d8d8d8] pt-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast permissions</p>
+          <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
+            Off by default. Grants extra broadcast powers for this department; baseline role rules still apply.
+          </p>
+          <ul className="mt-3 space-y-3">
+            {DEPT_BROADCAST_PERM_DEFS.map((def) => {
+              const row = broadcastPerms.find((p) => p.permission === def.permission);
+              const enabled = Boolean(row);
+              const minRole = (row?.min_role as MinRoleOpt | undefined) ?? def.minRoleOptions[0];
+              const safeMin = def.minRoleOptions.includes(minRole) ? minRole : def.minRoleOptions[0];
+              return (
+                <li
+                  key={def.permission}
+                  className="rounded-lg border border-[#eceae6] bg-[#faf9f6] px-3 py-2.5"
+                >
+                  <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap sm:items-center sm:justify-between">
+                    <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 rounded border-[#d8d8d8]"
+                        checked={enabled}
+                        disabled={busy}
+                        onChange={(e) => {
+                          if (e.target.checked) onUpsertBroadcastPerm(def.permission, def.minRoleOptions[0]);
+                          else onRevokeBroadcastPerm(def.permission);
+                        }}
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-medium text-[#121212]">{def.label}</span>
+                        <span className="mt-0.5 block text-[12px] leading-snug text-[#6b6b6b]">{def.hint}</span>
+                      </span>
+                    </label>
+                    {enabled && def.minRoleOptions.length > 1 ? (
+                      <FormSelect
+                        className="w-full shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[12px] text-[#121212] sm:w-[200px]"
+                        value={safeMin}
+                        disabled={busy}
+                        onChange={(e) =>
+                          onUpsertBroadcastPerm(def.permission, e.target.value as MinRoleOpt)
+                        }
+                        aria-label={`Minimum role for ${def.label}`}
+                      >
+                        {def.minRoleOptions.map((r) => (
+                          <option key={r} value={r}>
+                            {minRoleLabel(r)}
+                          </option>
+                        ))}
+                      </FormSelect>
+                    ) : enabled ? (
+                      <span className="shrink-0 rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11px] text-[#6b6b6b]">
+                        {minRoleLabel(def.minRoleOptions[0])}
+                      </span>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="mt-6 border-t border-[#d8d8d8] pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
@@ -1314,40 +1368,51 @@ function DeptDetailForm({
         </p>
         <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">{adminDepartmentsChannelsHint}</p>
         <ul className="mt-2 space-y-1.5 text-[13px]">
-          {categories.map((c) => (
-            <li key={c.id} className="flex items-center justify-between gap-2">
-              <span className="text-[#6b6b6b]">{c.name}</span>
-              <button
-                type="button"
-                className="text-[12px] text-[#b91c1c] hover:underline"
-                onClick={() => onRemoveCat(c.id)}
-              >
-                Remove
-              </button>
-            </li>
-          ))}
+          {categories.length === 0 ? (
+            <li className="text-[#9b9b9b]">No channels yet.</li>
+          ) : (
+            categories.map((c) => (
+              <li key={c.id} className="flex items-center justify-between gap-2">
+                <span className="text-[#6b6b6b]">{c.name}</span>
+                {isOrgAdmin ? (
+                  <button
+                    type="button"
+                    className="text-[12px] text-[#b91c1c] hover:underline"
+                    onClick={() => onRemoveCat(c.id)}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </li>
+            ))
+          )}
         </ul>
-        <div className="mt-2 flex gap-2">
-          <input
-            className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
-            placeholder="New channel"
-            value={catName}
-            onChange={(e) => setCatName(e.target.value)}
-          />
-          <button
-            type="button"
-            className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
-            onClick={() => {
-              onAddCat(catName);
-              setCatName('');
-            }}
-          >
-            Add
-          </button>
-        </div>
+        {isOrgAdmin ? (
+          <div className="mt-2 flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+              placeholder="New channel"
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+            />
+            <button
+              type="button"
+              className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              onClick={() => {
+                onAddCat(catName);
+                setCatName('');
+              }}
+            >
+              Add
+            </button>
+          </div>
+        ) : (
+          <p className="mt-2 text-[12px] leading-snug text-[#9b9b9b]">
+            Ask an organisation admin to add channels here or under Admin → Broadcast channels (
+            <span className="font-mono text-[11px]">/admin/categories</span>).
+          </p>
+        )}
       </div>
-        </>
-      ) : null}
 
       <div className="mt-6 border-t border-[#d8d8d8] pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Managers</p>

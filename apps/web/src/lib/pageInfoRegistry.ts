@@ -83,22 +83,6 @@ const PAGE_INFO_ENTRIES: PageInfoEntry[] = [
     ],
   },
   {
-    id: 'admin-scan-logs',
-    match: { kind: 'exact', path: '/admin/scan-logs' },
-    title: 'What these scan logs are for',
-    summary:
-      'This page is the audit trail for staff discount QR verification activity. It helps admins review who scanned which member card, when it happened, and whether the token check passed or failed.',
-    highlights: [
-      'Use this screen to investigate unusual scanner activity, confirm a recent verification happened, or spot repeated invalid scans.',
-      'The filters help narrow the view by result and time period so recent issues are easier to find.',
-      'This page is for monitoring and audit history, while the discount setup itself is managed separately under admin discount rules.',
-    ],
-    links: [
-      { href: '/admin/discount', label: 'Open discount rules' },
-      { href: '/discount/scan', label: 'Open staff scanner' },
-    ],
-  },
-  {
     id: 'admin-generic',
     match: { kind: 'prefix', path: '/admin' },
     title: 'How the admin area works',
@@ -807,12 +791,12 @@ const PAGE_INFO_ENTRIES: PageInfoEntry[] = [
   {
     id: 'admin-categories',
     match: { kind: 'exact', path: '/admin/categories' },
-    title: 'What categories are for',
+    title: 'What broadcast channels are for',
     summary:
-      'This page manages the category structure used to organise the workspace. It helps admins keep departments, teams, and related organisational groupings tidy and consistent.',
+      'Broadcast channels are per-department audience lists. Members follow a channel in Settings to receive targeted (non–org-wide) posts sent to that channel. This screen is the bulk editor; the same rows exist under Admin → Departments for each department.',
     highlights: [
-      'Use it when you are shaping the shared structure behind the org rather than editing one member.',
-      'Clean categories make team organisation and reporting easier elsewhere in the product.',
+      'Requires the same access as department admin tools (departments.view). Only effective organisation admins can create or delete channels at the database layer.',
+      'Managers use Manager → Departments to see which channels exist for their departments; they cannot add channels unless product policy grants it.',
     ],
     links: [
       { href: '/admin/departments', label: 'Open departments' },
@@ -832,21 +816,6 @@ const PAGE_INFO_ENTRIES: PageInfoEntry[] = [
     links: [
       { href: '/admin/teams', label: 'Open teams' },
       { href: '/admin/users', label: 'Open member directory' },
-    ],
-  },
-  {
-    id: 'admin-discount',
-    match: { kind: 'exact', path: '/admin/discount' },
-    title: 'What discount rules are for',
-    summary:
-      'This page controls the organisation rules behind staff discount cards and QR verification. It is where admins decide how discounts work, who can use them, and how verification should be monitored.',
-    highlights: [
-      'Use it to manage the policy behind the benefit rather than the card a member shows on their phone.',
-      'It pairs with the scanner and scan logs so admins can review both setup and usage.',
-    ],
-    links: [
-      { href: '/discount', label: 'Open member discount card' },
-      { href: '/admin/scan-logs', label: 'Open scan logs' },
     ],
   },
   {
@@ -1390,36 +1359,6 @@ const PAGE_INFO_ENTRIES: PageInfoEntry[] = [
     ],
   },
   {
-    id: 'discount-card',
-    match: { kind: 'exact', path: '/discount' },
-    title: 'What the discount card is for',
-    summary:
-      'This page shows your staff discount card in Campsite. It helps you present the correct QR or proof of eligibility when using organisation discount benefits in person.',
-    highlights: [
-      'Use it when you need the member-facing benefit card rather than the admin policy setup behind it.',
-      'If your role allows scanning, this area also links into the staff verification flow.',
-    ],
-    links: [
-      { href: '/discount/scan', label: 'Open scanner' },
-      { href: '/settings/discount-tiers', label: 'Open discount tiers' },
-    ],
-  },
-  {
-    id: 'discount-scan',
-    match: { kind: 'exact', path: '/discount/scan' },
-    title: 'What the discount scanner is for',
-    summary:
-      'This page is the staff-facing QR verification tool for discounts. It helps authorised users scan a member card quickly and confirm whether the discount token is valid.',
-    highlights: [
-      'Use it at the point of verification rather than for policy setup or audit review.',
-      'It pairs with scan logs so admins can review what happened after the fact.',
-    ],
-    links: [
-      { href: '/discount', label: 'Open member discount card' },
-      { href: '/admin/scan-logs', label: 'Open scan logs' },
-    ],
-  },
-  {
     id: 'leave',
     match: { kind: 'exact', path: '/leave' },
     title: 'What the leave hub is for',
@@ -1856,22 +1795,7 @@ const PAGE_INFO_ENTRIES: PageInfoEntry[] = [
     ],
     links: [
       { href: '/profile', label: 'Open profile' },
-      { href: '/settings/discount-tiers', label: 'Open discount tiers' },
-    ],
-  },
-  {
-    id: 'settings-discount-tiers',
-    match: { kind: 'exact', path: '/settings/discount-tiers' },
-    title: 'What discount tiers are for',
-    summary:
-      'This page manages the tier structure behind staff discount eligibility. It helps authorised users review how discount levels are named and applied within the organisation benefit setup.',
-    highlights: [
-      'Use it when the discount programme needs a change in structure rather than when you just need to show a member card.',
-      'These settings support the wider discount workflow used by cards, scanners, and admin rules.',
-    ],
-    links: [
-      { href: '/discount', label: 'Open member discount card' },
-      { href: '/admin/discount', label: 'Open admin discount rules' },
+      { href: '/dashboard', label: 'Open dashboard' },
     ],
   },
   {

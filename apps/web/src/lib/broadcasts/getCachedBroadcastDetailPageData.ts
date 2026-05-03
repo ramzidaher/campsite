@@ -20,7 +20,7 @@ type BroadcastDetailInitial = {
   dept_id: string;
   channel_id: string | null;
   created_by: string;
-  departments: { name: string } | null;
+  departments: { name: string; color_hex?: string | null } | null;
   broadcast_channels: { name: string } | null;
   department_teams: { name: string } | null;
   profiles: { full_name: string } | null;
@@ -75,7 +75,7 @@ export const getCachedBroadcastDetailPageData = cache(
         const status = String(b.status ?? '');
 
         const [deptRes, channelRes, teamRes, senderRes, maySetCoverRes, navRes, mayEditRes, repliesRes] = await Promise.all([
-          supabase.from('departments').select('name').eq('id', deptId).maybeSingle(),
+          supabase.from('departments').select('name,color_hex').eq('id', deptId).maybeSingle(),
           channelId
             ? supabase.from('broadcast_channels').select('name').eq('id', channelId).maybeSingle()
             : Promise.resolve({ data: null as { name: string } | null }),
@@ -134,7 +134,12 @@ export const getCachedBroadcastDetailPageData = cache(
             dept_id: deptId,
             channel_id: channelId,
             created_by: createdBy,
-            departments: deptRes.data ? { name: String(deptRes.data.name ?? '') } : null,
+            departments: deptRes.data
+              ? {
+                  name: String(deptRes.data.name ?? ''),
+                  color_hex: (deptRes.data as { color_hex?: string | null }).color_hex ?? null,
+                }
+              : null,
             broadcast_channels: channelRes.data ? { name: String(channelRes.data.name ?? '') } : null,
             department_teams: teamRes.data ? { name: String(teamRes.data.name ?? '') } : null,
             profiles: senderRes.data ? { full_name: String(senderRes.data.full_name ?? '') } : null,

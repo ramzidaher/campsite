@@ -215,7 +215,6 @@ export function FounderHqApp({
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [flagSheets, setFlagSheets] = useState(true);
-  const [flagDiscount, setFlagDiscount] = useState(true);
   const [flagBroadcast, setFlagBroadcast] = useState(true);
   const [flagBeta, setFlagBeta] = useState(false);
   const [memberQuery, setMemberQuery] = useState('');
@@ -2434,13 +2433,6 @@ export function FounderHqApp({
                       <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>Auto-sync shifts from linked spreadsheets</div>
                     </div>
                     <button type="button" className={`toggle${flagSheets ? ' on' : ''}`} onClick={() => setFlagSheets((v) => !v)} aria-label="Toggle Sheets sync" />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: '1px solid var(--border)' }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Discount QR Codes</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>Enable member discount scanning</div>
-                    </div>
-                    <button type="button" className={`toggle${flagDiscount ? ' on' : ''}`} onClick={() => setFlagDiscount((v) => !v)} aria-label="Toggle discount QR" />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: '1px solid var(--border)' }}>
                     <div>

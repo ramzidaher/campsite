@@ -102,7 +102,6 @@ export async function loadAdminOverview(
     { data: roleRows },
     { data: recentBroadcasts },
     { data: recentProfiles },
-    { data: scanRows },
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -153,14 +152,6 @@ export async function loadAdminOverview(
       .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(4),
-    profile.permissions.includes('members.view')
-      ? supabase
-          .from('scan_logs')
-          .select('id,created_at,scanned_display_name,token_valid')
-          .eq('org_id', orgId)
-          .order('created_at', { ascending: false })
-          .limit(2)
-      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
   ]);
 
   const rows = (deptRows ?? []) as { type: string }[];
@@ -232,21 +223,6 @@ export async function loadAdminOverview(
       timeLabel: relTime(created),
       at: t,
     });
-  }
-
-  if (profile.permissions.includes('members.view')) {
-    for (const s of scanRows ?? []) {
-      const created = s.created_at as string;
-      const ok = s.token_valid === true;
-      const label = (s.scanned_display_name as string)?.trim() || 'Member';
-      activities.push({
-        id: `s-${s.id}`,
-        icon: '🎫',
-        text: ok ? `Discount scan verified for ${label}` : `Discount scan attempt (${label})`,
-        timeLabel: relTime(created),
-        at: new Date(created).getTime(),
-      });
-    }
   }
 
   activities.sort((a, b) => b.at - a.at);

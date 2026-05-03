@@ -11,10 +11,10 @@ export type FeedRow = {
   is_mandatory?: boolean;
   is_pinned?: boolean;
   is_org_wide?: boolean;
-  departments: { name: string } | null;
+  departments: { name: string; color_hex?: string | null } | null;
   broadcast_channels: { name: string } | null;
   department_teams?: { name: string } | null;
-  collab_departments?: { id: string; name: string }[];
+  collab_departments?: { id: string; name: string; color_hex?: string | null }[];
   profiles: { full_name: string } | null;
   read?: boolean;
 };

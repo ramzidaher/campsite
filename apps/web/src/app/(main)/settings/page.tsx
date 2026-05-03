@@ -54,16 +54,17 @@ export default async function SettingsPage({
   let tenantOrgs: LoginOrgOption[] | null = null;
   const { data: memRows, error: memErr } = await supabase
     .from('user_org_memberships')
-    .select('org_id, organisations(name, slug)')
+    .select('org_id, organisations(name, slug, logo_url)')
     .eq('user_id', user.id);
   if (!memErr && memRows?.length) {
     tenantOrgs = memRows
       .map((r) => {
-        const o = r.organisations as { name?: string; slug?: string } | null;
+        const o = r.organisations as { name?: string; slug?: string; logo_url?: string | null } | null;
         return {
           org_id: r.org_id as string,
           name: o?.name?.trim() || 'Organisation',
           slug: o?.slug?.trim() || '',
+          logo_url: o?.logo_url?.trim() || null,
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -98,7 +99,6 @@ export default async function SettingsPage({
         currentOrgId={profile?.org_id ?? null}
         initial={initialProfile}
         initialBroadcastChannels={[]}
-        canManageDiscounts={false}
         celebrationModeOptions={getCelebrationModeOptions(orgCelebrationOverrides)}
         orgCelebrationOverrides={orgCelebrationOverrides}
       />

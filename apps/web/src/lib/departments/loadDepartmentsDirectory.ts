@@ -6,6 +6,7 @@ export type DeptRow = {
   name: string;
   type: string;
   description: string | null;
+  color_hex: string | null;
   is_archived: boolean;
 };
 
@@ -36,7 +37,7 @@ export async function loadDepartmentsDirectory(
 ): Promise<DepartmentsDirectoryBundle> {
   let deptQuery = supabase
     .from('departments')
-    .select('id, name, type, description, is_archived')
+    .select('id, name, type, description, color_hex, is_archived')
     .eq('org_id', orgId)
     .order('type')
     .order('name');

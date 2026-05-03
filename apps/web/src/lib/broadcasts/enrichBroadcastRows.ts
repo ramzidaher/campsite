@@ -54,7 +54,7 @@ export async function enrichBroadcastRows(
   const collabDeptIds = [...new Set((collabRows ?? []).map((r) => r.dept_id as string))];
 
   const [{ data: deps }, { data: chans }, { data: teams }, { data: profs }] = await Promise.all([
-    client.from('departments').select('id,name').in('id', deptIds),
+    client.from('departments').select('id,name,color_hex').in('id', deptIds),
     channelIds.length
       ? client.from('broadcast_channels').select('id,name').in('id', channelIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
@@ -64,14 +64,30 @@ export async function enrichBroadcastRows(
     client.from('coworker_directory_public').select('id,full_name').in('id', userIds),
   ]);
   const { data: collabDeps } = collabDeptIds.length
-    ? await client.from('departments').select('id,name').in('id', collabDeptIds)
+    ? await client.from('departments').select('id,name,color_hex').in('id', collabDeptIds)
     : { data: [] as { id: string; name: string }[] };
 
-  const dm = new Map((deps ?? []).map((d) => [d.id as string, d.name as string]));
+  const dm = new Map(
+    (deps ?? []).map((d) => [
+      d.id as string,
+      {
+        name: d.name as string,
+        color_hex: (d as { color_hex?: string | null }).color_hex ?? null,
+      },
+    ])
+  );
   const cm = new Map((chans ?? []).map((c) => [c.id as string, c.name as string]));
   const tm = new Map((teams ?? []).map((t) => [t.id as string, t.name as string]));
   const pm = new Map((profs ?? []).map((p) => [p.id as string, p.full_name as string]));
-  const collabDeptMap = new Map((collabDeps ?? []).map((d) => [d.id as string, d.name as string]));
+  const collabDeptMap = new Map(
+    (collabDeps ?? []).map((d) => [
+      d.id as string,
+      {
+        name: d.name as string,
+        color_hex: (d as { color_hex?: string | null }).color_hex ?? null,
+      },
+    ])
+  );
   const collabByBroadcast = new Map<string, string[]>();
   for (const row of collabRows ?? []) {
     const bId = row.broadcast_id as string;
@@ -94,12 +110,16 @@ export async function enrichBroadcastRows(
     is_mandatory: r.is_mandatory ?? false,
     is_pinned: r.is_pinned ?? false,
     is_org_wide: r.is_org_wide ?? false,
-    departments: dm.has(r.dept_id) ? { name: dm.get(r.dept_id)! } : null,
+    departments: dm.has(r.dept_id) ? dm.get(r.dept_id)! : null,
     broadcast_channels:
       r.channel_id && cm.has(r.channel_id) ? { name: cm.get(r.channel_id)! } : null,
     department_teams: r.team_id && tm.has(r.team_id) ? { name: tm.get(r.team_id)! } : null,
     collab_departments: (collabByBroadcast.get(r.id) ?? [])
-      .map((id) => ({ id, name: collabDeptMap.get(id) ?? 'Department' })),
+      .map((id) => ({
+        id,
+        name: collabDeptMap.get(id)?.name ?? 'Department',
+        color_hex: collabDeptMap.get(id)?.color_hex ?? null,
+      })),
     profiles: pm.has(r.created_by) ? { full_name: pm.get(r.created_by)! } : null,
     read: readSet.has(r.id),
   }));

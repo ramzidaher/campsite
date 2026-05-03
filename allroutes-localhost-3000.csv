@@ -1,150 +1,150 @@
 url,status,notes,follow_up,new_status,done_note
-http://localhost:3000/,PASS,,,PASS,No change needed
-http://localhost:3000/admin,PASS,,,PASS,No change needed
-http://localhost:3000/admin/applications,PASS,spacing is wrong the info is too close to the sides,,OPEN,Spacing issue not fixed yet
-http://localhost:3000/admin/broadcasts,PASS,,,PASS,No change needed
-http://localhost:3000/admin/categories,PASS,but its empty idk why it shoudl show broadcast and we shoudl have some mamanagmen thingy,,OPEN,Data and UX issue pending investigation
-http://localhost:3000/admin/departments,PASS,Might need to make it easier for the user ,,OPEN,UX improvement pending
-http://localhost:3000/admin/discount,PASS,Needs a redesing and layout is shitty and logic is bad,,OPEN,Redesign and logic cleanup pending
-http://localhost:3000/admin/hr,FAIL ,Redircts to http://localhost:3000/hr/records idk why,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Middleware now redirects /admin/hr to /hr
-http://localhost:3000/admin/hr/absence-reporting,PASS,Might need to add limits to how many page/users to show ,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/absence-reporting via middleware
-http://localhost:3000/admin/hr/custom-fields,PASS ,"idk why we have this need to look it up, also the dropwond needs some work ",Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/custom-fields via middleware
-http://localhost:3000/admin/hr/example,FAIL,idk why we have this also redirects to http://localhost:3000/hr/records,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/example via middleware
-http://localhost:3000/admin/hr/hr-metric-alerts,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/hr-metric-alerts via middleware
-http://localhost:3000/admin/hr/onboarding,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/onboarding via middleware
-http://localhost:3000/admin/hr/onboarding/example,FAIL,idk why we have this also redirects to http://localhost:3000/hr/onboarding,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/onboarding/example via middleware
+http://localhost:3000/trial-ended,PASS,,,DONE
+http://localhost:3000/terms,PASS,"Need to update it, make sure there is light mode",,DONE
+http://localhost:3000/subscription-suspended,"PASS ",Maybe remove or edit it liek it shows account lockec,,DONE
+http://localhost:3000/settings/discount-tiers,PASS,,,DONE
+http://localhost:3000/settings,PASS,Needs work and clean up,,DONE
+http://localhost:3000/session-choice,PASS,,,DONE
+http://localhost:3000/rota,PASS,,,DONE
+http://localhost:3000/resources/new,PASS,,,DONE
+http://localhost:3000/resources/example,PASS,,,DONE
+http://localhost:3000/resources,PASS,"ADD an AI directyl in that, to ask question we have that in each file but it shoudl be resource wide",,DONE
+http://localhost:3000/reports,FAIL,Needs proper work,,Not Ye SP needs to do that
+http://localhost:3000/register/done,PASS,,,DONE
+http://localhost:3000/register,PASS,"Need to pass the org logo ",,DONE
+http://localhost:3000/profile/hr,FAIL,redirects to profile idk if we have an actual page,,DONE
+http://localhost:3000/profile,PASS,Takes time thou needs a bit of redesign,,DONE
+http://localhost:3000/privacy,PASS,Takes some time needs to be udpated,,DONE
+http://localhost:3000/performance/example,PASS/FAIL,DOnt think its impolekented need to be imokeneted with warmrings if missing ect ect,
+http://localhost:3000/performance,PASS/FAIL,DOnt think its impolekented need to be imokeneted with warmrings if missing ect ect,
+http://localhost:3000/pending-approvals,PASS,that for amangers only,,x
+http://localhost:3000/pending,FAIL,Redircts to dashboard,
+http://localhost:3000/org-locked,PASS,,
+http://localhost:3000/one-on-ones/example,PASS,Needs a redesing espically the users shoudl be belwo the titlesalso needs to feel like a good docs/notiotn vibe and shoudl show who is editing live(who is on the page),
+http://localhost:3000/one-on-ones,PASS,Might need to add a calender,
+http://localhost:3000/onboarding,FAIL,redircts to dadhsbord and not implemented needs to ask sarthak also need user onbaodrding complelete steps),
+http://localhost:3000/notifications/recruitment,PASS/FAIL,why do we have it and how woudl the user even access this?,
+http://localhost:3000/notifications/leave,PASS/FAIL,why do we have it and how woudl the user even access this?,
+http://localhost:3000/notifications/hr-metrics,PASS/FAIL,why do we have it and how woudl the user even access this?,
+http://localhost:3000/notifications/calendar,PASS/FAIL,why do we have it and how woudl the user even access this?,
+http://localhost:3000/notifications/applications,PASS/FAIL,why do we have it and how woudl the user even access this?,
+http://localhost:3000/manager/teams,PASS,"IDK why we have that confusong teams and sub team and we need to orgbuse and emxplain it proerply ",
+http://localhost:3000/manager/system-overview,PASS,org chart might need to siwtch it to the circel oneor make it a place to quickly move aroudn mayabe,
+http://localhost:3000/manager/sub-teams,FAIL,"redicrts to normal teams ",
+http://localhost:3000/manager/recruitment,PASS,might need to put that under manager so its not under HR idk,
+http://localhost:3000/manager/org-chart,PASS,thats to see who is on shift might need it to match the current styling and maybe switch the org chart to somehting differetn users will get confused,
+http://localhost:3000/manager/departments,FAIL,Show empty idk why we have it,
+http://localhost:3000/manager,PASS,Need to make it nicer,
+http://localhost:3000/maintenance,PASS,,
+http://localhost:3000/login,PASS,need to add 2fa also the word connected shoudl be yellow,
+http://localhost:3000/legal/data-processing,PASS,Need to update the colours and the data (sarthak needs to update the info),
+http://localhost:3000/leave,PASS,"Two details info button combine the one in the top with the bottom one, also shows the wrong year I understadn its from 2025 - 2026 it shoudl def`ult to 2026 ",
+http://localhost:3000/jobs/status/example,PASS,,
+http://localhost:3000/jobs/register,PASS/FAIL,"need a big of redesing to look nicer not a fan of how it is now, ensure the org photo shows",
+http://localhost:3000/jobs/offer-sign/example,FAIL,,
+http://localhost:3000/jobs/me/profile,FAIL,Needs alot of work,
+http://localhost:3000/jobs/me/example,PASS,Needs alot of work,
+http://localhost:3000/jobs/me,PASS,"Needs alot of work, and the logo shoudl show as well",
+http://localhost:3000/jobs/login,PASS,Needs 2fa,
+http://localhost:3000/jobs/forgot-password,PASS,"Need to test it our and need 2fa ",
+http://localhost:3000/jobs/example/apply,PASS,,
+http://localhost:3000/jobs/example,PASS,,
+http://localhost:3000/jobs,FAIL,,
+http://localhost:3000/hr/wagesheets,"PASS/FAIl ",redircts to the finance one,
+http://localhost:3000/hr/timesheets,PASS,,
+http://localhost:3000/hr/recruitment,PASS,,
+http://localhost:3000/hr/records/example,PASS,,
+http://localhost:3000/hr/records,PASS,,
+http://localhost:3000/hr/performance/example,PASS,,
+http://localhost:3000/hr/performance,PASS,Need to implement this,
+http://localhost:3000/hr/org-chart,PASS,,
+http://localhost:3000/hr/one-on-ones,PASS,need to make all row change colours and also need to add page limit,
+http://localhost:3000/hr/onboarding/example,PASS,,
+http://localhost:3000/hr/onboarding,FAIL,Need to implement,
+http://localhost:3000/hr/offer-templates/new,PASS,Need to make sure it works and is conncted to the email,
+http://localhost:3000/hr/offer-templates/example/edit,PASS,Need to make sure it works and is conncted to the email,
+http://localhost:3000/hr/offer-templates,PASS,Need to make sure it works and is conncted to the email,
+http://localhost:3000/hr/leave,"PASS ",Has alot of bugs,
+http://localhost:3000/hr/jobs/example/preview,PASS,,
+http://localhost:3000/hr/jobs/example/edit,PASS,,
+http://localhost:3000/hr/jobs/example/applications,,,
+http://localhost:3000/hr/jobs/example/admin-legal,,,
+http://localhost:3000/hr/jobs,PASS,when its not published the buttons arent aligned,
+http://localhost:3000/hr/interviews,PASS,,
+http://localhost:3000/hr/hr-metric-alerts,PASS,,
+http://localhost:3000/hr/hiring/templates,PASS,Remove the workspace,
+http://localhost:3000/hr/hiring/requests/example,,,
+http://localhost:3000/hr/hiring/requests,PASS,info button and new button make it nicer,
+http://localhost:3000/hr/hiring/new-request,PASS,"we need to remove the workspace tabs, not a fan of the form feels long tbh, me be nice to add ai, or make it interative idk feels too long and too overwhellimg ",
+http://localhost:3000/hr/hiring/jobs,PASS,Remove — and replace with proper one,
+http://localhost:3000/hr/hiring/interviews,PASS,,
+http://localhost:3000/hr/hiring/applications,PASS,Change the text to a button to open,
+http://localhost:3000/hr/hiring/application-forms/example/preview,PASS,Takes some time,
+http://localhost:3000/hr/hiring/application-forms/example/edit,PASS,"Take time to load, need to remove the workspace tabs butkeep the button and the ""i""",
+http://localhost:3000/hr/hiring/application-forms,PASS,,
+http://localhost:3000/hr/hiring,PASS,"Need to work on the new request button, dropdown button",
+http://localhost:3000/hr/finance,PASS,,
+http://localhost:3000/hr/custom-fields,PASS,THE Hr back error needs work as the r isnt caps,
+http://localhost:3000/hr/attendance-settings,"FAIL ",Redicrts to the finance idk why,
+http://localhost:3000/hr/applications,PASS,"Update open ob to a btn, need to work on the button colours remove the green colours, when you are in the jon lsiting application, this shows Job listings/Pipeline no need for it as we have a back button",
+http://localhost:3000/hr/absence-reporting,PASS,"Need testing regarding the end part and needs status flashing of any override for runnign low ect ect ",
+http://localhost:3000/hr,PASS,Needs Redesing with the timeline of srathak idea as well to keep on top of stuff,
+http://localhost:3000/founders,PASS,Needs work,
+http://localhost:3000/forgot-password,PASS/FAIL,its sedning on any email shoudl not send if email not in the system,
+http://localhost:3000/finance/wagesheets,PASS,Need a redesing looks bad and differetn colours and need proeper testing,
+http://localhost:3000/finance/timesheets,PASS,Need a redesing looks bad and differetn colours and need proeper testing,
+http://localhost:3000/finance/attendance-settings,PASS,"Need a redesing looks bad and differetn colours ",
+http://localhost:3000/finance,PASS,it can scroll left and right need to stop that,
+http://localhost:3000/discount/scan,PASS,Hide this for now," no need currently"
+http://localhost:3000/discount,PASS,"Hide this for now, no need currently",
+http://localhost:3000/dashboard,PASS,"Add Skelton Loading ",
+http://localhost:3000/calendar,PASS,"f calender not linked add an option to link two way either by googel or outlook ",
+http://localhost:3000/broadcasts/example/edit,FAIL,"No edit option ",
+http://localhost:3000/broadcasts/example,Pass,,
+http://localhost:3000/broadcasts,Pass,"Need to work on the stylig espicalyl near the filters ",
+http://localhost:3000/auth/set-password,Pass,,
+http://localhost:3000/auth/callback,Pass,,
+http://localhost:3000/attendance,Pass,"we need it to show for peolpe who has access espically on the side bar ",
+http://localhost:3000/admin/users,Pass,"Need to add a limit per page, also we need to add an option to delete as well",
+http://localhost:3000/admin/teams,Pass,,
+http://localhost:3000/admin/system-overview,Pass,Dont think we need it unless we change it so its like the profile rather than an org chart type of view,
+http://localhost:3000/admin/sub-teams,Fail,redircts to /team,
+http://localhost:3000/admin/settings,PASS,need to make the logo part better probably feels scttaered,
+http://localhost:3000/admin/scan-logs,PASS,Might need to disable it,
+http://localhost:3000/admin/rota-import,PASS,Might need to disable it,
+http://localhost:3000/admin/rota,PASS,Might need to disable it,
+http://localhost:3000/admin/roles,PASS,,
+http://localhost:3000/admin/recruitment/example,PASS,,
+http://localhost:3000/admin/recruitment,PASS,,
+http://localhost:3000/admin/privacy,PASS,,
+http://localhost:3000/admin/pending,PASS,,
+http://localhost:3000/admin/offer-templates/new,PASS,,
+http://localhost:3000/admin/offer-templates/example/edit,PASS,,
+http://localhost:3000/admin/offer-templates,PASS,,
+http://localhost:3000/admin/notifications,PASS,,
+http://localhost:3000/admin/leave,PASS,,
+http://localhost:3000/admin/jobs/example/edit,PASS,,Canonical redirect enforced in middleware from /admin/jobs/* to /hr/jobs/*,FIXED,Route now canonicalized to /hr/jobs/example/edit via middleware
+http://localhost:3000/admin/jobs/example/applications,PASS,,Canonical redirect enforced in middleware from /admin/jobs/* to /hr/jobs/*,FIXED,Route now canonicalized to /hr/jobs/example/applications via middleware
+http://localhost:3000/admin/jobs/example/admin-legal,PASS,,Canonical redirect enforced in middleware from /admin/jobs/* to /hr/jobs/*,FIXED,Route now canonicalized to /hr/jobs/example/admin-legal via middleware
+http://localhost:3000/admin/jobs,PASS,,Canonical redirect enforced in middleware from /admin/jobs/* to /hr/jobs/*,FIXED,Middleware now redirects /admin/jobs to /hr/jobs
+http://localhost:3000/admin/interviews,PASS,idk why its under admin though,,OPEN,Route ownership question pending product decision
+http://localhost:3000/admin/integrations,PASS,but idk why we need this,,PASS,No change needed
+http://localhost:3000/admin/hr/performance/example,FAIL,same idk why we have this its an exmaple,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/performance/example via middleware
+http://localhost:3000/admin/hr/performance,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/performance via middleware
+http://localhost:3000/admin/hr/org-chart,PASS/FAIL,Needs redesing not a fan of the black and a bit buggy,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/org-chart via middleware
 http://localhost:3000/admin/hr/one-on-ones,PASS/FAIL,"Error ""Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:"" need to fix this for all pages
 ",,,FIXED,Hydration mismatch reduced by stabilizing initial date render
-http://localhost:3000/admin/hr/org-chart,PASS/FAIL,Needs redesing not a fan of the black and a bit buggy,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/org-chart via middleware
-http://localhost:3000/admin/hr/performance,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/performance via middleware
-http://localhost:3000/admin/hr/performance/example,FAIL,same idk why we have this its an exmaple,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/performance/example via middleware
-http://localhost:3000/admin/integrations,PASS,but idk why we need this,,PASS,No change needed
-http://localhost:3000/admin/interviews,PASS,idk why its under admin though,,OPEN,Route ownership question pending product decision
-http://localhost:3000/admin/jobs,,,Canonical redirect enforced in middleware from /admin/jobs/* to /hr/jobs/*,FIXED,Middleware now redirects /admin/jobs to /hr/jobs
-http://localhost:3000/admin/jobs/example/admin-legal,,,Canonical redirect enforced in middleware from /admin/jobs/* to /hr/jobs/*,FIXED,Route now canonicalized to /hr/jobs/example/admin-legal via middleware
-http://localhost:3000/admin/jobs/example/applications,,,Canonical redirect enforced in middleware from /admin/jobs/* to /hr/jobs/*,FIXED,Route now canonicalized to /hr/jobs/example/applications via middleware
-http://localhost:3000/admin/jobs/example/edit,,,Canonical redirect enforced in middleware from /admin/jobs/* to /hr/jobs/*,FIXED,Route now canonicalized to /hr/jobs/example/edit via middleware
-http://localhost:3000/admin/leave,,,
-http://localhost:3000/admin/notifications,,,
-http://localhost:3000/admin/offer-templates,,,
-http://localhost:3000/admin/offer-templates/example/edit,,,
-http://localhost:3000/admin/offer-templates/new,,,
-http://localhost:3000/admin/pending,,,
-http://localhost:3000/admin/privacy,,,
-http://localhost:3000/admin/recruitment,,,
-http://localhost:3000/admin/recruitment/example,,,
-http://localhost:3000/admin/roles,,,
-http://localhost:3000/admin/rota,,,
-http://localhost:3000/admin/rota-import,,,
-http://localhost:3000/admin/scan-logs,,,
-http://localhost:3000/admin/settings,,,
-http://localhost:3000/admin/sub-teams,,,
-http://localhost:3000/admin/system-overview,,,
-http://localhost:3000/admin/teams,,,
-http://localhost:3000/admin/users,,,
-http://localhost:3000/attendance,,,
-http://localhost:3000/auth/callback,,,
-http://localhost:3000/auth/set-password,,,
-http://localhost:3000/broadcasts,,,
-http://localhost:3000/broadcasts/example,,,
-http://localhost:3000/broadcasts/example/edit,,,
-http://localhost:3000/calendar,,,
-http://localhost:3000/dashboard,,,
-http://localhost:3000/discount,,,
-http://localhost:3000/discount/scan,,,
-http://localhost:3000/finance,,,
-http://localhost:3000/finance/attendance-settings,,,
-http://localhost:3000/finance/timesheets,,,
-http://localhost:3000/finance/wagesheets,,,
-http://localhost:3000/forgot-password,,,
-http://localhost:3000/founders,,,
-http://localhost:3000/hr,,,
-http://localhost:3000/hr/absence-reporting,,,
-http://localhost:3000/hr/applications,,,
-http://localhost:3000/hr/attendance-settings,,,
-http://localhost:3000/hr/custom-fields,,,
-http://localhost:3000/hr/finance,,,
-http://localhost:3000/hr/hiring,,,
-http://localhost:3000/hr/hiring/application-forms,,,
-http://localhost:3000/hr/hiring/application-forms/example/edit,,,
-http://localhost:3000/hr/hiring/application-forms/example/preview,,,
-http://localhost:3000/hr/hiring/applications,,,
-http://localhost:3000/hr/hiring/interviews,,,
-http://localhost:3000/hr/hiring/jobs,,,
-http://localhost:3000/hr/hiring/new-request,,,
-http://localhost:3000/hr/hiring/requests,,,
-http://localhost:3000/hr/hiring/requests/example,,,
-http://localhost:3000/hr/hiring/templates,,,
-http://localhost:3000/hr/hr-metric-alerts,,,
-http://localhost:3000/hr/interviews,,,
-http://localhost:3000/hr/jobs,,,
-http://localhost:3000/hr/jobs/example/admin-legal,,,
-http://localhost:3000/hr/jobs/example/applications,,,
-http://localhost:3000/hr/jobs/example/edit,,,
-http://localhost:3000/hr/jobs/example/preview,,,
-http://localhost:3000/hr/leave,,,
-http://localhost:3000/hr/offer-templates,,,
-http://localhost:3000/hr/offer-templates/example/edit,,,
-http://localhost:3000/hr/offer-templates/new,,,
-http://localhost:3000/hr/onboarding,,,
-http://localhost:3000/hr/onboarding/example,,,
-http://localhost:3000/hr/one-on-ones,,,
-http://localhost:3000/hr/org-chart,,,
-http://localhost:3000/hr/performance,,,
-http://localhost:3000/hr/performance/example,,,
-http://localhost:3000/hr/records,,,
-http://localhost:3000/hr/records/example,,,
-http://localhost:3000/hr/recruitment,,,
-http://localhost:3000/hr/timesheets,,,
-http://localhost:3000/hr/wagesheets,,,
-http://localhost:3000/jobs,,,
-http://localhost:3000/jobs/example,,,
-http://localhost:3000/jobs/example/apply,,,
-http://localhost:3000/jobs/forgot-password,,,
-http://localhost:3000/jobs/login,,,
-http://localhost:3000/jobs/me,,,
-http://localhost:3000/jobs/me/example,,,
-http://localhost:3000/jobs/me/profile,,,
-http://localhost:3000/jobs/offer-sign/example,,,
-http://localhost:3000/jobs/register,,,
-http://localhost:3000/jobs/status/example,,,
-http://localhost:3000/leave,,,
-http://localhost:3000/legal/data-processing,,,
-http://localhost:3000/login,,,
-http://localhost:3000/maintenance,,,
-http://localhost:3000/manager,,,
-http://localhost:3000/manager/departments,,,
-http://localhost:3000/manager/org-chart,,,
-http://localhost:3000/manager/recruitment,,,
-http://localhost:3000/manager/sub-teams,,,
-http://localhost:3000/manager/system-overview,,,
-http://localhost:3000/manager/teams,,,
-http://localhost:3000/notifications/applications,,,
-http://localhost:3000/notifications/calendar,,,
-http://localhost:3000/notifications/hr-metrics,,,
-http://localhost:3000/notifications/leave,,,
-http://localhost:3000/notifications/recruitment,,,
-http://localhost:3000/onboarding,,,
-http://localhost:3000/one-on-ones,,,
-http://localhost:3000/one-on-ones/example,,,
-http://localhost:3000/org-locked,,,
-http://localhost:3000/pending,,,
-http://localhost:3000/pending-approvals,,,
-http://localhost:3000/performance,,,
-http://localhost:3000/performance/example,,,
-http://localhost:3000/privacy,,,
-http://localhost:3000/profile,,,
-http://localhost:3000/profile/hr,,,
-http://localhost:3000/register,,,
-http://localhost:3000/register/done,,,
-http://localhost:3000/reports,,,
-http://localhost:3000/resources,,,
-http://localhost:3000/resources/example,,,
-http://localhost:3000/resources/new,,,
-http://localhost:3000/rota,,,
-http://localhost:3000/session-choice,,,
-http://localhost:3000/settings,,,
-http://localhost:3000/settings/discount-tiers,,,
-http://localhost:3000/subscription-suspended,,,
-http://localhost:3000/terms,,,
-http://localhost:3000/trial-ended,,,
+http://localhost:3000/admin/hr/onboarding/example,FAIL,idk why we have this also redirects to http://localhost:3000/hr/onboarding,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/onboarding/example via middleware
+http://localhost:3000/admin/hr/onboarding,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/onboarding via middleware
+http://localhost:3000/admin/hr/hr-metric-alerts,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/hr-metric-alerts via middleware
+http://localhost:3000/admin/hr/example,FAIL,idk why we have this also redirects to http://localhost:3000/hr/records,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/example via middleware
+http://localhost:3000/admin/hr/custom-fields,"PASS ","idk why we have this need to look it up, also the dropwond needs some work ",Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/custom-fields via middleware
+http://localhost:3000/admin/hr/absence-reporting,PASS,"Might need to add limits to how many page/users to show ",Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/absence-reporting via middleware
+http://localhost:3000/admin/hr,"FAIL ",Redircts to http://localhost:3000/hr/records idk why,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Middleware now redirects /admin/hr to /hr
+http://localhost:3000/admin/discount,PASS,Needs a redesing and layout is shitty and logic is bad,,OPEN,Redesign and logic cleanup pending
+http://localhost:3000/admin/departments,PASS,"Might need to make it easier for the user ",,OPEN,UX improvement pending
+http://localhost:3000/admin/categories,PASS,but its empty idk why it shoudl show broadcast and we shoudl have some mamanagmen thingy,,OPEN,Data and UX issue pending investigation
+http://localhost:3000/admin/broadcasts,PASS,,,PASS,No change needed
+http://localhost:3000/admin/applications,PASS,spacing is wrong the info is too close to the sides,,OPEN,Spacing issue not fixed yet
+http://localhost:3000/admin,PASS,,,PASS,No change needed
+http://localhost:3000/,PASS,,,PASS,No change needed

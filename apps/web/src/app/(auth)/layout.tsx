@@ -90,7 +90,6 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             {[
               'Broadcast messages to departments',
               'Manage rotas and schedules',
-              'Staff discount verification',
               'Smart calendar sync',
             ].map((line) => (
               <li key={line} className="flex items-center gap-3">

@@ -19,6 +19,7 @@ import {
   BroadcastBodyEditor,
   type BroadcastBodyEditorHandle,
 } from '@/components/broadcasts/BroadcastBodyEditor';
+import { SendButton } from '@/components/ui/send-button';
 import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
 
 type CatRow = { id: string; name: string; dept_id: string };
@@ -70,6 +71,21 @@ function categoriesForDepartment(map: Map<string, CatRow[]>, deptId: string): Ca
   return map.get(deptId.trim().toLowerCase()) ?? [];
 }
 
+function initialsFromPersonName(name: string | null | undefined): string {
+  const n = name?.trim();
+  if (!n) return '?';
+  const p = n.split(/\s+/).filter(Boolean);
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
+}
+
+function initialsFromLabel(label: string): string {
+  const p = label.trim().split(/\s+/).filter(Boolean);
+  if (!p.length) return '?';
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
+}
+
 function pickPreferredOrgWideAuthorityDept(
   allowedDeptIds: string[],
   departments: DeptRow[],
@@ -104,6 +120,10 @@ type Props = {
   viewerDeptIds: Set<string>;
   /** Called after a successful save/send; use to switch tabs or refresh lists. */
   onCreated?: (outcome: BroadcastComposeOutcome) => void;
+  /** Shown in the journal-style header (avatar initials). */
+  viewerDisplayName?: string | null;
+  /** Back to feed without saving (parent clears `?compose=1`). */
+  onClose?: () => void;
 };
 
 const TITLE_MAX = 120;
@@ -126,6 +146,10 @@ const SELECT_FIELD_STYLE = {
   color: '#121212',
   backgroundColor: '#ffffff',
 };
+
+/** Primary actions use tenant org tokens (see `orgBrandingCssVars`), not generic “success” green. */
+const COMPOSE_PRIMARY_CTA_CLASS =
+  'rounded-lg px-4 py-2 text-sm font-medium transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-45 bg-[var(--org-brand-primary,#121212)] text-[var(--org-brand-on-primary,#faf9f6)]';
 
 function SelectWithChevron({
   children,
@@ -175,8 +199,11 @@ export function BroadcastComposer({
   categoriesByDept,
   viewerDeptIds,
   onCreated,
+  viewerDisplayName = null,
+  onClose,
 }: Props) {
   const playUiSound = useUiSound();
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   const [deptId, setDeptId] = useState<string>('');
   const [catId, setCatId] = useState<string>('');
   /** For published compose (not draft-only): one or more recipient departments; order follows the list below. */
@@ -229,14 +256,26 @@ export function BroadcastComposer({
     [categoriesByDept, displayDeptId]
   );
 
-  /** Drafts: explicit channel pick. Published specific: first channel for the lead department (DB requires a channel). */
+  /**
+   * Channel stored on `broadcasts.channel_id` for the lead department.
+   * Specific sends (draft or published): user-visible pick so subscribers can follow the right channel.
+   * Org-wide: no channel row (null at insert).
+   */
   const displayCatId = useMemo(() => {
-    if (!draftOnly) return '';
+    if (isOrgWideActive) return '';
+    if (!cats.length) return '';
     if (cats.some((c) => c.id === catId)) return catId;
     return cats[0]?.id ?? '';
-  }, [cats, catId, draftOnly]);
+  }, [cats, catId, isOrgWideActive]);
 
-  const autoChannelId = useMemo(() => cats[0]?.id ?? '', [cats]);
+  useEffect(() => {
+    if (isOrgWideActive) return;
+    if (!cats.length) return;
+    if (!cats.some((c) => c.id === catId)) {
+      const first = cats[0]?.id;
+      if (first) setCatId(first);
+    }
+  }, [cats, catId, isOrgWideActive]);
 
   /** Stable across parent re-fetches: `BroadcastsClient` replaces `departments` with a new array on each periodic shell refresh even when rows are unchanged. */
   const departmentIdsSignature = useMemo(
@@ -250,6 +289,13 @@ export function BroadcastComposer({
   );
   const departmentsRef = useRef(departments);
   departmentsRef.current = departments;
+
+  useEffect(() => {
+    const ta = titleRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+  }, [title]);
 
   useEffect(() => {
     dirty.current = true;
@@ -410,7 +456,7 @@ export function BroadcastComposer({
     } else if (isOrgWideActive) {
       if (!displayAuthorityDeptId) return { status: 'skipped' };
     } else {
-      if (!displayDeptId || !autoChannelId) return { status: 'skipped' };
+      if (!displayDeptId || !displayCatId) return { status: 'skipped' };
     }
 
     setSaving(true);
@@ -419,7 +465,7 @@ export function BroadcastComposer({
       const row = {
         org_id: orgId,
         dept_id: draftOnly || !isOrgWideActive ? displayDeptId : displayAuthorityDeptId,
-        channel_id: isOrgWideActive ? null : draftOnly ? displayCatId : autoChannelId,
+        channel_id: isOrgWideActive ? null : displayCatId,
         team_id: draftOnly || isOrgWideActive || !teamId ? null : teamId,
         title: title.trim().slice(0, TITLE_MAX),
         body: body ?? '',
@@ -458,7 +504,6 @@ export function BroadcastComposer({
     isOrgWideActive,
     displayDeptId,
     displayCatId,
-    autoChannelId,
     displayAuthorityDeptId,
     title,
     body,
@@ -569,9 +614,17 @@ export function BroadcastComposer({
         playUiSound('error_soft');
         return;
       }
-      if (!autoChannelId) {
+      if (!displayCatId) {
         setError(
-          `Add a broadcast channel for ${departments.find((d) => d.id === displayDeptId)?.name ?? 'the lead department'} under Settings (first channel is used automatically).`
+          `Add a broadcast channel for ${departments.find((d) => d.id === displayDeptId)?.name ?? 'the lead department'} under Settings.`
+        );
+        playUiSound('error_soft');
+        return;
+      }
+      const pubCat = cats.find((c) => c.id === displayCatId);
+      if (!pubCat || String(pubCat.dept_id).trim().toLowerCase() !== displayDeptId.trim().toLowerCase()) {
+        setError(
+          'Pick a channel that belongs to the lead department (the first checked department above). Refresh if the list looks wrong.'
         );
         playUiSound('error_soft');
         return;
@@ -615,7 +668,7 @@ export function BroadcastComposer({
       }
 
       const baseDept = isOrgWideActive ? displayAuthorityDeptId : displayDeptId;
-      const baseCat = isOrgWideActive ? null : autoChannelId;
+      const baseCat = isOrgWideActive ? null : displayCatId;
       const baseTeam = isOrgWideActive || !teamId ? null : teamId;
       const baseFlags = {
         is_org_wide: isOrgWideActive,
@@ -709,35 +762,101 @@ export function BroadcastComposer({
   const showExtraDelivery =
     !draftOnly && caps && (caps.mandatory_broadcast || caps.pin_broadcasts);
 
+  const composeDateLabel = useMemo(
+    () =>
+      new Date().toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }),
+    []
+  );
+
+  const viewerInitials = initialsFromPersonName(viewerDisplayName);
+  const viewerLabel = viewerDisplayName?.trim() || 'You';
+
   if (!canCompose) {
     return <p className="text-sm text-[#6b6b6b]">Your role cannot compose broadcasts.</p>;
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5 rounded-xl border border-[#d8d8d8] bg-[#faf9f6] p-5 sm:p-6">
-      {error ? (
-        <div className="status-banner-error rounded-lg px-3 py-2 text-sm">
-          {error}
-        </div>
-      ) : null}
+    <div className="w-full bg-[#F9F8F6] pb-20">
+      <article className="w-full min-w-0 px-5 py-8 selection:bg-[#e8e4df] sm:px-7 sm:py-10 lg:px-10 xl:px-14">
+        {error ? (
+          <div className="status-banner-error mb-6 rounded-lg px-3 py-2 text-sm">{error}</div>
+        ) : null}
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-[#121212]">Title</label>
-        <input
-          className={`${COMPOSE_INPUT_CLASS} text-lg font-semibold tracking-tight text-[#37352f] placeholder:font-normal placeholder:text-[#aeaca7]`}
-          maxLength={TITLE_MAX}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Headline"
-        />
-        <div className="mt-1 text-right text-xs text-[#6b6b6b]">
-          {title.length}/{TITLE_MAX}
-        </div>
-      </div>
+        <header className="pb-2">
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-[13px] leading-relaxed text-[#8f8f8f] transition hover:text-[#2d2d2d]"
+            >
+              <span aria-hidden>←</span> Broadcasts
+            </button>
+          ) : null}
 
-      {!draftOnly ? (
-        <div className="rounded-lg border border-[#d8d8d8] bg-white p-3">
-          <p className="text-sm font-medium text-[#121212]">Audience</p>
+          <p className={`text-[13px] leading-relaxed text-[#8f8f8f] ${onClose ? 'mt-6' : ''}`}>
+            <span>Broadcasts</span>
+            <span className="mx-1 text-[#c9c7c4]" aria-hidden>
+              /
+            </span>
+            <span>New message</span>
+          </p>
+
+          <label className="sr-only" htmlFor="broadcast-compose-title">
+            Title
+          </label>
+          <textarea
+            id="broadcast-compose-title"
+            ref={titleRef}
+            rows={1}
+            maxLength={TITLE_MAX}
+            className="mt-5 w-full resize-none border-0 bg-transparent font-authSerif text-[2rem] font-bold leading-[1.2] tracking-[-0.02em] text-[#2d2d2d] outline-none placeholder:text-[#b9b7b4] sm:text-[2.25rem]"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Untitled broadcast"
+          />
+
+          <p className="mt-3 text-[14px] leading-relaxed text-[#6b6b6b]">
+            <span>{composeDateLabel}</span>
+            <span className="mx-1.5 text-[#c9c7c4]" aria-hidden>
+              ·
+            </span>
+            <span>{draftOnly ? 'Awaiting approval after submit' : 'Not sent yet'}</span>
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 max-w-full items-center gap-2.5">
+              <span className="text-[12px] text-[#a3a3a3]">Author</span>
+              <span
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e3e2df] bg-[#E8F1FA] text-[11px] font-semibold text-[#1e4d7a]"
+                title={viewerLabel}
+              >
+                {viewerInitials}
+              </span>
+              <span className="min-w-0 truncate text-[13px] text-[#6b6b6b]" title={viewerLabel}>
+                {viewerLabel}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#8f8f8f]">
+              {saving ? <span>Saving…</span> : null}
+            </div>
+          </div>
+
+          <p className="mt-2 text-right text-[11px] text-[#9b9b9b]">
+            {title.length}/{TITLE_MAX} characters
+          </p>
+        </header>
+
+        <section className="mt-14 min-w-0 space-y-8">
+          <h2 className="text-[14px] font-semibold text-[#2d2d2d]">Audience</h2>
+
+          {!draftOnly ? (
+            <div className="rounded-lg border border-[#e3e2df] bg-white/80 p-4 sm:p-5">
+              <p className="text-sm font-medium text-[#2d2d2d]">Delivery shape</p>
           <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
             <span className="font-medium text-[#121212]">Org-wide</span> goes to everyone (no team filter).{' '}
             <span className="font-medium text-[#121212]">Specific</span> targets one or more departments; if the lead
@@ -816,7 +935,7 @@ export function BroadcastComposer({
       ) : null}
 
       {draftOnly ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 rounded-lg border border-[#e3e2df] bg-white/80 p-4 sm:p-5">
           <div>
             <label className="mb-1 block text-sm font-medium text-[#121212]">Department</label>
             <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
@@ -873,7 +992,7 @@ export function BroadcastComposer({
           </div>
         </div>
       ) : !isOrgWideActive ? (
-        <div>
+        <div className="rounded-lg border border-[#e3e2df] bg-white/60 p-3 sm:p-4">
           <label className="mb-1 block text-sm font-medium text-[#121212]">Departments</label>
           <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">
             Select one or more. Order in this list determines the <span className="font-medium text-[#121212]">lead</span>{' '}
@@ -902,24 +1021,44 @@ export function BroadcastComposer({
               </label>
             ))}
           </div>
-          {autoChannelId ? (
-            <p className="mt-2 text-[12px] leading-snug text-[#6b6b6b]">
-              Delivery uses the first broadcast channel for the lead department. Manage channels under{' '}
+          <div className="mt-5 border-t border-[#ebe8e4] pt-4">
+            <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+              <label className="block text-sm font-medium text-[#121212]" htmlFor="compose-publish-channel">
+                {composeChannelLabel}{' '}
+                <span className="font-normal text-[#6b6b6b]">(lead department)</span>
+              </label>
               <Link
                 href="/settings"
-                className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+                className="text-[12px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
               >
-                Settings
+                {composeManageChannelsInSettings}
               </Link>
-              .
-            </p>
-          ) : (
-            <p className="mt-2 text-[12px] leading-snug text-amber-900">
-              {composeNoChannelsHint(
-                departments.find((d) => d.id === displayDeptId)?.name ?? 'the lead department'
-              )}
-            </p>
-          )}
+            </div>
+            <p className="mb-2 text-[12px] leading-snug text-[#6b6b6b]">{composeChannelExplainer}</p>
+            <SelectWithChevron
+              id="compose-publish-channel"
+              value={displayCatId}
+              onChange={(e) => setCatId(e.target.value)}
+              disabled={!cats.length}
+              aria-describedby={!cats.length ? 'compose-publish-channel-hint' : undefined}
+            >
+              {!cats.length ? (
+                <option value="">No channels for the lead department</option>
+              ) : null}
+              {cats.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </SelectWithChevron>
+            {!cats.length ? (
+              <p id="compose-publish-channel-hint" className="mt-1.5 text-[12px] leading-snug text-amber-900">
+                {composeNoChannelsHint(
+                  departments.find((d) => d.id === displayDeptId)?.name ?? 'the lead department'
+                )}
+              </p>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -947,9 +1086,69 @@ export function BroadcastComposer({
         </div>
       ) : null}
 
+          <div>
+            <h3 className="mb-4 text-[14px] font-semibold text-[#2d2d2d]">Reach</h3>
+            <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:gap-x-12 sm:gap-y-6">
+              {draftOnly ? (
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e3e2df] bg-[#E8F1FA] text-[11px] font-semibold text-[#1e4d7a]">
+                    {initialsFromLabel(departments.find((d) => d.id === displayDeptId)?.name ?? '—')}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-[14px] font-medium text-[#2d2d2d]">
+                      {departments.find((d) => d.id === displayDeptId)?.name ?? 'Department'}
+                    </div>
+                    <div className="truncate text-[13px] text-[#6b6b6b]">
+                      {cats.find((c) => c.id === displayCatId)?.name ?? 'Channel'}
+                    </div>
+                    <span className="mt-0.5 text-[12px] text-[#8f8f8f]">Draft for approval</span>
+                  </div>
+                </div>
+              ) : isOrgWideActive ? (
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e3e2df] bg-[#E4F0E4] text-[11px] font-semibold text-[#2d5a2d]">
+                    {initialsFromLabel('Everyone')}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-[14px] font-medium text-[#2d2d2d]">Everyone</div>
+                    <div className="truncate text-[13px] text-[#6b6b6b]">Org-wide broadcast</div>
+                  </div>
+                </div>
+              ) : (
+                orderedSpecificDeptIds.map((id, idx) => {
+                  const name = departments.find((d) => d.id === id)?.name ?? 'Department';
+                  const chip =
+                    idx % 3 === 0
+                      ? 'bg-[#E8F1FA] text-[#1e4d7a]'
+                      : idx % 3 === 1
+                        ? 'bg-[#E4F0E4] text-[#2d5a2d]'
+                        : 'bg-[#f3e8dc] text-[#7a4d1e]';
+                  const lead = id === displayDeptId;
+                  return (
+                    <div key={id} className="flex min-w-0 items-start gap-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e3e2df] text-[11px] font-semibold ${chip}`}
+                      >
+                        {initialsFromLabel(name)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-[14px] font-medium text-[#2d2d2d]">{name}</div>
+                        <div className="truncate text-[13px] text-[#6b6b6b]">
+                          {lead
+                            ? `Channel: ${cats.find((c) => c.id === displayCatId)?.name ?? '—'}`
+                            : 'Collaborating department'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
       {!draftOnly && capsDeptId ? (
-        <div className="rounded-lg border border-[#d8d8d8] bg-white p-3">
-          <p className="text-sm font-medium text-[#121212]">Delivery options</p>
+        <div className="rounded-lg border border-[#e3e2df] bg-white/80 p-4 sm:p-5">
+          <p className="text-sm font-medium text-[#2d2d2d]">Delivery options</p>
           <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">
             {isOrgWideActive
               ? 'Org-wide posts reach all active members. Mandatory and pin follow your permissions on the department above.'
@@ -999,12 +1198,15 @@ export function BroadcastComposer({
           )}
         </div>
       ) : null}
+        </section>
 
-      <div>
+        <div className="my-10 h-px bg-[#e8e6e3]" aria-hidden />
+
+        <section className="min-w-0 space-y-5">
         <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <p className="text-sm font-medium text-[#121212]">Write</p>
-            <p className="mt-0.5 text-[12px] leading-snug text-[#6b6b6b]">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-[#8f8f8f]">Message</h2>
+            <p className="mt-1.5 text-[12px] leading-relaxed text-[#6b6b6b]">
               Edit visually like Notion — content is stored as markdown for the feed. Add images as framed blocks; uploads need a
               title and saved draft.
             </p>
@@ -1106,10 +1308,10 @@ export function BroadcastComposer({
             heading.
           </p>
         </div>
-      </div>
+        </section>
 
       {!draftOnly ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-[#d8d8d8] bg-white p-3">
+        <div className="mt-8 flex flex-col gap-2 rounded-lg border border-[#e3e2df] bg-white/80 p-4 sm:p-5">
           <label className="flex items-center gap-2 text-sm text-[#121212]">
             <input type="checkbox" checked={schedule} onChange={(e) => setSchedule(e.target.checked)} />
             Schedule send
@@ -1126,7 +1328,17 @@ export function BroadcastComposer({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-10 flex flex-wrap items-center gap-2">
+        {onClose ? (
+          <button
+            type="button"
+            disabled={saving}
+            className="rounded-lg px-3 py-2 text-[13px] font-medium text-[#6b6b6b] transition hover:bg-[#ebe8e4] hover:text-[#2d2d2d]"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={saving}
@@ -1139,7 +1351,7 @@ export function BroadcastComposer({
           <button
             type="button"
             disabled={saving}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+            className={COMPOSE_PRIMARY_CTA_CLASS}
             onClick={() => void submit('pending')}
           >
             Submit for approval
@@ -1148,22 +1360,18 @@ export function BroadcastComposer({
           <button
             type="button"
             disabled={saving}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+            className={COMPOSE_PRIMARY_CTA_CLASS}
             onClick={() => void submit('schedule')}
           >
             Schedule
           </button>
         ) : (
-          <button
-            type="button"
-            disabled={saving}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-            onClick={() => void submit('send')}
-          >
+          <SendButton disabled={saving} onClick={() => void submit('send')}>
             Send now
-          </button>
+          </SendButton>
         )}
       </div>
+      </article>
     </div>
   );
 }

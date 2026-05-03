@@ -40,7 +40,6 @@ export default async function AdminSystemOverviewPage() {
       k.startsWith('departments.') ||
       k.startsWith('teams.') ||
       k.startsWith('broadcasts.') ||
-      k.startsWith('discounts.') ||
       k.startsWith('rota.') ||
       k.startsWith('recruitment.') ||
       k.startsWith('jobs.') ||
@@ -68,4 +67,3 @@ export default async function AdminSystemOverviewPage() {
   warnIfSlowServerPath('/admin/system-overview', pathStartedAtMs);
   return view;
 }
-

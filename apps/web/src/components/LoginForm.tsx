@@ -93,7 +93,7 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
 
     const { data: memRows, error: memErr } = await supabase
       .from('user_org_memberships')
-      .select('org_id, status, organisations(name, slug)');
+      .select('org_id, status, organisations(name, slug, logo_url)');
 
     const { data: prof } = await supabase.from('profiles').select('org_id').eq('id', uid).maybeSingle();
 
@@ -120,11 +120,12 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
 
     const orgs: LoginOrgOption[] = activeMembershipRows
       .map((r) => {
-        const o = r.organisations as { name?: string; slug?: string } | null;
+        const o = r.organisations as { name?: string; slug?: string; logo_url?: string | null } | null;
         return {
           org_id: r.org_id as string,
           name: o?.name?.trim() || 'Organisation',
           slug: o?.slug?.trim() || '',
+          logo_url: o?.logo_url?.trim() || null,
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));

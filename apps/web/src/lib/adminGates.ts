@@ -60,7 +60,6 @@ export type ShellNavIconId =
   | 'broadcasts'
   | 'calendar'
   | 'rota'
-  | 'discount'
   | 'resources'
   | 'settings'
   | 'home'
@@ -128,7 +127,7 @@ export function getMainShellAdminNavItems(
     { href: '/admin/broadcasts', label: 'Broadcasts', icon: 'broadcasts', section: 'Content' },
     { href: '/admin/departments', label: 'Departments', icon: 'departments', section: 'Content' },
     { href: '/admin/teams', label: 'Teams', icon: 'teams', section: 'Content' },
-    { href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' },
+    { href: '/admin/categories', label: 'Broadcast channels', icon: 'categories', section: 'Content' },
     { href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' },
     { href: '/hr/hiring', label: 'Hiring', icon: 'recruitment', section: 'HR' },
     { href: '/hr/records', label: 'Employee records', icon: 'hrRecords', section: 'HR' },
@@ -137,8 +136,6 @@ export function getMainShellAdminNavItems(
     { href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'HR' },
     { href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'HR' },
     { href: '/hr/one-on-ones', label: '1:1 check-ins', icon: 'hrRecords', section: 'HR' },
-    { href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' },
-    { href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' },
     { href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' },
     { href: '/admin/notifications', label: 'Notification defaults', icon: 'notifications', section: 'Configuration' },
     { href: '/admin/integrations', label: 'Integrations', icon: 'integrations', section: 'Configuration' },
@@ -213,7 +210,6 @@ export function getMainShellAdminNavItemsByPermissions(
       k.startsWith('departments.') ||
       k.startsWith('teams.') ||
       k.startsWith('broadcasts.') ||
-      k.startsWith('discounts.') ||
       k.startsWith('rota.')
   );
   if (!canSeeAnyAdmin) return null;
@@ -228,7 +224,6 @@ export function getMainShellAdminNavItemsByPermissions(
       k.startsWith('departments.') ||
       k.startsWith('teams.') ||
       k.startsWith('broadcasts.') ||
-      k.startsWith('discounts.') ||
       k.startsWith('rota.') ||
       k.startsWith('recruitment.') ||
       k.startsWith('jobs.') ||
@@ -253,13 +248,11 @@ export function getMainShellAdminNavItemsByPermissions(
     items.push({ href: '/admin/departments', label: 'Departments', icon: 'departments', section: 'Content' });
   if (p.includes('teams.view'))
     items.push({ href: '/admin/teams', label: 'Teams', icon: 'teams', section: 'Content' });
-  items.push({ href: '/admin/categories', label: 'Categories', icon: 'categories', section: 'Content' });
+  if (p.includes('departments.view')) {
+    items.push({ href: '/admin/categories', label: 'Broadcast channels', icon: 'categories', section: 'Content' });
+  }
   if (p.includes('rota.view') || p.includes('rota.manage'))
     items.push({ href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' });
-  if (p.includes('discounts.view'))
-    items.push({ href: '/admin/discount', label: 'Discount rules', icon: 'discount', section: 'Operations' });
-  if (p.includes('members.view'))
-    items.push({ href: '/admin/scan-logs', label: 'Activity log', icon: 'activity', section: 'Operations' });
   items.push({ href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' });
   if (
     p.includes('privacy.retention_policy.view') ||

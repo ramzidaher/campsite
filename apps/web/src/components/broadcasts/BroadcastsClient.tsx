@@ -151,7 +151,7 @@ export function BroadcastsClient({
     const compose = canComposeBroadcast(profile.role);
     const approver = isBroadcastApproverRole(profile.role);
     const [{ data: deps }, { data: ud }, { data: dm }, myPendingRes, pendingQueue] = await Promise.all([
-      supabase.from('departments').select('id,org_id,name,type,is_archived').eq('org_id', profile.org_id),
+      supabase.from('departments').select('id,org_id,name,type,color_hex,is_archived').eq('org_id', profile.org_id),
       supabase.from('user_departments').select('dept_id').eq('user_id', profile.id),
       supabase.from('dept_managers').select('dept_id').eq('user_id', profile.id),
       compose
@@ -386,18 +386,20 @@ export function BroadcastsClient({
     ) : null;
 
   return (
-    <div className="w-full px-5 py-8 sm:px-7">
-      {/* Page header — match Time off / main workspace pages */}
-      <div className="mb-7">
-        <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
-          Broadcasts
-        </h1>
-        <p className="mt-1 text-[13.5px] leading-relaxed text-[#6b6b6b]">
-          {draftOnlyRole
-            ? 'Feed, drafts, and submit messages for approval.'
-            : 'Org-wide messages, your drafts, and approval queue.'}
-        </p>
-      </div>
+    <div className={composeOpen && composeAllowed ? 'w-full' : 'w-full px-5 py-8 sm:px-7'}>
+      {/* Page header — hidden in compose so the journal-style composer owns the canvas */}
+      {!(composeOpen && composeAllowed) ? (
+        <div className="mb-7">
+          <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
+            Broadcasts
+          </h1>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-[#6b6b6b]">
+            {draftOnlyRole
+              ? 'Feed, drafts, and submit messages for approval.'
+              : 'Org-wide messages, your drafts, and approval queue.'}
+          </p>
+        </div>
+      ) : null}
 
       {approvalToast ? (
         <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border border-white/15 bg-[#121212] px-4 py-3 text-[13px] leading-snug text-[#faf9f6] shadow-lg">
@@ -556,26 +558,26 @@ export function BroadcastsClient({
       ) : null}
 
       {composeOpen && composeAllowed ? (
-        <div className="space-y-4">
-          <BroadcastComposer
-            supabase={supabase}
-            orgId={profile.org_id}
-            userId={profile.id}
-            canCompose={composeAllowed}
-            draftOnly={draftOnlyRole}
-            canPublishWithoutApproval={composeAllowed && !draftOnlyRole}
-            departments={scopedDepts}
-            categoriesByDept={categoriesByDept}
-            viewerDeptIds={viewerDeptIds}
-            onCreated={(outcome) => {
-              void loadMeta();
-              closeCompose();
-              if (outcome === 'submitted_for_approval') goWorkspace('submitted');
-              else if (outcome === 'draft_saved') goWorkspace('drafts');
-              else goWorkspace('feed');
-            }}
-          />
-        </div>
+        <BroadcastComposer
+          supabase={supabase}
+          orgId={profile.org_id}
+          userId={profile.id}
+          canCompose={composeAllowed}
+          draftOnly={draftOnlyRole}
+          canPublishWithoutApproval={composeAllowed && !draftOnlyRole}
+          departments={scopedDepts}
+          categoriesByDept={categoriesByDept}
+          viewerDeptIds={viewerDeptIds}
+          viewerDisplayName={profile.full_name}
+          onClose={closeCompose}
+          onCreated={(outcome) => {
+            void loadMeta();
+            closeCompose();
+            if (outcome === 'submitted_for_approval') goWorkspace('submitted');
+            else if (outcome === 'draft_saved') goWorkspace('drafts');
+            else goWorkspace('feed');
+          }}
+        />
       ) : null}
 
       {!composeOpen && workspaceView === 'drafts' && composeAllowed ? (

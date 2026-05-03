@@ -62,9 +62,13 @@ export function AdminCategoriesClient({
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
       <div className="mb-6">
-        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Categories</h1>
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+          Broadcast channels
+        </h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Broadcast categories are scoped per department. They appear when composing broadcasts and in{' '}
+          URL <span className="font-mono text-[12px] text-[#6b6b6b]">/admin/categories</span> is legacy; these rows
+          are <span className="font-medium text-[#121212]">broadcast_channels</span> in the database. Channels are
+          scoped per department, appear when composing broadcasts, and in{' '}
           <Link href="/admin/departments" className="font-medium text-[#121212] underline underline-offset-2">
             Departments
           </Link>{' '}
@@ -104,7 +108,7 @@ export function AdminCategoriesClient({
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {cats.length === 0 ? (
-                    <span className="text-[13px] text-[#9b9b9b]">No categories yet.</span>
+                    <span className="text-[13px] text-[#9b9b9b]">No channels yet.</span>
                   ) : (
                     cats.map((c) => (
                       <span

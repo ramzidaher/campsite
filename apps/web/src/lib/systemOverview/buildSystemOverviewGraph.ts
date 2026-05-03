@@ -50,7 +50,6 @@ export function buildSystemOverviewGraph(params: {
   const canHrRecords = hasAny(p, ['hr.view_records']);
   const canOnboarding = hasAny(p, ['onboarding.manage_runs', 'onboarding.manage_templates', 'onboarding.complete_own_tasks']);
   const canPerformance = hasAny(p, ['performance.view_own', 'performance.review_direct_reports', 'performance.manage_cycles', 'performance.view_reports']);
-  const canDiscounts = hasAny(p, ['discounts.view']);
   const canSettings = hasAny(p, ['roles.view', 'members.edit_status']);
 
   const nodes: SystemGraphNode[] = [];
@@ -132,9 +131,6 @@ export function buildSystemOverviewGraph(params: {
   const performanceNode = canPerformance
     ? addNode({ id: 'performance', label: 'Performance', group: 'module', tier: 'hr', href: '/performance' })
     : null;
-  const discountsNode = canDiscounts
-    ? addNode({ id: 'discounts', label: 'Discount rules', group: 'module', tier: 'ops', href: '/admin/discount' })
-    : null;
   const settingsNode = canSettings
     ? addNode({ id: 'settings', label: 'Settings', group: 'module', tier: 'config', href: '/admin/settings' })
     : null;
@@ -172,8 +168,6 @@ export function buildSystemOverviewGraph(params: {
 
   if (settingsNode && membersNode) connect(settingsNode, membersNode);
   if (settingsNode && departmentsNode) connect(settingsNode, departmentsNode);
-  if (settingsNode && discountsNode) connect(settingsNode, discountsNode);
 
   return { nodes, edges };
 }
-

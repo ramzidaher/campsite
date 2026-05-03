@@ -5,6 +5,7 @@ import { BroadcastBackdropPicker } from '@/components/broadcasts/BroadcastBackdr
 import { BroadcastDetailStyleRail } from '@/components/broadcasts/BroadcastDetailStyleRail';
 import { cssBackgroundImageUrl } from '@/lib/broadcasts/cssBackgroundImageUrl';
 import { DEFAULT_BROADCAST_BACKDROP_PATH } from '@/lib/broadcasts/defaultBroadcastBackdrop';
+import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
 import {
   broadcastDetailFollowChannelHelp,
   broadcastDetailFollowChannelTitle,
@@ -12,6 +13,7 @@ import {
   channelPillAccessibleName,
 } from '@/lib/broadcasts/channelCopy';
 import { enqueueBroadcastRead } from '@/lib/offline/broadcastReadQueue';
+import { departmentColorTagStyle } from '@/lib/departments/departmentColor';
 import { uploadBroadcastCover } from '@/lib/storage/uploadBroadcastCover';
 import { createClient } from '@/lib/supabase/client';
 import * as chrono from 'chrono-node';
@@ -51,7 +53,7 @@ type Row = {
   dept_id: string;
   channel_id: string | null;
   created_by: string;
-  departments: { name: string } | null;
+  departments: { name: string; color_hex?: string | null } | null;
   broadcast_channels: { name: string } | null;
   department_teams?: { name: string } | null;
   profiles: { full_name: string } | null;
@@ -95,14 +97,21 @@ export function BroadcastDetailView({
 
   const [feedCacheEpoch, setFeedCacheEpoch] = useState(0);
   useEffect(() => {
+    let cancelled = false;
     const unsub = queryClient.getQueryCache().subscribe((event) => {
       const q = event?.query;
       const k = q?.queryKey;
       if (Array.isArray(k) && k[0] === 'broadcast-feed' && k[1] === orgId && k[2] === userId) {
-        setFeedCacheEpoch((n) => n + 1);
+        queueMicrotask(() => {
+          if (cancelled) return;
+          setFeedCacheEpoch((n) => n + 1);
+        });
       }
     });
-    return unsub;
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [queryClient, orgId, userId]);
 
   const navigationFromFeedCache = useMemo(() => {
@@ -140,6 +149,7 @@ export function BroadcastDetailView({
   const [channelFollowBusy, setChannelFollowBusy] = useState(false);
   const [channelFollowErr, setChannelFollowErr] = useState<string | null>(null);
   const [markUnreadBusy, setMarkUnreadBusy] = useState(false);
+  const deptColorStyle = departmentColorTagStyle(initial.departments?.color_hex);
 
   const showChannelFollow =
     initial.status === 'sent' &&
@@ -557,7 +567,13 @@ export function BroadcastDetailView({
             </span>
           ) : null}
           {initial.departments?.name ? (
-            <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
+            <span
+              className={[
+                'inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium',
+                deptTagClass(initial.departments.name),
+              ].join(' ')}
+              style={deptColorStyle}
+            >
               {initial.departments.name}
             </span>
           ) : null}
