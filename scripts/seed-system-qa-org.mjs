@@ -424,6 +424,55 @@ async function maybeUpdate(table, values, column, value) {
   return true;
 }
 
+/** Departments have no unique on (org_id, name); upsert onConflict is invalid. */
+async function ensureDepartmentRow(org, department) {
+  const { data: existing, error: lookupError } = await supabase
+    .from("departments")
+    .select("*")
+    .eq("org_id", org.id)
+    .eq("name", department.name)
+    .maybeSingle();
+  if (lookupError) {
+    throw new Error(`departments: ${lookupError.message}`);
+  }
+  if (existing) {
+    if (
+      existing.description !== department.description ||
+      existing.type !== department.type ||
+      Boolean(existing.is_archived) !== Boolean(department.is_archived ?? false)
+    ) {
+      const { data: updated, error: updateError } = await supabase
+        .from("departments")
+        .update({
+          description: department.description,
+          type: department.type,
+          is_archived: department.is_archived ?? false,
+        })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (updateError) {
+        warn(`departments update skipped (${department.name}): ${updateError.message}`);
+        return existing;
+      }
+      return updated;
+    }
+    return existing;
+  }
+  const rows = await mustInsert(
+    "departments",
+    {
+      org_id: org.id,
+      name: department.name,
+      description: department.description,
+      type: department.type,
+      is_archived: department.is_archived ?? false,
+    },
+    "*",
+  );
+  return rows[0];
+}
+
 async function findAuthUser(email) {
   const lowerEmail = email.toLowerCase();
   let page = 1;
@@ -493,7 +542,12 @@ async function ensureOrganisation() {
   if (existing) {
     if (!CONTINUE) {
       throw new Error(
-        `Organisation '${ORG_SLUG}' already exists. Re-run with --continue to add data to it.`,
+        [
+          `Organisation slug '${ORG_SLUG}' already exists (partial or full seed from an earlier run).`,
+          `To finish or re-apply seed rows into that org, run: npm run seed-system-qa:continue`,
+          `Or: npm run seed-system-qa -- --continue`,
+          `For a brand-new org instead, set CAMPSITE_SYSTEM_QA_ORG_SLUG (and optionally CAMPSITE_SYSTEM_QA_ORG_NAME) to unused values.`,
+        ].join("\n"),
       );
     }
     return existing;
@@ -518,27 +572,14 @@ async function seedOrgFoundation(org) {
 
   const deptMap = new Map();
   for (const department of departments) {
-    const row = await maybeUpsert(
-      "departments",
-      {
-        org_id: org.id,
-        name: department.name,
-        description: department.description,
-        type: department.type,
-        is_archived: department.is_archived ?? false,
-      },
-      "org_id,name",
-      "*",
-    );
-    if (row) {
-      deptMap.set(department.name, row);
-      report.departments.push({
-        id: row.id,
-        name: row.name,
-        type: row.type,
-        is_archived: row.is_archived,
-      });
-    }
+    const row = await ensureDepartmentRow(org, department);
+    deptMap.set(department.name, row);
+    report.departments.push({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      is_archived: row.is_archived,
+    });
   }
 
   const userMap = new Map();
@@ -552,7 +593,6 @@ async function seedOrgFoundation(org) {
       email: persona.email,
       role: persona.role,
       status: persona.status,
-      department_id: department.id,
       avatar_url: null,
     });
 
@@ -572,7 +612,6 @@ async function seedOrgFoundation(org) {
         email: persona.email,
         role: persona.role,
         status: persona.status,
-        department_id: department.id,
       },
       "user_id,org_id",
       "*",
@@ -583,15 +622,6 @@ async function seedOrgFoundation(org) {
       {
         user_id: auth.id,
         dept_id: department.id,
-        role:
-          persona.role === "manager" ||
-          persona.role === "org_admin" ||
-          persona.role === "duty_manager"
-            ? "manager"
-            : persona.role === "society_leader"
-              ? "society_leader"
-              : "member",
-        active: persona.status === "active",
       },
       "user_id,dept_id",
       "*",
@@ -605,11 +635,10 @@ async function seedOrgFoundation(org) {
       await maybeUpsert(
         "dept_managers",
         {
-          dept_id: department.id,
           user_id: auth.id,
-          role: persona.role === "org_admin" ? "owner" : "manager",
+          dept_id: department.id,
         },
-        "dept_id,user_id",
+        "user_id,dept_id",
         "*",
       );
     }
@@ -3122,6 +3151,9 @@ function printPlan() {
   );
   log(
     "Profiles are made active in this org by default so login lands in the QA data. Set CAMPSITE_SYSTEM_QA_ACTIVATE_PROFILES=0 to only add memberships.",
+  );
+  log(
+    `If this org slug already exists: npm run seed-system-qa:continue  (or pass --continue). Or set CAMPSITE_SYSTEM_QA_ORG_SLUG to seed a different org.`,
   );
 }
 

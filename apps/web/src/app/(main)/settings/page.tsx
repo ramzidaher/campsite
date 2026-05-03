@@ -1,14 +1,26 @@
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { getCelebrationModeOptions, type OrgCelebrationModeOverride } from '@/lib/holidayThemes';
+import { getCachedSettingsPageData } from '@/lib/settings/getCachedSettingsPageData';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
+const EMPTY_INTEGRATION_CONNECTIONS = {
+  googleCalendar: { connected: false, accountEmail: null, expiresAt: null },
+  googleSheets: { connected: false, accountEmail: null, expiresAt: null },
+  outlookCalendar: { connected: false, accountEmail: null, expiresAt: null },
+} as const;
+
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ google_connected?: string; google_error?: string }>;
+  searchParams: Promise<{
+    google_connected?: string;
+    google_error?: string;
+    outlook_connected?: string;
+    outlook_error?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const googleFlash =
@@ -19,6 +31,14 @@ export default async function SettingsPage({
         : null;
   const googleFlashTone =
     sp.google_connected === '1' ? ('success' as const) : sp.google_error ? ('error' as const) : null;
+  const outlookFlash =
+    sp.outlook_connected === '1'
+      ? 'Outlook account connected.'
+      : sp.outlook_error
+        ? `Outlook: ${sp.outlook_error}`
+        : null;
+  const outlookFlashTone =
+    sp.outlook_connected === '1' ? ('success' as const) : sp.outlook_error ? ('error' as const) : null;
   const supabase = await createClient();
   const user = await getAuthUser();
   if (!user) {
@@ -86,6 +106,10 @@ export default async function SettingsPage({
     orgCelebrationOverrides = (celebrationRows ?? []) as OrgCelebrationModeOverride[];
   }
 
+  const settingsCache = await getCachedSettingsPageData();
+  const initialIntegrationConnections =
+    settingsCache?.integrationConnections ?? EMPTY_INTEGRATION_CONNECTIONS;
+
   return (
     <div className="mx-auto max-w-4xl px-5 pb-10 pt-6 sm:px-[28px]">
       <header className="mb-7 campsite-stack-sm">
@@ -95,9 +119,12 @@ export default async function SettingsPage({
       <ProfileSettings
         googleFlash={googleFlash}
         googleFlashTone={googleFlashTone}
+        outlookFlash={outlookFlash}
+        outlookFlashTone={outlookFlashTone}
         tenantOrgs={tenantOrgs}
         currentOrgId={profile?.org_id ?? null}
         initial={initialProfile}
+        initialIntegrationConnections={initialIntegrationConnections}
         initialBroadcastChannels={[]}
         celebrationModeOptions={getCelebrationModeOptions(orgCelebrationOverrides)}
         orgCelebrationOverrides={orgCelebrationOverrides}

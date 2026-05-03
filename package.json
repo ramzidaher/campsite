@@ -11,6 +11,7 @@
     "seed-demo-org": "node scripts/seed-demo-org.mjs",
     "seed-qa-full": "node scripts/seed-qa-full.mjs",
     "seed-system-qa": "node scripts/seed-system-qa-org.mjs",
+    "seed-system-qa:continue": "node scripts/seed-system-qa-org.mjs --continue",
     "qa:login-csv": "node scripts/generate-qa-login-csv.mjs",
     "generate:test-checklist": "node scripts/generate-full-app-test-checklist.mjs",
     "routes:audit": "node scripts/route-inventory-and-probe.mjs --mode all",
