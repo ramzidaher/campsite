@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -995,14 +996,14 @@ export function FinanceHubClient({
               onChange={(e) => setPayElementInput((prev) => ({ ...prev, emoji: e.target.value }))}
               className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
             />
-            <select
+            <FormSelect
               value={payElementInput.type}
               onChange={(e) => setPayElementInput((prev) => ({ ...prev, type: e.target.value as 'hourly' | 'fixed' }))}
               className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
             >
               <option value="hourly">Hourly</option>
               <option value="fixed">Fixed</option>
-            </select>
+            </FormSelect>
             <input
               type="number"
               step="0.01"
@@ -1017,7 +1018,7 @@ export function FinanceHubClient({
               onChange={(e) => setPayElementInput((prev) => ({ ...prev, effectiveFrom: e.target.value }))}
               className="rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
             />
-            <select
+            <FormSelect
               value={payElementInput.appliesToRole}
               onChange={(e) => setPayElementInput((prev) => ({ ...prev, appliesToRole: e.target.value as 'all' | 'csa' | 'dm' | 'custom' }))}
               className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
@@ -1026,7 +1027,7 @@ export function FinanceHubClient({
               <option value="csa">CSA</option>
               <option value="dm">DM</option>
               <option value="custom">Custom skill</option>
-            </select>
+            </FormSelect>
             <button type="button" onClick={() => void savePayElement()} className="rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white">
               Add pay element
             </button>
@@ -1077,14 +1078,14 @@ export function FinanceHubClient({
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <label className="text-[12px] font-semibold text-[#6b6b6b]">
                   Employee
-                  <select value={adjustUserId} onChange={(e) => setAdjustUserId(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] bg-white px-3 py-2 text-[14px]">
+                  <FormSelect value={adjustUserId} onChange={(e) => setAdjustUserId(e.target.value)} className="mt-1 w-full rounded-xl border border-[#d8d8d8] bg-white px-3 py-2 text-[14px]">
                     <option value="">Select</option>
                     {people.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.full_name ?? p.id}
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </label>
                 <label className="text-[12px] font-semibold text-[#6b6b6b]">
                   Week start
@@ -1127,14 +1128,14 @@ export function FinanceHubClient({
                         <p className="mt-1 text-[11px] uppercase tracking-wide text-[#9b9b9b]">{r.reviewStatus.replace('_', ' ')}</p>
                       </div>
                       {canManage ? (
-                        <select
+                        <FormSelect
                           value={role}
                           onChange={(e) => void setPayRole(r.userId, e.target.value as 'csa' | 'dm')}
                           className="rounded border border-[#d8d8d8] bg-white px-2 py-1 text-[12px]"
                         >
                           <option value="csa">CSA</option>
                           <option value="dm">DM</option>
-                        </select>
+                        </FormSelect>
                       ) : (
                         <span className="rounded-full bg-[#f4f4f4] px-2 py-1 text-[11px] uppercase tracking-wide text-[#6b6b6b]">{role}</span>
                       )}
@@ -1242,14 +1243,14 @@ export function FinanceHubClient({
                       <td className="px-3 py-2 capitalize">{r.payFrequency.replace('_', ' ')}</td>
                       <td className="px-3 py-2">
                         {canManage ? (
-                          <select
+                          <FormSelect
                             value={role}
                             onChange={(e) => void setPayRole(r.userId, e.target.value as 'csa' | 'dm')}
                             className="rounded border border-[#d8d8d8] bg-white px-2 py-1 text-[12px]"
                           >
                             <option value="csa">CSA</option>
                             <option value="dm">DM</option>
-                          </select>
+                          </FormSelect>
                         ) : (
                           <span className="uppercase">{role}</span>
                         )}

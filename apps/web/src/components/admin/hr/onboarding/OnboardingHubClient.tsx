@@ -1,5 +1,6 @@
 'use client';
 
+import { campusSurface, FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -364,7 +365,7 @@ export function OnboardingHubClient({
           <form className="mt-4 grid gap-4 sm:grid-cols-3" onSubmit={(e) => void startRun(e)}>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Employee
-              <select
+              <FormSelect
                 className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
                 value={startUserId}
                 onChange={(e) => setStartUserId(e.target.value)}
@@ -373,11 +374,11 @@ export function OnboardingHubClient({
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>{m.display_name}</option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Template
-              <select
+              <FormSelect
                 className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
                 value={startTemplateId}
                 onChange={(e) => setStartTemplateId(e.target.value)}
@@ -388,7 +389,7 @@ export function OnboardingHubClient({
                     {t.name}{t.is_default ? ' (default)' : ''}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Employment start date
@@ -516,7 +517,10 @@ export function OnboardingHubClient({
               <ul className="space-y-2">
                 {activeRuns.map((r) => (
                   <li key={r.id}>
-                    <Link href={`/hr/onboarding/${r.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 hover:bg-[#faf9f6] transition-colors">
+                    <Link
+                      href={`/hr/onboarding/${r.id}`}
+                      className={`flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 ${campusSurface.interactiveSheetRow}`}
+                    >
                       <div>
                         <p className="font-medium text-[#121212]">{r.display_name}</p>
                         <p className="text-[12px] text-[#9b9b9b]">
@@ -613,21 +617,21 @@ export function OnboardingHubClient({
                 </label>
                 <label className="block text-[12px] font-medium text-[#6b6b6b]">
                   Category
-                  <select value={taskCategory} onChange={(e) => setTaskCategory(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none">
+                  <FormSelect value={taskCategory} onChange={(e) => setTaskCategory(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none">
                     <option value="documents">Documents</option>
                     <option value="it_setup">IT setup</option>
                     <option value="introductions">Introductions</option>
                     <option value="compliance">Compliance</option>
                     <option value="other">Other</option>
-                  </select>
+                  </FormSelect>
                 </label>
                 <label className="block text-[12px] font-medium text-[#6b6b6b]">
                   Assignee
-                  <select value={taskAssignee} onChange={(e) => setTaskAssignee(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none">
+                  <FormSelect value={taskAssignee} onChange={(e) => setTaskAssignee(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none">
                     <option value="employee">Employee</option>
                     <option value="manager">Manager</option>
                     <option value="hr">HR</option>
-                  </select>
+                  </FormSelect>
                 </label>
                 <label className="block text-[12px] font-medium text-[#6b6b6b]">
                   Due offset days

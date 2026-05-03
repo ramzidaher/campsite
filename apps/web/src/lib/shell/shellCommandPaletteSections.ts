@@ -77,7 +77,6 @@ export function buildShellCommandPaletteSections(opts: {
     { id: 'nav-broadcasts', label: 'Broadcasts', href: '/broadcasts', keywords: ['news', 'updates', 'messages'] },
     { id: 'nav-calendar', label: 'Calendar', href: '/calendar', keywords: ['events', 'schedule'] },
     { id: 'nav-rota', label: 'Rota', href: '/rota', keywords: ['schedule', 'shifts', 'swaps'] },
-    { id: 'nav-discount', label: 'Discount Card', href: '/discount', keywords: ['perks', 'benefits'] },
   );
   if (opts.showLeaveNav) {
     main.push({ id: 'nav-leave', label: 'Leave', href: '/leave', keywords: ['time off', 'pto', 'holiday', 'absence'] });

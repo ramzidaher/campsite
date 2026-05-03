@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import {
   archiveJobListing,
   publishJobListing,
@@ -468,7 +469,7 @@ export function AdminJobEditClient({
             <label className={labelClass} htmlFor="contract">
               Contract type
             </label>
-            <select
+            <FormSelect
               id="contract"
               className={fieldClass}
               value={contractType}
@@ -480,7 +481,7 @@ export function AdminJobEditClient({
                   {recruitmentContractLabel(c)}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </div>
           <div>
             <label className={labelClass} htmlFor="role_profile_link">
@@ -637,7 +638,7 @@ export function AdminJobEditClient({
                 Application form for this advert
               </label>
               <div className="flex flex-wrap items-center gap-2">
-                <select
+                <FormSelect
                   id="application_form"
                   className={fieldClass}
                   value={applicationQuestionSetId}
@@ -649,7 +650,7 @@ export function AdminJobEditClient({
                       {String(form.name ?? '').trim() || 'Untitled form'}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
             </div>
           ) : null}

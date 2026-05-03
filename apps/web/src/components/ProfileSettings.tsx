@@ -1,6 +1,7 @@
 'use client';
 
 import { accentPresets, type AccentPreset } from '@campsite/theme';
+import { FormSelect } from '@campsite/ui/web';
 import {
   settingsBroadcastChannelsHelp,
   settingsBroadcastChannelsTitle,
@@ -10,17 +11,21 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import type { LoginOrgOption } from '@/components/auth/LoginOrgChoiceModal';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
+import { emitGlobalActionFeedback } from '@/lib/ui/globalActionFeedback';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowUpRight, Camera, CheckCircle2, Mail } from 'lucide-react';
+import { ArrowUpRight, Camera, CheckCircle2, ChevronDown, Mail } from 'lucide-react';
 import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
 import { useCampfireAmbientPreferences } from '@/lib/sound/useCampfireAmbientPreferences';
 import { useUiSound, useUiSoundPreferences } from '@/lib/sound/useUiSound';
 import { uploadUserAvatar } from '@/lib/storage/uploadUserAvatar';
 import {
   CELEBRATION_MODE_OPTIONS,
+  getAutoCelebrationMode,
+  getCelebrationModeDef,
   normalizeCelebrationMode,
   type CelebrationModeCategory,
   type CelebrationMode,
+  type OrgCelebrationModeOverride,
 } from '@/lib/holidayThemes';
 import { normalizeUiMode, type UiMode } from '@/lib/uiMode';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
@@ -171,9 +176,9 @@ function OutlookLogo({ className = 'h-7 w-7' }: { className?: string }) {
 
 function IntegrationStatusPill({ connected }: { connected: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-[#d8d8d8] bg-[#fafaf9] px-2.5 py-1 text-[11px] font-semibold text-[#121212]">
+    <span className="inline-flex items-center gap-2 rounded-full border border-campsite-border bg-campsite-bg px-2.5 py-1 text-[11px] font-semibold text-campsite-text">
       <span
-        className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-[#15803d]' : 'bg-[#b7b7b1]'}`}
+        className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-campsite-success' : 'bg-[#b7b7b1]'}`}
         aria-hidden
       />
       {connected ? 'Connected' : 'Not connected'}
@@ -222,18 +227,20 @@ function getPasswordStrength(pwd: string): PasswordStrength {
   return { score: s, label: labels[s]!, color: colors[s]!, width: widths[s]! };
 }
 
-const fieldLabel = 'block text-[13px] font-medium text-[#121212]';
+const fieldLabel = 'block text-[13px] font-medium text-campsite-text';
 const inputClass =
-  'mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] shadow-sm outline-none transition placeholder:text-[#9b9b9b] focus:border-[#121212] focus:ring-1 focus:ring-[#121212]';
-const selectClass = inputClass;
-const sectionTitle = 'mb-1 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]';
-const sectionDesc = 'mb-5 text-[13px] text-[#6b6b6b]';
+  'mt-1.5 w-full rounded-lg border border-campsite-border bg-campsite-bg px-3 py-2.5 text-[13px] text-campsite-text shadow-sm outline-none transition placeholder:text-campsite-text-muted focus:border-campsite-text focus:ring-1 focus:ring-campsite-text';
+const formSelectProfileClass = 'shadow-sm focus:border-campsite-text focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
+const sectionTitle = 'mb-1 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-campsite-text-muted';
+const sectionDesc = 'mb-5 text-[13px] text-campsite-text-secondary';
 const btnPrimary =
-  'inline-flex items-center justify-center rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-[#faf9f6] transition hover:bg-[#2a2a2a] disabled:pointer-events-none disabled:opacity-45';
+  'inline-flex items-center justify-center rounded-lg bg-campsite-text px-4 py-2.5 text-[13px] font-medium text-campsite-bg transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-45';
 const btnSecondary =
-  'inline-flex items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#121212] transition hover:bg-[#f5f4f1] disabled:pointer-events-none disabled:opacity-45';
+  'inline-flex items-center justify-center rounded-lg border border-campsite-border bg-campsite-elevated px-4 py-2.5 text-[13px] font-medium text-campsite-text transition hover:bg-campsite-surface disabled:pointer-events-none disabled:opacity-45';
 const btnDanger =
-  'inline-flex items-center justify-center rounded-lg border border-[#b91c1c]/35 bg-[#b91c1c] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[#7f1d1d] disabled:pointer-events-none disabled:opacity-45';
+  'inline-flex items-center justify-center rounded-lg border border-campsite-warning/35 bg-campsite-warning px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-45';
+const soundVolumeRangeClass =
+  'mt-2 h-2 w-full cursor-pointer appearance-none rounded-full bg-[#d8d8d8] accent-campsite-text disabled:opacity-50 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-campsite-border [&::-moz-range-thumb]:bg-campsite-elevated [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-[#d8d8d8] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-campsite-border [&::-webkit-slider-thumb]:bg-campsite-elevated [&::-webkit-slider-thumb]:shadow-sm';
 const SHELL_MODE_STORAGE_KEY = 'campsite_shell_mode';
 const SHELL_MODE_AUTO_STORAGE_KEY = 'campsite_shell_mode_auto_enabled';
 const LEGACY_PRIDE_MODE_STORAGE_KEY = 'campsite_pride_mode';
@@ -392,6 +399,7 @@ export function ProfileSettings({
   initialBroadcastChannels = [],
   canManageDiscounts = false,
   celebrationModeOptions = CELEBRATION_MODE_OPTIONS,
+  orgCelebrationOverrides = [],
 }: {
   initial: Profile | null;
   googleFlash?: string | null;
@@ -408,6 +416,7 @@ export function ProfileSettings({
     label: string;
     category: CelebrationModeCategory;
   }>;
+  orgCelebrationOverrides?: OrgCelebrationModeOverride[];
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
@@ -425,7 +434,6 @@ export function ProfileSettings({
   const [showPronouns, setShowPronouns] = useState(initial?.show_pronouns ?? false);
   const [avatarUrl, setAvatarUrl] = useState(initial?.avatar_url ?? '');
   const [accent, setAccent] = useState<string>(initial?.accent_preset ?? 'midnight');
-  const [scheme, setScheme] = useState<string>(initial?.color_scheme ?? 'system');
   const [dnd, setDnd] = useState(initial?.dnd_enabled ?? false);
   const [dndStart, setDndStart] = useState(initial?.dnd_start ?? '22:00');
   const [dndEnd, setDndEnd] = useState(initial?.dnd_end ?? '07:00');
@@ -448,12 +456,6 @@ export function ProfileSettings({
   const passwordValid =
     password.length >= 8 && password === confirmPassword && confirmPassword !== '';
 
-  const [msg, setMsg] = useState<string | null>(googleFlash ?? null);
-  const [msgTone, setMsgTone] = useState<'success' | 'error' | 'neutral'>(() => {
-    if (googleFlashTone === 'success') return 'success';
-    if (googleFlashTone === 'error') return 'error';
-    return 'neutral';
-  });
   const [loading, setLoading] = useState(false);
   const [shellMode, setShellMode] = useState<CelebrationMode>(
     normalizeCelebrationMode(initial?.celebration_mode)
@@ -467,6 +469,7 @@ export function ProfileSettings({
   const [avatarStyle, setAvatarStyle] = useState<AvatarStyle>('initials');
   const [avatarVariantQuery, setAvatarVariantQuery] = useState('');
   const [avatarSource, setAvatarSource] = useState<AvatarSource>('upload');
+  const [profileImageExpanded, setProfileImageExpanded] = useState(false);
   const avatarUploadRef = useRef<HTMLInputElement | null>(null);
   const [channelPrefs, setChannelPrefs] =
     useState<BroadcastChannelPref[]>(initialBroadcastChannels);
@@ -574,11 +577,13 @@ export function ProfileSettings({
   useEffect(() => {
     const flash = outlookFlash ?? googleFlash ?? null;
     const tone = outlookFlash != null ? outlookFlashTone : googleFlashTone;
-    setMsg(flash);
-    if (tone === 'success') setMsgTone('success');
-    else if (tone === 'error') setMsgTone('error');
-    else if (flash != null) setMsgTone('neutral');
-    if (flash != null) setActiveTab('integrations');
+    if (flash != null) {
+      emitGlobalActionFeedback({
+        tone: tone === 'error' ? 'err' : 'ok',
+        message: flash,
+      });
+      setActiveTab('integrations');
+    }
   }, [googleFlash, googleFlashTone, outlookFlash, outlookFlashTone]);
 
   useEffect(() => {
@@ -589,15 +594,16 @@ export function ProfileSettings({
 
   const navigate = useCallback((tab: Tab) => {
     setActiveTab(tab);
-    setMsg(null);
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', `#${tab}`);
     }
   }, []);
 
   function setFeedback(text: string, tone: 'success' | 'error' | 'neutral') {
-    setMsg(text);
-    setMsgTone(tone);
+    emitGlobalActionFeedback({
+      tone: tone === 'error' ? 'err' : 'ok',
+      message: text,
+    });
   }
 
   function setShellModePref(mode: CelebrationMode) {
@@ -661,6 +667,30 @@ export function ProfileSettings({
       };
     });
   }, [avatarStyle, dicebearSeed]);
+
+  const profileImageSummary = useMemo(() => {
+    if (avatarSource === 'avatar' && avatarStyle !== 'initials') {
+      const label =
+        avatarStyleOptions.find((s) => s.id === avatarStyle)?.label ?? 'Avatar';
+      return `Avatar · ${label}`;
+    }
+    if (safeAvatar) {
+      return 'Uploaded photo';
+    }
+    return 'Default initials';
+  }, [avatarSource, avatarStyle, safeAvatar, avatarStyleOptions]);
+
+  const effectiveCelebrationMode = useMemo(() => {
+    if (shellMode !== 'off') return shellMode;
+    if (shellModeAutoEnabled)
+      return getAutoCelebrationMode(new Date(), orgCelebrationOverrides);
+    return 'off' as CelebrationMode;
+  }, [shellMode, shellModeAutoEnabled, orgCelebrationOverrides]);
+
+  const effectiveCelebrationLabel = useMemo(
+    () => getCelebrationModeDef(effectiveCelebrationMode, orgCelebrationOverrides).label,
+    [effectiveCelebrationMode, orgCelebrationOverrides]
+  );
 
   const channelsByDept = useMemo(() => {
     const m = new Map<string, BroadcastChannelPref[]>();
@@ -821,7 +851,6 @@ export function ProfileSettings({
 
   async function uploadAvatarFile(file: File) {
     setLoading(true);
-    setMsg(null);
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) {
@@ -872,7 +901,6 @@ export function ProfileSettings({
 
   async function saveProfile() {
     setLoading(true);
-    setMsg(null);
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
@@ -885,7 +913,7 @@ export function ProfileSettings({
         show_pronouns: showPronouns,
         avatar_url: avatarUrl || null,
         accent_preset: accent,
-        color_scheme: scheme,
+        color_scheme: 'light',
         celebration_mode: shellMode,
         celebration_auto_enabled: shellModeAutoEnabled,
         ui_mode: uiMode,
@@ -930,13 +958,17 @@ export function ProfileSettings({
 
   async function switchTenant(orgId: string) {
     setTenantSwitching(orgId);
-    setMsg(null);
     const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
     const { error } = await supabase.rpc('set_my_active_org', { p_org_id: orgId });
     setTenantSwitching(null);
     if (error) {
       setFeedback(error.message, 'error');
       return;
+    }
+    if (userId) {
+      await invalidateOwnProfileCaches(userId).catch(() => null);
     }
     const selectedOrg = tenantOrgs?.find((o) => o.org_id === orgId);
     const selectedSlug = selectedOrg?.slug?.trim();
@@ -946,7 +978,7 @@ export function ProfileSettings({
       const refreshToken = data.session?.refresh_token;
       const orgOrigin = tenantSubdomainOriginForHost(selectedSlug, window.location.host);
       const callbackUrl = new URL('/auth/callback', orgOrigin);
-      callbackUrl.searchParams.set('next', '/settings#account');
+      callbackUrl.searchParams.set('next', '/dashboard');
       if (accessToken && refreshToken) {
         callbackUrl.hash = new URLSearchParams({
           access_token: accessToken,
@@ -959,6 +991,7 @@ export function ProfileSettings({
     }
     setFeedback('Switched workspace.', 'success');
     router.refresh();
+    router.replace('/dashboard');
   }
 
   async function deactivate() {
@@ -981,17 +1014,10 @@ export function ProfileSettings({
     router.replace('/login');
   }
 
-  const flashClass =
-    msgTone === 'success'
-      ? 'status-banner-success'
-      : msgTone === 'error'
-        ? 'status-banner-error'
-        : 'status-banner-warning';
-
   if (!profile) {
     return (
-      <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
-        <p className="text-[13px] text-[#6b6b6b]">Loading profile...</p>
+      <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5">
+        <p className="text-[13px] text-campsite-text-secondary">Loading profile...</p>
       </div>
     );
   }
@@ -1010,8 +1036,8 @@ export function ProfileSettings({
               aria-pressed={activeTab === t.id}
               className={`shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition ${
                 activeTab === t.id
-                  ? 'bg-[#121212] text-white'
-                  : 'bg-[#f5f4f1] text-[#6b6b6b] hover:bg-[#ece9e4] hover:text-[#121212]'
+                  ? 'bg-campsite-text text-white'
+                  : 'bg-campsite-surface text-campsite-text-secondary hover:bg-campsite-surface-2 hover:text-campsite-text'
               }`}
             >
               {t.label}
@@ -1028,8 +1054,8 @@ export function ProfileSettings({
                 aria-current={activeTab === t.id ? 'page' : undefined}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition ${
                   activeTab === t.id
-                    ? 'bg-[#121212] text-white'
-                    : 'text-[#6b6b6b] hover:bg-[#f5f4f1] hover:text-[#121212]'
+                    ? 'bg-campsite-text text-white'
+                    : 'text-campsite-text-secondary hover:bg-campsite-surface hover:text-campsite-text'
                 }`}
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 fill-current" aria-hidden>
@@ -1044,25 +1070,16 @@ export function ProfileSettings({
 
       {/* Main content */}
       <div className="min-w-0 flex-1">
-        {msg ? (
-          <div
-            role="status"
-            className={`mb-4 rounded-xl border px-4 py-3 text-[13px] ${flashClass}`}
-          >
-            {msg}
-          </div>
-        ) : null}
-
         {/* Profile tab */}
         {activeTab === 'profile' && (
-          <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+          <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
             <h2 className={sectionTitle}>Profile</h2>
             <p className={sectionDesc}>
               Your public name, avatar, and role within the organisation.
             </p>
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
               <div className="flex shrink-0 justify-center sm:justify-start">
-                <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#d8d8d8] bg-[#faf9f6] text-[22px] font-semibold text-[#6b6b6b] shadow-sm">
+                <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-campsite-border bg-campsite-bg text-[22px] font-semibold text-campsite-text-secondary shadow-sm">
                   {safeAvatar && !avatarPreviewFailed ? (
                     <img
                       src={safeAvatar}
@@ -1082,7 +1099,7 @@ export function ProfileSettings({
                   ) : (
                     <span aria-hidden>{initials(fullName || 'Member')}</span>
                   )}
-                  <div className="absolute right-1.5 bottom-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d8d8d8] bg-white text-[#121212] shadow-sm">
+                  <div className="absolute right-1.5 bottom-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full border border-campsite-border bg-campsite-elevated text-campsite-text shadow-sm">
                     <Camera className="h-3.5 w-3.5" aria-hidden />
                   </div>
                 </div>
@@ -1118,14 +1135,14 @@ export function ProfileSettings({
                     maxLength={80}
                   />
                 </label>
-                <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5">
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-campsite-border bg-campsite-bg px-3 py-2.5">
                   <input
                     type="checkbox"
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                     checked={showPronouns}
                     onChange={(e) => setShowPronouns(e.target.checked)}
                   />
-                  <span className="text-[12.5px] leading-snug text-[#6b6b6b]">
+                  <span className="text-[12.5px] leading-snug text-campsite-text-secondary">
                     Display my pronouns on my profile
                   </span>
                 </label>
@@ -1140,113 +1157,139 @@ export function ProfileSettings({
                     if (file) void uploadAvatarFile(file);
                   }}
                 />
-                <div className="overflow-hidden rounded-3xl border border-[#d8d8d8] bg-gradient-to-b from-[#fcfbf8] to-white p-4 shadow-sm">
-                  <div>
-                    <p className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">
-                      Profile image
-                    </p>
-                    <p className="mt-1 text-[13px] text-[#6b6b6b]">
-                      Keep it simple: upload your own photo or pick an avatar family and choose a
-                      variation.
-                    </p>
-                  </div>
-
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      className={avatarSource === 'upload' ? btnPrimary : btnSecondary}
-                      onClick={() => {
-                        setAvatarSource('upload');
-                        avatarUploadRef.current?.click();
-                      }}
-                    >
-                      Upload
-                    </button>
-                    <button
-                      type="button"
-                      className={avatarSource === 'avatar' ? btnPrimary : btnSecondary}
-                      onClick={() => {
-                        setAvatarSource('avatar');
-                        if (avatarStyle === 'initials') {
-                          selectAvatarFamily(avatarStyleOptions[0]?.id ?? 'big-ears');
-                        }
-                      }}
-                    >
-                      Avatar
-                    </button>
-                  </div>
-
-                  {avatarSource === 'avatar' ? (
-                    <div className="mt-4 space-y-4">
-                      <label className={fieldLabel}>
-                        Avatar family
-                        <select
-                          className={selectClass}
-                          value={
-                            avatarStyle === 'initials'
-                              ? (avatarStyleOptions[0]?.id ?? 'big-ears')
-                              : avatarStyle
-                          }
-                          onChange={(e) => selectAvatarFamily(e.target.value as AvatarStyle)}
-                        >
-                          {avatarStyleOptions.map((style) => (
-                            <option key={style.id} value={style.id}>
-                              {style.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        {avatarVariantChoices.map((variant) => {
-                          const isSelected =
-                            avatarStyle === 'rings'
-                              ? avatarVariantQuery === variant.query
-                              : avatarUrl === variant.imageUrl;
-                          return (
-                            <button
-                              key={variant.key}
-                              type="button"
-                              className={`overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-0.5 hover:shadow-sm ${
-                                isSelected
-                                  ? 'border-[#121212] ring-1 ring-[#121212]'
-                                  : 'border-[#d8d8d8] hover:border-[#c4b59f]'
-                              }`}
-                              onClick={() => {
-                                if (avatarStyle === 'rings')
-                                  selectAvatarStyle('rings', variant.query);
-                                else {
-                                  setAvatarSource('avatar');
-                                  setAvatarVariantQuery('');
-                                  setAvatarUrl(variant.imageUrl);
-                                }
-                              }}
-                            >
-                              <div className="aspect-square bg-[#faf9f6] p-2">
-                                <img
-                                  src={variant.imageUrl}
-                                  alt=""
-                                  className="h-full w-full rounded-xl object-cover"
-                                />
-                              </div>
-                              <div className="border-t border-[#ece8e0] px-3 py-2 text-left">
-                                <p className="text-[12px] font-medium text-[#121212]">
-                                  {variant.label}
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
+                <div className="overflow-hidden rounded-3xl border border-campsite-border bg-gradient-to-b from-[#fcfbf8] to-white p-4 shadow-sm">
+                  <button
+                    type="button"
+                    aria-expanded={profileImageExpanded}
+                    onClick={() => setProfileImageExpanded((o) => !o)}
+                    className="flex w-full items-start gap-3 rounded-xl text-left outline-none ring-offset-2 ring-offset-campsite-bg focus-visible:ring-2 focus-visible:ring-campsite-text"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-semibold uppercase tracking-widest text-campsite-text-muted">
+                        Profile image
+                      </p>
+                      <p className="mt-1 text-[13px] text-campsite-text-secondary">
+                        {profileImageSummary}
+                        {!profileImageExpanded ? (
+                          <span className="text-campsite-text-muted"> · Click to change</span>
+                        ) : null}
+                      </p>
                     </div>
+                    <ChevronDown
+                      className={`mt-0.5 h-5 w-5 shrink-0 text-campsite-text-secondary transition-transform ${
+                        profileImageExpanded ? 'rotate-180' : ''
+                      }`}
+                      aria-hidden
+                    />
+                  </button>
+
+                  {profileImageExpanded ? (
+                    <>
+                      <p className="mt-3 text-[13px] text-campsite-text-secondary">
+                        Upload your own photo or pick an avatar family and choose a variation.
+                      </p>
+
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          className={avatarSource === 'upload' ? btnPrimary : btnSecondary}
+                          onClick={() => {
+                            setAvatarSource('upload');
+                            avatarUploadRef.current?.click();
+                          }}
+                        >
+                          Upload
+                        </button>
+                        <button
+                          type="button"
+                          className={avatarSource === 'avatar' ? btnPrimary : btnSecondary}
+                          onClick={() => {
+                            setAvatarSource('avatar');
+                            if (avatarStyle === 'initials') {
+                              selectAvatarFamily(avatarStyleOptions[0]?.id ?? 'big-ears');
+                            }
+                          }}
+                        >
+                          Avatar
+                        </button>
+                      </div>
+
+                      {avatarSource === 'avatar' ? (
+                        <div className="mt-4 space-y-3">
+                          <label className={fieldLabel}>
+                            Avatar family
+                            <FormSelect
+                              wrapperClassName="mt-1.5"
+                              tone="canvas"
+                              className={formSelectProfileClass}
+                              value={
+                                avatarStyle === 'initials'
+                                  ? (avatarStyleOptions[0]?.id ?? 'big-ears')
+                                  : avatarStyle
+                              }
+                              onChange={(e) => selectAvatarFamily(e.target.value as AvatarStyle)}
+                            >
+                              {avatarStyleOptions.map((style) => (
+                                <option key={style.id} value={style.id}>
+                                  {style.label}
+                                </option>
+                              ))}
+                            </FormSelect>
+                          </label>
+
+                          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+                            {avatarVariantChoices.map((variant) => {
+                              const isSelected =
+                                avatarStyle === 'rings'
+                                  ? avatarVariantQuery === variant.query
+                                  : avatarUrl === variant.imageUrl;
+                              return (
+                                <button
+                                  key={variant.key}
+                                  type="button"
+                                  title={variant.label}
+                                  className={`overflow-hidden rounded-lg border bg-campsite-elevated transition hover:border-campsite-border hover:shadow-sm ${
+                                    isSelected
+                                      ? 'border-campsite-text ring-1 ring-campsite-text'
+                                      : 'border-campsite-border'
+                                  }`}
+                                  onClick={() => {
+                                    if (avatarStyle === 'rings')
+                                      selectAvatarStyle('rings', variant.query);
+                                    else {
+                                      setAvatarSource('avatar');
+                                      setAvatarVariantQuery('');
+                                      setAvatarUrl(variant.imageUrl);
+                                    }
+                                  }}
+                                >
+                                  <div className="aspect-square bg-campsite-bg p-1">
+                                    <img
+                                      src={variant.imageUrl}
+                                      alt=""
+                                      className="h-full w-full rounded-md object-cover"
+                                    />
+                                  </div>
+                                  <div className="border-t border-campsite-border px-1.5 py-1 text-left">
+                                    <p className="truncate text-[10px] font-medium text-campsite-text sm:text-[11px]">
+                                      {variant.label}
+                                    </p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
                   ) : null}
                 </div>
-                <div className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5">
-                  <p className="text-[12.5px] leading-relaxed text-[#6b6b6b]">
-                    <span className="font-medium text-[#121212]">
+                <div className="rounded-lg border border-campsite-border bg-campsite-bg px-3 py-2.5">
+                  <p className="text-[12.5px] leading-relaxed text-campsite-text-secondary">
+                    <span className="font-medium text-campsite-text">
                       {profileRoleDisplay(profile.role)}
                     </span>
-                    <span className="text-[#9b9b9b]"> · </span>
+                    <span className="text-campsite-text-muted"> · </span>
                     Contact an admin if you need a different role or team.
                   </p>
                 </div>
@@ -1265,22 +1308,12 @@ export function ProfileSettings({
 
         {/* Appearance tab */}
         {activeTab === 'appearance' && (
-          <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+          <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
             <h2 className={sectionTitle}>Appearance</h2>
-            <p className={sectionDesc}>Colour scheme and accent colour for your interface.</p>
+            <p className={sectionDesc}>
+              Accent colour and layout preferences. The interface uses light mode only for now.
+            </p>
             <div className="space-y-4">
-              <label className={fieldLabel}>
-                Colour scheme
-                <select
-                  className={selectClass}
-                  value={scheme}
-                  onChange={(e) => setScheme(e.target.value)}
-                >
-                  <option value="system">System</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </label>
               <div>
                 <p className={fieldLabel}>Accent</p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -1291,8 +1324,8 @@ export function ProfileSettings({
                       onClick={() => setAccent(k)}
                       className={`rounded-lg border px-3 py-1.5 text-[12.5px] font-medium transition ${
                         accent === k
-                          ? 'border-[#121212] bg-[#121212] text-white'
-                          : 'border-[#d8d8d8] bg-[#faf9f6] text-[#6b6b6b] hover:border-[#c4c4c4] hover:text-[#121212]'
+                          ? 'border-campsite-text bg-campsite-text text-white'
+                          : 'border-campsite-border bg-campsite-bg text-campsite-text-secondary hover:border-campsite-border hover:text-campsite-text'
                       }`}
                     >
                       {accentLabel(k)}
@@ -1302,38 +1335,44 @@ export function ProfileSettings({
               </div>
               <label className={fieldLabel}>
                 Experience mode
-                <select
-                  className={selectClass}
+                <FormSelect
+                  wrapperClassName="mt-1.5"
+                  tone="canvas"
+                  className={formSelectProfileClass}
                   value={uiMode}
                   onChange={(e) => setUiModePref(normalizeUiMode(e.target.value))}
                 >
                   <option value="classic">Classic mode</option>
                   <option value="interactive">Interactive mode</option>
-                </select>
-                <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
+                </FormSelect>
+                <span className="mt-2 block text-[12.5px] font-normal text-campsite-text-secondary">
                   Interactive mode enables graph-based and modern workflow experiences with quicker
                   navigation.
                 </span>
               </label>
               <label className={fieldLabel}>
                 Sidebar icon style
-                <select
-                  className={selectClass}
+                <FormSelect
+                  wrapperClassName="mt-1.5"
+                  tone="canvas"
+                  className={formSelectProfileClass}
                   value={shellIconStyle}
                   onChange={(e) => setShellIconStylePref(e.target.value as ShellIconStyle)}
                 >
                   <option value="classic">Classic (multi-color)</option>
                   <option value="white">White</option>
-                </select>
-                <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
+                </FormSelect>
+                <span className="mt-2 block text-[12.5px] font-normal text-campsite-text-secondary">
                   Choose whether sidebar icons use the original color palette or a unified white
                   style.
                 </span>
               </label>
               <label className={fieldLabel}>
                 Celebration mode
-                <select
-                  className={selectClass}
+                <FormSelect
+                  wrapperClassName="mt-1.5"
+                  tone="canvas"
+                  className={formSelectProfileClass}
                   value={shellMode}
                   onChange={(e) => setShellModePref(normalizeCelebrationMode(e.target.value))}
                 >
@@ -1350,12 +1389,12 @@ export function ProfileSettings({
                       </optgroup>
                     )
                   )}
-                </select>
-                <span className="mt-2 block text-[12.5px] font-normal text-[#6b6b6b]">
+                </FormSelect>
+                <span className="mt-2 block text-[12.5px] font-normal text-campsite-text-secondary">
                   Adds a themed color wash to the sidebar and app shell.
                 </span>
               </label>
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={shellModeAutoEnabled}
@@ -1373,16 +1412,34 @@ export function ProfileSettings({
                       })
                     );
                   }}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Auto holiday mode by date</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Automatically apply the current holiday theme when available. Manual selection
                     still overrides.
                   </span>
                 </span>
               </label>
+              {shellModeAutoEnabled ? (
+                <div
+                  className="rounded-lg border border-campsite-border bg-campsite-bg px-3.5 py-2.5 text-[12.5px] leading-snug text-campsite-text-secondary"
+                  role="status"
+                >
+                  <p className="text-campsite-text">
+                    <span className="font-medium">Active shell theme</span>
+                    <span className="mx-1 font-semibold">{effectiveCelebrationLabel}</span>
+                  </p>
+                  <p className="mt-1 text-[12px] text-campsite-text-secondary">
+                    {shellMode !== 'off'
+                      ? 'Uses the celebration mode you selected above; it overrides the holiday calendar.'
+                      : effectiveCelebrationMode === 'off'
+                        ? 'No organisation holiday window matches today’s date — the shell stays without a holiday tint.'
+                        : 'Matched from today’s date and your organisation’s holiday calendar. Pick a mode above to override.'}
+                  </p>
+                </div>
+              ) : null}
               <button
                 type="button"
                 disabled={loading}
@@ -1396,7 +1453,7 @@ export function ProfileSettings({
         )}
 
         {activeTab === 'accessibility' && (
-          <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+          <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
             <h2 className={sectionTitle}>Accessibility</h2>
             <p className={sectionDesc}>
               Adjust visual and motion settings to match your needs. Changes apply instantly across
@@ -1405,8 +1462,10 @@ export function ProfileSettings({
             <div className="space-y-4">
               <label className={fieldLabel}>
                 Text size
-                <select
-                  className={selectClass}
+                <FormSelect
+                  wrapperClassName="mt-1.5"
+                  tone="canvas"
+                  className={formSelectProfileClass}
                   value={a11yPrefs.largerText}
                   onChange={(e) =>
                     setAccessibilityPref('largerText', e.target.value as AccessibilityTextSize)
@@ -1415,158 +1474,158 @@ export function ProfileSettings({
                   <option value="default">Default</option>
                   <option value="large">Large</option>
                   <option value="xlarge">Extra Large</option>
-                </select>
+                </FormSelect>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.boldText}
                   onChange={(e) => setAccessibilityPref('boldText', e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Bold text</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Increases text weight throughout the interface.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.increaseContrast}
                   onChange={(e) => setAccessibilityPref('increaseContrast', e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Increase contrast</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Strengthens foreground/background separation.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.reduceTransparency}
                   onChange={(e) => setAccessibilityPref('reduceTransparency', e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Reduce transparency</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Uses more opaque surfaces for overlays and translucent UI.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.reduceMotion}
                   onChange={(e) => setAccessibilityPref('reduceMotion', e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Reduce motion</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Minimises animations and transition effects.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.dimFlashingLights}
                   onChange={(e) => setAccessibilityPref('dimFlashingLights', e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Dim flashing lights (video)</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Lowers brightness of video playback to reduce visual strain.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.differentiateWithoutColor}
                   onChange={(e) =>
                     setAccessibilityPref('differentiateWithoutColor', e.target.checked)
                   }
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Differentiate without colour</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Adds non-colour visual cues where possible.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.buttonShapes}
                   onChange={(e) => setAccessibilityPref('buttonShapes', e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Button shapes</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Emphasises tappable controls with underlined action text.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.onOffLabels}
                   onChange={(e) => setAccessibilityPref('onOffLabels', e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">On/Off labels</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Adds explicit state labels in settings style controls.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.grayscale}
                   onChange={(e) => setAccessibilityPref('grayscale', e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Greyscale filter</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Displays the interface in greyscale to reduce colour load.
                   </span>
                 </span>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={a11yPrefs.preferNonBlinkingCursor}
                   onChange={(e) =>
                     setAccessibilityPref('preferNonBlinkingCursor', e.target.checked)
                   }
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Prefer non-blinking cursor</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Reduces caret flicker in text entry fields.
                   </span>
                 </span>
@@ -1587,22 +1646,22 @@ export function ProfileSettings({
 
         {/* Notifications tab */}
         {activeTab === 'notifications' && (
-          <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+          <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
             <h2 className={sectionTitle}>Notifications</h2>
             <p className={sectionDesc}>
               Control when and how you receive alerts, sounds, and reminders.
             </p>
             <div className="space-y-4">
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={dnd}
                   onChange={(e) => setDnd(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Do Not Disturb</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     Quiet hours for reminders (times in your local timezone).
                   </span>
                 </span>
@@ -1615,7 +1674,7 @@ export function ProfileSettings({
                     value={dndStart}
                     onChange={(e) => setDndStart(e.target.value)}
                   />
-                  <span className="text-[13px] text-[#9b9b9b]">to</span>
+                  <span className="text-[13px] text-campsite-text-muted">to</span>
                   <input
                     type="time"
                     className={`${inputClass} mt-0 w-auto min-w-[8.5rem] flex-1 sm:flex-none`}
@@ -1626,8 +1685,10 @@ export function ProfileSettings({
               ) : null}
               <label className={fieldLabel}>
                 Shift reminder (before start)
-                <select
-                  className={selectClass}
+                <FormSelect
+                  wrapperClassName="mt-1.5"
+                  tone="canvas"
+                  className={formSelectProfileClass}
                   value={shiftReminder === 'off' ? 'off' : String(shiftReminder)}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -1641,44 +1702,58 @@ export function ProfileSettings({
                   <option value={120}>2 hours</option>
                   <option value={240}>4 hours</option>
                   <option value={1440}>1 day</option>
-                </select>
+                </FormSelect>
               </label>
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                 <input
                   type="checkbox"
                   checked={openSlotAlertsEnabled}
                   onChange={(e) => setOpenSlotAlertsEnabled(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                 />
-                <span className="text-[13px] leading-snug text-[#121212]">
+                <span className="text-[13px] leading-snug text-campsite-text">
                   <span className="font-medium">Notify me about new open bookable shifts</span>
-                  <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                  <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                     You&apos;ll get rota notifications when a manager posts an open slot you can
                     claim.
                   </span>
                 </span>
               </label>
 
-              <div className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5">
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
+              <div className="rounded-lg border border-campsite-border bg-campsite-bg p-3.5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-medium leading-snug text-campsite-text">UI sound effects</p>
+                    <p className="mt-0.5 text-[12.5px] font-normal leading-snug text-campsite-text-secondary">
+                      Play subtle sounds for menus, toggles, sends, and notification actions.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={uiSoundPrefs.enabled}
                     data-no-checkbox-sound
-                    checked={uiSoundPrefs.enabled}
-                    onChange={(e) => {
-                      const enabled = e.target.checked;
+                    onClick={() => {
+                      const enabled = !uiSoundPrefs.enabled;
                       setUiSoundEnabled(enabled);
                       playUiSound(enabled ? 'toggle_on' : 'toggle_off');
                     }}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
-                  />
-                  <span className="text-[13px] leading-snug text-[#121212]">
-                    <span className="font-medium">UI sound effects</span>
-                    <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
-                      Play subtle sounds for menus, toggles, sends, and notification actions.
-                    </span>
-                  </span>
-                </label>
+                    className="relative mt-0.5 inline-flex h-7 w-11 shrink-0 cursor-pointer items-center rounded-full border border-campsite-border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]"
+                    style={{
+                      background: uiSoundPrefs.enabled ? '#121212' : '#ece9e4',
+                    }}
+                    title={uiSoundPrefs.enabled ? 'Turn off UI sounds' : 'Turn on UI sounds'}
+                  >
+                    <span className="sr-only">UI sound effects</span>
+                    <span
+                      aria-hidden
+                      className="inline-block h-5 w-5 rounded-full bg-campsite-elevated shadow-sm transition-transform"
+                      style={{
+                        transform: uiSoundPrefs.enabled ? 'translateX(22px)' : 'translateX(4px)',
+                      }}
+                    />
+                  </button>
+                </div>
                 <label className={`${fieldLabel} mt-3`}>
                   UI sound volume: {uiSoundPrefs.volume}%
                   <input
@@ -1691,32 +1766,48 @@ export function ProfileSettings({
                     onMouseUp={() => playUiSound('toggle_on')}
                     onTouchEnd={() => playUiSound('toggle_on')}
                     disabled={!uiSoundPrefs.enabled}
-                    className="mt-2 w-full accent-[#121212] disabled:opacity-50"
+                    className={soundVolumeRangeClass}
                   />
                 </label>
               </div>
 
-              <div className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5">
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
+              <div className="rounded-lg border border-campsite-border bg-campsite-bg p-3.5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-medium leading-snug text-campsite-text">
+                      Dashboard campfire ambience
+                    </p>
+                    <p className="mt-0.5 text-[12.5px] font-normal leading-snug text-campsite-text-secondary">
+                      Soft crackling fire sound while you&apos;re on the home dashboard (separate
+                      from UI sounds).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={campfirePrefs.enabled}
                     data-no-checkbox-sound
-                    checked={campfirePrefs.enabled}
-                    onChange={(e) => {
-                      const enabled = e.target.checked;
+                    onClick={() => {
+                      const enabled = !campfirePrefs.enabled;
                       setCampfireEnabled(enabled);
                       playUiSound(enabled ? 'toggle_on' : 'toggle_off');
                     }}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
-                  />
-                  <span className="text-[13px] leading-snug text-[#121212]">
-                    <span className="font-medium">Dashboard campfire ambience</span>
-                    <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
-                      Soft crackling fire sound while you&apos;re on the home dashboard (separate
-                      from UI sounds).
-                    </span>
-                  </span>
-                </label>
+                    className="relative mt-0.5 inline-flex h-7 w-11 shrink-0 cursor-pointer items-center rounded-full border border-campsite-border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]"
+                    style={{
+                      background: campfirePrefs.enabled ? '#121212' : '#ece9e4',
+                    }}
+                    title={campfirePrefs.enabled ? 'Turn off campfire ambience' : 'Turn on campfire ambience'}
+                  >
+                    <span className="sr-only">Dashboard campfire ambience</span>
+                    <span
+                      aria-hidden
+                      className="inline-block h-5 w-5 rounded-full bg-campsite-elevated shadow-sm transition-transform"
+                      style={{
+                        transform: campfirePrefs.enabled ? 'translateX(22px)' : 'translateX(4px)',
+                      }}
+                    />
+                  </button>
+                </div>
                 <label className={`${fieldLabel} mt-3`}>
                   Campfire volume: {campfirePrefs.volume}%
                   <input
@@ -1729,7 +1820,7 @@ export function ProfileSettings({
                     onMouseUp={() => playUiSound('toggle_on')}
                     onTouchEnd={() => playUiSound('toggle_on')}
                     disabled={!campfirePrefs.enabled}
-                    className="mt-2 w-full accent-[#121212] disabled:opacity-50"
+                    className={soundVolumeRangeClass}
                   />
                 </label>
               </div>
@@ -1748,15 +1839,15 @@ export function ProfileSettings({
 
         {/* Channels tab */}
         {activeTab === 'channels' && (
-          <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+          <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
             <h2 className={sectionTitle}>{settingsBroadcastChannelsTitle}</h2>
             <p className={sectionDesc}>{settingsBroadcastChannelsHelp}</p>
             {channelsLoading ? (
-              <p className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[13px] text-[#6b6b6b]">
+              <p className="rounded-lg border border-campsite-border bg-campsite-bg px-4 py-3 text-[13px] text-campsite-text-secondary">
                 Loading channels...
               </p>
             ) : channelPrefs.length === 0 ? (
-              <p className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[13px] text-[#9b9b9b]">
+              <p className="rounded-lg border border-campsite-border bg-campsite-bg px-4 py-3 text-[13px] text-campsite-text-muted">
                 No broadcast channels yet. Org admins add channels under Admin → Departments; then
                 you can follow them here.
               </p>
@@ -1764,23 +1855,23 @@ export function ProfileSettings({
               <div className="space-y-5">
                 {channelsByDept.map(([deptName, rows]) => (
                   <div key={deptName}>
-                    <p className="mb-2 text-[12px] font-semibold text-[#121212]">{deptName}</p>
+                    <p className="mb-2 text-[12px] font-semibold text-campsite-text">{deptName}</p>
                     <ul className="space-y-2">
                       {rows.map((c) => (
                         <li key={c.channel_id}>
-                          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3.5 transition hover:border-[#c4c4c4]">
+                          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-campsite-border bg-campsite-bg p-3.5 transition hover:border-campsite-border">
                             <input
                               type="checkbox"
-                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#d8d8d8] text-[#121212] focus:ring-[#121212]"
+                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-campsite-border text-campsite-text focus:ring-campsite-text"
                               checked={c.subscribed}
                               disabled={channelBusyId === c.channel_id}
                               onChange={(e) =>
                                 void toggleBroadcastChannel(c.channel_id, e.target.checked)
                               }
                             />
-                            <span className="text-[13px] leading-snug text-[#121212]">
+                            <span className="text-[13px] leading-snug text-campsite-text">
                               <span className="font-medium">{c.name}</span>
-                              <span className="mt-0.5 block text-[12.5px] font-normal text-[#6b6b6b]">
+                              <span className="mt-0.5 block text-[12.5px] font-normal text-campsite-text-secondary">
                                 Follow to see targeted posts for this channel.
                               </span>
                             </span>
@@ -1799,15 +1890,15 @@ export function ProfileSettings({
         {activeTab === 'integrations' && (
           <div className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-2 xl:mx-auto xl:max-w-5xl">
-              <div className="rounded-2xl border border-[#d8d8d8] bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-campsite-border bg-campsite-elevated p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e3e3df] bg-[#f8fafc] shadow-sm">
                       <GoogleCalendarLogo />
                     </div>
                     <div>
-                      <p className="text-[16px] font-semibold text-[#121212]">Google Calendar</p>
-                      <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                      <p className="text-[16px] font-semibold text-campsite-text">Google Calendar</p>
+                      <p className="mt-0.5 text-[12.5px] text-campsite-text-secondary">
                         Push CampSite items into Google Calendar.
                       </p>
                     </div>
@@ -1816,47 +1907,47 @@ export function ProfileSettings({
                     connected={initialIntegrationConnections.googleCalendar.connected}
                   />
                 </div>
-                <div className="mt-4 rounded-2xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
+                <div className="mt-4 rounded-2xl border border-[#e7e7e4] bg-campsite-bg px-4 py-3">
                   {initialIntegrationConnections.googleCalendar.connected ? (
                     <>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-campsite-text-muted">
                         Connected account
                       </p>
-                      <div className="mt-1 flex items-start gap-2 text-[13px] text-[#121212]">
-                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                      <div className="mt-1 flex items-start gap-2 text-[13px] text-campsite-text">
+                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-campsite-text-secondary" aria-hidden />
                         <span className="font-medium">
                           {initialIntegrationConnections.googleCalendar.accountEmail ??
                             'Google account connected'}
                         </span>
                       </div>
-                      <p className="mt-2 text-[12.5px] text-[#6b6b6b]">
+                      <p className="mt-2 text-[12.5px] text-campsite-text-secondary">
                         Reconnect if you want to switch to a different Google account.
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-campsite-text-muted">
                         Status
                       </p>
-                      <p className="mt-1 text-[13px] text-[#121212]">Not connected yet.</p>
-                      <p className="mt-2 text-[12.5px] text-[#6b6b6b]">
+                      <p className="mt-1 text-[13px] text-campsite-text">Not connected yet.</p>
+                      <p className="mt-2 text-[12.5px] text-campsite-text-secondary">
                         Connect once and CampSite can write your shifts, interviews and events into
                         Google Calendar.
                       </p>
                     </>
                   )}
                 </div>
-                <div className="mt-4 space-y-2 text-[12.5px] text-[#4f4f4f]">
+                <div className="mt-4 space-y-2 text-[12.5px] text-campsite-text-secondary">
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-campsite-text-secondary" aria-hidden />
                     <span>Sync interview slots for panel and hiring workflows.</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-campsite-text-secondary" aria-hidden />
                     <span>Push rota shifts and manual calendar events from CampSite.</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-campsite-text-secondary" aria-hidden />
                     <span>Google events also appear in the in-app calendar view.</span>
                   </div>
                 </div>
@@ -1876,15 +1967,15 @@ export function ProfileSettings({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#d8d8d8] bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-campsite-border bg-campsite-elevated p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e3e3df] bg-[#f8fafc] shadow-sm">
                       <OutlookLogo />
                     </div>
                     <div>
-                      <p className="text-[16px] font-semibold text-[#121212]">Outlook Calendar</p>
-                      <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
+                      <p className="text-[16px] font-semibold text-campsite-text">Outlook Calendar</p>
+                      <p className="mt-0.5 text-[12.5px] text-campsite-text-secondary">
                         Keep Microsoft 365 calendars in sync.
                       </p>
                     </div>
@@ -1893,49 +1984,49 @@ export function ProfileSettings({
                     connected={initialIntegrationConnections.outlookCalendar.connected}
                   />
                 </div>
-                <div className="mt-4 rounded-2xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
+                <div className="mt-4 rounded-2xl border border-[#e7e7e4] bg-campsite-bg px-4 py-3">
                   {initialIntegrationConnections.outlookCalendar.connected ? (
                     <>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-campsite-text-muted">
                         Connected account
                       </p>
-                      <div className="mt-1 flex items-start gap-2 text-[13px] text-[#121212]">
-                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                      <div className="mt-1 flex items-start gap-2 text-[13px] text-campsite-text">
+                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-campsite-text-secondary" aria-hidden />
                         <span className="font-medium">
                           {initialIntegrationConnections.outlookCalendar.accountEmail ??
                             'Outlook account connected'}
                         </span>
                       </div>
-                      <p className="mt-2 text-[12.5px] text-[#6b6b6b]">
+                      <p className="mt-2 text-[12.5px] text-campsite-text-secondary">
                         Reconnect if you need to swap Microsoft accounts or renew access manually.
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9b9b9b]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-campsite-text-muted">
                         Status
                       </p>
-                      <p className="mt-1 text-[13px] text-[#121212]">Not connected yet.</p>
-                      <p className="mt-2 text-[12.5px] text-[#6b6b6b]">
+                      <p className="mt-1 text-[13px] text-campsite-text">Not connected yet.</p>
+                      <p className="mt-2 text-[12.5px] text-campsite-text-secondary">
                         Ideal if your university or workplace runs on Outlook instead of Google
                         Calendar.
                       </p>
                     </>
                   )}
                 </div>
-                <div className="mt-4 space-y-2 text-[12.5px] text-[#4f4f4f]">
+                <div className="mt-4 space-y-2 text-[12.5px] text-campsite-text-secondary">
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-campsite-text-secondary" aria-hidden />
                     <span>Sync interview slots, rota shifts and CampSite calendar events.</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-campsite-text-secondary" aria-hidden />
                     <span>
                       Microsoft events appear alongside CampSite events in the calendar page.
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#6b6b6b]" aria-hidden />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-campsite-text-secondary" aria-hidden />
                     <span>Best-fit option for Microsoft 365 and university-managed accounts.</span>
                   </div>
                 </div>
@@ -1957,45 +2048,45 @@ export function ProfileSettings({
 
             </div>
 
-            <div className="rounded-2xl border border-[#d8d8d8] bg-white p-5 xl:mx-auto xl:max-w-5xl">
+            <div className="rounded-2xl border border-campsite-border bg-campsite-elevated p-5 xl:mx-auto xl:max-w-5xl">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3 className="font-authSerif text-[20px] tracking-[-0.02em] text-[#121212]">
+                  <h3 className="font-authSerif text-[20px] tracking-[-0.02em] text-campsite-text">
                     What happens after you connect?
                   </h3>
-                  <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                  <p className="mt-1 text-[13px] text-campsite-text-secondary">
                     CampSite uses these connections to reduce duplicate admin work, not to replace
                     your existing tools.
                   </p>
                 </div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#d8d8d8] bg-[#fafaf9] px-3 py-1.5 text-[12px] font-medium text-[#121212]">
+                <span className="inline-flex items-center gap-2 rounded-full border border-campsite-border bg-campsite-bg px-3 py-1.5 text-[12px] font-medium text-campsite-text">
                   <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
                   Connect once, keep working as normal
                 </span>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
-                  <p className="text-[12px] font-semibold text-[#121212]">
+                <div className="rounded-xl border border-[#e7e7e4] bg-campsite-bg px-4 py-3">
+                  <p className="text-[12px] font-semibold text-campsite-text">
                     1. Choose your provider
                   </p>
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-campsite-text-secondary">
                     Use Google Calendar or Outlook Calendar depending on your workflow.
                   </p>
                 </div>
-                <div className="rounded-xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
-                  <p className="text-[12px] font-semibold text-[#121212]">
+                <div className="rounded-xl border border-[#e7e7e4] bg-campsite-bg px-4 py-3">
+                  <p className="text-[12px] font-semibold text-campsite-text">
                     2. Authorise your account
                   </p>
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-campsite-text-secondary">
                     OAuth keeps access tied to your own CampSite account rather than the whole
                     organisation.
                   </p>
                 </div>
-                <div className="rounded-xl border border-[#e7e7e4] bg-[#fafaf9] px-4 py-3">
-                  <p className="text-[12px] font-semibold text-[#121212]">
+                <div className="rounded-xl border border-[#e7e7e4] bg-campsite-bg px-4 py-3">
+                  <p className="text-[12px] font-semibold text-campsite-text">
                     3. Let CampSite do the repeat work
                   </p>
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-[#6b6b6b]">
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-campsite-text-secondary">
                     New shifts, events and interview slots can flow out automatically once the
                     integration is ready.
                   </p>
@@ -2003,7 +2094,7 @@ export function ProfileSettings({
               </div>
             </div>
             {canManageDiscountsState ? (
-              <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+              <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
                 <h2 className={sectionTitle}>Organisation tools</h2>
                 <p className={sectionDesc}>
                   Configure staff discount tiers shown on discount cards.
@@ -2018,7 +2109,7 @@ export function ProfileSettings({
 
         {/* Security tab */}
         {activeTab === 'security' && (
-          <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+          <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
             <h2 className={sectionTitle}>Security</h2>
             <p className={sectionDesc}>
               Update your password. This account password is shared across all organisations linked
@@ -2041,7 +2132,7 @@ export function ProfileSettings({
                     type="button"
                     tabIndex={-1}
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9b9b9b] hover:text-[#121212]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-campsite-text-muted hover:text-campsite-text"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
@@ -2061,17 +2152,17 @@ export function ProfileSettings({
               {password.length > 0 && (
                 <div>
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[12px] text-[#9b9b9b]">Password strength</span>
+                    <span className="text-[12px] text-campsite-text-muted">Password strength</span>
                     {passwordStrength.label && (
                       <span
                         className={`text-[12px] font-medium ${
                           passwordStrength.score === 4
-                            ? 'text-[#15803d]'
+                            ? 'text-campsite-success'
                             : passwordStrength.score === 3
                               ? 'text-yellow-600'
                               : passwordStrength.score === 2
                                 ? 'text-orange-500'
-                                : 'text-[#b91c1c]'
+                                : 'text-campsite-warning'
                         }`}
                       >
                         {passwordStrength.label}
@@ -2099,7 +2190,7 @@ export function ProfileSettings({
                     ].map((rule) => (
                       <li
                         key={rule.label}
-                        className={`flex items-center gap-1.5 text-[12px] ${rule.ok ? 'text-[#15803d]' : 'text-[#9b9b9b]'}`}
+                        className={`flex items-center gap-1.5 text-[12px] ${rule.ok ? 'text-campsite-success' : 'text-campsite-text-muted'}`}
                       >
                         <svg
                           viewBox="0 0 24 24"
@@ -2127,7 +2218,7 @@ export function ProfileSettings({
                     type={showConfirm ? 'text' : 'password'}
                     className={`${inputClass} mt-0 pr-10 ${
                       confirmPassword && !passwordsMatch
-                        ? 'border-[#b91c1c] focus:border-[#b91c1c] focus:ring-[#b91c1c]'
+                        ? 'border-campsite-warning focus:border-campsite-warning focus:ring-[#b91c1c]'
                         : ''
                     }`}
                     value={confirmPassword}
@@ -2139,7 +2230,7 @@ export function ProfileSettings({
                     type="button"
                     tabIndex={-1}
                     onClick={() => setShowConfirm((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9b9b9b] hover:text-[#121212]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-campsite-text-muted hover:text-campsite-text"
                     aria-label={showConfirm ? 'Hide password' : 'Show password'}
                   >
                     {showConfirm ? (
@@ -2154,7 +2245,7 @@ export function ProfileSettings({
                   </button>
                 </div>
                 {confirmPassword && !passwordsMatch && (
-                  <p className="mt-1.5 text-[12px] text-[#b91c1c]">Passwords do not match.</p>
+                  <p className="mt-1.5 text-[12px] text-campsite-warning">Passwords do not match.</p>
                 )}
               </label>
 
@@ -2175,7 +2266,7 @@ export function ProfileSettings({
           <div className="space-y-4">
             {/* Workspaces */}
             {tenantOrgs && tenantOrgs.length > 1 ? (
-              <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+              <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
                 <h2 className={sectionTitle}>Workspaces</h2>
                 <p className={sectionDesc}>
                   Your account is linked to more than one organisation. Switch the active workspace
@@ -2187,16 +2278,16 @@ export function ProfileSettings({
                     return (
                       <li
                         key={o.org_id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e8e6e3] bg-[#faf9f6] px-3 py-2.5"
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e8e6e3] bg-campsite-bg px-3 py-2.5"
                       >
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-[#121212]">{o.name}</p>
-                          <p className="truncate font-mono text-[11px] text-[#9b9b9b]">
+                          <p className="text-[13px] font-medium text-campsite-text">{o.name}</p>
+                          <p className="truncate font-mono text-[11px] text-campsite-text-muted">
                             {o.slug ?? '-'}
                           </p>
                         </div>
                         {isCurrent ? (
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-[#15803d]">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-campsite-success">
                             Current
                           </span>
                         ) : (
@@ -2217,7 +2308,7 @@ export function ProfileSettings({
             ) : null}
 
             {/* Session */}
-            <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+            <div className="rounded-xl border border-campsite-border bg-campsite-elevated p-5 sm:p-6">
               <h2 className={sectionTitle}>Session</h2>
               <p className={sectionDesc}>Sign out of your current session on this device.</p>
               <button type="button" onClick={() => void logout()} className={btnSecondary}>

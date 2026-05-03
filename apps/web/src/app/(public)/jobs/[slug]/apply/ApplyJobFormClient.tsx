@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import {
   CV_MAX_BYTES,
@@ -762,7 +763,7 @@ export function ApplyJobFormClient({
                   <label className={labelClass} htmlFor="staffsavvy_score_visible">
                     StaffSavvy score (1-5)
                   </label>
-                  <select
+                  <FormSelect
                     id="staffsavvy_score_visible"
                     value={staffsavvyScore}
                     onChange={(e) => setStaffsavvyScore(e.target.value)}
@@ -775,7 +776,7 @@ export function ApplyJobFormClient({
                         {n}
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </div>
               ) : null}
               <div>
@@ -825,7 +826,7 @@ export function ApplyJobFormClient({
                   <label className={labelClass} htmlFor="eq_ethnicity">
                     How would you describe your ethnicity?
                   </label>
-                  <select
+                  <FormSelect
                     id="eq_ethnicity"
                     name="eq_ethnicity"
                     className={baseField}
@@ -839,7 +840,7 @@ export function ApplyJobFormClient({
                       </option>
                     ))}
                     <option value="__declined__">Prefer not to participate in monitoring</option>
-                  </select>
+                  </FormSelect>
                 </div>
               ) : null}
               <div className="space-y-2 text-[13px]">

@@ -1,3 +1,6 @@
+/** Web-only tokens (Tailwind class strings); safe to import from server components. */
+export { campusSurface } from './web/campusTokens';
+
 export { ThemeProvider, useCampsiteTheme, type ThemeProviderProps } from './ThemeProvider';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { Input, type InputProps } from './Input';

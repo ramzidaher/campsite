@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewModal';
 import { EmployeeDirectoryGraph } from '@/components/genz/EmployeeDirectoryGraph';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
@@ -733,24 +734,24 @@ export function HRDirectoryClient({
               onChange={(e) => setQ(e.target.value)}
               className="h-9 w-64 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] outline-none focus:border-[#121212]"
             />
-            <select value={filterContract} onChange={(e) => setFilterContract(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
+            <FormSelect value={filterContract} onChange={(e) => setFilterContract(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
               <option value="">All contracts</option>
               <option value="full_time">Full-time</option>
               <option value="part_time">Part-time</option>
               <option value="contractor">Contractor</option>
               <option value="zero_hours">Zero hours</option>
-            </select>
-            <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
+            </FormSelect>
+            <FormSelect value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
               <option value="">All locations</option>
               <option value="office">Office</option>
               <option value="remote">Remote</option>
               <option value="hybrid">Hybrid</option>
-            </select>
-            <select value={filterHasRecord} onChange={(e) => setFilterHasRecord(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
+            </FormSelect>
+            <FormSelect value={filterHasRecord} onChange={(e) => setFilterHasRecord(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
               <option value="">All members</option>
               <option value="yes">Has HR record</option>
               <option value="no">Missing HR record</option>
-            </select>
+            </FormSelect>
             <div ref={columnsMenuRef} className="relative z-40">
               <button
                 type="button"

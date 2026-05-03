@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { extractSpreadsheetId } from '@/lib/rota/sheetsImportParse';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -323,7 +324,7 @@ export function SheetsImportWizard({ orgId }: { orgId: string }) {
           </label>
           <label className="mt-2 block text-[12px] text-[#6b6b6b]">
             Target rota (optional)
-            <select
+            <FormSelect
               className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
               value={targetRotaId}
               onChange={(e) => setTargetRotaId(e.target.value)}
@@ -334,7 +335,7 @@ export function SheetsImportWizard({ orgId }: { orgId: string }) {
                   {r.title}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <button
             type="button"

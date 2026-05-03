@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import { createClient } from '@/lib/supabase/client';
 import { friendlyDbError } from '@/lib/rota/friendlyDbError';
@@ -309,29 +310,29 @@ export function RotaQuickAddShiftPopover({
           {deptOptions.length > 0 ? (
             <label className="mb-3 block text-[12px] font-medium text-[#121212]">
               Department{profileRole === 'manager' ? ' (required)' : ''}
-              <select className={`${field} mt-1.5`} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
+              <FormSelect className={`${field} mt-1.5`} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
                 <option value="">-</option>
                 {deptOptions.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
           ) : null}
 
           <label className="mb-3 block text-[12px] font-medium text-[#121212]">
             Level
-            <select className={`${field} mt-1.5`} value={level} onChange={(e) => setLevel(e.target.value as 'all' | 'csa' | 'dm')}>
+            <FormSelect className={`${field} mt-1.5`} value={level} onChange={(e) => setLevel(e.target.value as 'all' | 'csa' | 'dm')}>
               <option value="all">All levels</option>
               <option value="csa">CSA</option>
               <option value="dm">DM</option>
-            </select>
+            </FormSelect>
           </label>
 
           <label className="mb-3 block text-[12px] font-medium text-[#121212]">
             Assignee
-            <select className={`${field} mt-1.5`} value={userId} onChange={(e) => setUserId(e.target.value)}>
+            <FormSelect className={`${field} mt-1.5`} value={userId} onChange={(e) => setUserId(e.target.value)}>
               <option value="">Open slot</option>
               {eligibleStaff.map((s) => {
                 const hint = assigneeHintById.get(s.id);
@@ -343,12 +344,12 @@ export function RotaQuickAddShiftPopover({
                   </option>
                 );
               })}
-            </select>
+            </FormSelect>
           </label>
 
           <label className="mb-1 block text-[12px] font-medium text-[#121212]">
             Rota {requireRota ? '(required)' : '(optional)'}
-            <select className={`${field} mt-1.5`} value={rotaId} onChange={(e) => setRotaId(e.target.value)}>
+            <FormSelect className={`${field} mt-1.5`} value={rotaId} onChange={(e) => setRotaId(e.target.value)}>
               <option value="">-</option>
               {rotas.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -356,7 +357,7 @@ export function RotaQuickAddShiftPopover({
                   {r.status === 'draft' ? ' (draft)' : ''}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
 
           {msg ? (

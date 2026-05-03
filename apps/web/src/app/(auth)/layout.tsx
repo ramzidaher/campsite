@@ -1,5 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import { AuthOrgCard, type AuthOrgDisplay } from '@/components/auth/AuthOrgCard';
 import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { createClient } from '@/lib/supabase/server';
@@ -27,18 +28,22 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const hostLabel = hostRaw.split(':')[0] || 'camp-site.co.uk';
 
   let orgName: string | null = null;
+  let orgLogoUrl: string | null = null;
   if (slug) {
     try {
       const supabase = await createClient();
       const { data } = await supabase
         .from('organisations')
-        .select('name')
+        .select('name, logo_url')
         .eq('slug', slug)
         .eq('is_active', true)
         .maybeSingle();
       orgName = (data?.name as string | undefined) ?? null;
+      const rawLogo = (data as { logo_url?: string | null } | null)?.logo_url;
+      orgLogoUrl = typeof rawLogo === 'string' && rawLogo.trim() ? rawLogo.trim() : null;
     } catch {
       orgName = null;
+      orgLogoUrl = null;
     }
   }
 
@@ -50,6 +55,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     slug,
     displayName,
     hostLabel,
+    logoUrl: orgLogoUrl,
   };
 
   return (
@@ -73,7 +79,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           <h1 className="font-authSerif text-[38px] leading-[1.2] text-[#faf9f6]">
             Your team,
             <br />
-            <em className="text-white/60">connected</em> and
+            <em className="text-[#e8622a]">connected</em> and
             <br />
             organised.
           </h1>
@@ -103,7 +109,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       <main
         id="main-content"
         tabIndex={-1}
-        className="auth-shell-main flex min-h-screen flex-1 items-start justify-center overflow-y-auto px-6 py-10 sm:px-8 sm:py-12 lg:items-center"
+        className="campsite-paper auth-shell-main flex min-h-screen flex-1 items-start justify-center overflow-y-auto px-6 py-10 sm:px-8 sm:py-12 lg:items-center"
       >
         <div className="w-full max-w-[460px]">
           <Link href="/" className="mb-6 flex items-center gap-2.5 lg:hidden">
@@ -114,9 +120,14 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             <Link
               href={backLink.href}
               prefetch={false}
-              className="mb-5 inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
+              className="group mb-5 inline-flex items-center gap-1 text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
             >
-              {`\u2190 ${backLink.label}`}
+              <ChevronLeft
+                className="h-3.5 w-3.5 shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+                aria-hidden
+                strokeWidth={2}
+              />
+              {backLink.label}
             </Link>
           ) : null}
           <AuthOrgCard org={org} />

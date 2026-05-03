@@ -1,4 +1,6 @@
 import type { CelebrationMode } from '@/lib/holidayThemes';
+import type { AccentPreset } from '@campsite/theme';
+import { getThemeTokens } from '@campsite/theme';
 import type { CSSProperties } from 'react';
 
 export const ORG_BRAND_TOKEN_KEYS = [
@@ -269,6 +271,32 @@ export function orgBrandingCssVars(tokens: Record<OrgBrandTokenKey, string>): CS
     ['--org-brand-accent' as string]: tokens.accent,
     ['--org-brand-on-primary' as string]: onColorFor(tokens.primary),
   };
+}
+
+/**
+ * In dark mode, use theme neutrals (background, surface, text) so the workspace matches the shell,
+ * while keeping org primary / secondary / accent from the brand preset.
+ */
+export function orgBrandingCssVarsForColorScheme(
+  tokens: Record<OrgBrandTokenKey, string>,
+  scheme: 'light' | 'dark',
+  accentPreset: AccentPreset,
+): CSSProperties {
+  if (scheme === 'light') {
+    return orgBrandingCssVars(tokens);
+  }
+  const dt = getThemeTokens('dark', accentPreset);
+  const merged: Record<OrgBrandTokenKey, string> = {
+    bg: dt.background,
+    surface: dt.surface,
+    text: dt.textPrimary,
+    muted: dt.textMuted,
+    border: dt.border,
+    primary: tokens.primary,
+    secondary: tokens.secondary,
+    accent: tokens.accent,
+  };
+  return orgBrandingCssVars(merged);
 }
 
 export function suggestedBrandTokensFromHexes(hexes: string[]): OrgBrandTokens {

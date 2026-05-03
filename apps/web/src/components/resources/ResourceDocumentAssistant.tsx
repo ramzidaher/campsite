@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { Compass } from 'lucide-react';
 
 import { AssistantChatMarkdown } from '@/components/resources/AssistantChatMarkdown';
 import { userFacingScoutError } from '@campsite/types';
@@ -99,26 +100,24 @@ export function ResourceDocumentAssistant({
   const showIntro = messages.length === 0;
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-sm">
-      <div className="flex items-center gap-2.5 border-b border-black/[0.08] px-4 py-4 sm:px-5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#1a1a1a] text-white">
-          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
-            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2zM9 9a5 5 0 0 0-5 5v3a5 5 0 0 0 10 0v-3a5 5 0 0 0-5-5zm6 0a5 5 0 0 0-4.9 4h-.1v4a5 5 0 0 0 5 5 5 5 0 0 0 5-5v-3a5 5 0 0 0-5-5z" />
-          </svg>
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_35%,transparent)]">
+      <div className="flex items-center gap-2.5 border-b border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] px-4 py-4 sm:px-5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--org-brand-primary)] text-[var(--org-brand-on-primary)]">
+          <Compass className="h-4 w-4" strokeWidth={2} aria-hidden />
         </div>
         <div className="min-w-0">
-          <div className={`${displayFontClassName} text-sm font-semibold text-[#1a1a1a]`}>Scout</div>
-          <div className="flex items-center gap-1 text-[11px] font-medium text-[#69b34c]">
-            <span className="inline-block h-[5px] w-[5px] rounded-full bg-[#69b34c]" aria-hidden />
+          <div className={`${displayFontClassName} text-sm font-semibold text-[var(--org-brand-text)]`}>Scout</div>
+          <div className="flex items-center gap-1 text-[11px] font-medium text-[var(--org-brand-primary)]">
+            <span className="inline-block h-[5px] w-[5px] rounded-full bg-[var(--org-brand-primary)]" aria-hidden />
             Ready to help
           </div>
         </div>
       </div>
 
-      <div className="flex max-h-[min(52vh,440px)] min-h-[280px] flex-col gap-3 overflow-y-auto bg-[#f9f8f5] px-4 py-4 sm:px-5">
+      <div className="flex max-h-[min(52vh,440px)] min-h-[280px] flex-col gap-3 overflow-y-auto bg-[color-mix(in_oklab,var(--org-brand-surface)_55%,var(--org-brand-bg))] px-4 py-4 sm:px-5">
         {showIntro ? (
           <div className="flex flex-col gap-1 self-start">
-            <div className="max-w-[85%] rounded-[14px] rounded-bl-[4px] border border-black/[0.08] bg-white px-3.5 py-2.5 text-[13.5px] leading-[1.55] text-[#1a1a1a]">
+            <div className="max-w-[85%] rounded-[14px] rounded-bl-[4px] border border-[color-mix(in_oklab,var(--org-brand-border)_88%,transparent)] bg-[var(--org-brand-bg)] px-3.5 py-2.5 text-[13.5px] leading-[1.55] text-[var(--org-brand-text)]">
               Hi! I&apos;m Scout — I can answer questions about this file using its contents when I can read them (for
               example PDF and text). Here are some ideas to get started:
             </div>
@@ -133,7 +132,7 @@ export function ResourceDocumentAssistant({
                 type="button"
                 disabled={busy}
                 onClick={() => void runSend(label)}
-                className="rounded-full border border-black/[0.08] bg-white px-3 py-1.5 text-left text-[12px] text-[#1a1a1a] transition hover:border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white disabled:opacity-50"
+                className="rounded-full border border-[color-mix(in_oklab,var(--org-brand-border)_88%,transparent)] bg-[var(--org-brand-bg)] px-3 py-1.5 text-left text-[12px] text-[var(--org-brand-text)] transition hover:border-[var(--org-brand-primary)] hover:bg-[var(--org-brand-primary)] hover:text-[var(--org-brand-on-primary)] disabled:opacity-50"
               >
                 {label}
               </button>
@@ -149,8 +148,8 @@ export function ResourceDocumentAssistant({
             <div
               className={`rounded-[14px] px-3.5 py-2.5 text-[13.5px] leading-[1.55] ${
                 m.role === 'user'
-                  ? 'rounded-br-[4px] bg-[#1a1a1a] text-white whitespace-pre-wrap'
-                  : 'rounded-bl-[4px] border border-black/[0.08] bg-white text-[#1a1a1a]'
+                  ? 'rounded-br-[4px] bg-[var(--org-brand-primary)] text-[var(--org-brand-on-primary)] whitespace-pre-wrap'
+                  : 'rounded-bl-[4px] border border-[color-mix(in_oklab,var(--org-brand-border)_88%,transparent)] bg-[var(--org-brand-bg)] text-[var(--org-brand-text)]'
               }`}
             >
               {m.role === 'assistant' ? (
@@ -164,28 +163,28 @@ export function ResourceDocumentAssistant({
 
         {busy ? (
           <div className="flex max-w-[85%] self-start">
-            <div className="flex items-center gap-1.5 rounded-[14px] rounded-bl-[4px] border border-black/[0.08] bg-white px-3.5 py-2.5">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#ccc] [animation-duration:1.2s]" />
-              <span
-                className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#ccc] [animation-delay:0.2s] [animation-duration:1.2s]"
-              />
-              <span
-                className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#ccc] [animation-delay:0.4s] [animation-duration:1.2s]"
-              />
+            <div className="flex items-center gap-1.5 rounded-[14px] rounded-bl-[4px] border border-[color-mix(in_oklab,var(--org-brand-border)_88%,transparent)] bg-[var(--org-brand-bg)] px-3.5 py-2.5">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[color-mix(in_oklab,var(--org-brand-muted)_55%,var(--org-brand-border))] [animation-duration:1.2s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[color-mix(in_oklab,var(--org-brand-muted)_55%,var(--org-brand-border))] [animation-delay:0.2s] [animation-duration:1.2s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[color-mix(in_oklab,var(--org-brand-muted)_55%,var(--org-brand-border))] [animation-delay:0.4s] [animation-duration:1.2s]" />
             </div>
           </div>
         ) : null}
         <div ref={bottomRef} />
       </div>
 
-      {err ? <p className="border-t border-black/[0.08] px-4 py-2 text-[13px] text-red-800 sm:px-5">{err}</p> : null}
+      {err ? (
+        <p className="border-t border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] px-4 py-2 text-[13px] text-red-800 sm:px-5">
+          {err}
+        </p>
+      ) : null}
       {note ? (
-        <div className="border-t border-dashed border-black/[0.06] px-4 py-2 sm:px-5">
+        <div className="border-t border-dashed border-[color-mix(in_oklab,var(--org-brand-border)_70%,transparent)] px-4 py-2 sm:px-5">
           <AssistantChatMarkdown content={note} variant="muted" />
         </div>
       ) : null}
 
-      <div className="border-t border-black/[0.08] bg-white px-4 py-3 sm:px-5">
+      <div className="border-t border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] px-4 py-3 sm:px-5">
         <div className="flex items-end gap-2">
           <textarea
             value={input}
@@ -199,13 +198,13 @@ export function ResourceDocumentAssistant({
             placeholder="Ask Scout about this document…"
             rows={1}
             disabled={busy}
-            className="min-h-[40px] flex-1 resize-none rounded-[10px] border border-black/[0.08] bg-[#f9f8f5] px-3.5 py-2.5 text-[13.5px] text-[#1a1a1a] outline-none transition placeholder:text-[#888] focus:border-black/25 disabled:opacity-60"
+            className="min-h-[40px] flex-1 resize-none rounded-[10px] border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[color-mix(in_oklab,var(--org-brand-surface)_40%,var(--org-brand-bg))] px-3.5 py-2.5 text-[13.5px] text-[var(--org-brand-text)] outline-none transition placeholder:text-[var(--org-brand-muted)] focus:border-[var(--org-brand-primary)] focus:ring-[3px] focus:ring-[color-mix(in_oklab,var(--org-brand-primary)_15%,transparent)] disabled:opacity-60"
           />
           <button
             type="button"
             disabled={busy || !input.trim()}
             onClick={() => void send()}
-            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[#1a1a1a] text-white transition hover:bg-[#333] disabled:opacity-40"
+            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--org-brand-primary)] text-[var(--org-brand-on-primary)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_88%,black)] disabled:opacity-40"
             aria-label="Send"
           >
             <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] fill-current" aria-hidden>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import { headers } from 'next/headers';
 
 function getPublicBackLink(pathname: string): { href: string; label: string } | null {
@@ -21,9 +22,14 @@ export default async function PublicLayout({ children }: { children: React.React
           <Link
             href={backLink.href}
             prefetch={false}
-            className="inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
+            className="group inline-flex items-center gap-1 text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
           >
-            {`\u2190 ${backLink.label}`}
+            <ChevronLeft
+              className="h-3.5 w-3.5 shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+              aria-hidden
+              strokeWidth={2}
+            />
+            {backLink.label}
           </Link>
         </div>
       ) : null}

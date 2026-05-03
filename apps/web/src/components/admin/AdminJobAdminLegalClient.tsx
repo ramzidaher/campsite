@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { updateJobAdminLegalSettings } from '@/app/(main)/admin/jobs/actions';
 import { JobEditorTabNav } from '@/components/admin/JobEditorTabNav';
 import { useTopPageFeedback } from '@/lib/ui/useTopPageFeedback';
@@ -132,14 +133,14 @@ export function AdminJobAdminLegalClient({
         <p className="mt-2 text-[13px] text-[#6b6b6b]">
           Choose the offer template used for this job when creating and sending offers.
         </p>
-        <select className={fieldClass} value={offerTemplateId} onChange={(e) => setOfferTemplateId(e.target.value)}>
+        <FormSelect className={fieldClass} value={offerTemplateId} onChange={(e) => setOfferTemplateId(e.target.value)}>
           <option value="">Use default workflow template</option>
           {offerTemplateOptions.map((template) => (
             <option key={template.id} value={template.id}>
               {String(template.name ?? '').trim() || 'Untitled template'}
             </option>
           ))}
-        </select>
+        </FormSelect>
       </section>
 
       <section className="rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
@@ -147,7 +148,7 @@ export function AdminJobAdminLegalClient({
         <p className="mt-2 text-[13px] text-[#6b6b6b]">
           Choose the contract template linked to this job offer workflow.
         </p>
-        <select
+        <FormSelect
           className={fieldClass}
           value={contractTemplateId}
           onChange={(e) => setContractTemplateId(e.target.value)}
@@ -158,7 +159,7 @@ export function AdminJobAdminLegalClient({
               {String(template.name ?? '').trim() || 'Untitled template'}
             </option>
           ))}
-        </select>
+        </FormSelect>
       </section>
 
       <div>

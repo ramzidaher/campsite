@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { GenerateOfferModal } from '@/app/(main)/admin/jobs/[id]/applications/GenerateOfferModal';
 import { JobEditorTabNav } from '@/components/admin/JobEditorTabNav';
 import { useTopPageFeedback } from '@/lib/ui/useTopPageFeedback';
@@ -672,14 +673,14 @@ export function JobPipelineClient({
           </span>
           <label className="inline-flex items-center gap-1.5 rounded-full border border-[#d8d8d8] bg-white px-2.5 py-1">
             <span className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Sort</span>
-            <select
+            <FormSelect
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'submitted_at' | 'screening_avg')}
               className="border-0 bg-transparent text-[12px] text-[#121212] outline-none"
             >
               <option value="submitted_at">Newest first</option>
               <option value="screening_avg">Application question average</option>
-            </select>
+            </FormSelect>
           </label>
           <button
             type="button"
@@ -822,7 +823,7 @@ export function JobPipelineClient({
           </div>
           <label className="text-[12px] font-medium text-[#505050]">
             Duration of session
-            <select
+            <FormSelect
               value={slotMinutes}
               onChange={(e) => setSlotMinutes(e.target.value)}
               className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
@@ -831,11 +832,11 @@ export function JobPipelineClient({
               <option value="30">30 mins</option>
               <option value="45">45 mins</option>
               <option value="60">60 mins</option>
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[12px] font-medium text-[#505050]">
             Gap between sessions
-            <select
+            <FormSelect
               value={breakMinutes}
               onChange={(e) => setBreakMinutes(e.target.value)}
               className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
@@ -844,7 +845,7 @@ export function JobPipelineClient({
               <option value="10">10 mins</option>
               <option value="15">15 mins</option>
               <option value="20">20 mins</option>
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[12px] font-medium text-[#505050]">
             Number of back to back interview sessions
@@ -997,7 +998,7 @@ export function JobPipelineClient({
             {canManageInterviews ? (
               <div className="mt-4 rounded-lg border border-[#d8d8d8] bg-[#fafaf9] p-3">
                 <label className="text-[12px] font-medium text-[#505050]">Assign applicant to this slot</label>
-                <select
+                <FormSelect
                   value={slotAssignAppId}
                   onChange={(e) => setSlotAssignAppId(e.target.value)}
                   className="mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] px-3 text-[13px] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
@@ -1008,7 +1009,7 @@ export function JobPipelineClient({
                       {app.candidate_name} ({app.candidate_email})
                     </option>
                   ))}
-                </select>
+                </FormSelect>
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
@@ -1043,7 +1044,7 @@ export function JobPipelineClient({
               <span className="rounded-full border border-[#d8d8d8] bg-[#faf9f6] px-2.5 py-1 text-[12px] text-[#505050]">
                 Selected: {selectedApplicationIds.length}
               </span>
-              <select
+              <FormSelect
                 value={bulkActionId}
                 onChange={(e) => setBulkActionId(e.target.value as QuickActionId)}
                 className="h-8 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[12px] text-[#121212]"
@@ -1053,7 +1054,7 @@ export function JobPipelineClient({
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
               <button
                 type="button"
                 onClick={() => applyQuickAction(selectedApplicationIds, bulkActionId)}
@@ -1190,7 +1191,7 @@ export function JobPipelineClient({
                         </button>
                       </td>
                       <td className="px-4 py-3">
-                        <select
+                        <FormSelect
                           className="h-8 min-w-[11rem] rounded-md border border-[#d8d8d8] bg-white px-2 text-[12px] text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                           value={quickActionForStage(app.stage)}
                           disabled={!canMoveStage}
@@ -1207,7 +1208,7 @@ export function JobPipelineClient({
                               {opt.label}
                             </option>
                           ))}
-                        </select>
+                        </FormSelect>
                       </td>
                     </tr>
                   );
@@ -1256,7 +1257,7 @@ export function JobPipelineClient({
                 </p>
                 <label className="block text-[12px] font-medium text-[#505050]">
                   Available slot
-                  <select
+                  <FormSelect
                     value={interviewSlotId}
                     onChange={(e) => setInterviewSlotId(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
@@ -1268,7 +1269,7 @@ export function JobPipelineClient({
                         {s.title ? `(${s.title})` : ''}
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </label>
                 {interviewSlots.length === 0 ? (
                   <p className="text-[13px] text-amber-900">

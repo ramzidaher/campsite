@@ -23,10 +23,13 @@ export default async function RegisterPage({
         initialInviteToken={inviteToken}
         initialLegalBundleVersion={legal.bundle_version}
       />
-      <p className="mt-8 text-center text-[13px] text-[#6b6b6b]">
+      <p className="mt-8 text-center campsite-body text-[#6b6b6b]">
         Already have an account?{' '}
-        <Link href="/login" className="auth-link">
-          Sign in
+        <Link
+          href="/login"
+          className="font-medium text-[#e8622a] underline underline-offset-[3px] decoration-[#e8622a]/45 hover:decoration-[#e8622a]"
+        >
+          Sign in!
         </Link>
       </p>
     </div>

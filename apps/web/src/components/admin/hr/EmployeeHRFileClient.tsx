@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { DependantsEditorClient, type DependantRow } from '@/components/hr/DependantsEditorClient';
@@ -1498,7 +1499,7 @@ export function EmployeeHRFileClient({
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Contract type
-                <select
+                <FormSelect
                   value={contractType}
                   onChange={(e) => setContractType(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
@@ -1507,7 +1508,7 @@ export function EmployeeHRFileClient({
                   <option value="part_time">Part-time</option>
                   <option value="contractor">Contractor</option>
                   <option value="zero_hours">Zero hours</option>
-                </select>
+                </FormSelect>
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 FTE (0.1 – 1.0)
@@ -1536,7 +1537,7 @@ export function EmployeeHRFileClient({
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Pay frequency
-                <select
+                <FormSelect
                   value={payFrequency}
                   onChange={(e) => setPayFrequency(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
@@ -1544,7 +1545,7 @@ export function EmployeeHRFileClient({
                   <option value="monthly">Monthly</option>
                   <option value="weekly">Weekly</option>
                   <option value="four_weekly">Four-weekly</option>
-                </select>
+                </FormSelect>
                 <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">
                   Weekly + contracted days drive statutory annual leave when enabled in leave
                   settings.
@@ -1658,7 +1659,7 @@ export function EmployeeHRFileClient({
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Work location
-                <select
+                <FormSelect
                   value={workLocation}
                   onChange={(e) => setWorkLocation(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
@@ -1666,7 +1667,7 @@ export function EmployeeHRFileClient({
                   <option value="office">Office</option>
                   <option value="remote">Remote</option>
                   <option value="hybrid">Hybrid</option>
-                </select>
+                </FormSelect>
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Employment start date
@@ -1767,7 +1768,7 @@ export function EmployeeHRFileClient({
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Right-to-work status
-                <select
+                <FormSelect
                   value={rtwStatus}
                   onChange={(e) => setRtwStatus(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
@@ -1778,7 +1779,7 @@ export function EmployeeHRFileClient({
                   <option value="verified">Verified</option>
                   <option value="expired">Expired</option>
                   <option value="not_required">Not required</option>
-                </select>
+                </FormSelect>
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 RTW checked on
@@ -1923,7 +1924,7 @@ export function EmployeeHRFileClient({
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Linked application (hired from)
-                <select
+                <FormSelect
                   value={hiredFromApp}
                   onChange={(e) => setHiredFromApp(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
@@ -1934,7 +1935,7 @@ export function EmployeeHRFileClient({
                       {a.candidate_name}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </label>
             </div>
             <div className="mt-6 border-t border-[#ececec] pt-4">
@@ -2455,7 +2456,7 @@ export function EmployeeHRFileClient({
               <div className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3">
                 <label className="block min-w-[160px] text-[12.5px] font-medium text-[#6b6b6b]">
                   Category
-                  <select
+                  <FormSelect
                     value={docCategory}
                     onChange={(e) => setDocCategory(e.target.value)}
                     disabled={docBusy}
@@ -2468,7 +2469,7 @@ export function EmployeeHRFileClient({
                     <option value="other">Other</option>
                     <option value="employee_photo">Employee photo</option>
                     <option value="id_document">ID document</option>
-                  </select>
+                  </FormSelect>
                 </label>
                 <label className="block min-w-[180px] flex-1 text-[12.5px] font-medium text-[#6b6b6b]">
                   Label (optional)
@@ -2484,7 +2485,7 @@ export function EmployeeHRFileClient({
                 {docCategory === 'other' ? (
                   <label className="block min-w-[220px] text-[12.5px] font-medium text-[#6b6b6b]">
                     Custom category
-                    <select
+                    <FormSelect
                       value={selectedCustomCategoryId}
                       onChange={(e) => setSelectedCustomCategoryId(e.target.value)}
                       disabled={docBusy}
@@ -2502,7 +2503,7 @@ export function EmployeeHRFileClient({
                             {c.name}
                           </option>
                         ))}
-                    </select>
+                    </FormSelect>
                   </label>
                 ) : null}
                 {docCategory === 'other' && canManage ? (

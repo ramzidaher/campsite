@@ -1,5 +1,6 @@
 'use client';
 
+import { campusSurface, FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -143,9 +144,9 @@ export function PerformanceCyclesClient({
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Type
-              <select value={type} onChange={(e) => setType(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none">
+              <FormSelect value={type} onChange={(e) => setType(e.target.value)} className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none">
                 {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
+              </FormSelect>
             </label>
             <div />
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
@@ -226,7 +227,10 @@ function CycleRow({ cycle, canViewCycleDetail }: { cycle: Cycle; canViewCycleDet
   return (
     <li>
       {canViewCycleDetail ? (
-        <Link href={`/hr/performance/${cycle.id}`} className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 transition-colors hover:bg-[#faf9f6]">
+        <Link
+          href={`/hr/performance/${cycle.id}`}
+          className={`flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 ${campusSurface.interactiveSheetRow}`}
+        >
           {content}
         </Link>
       ) : (

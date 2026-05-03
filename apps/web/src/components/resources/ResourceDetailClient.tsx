@@ -51,7 +51,7 @@ export function ResourceDetailClient({
   canManage: boolean;
   /** False when the DB has no `archived_at` column (migration not applied); archive/restore UI is hidden. */
   archiveSupported?: boolean;
-  /** Syne (or other display font) for titles — applied from `next/font` on the page. */
+  /** Display font for titles; omit to use Campsite default (`font-authSerif` / DM Serif Display). */
   titleFontClassName?: string;
 }) {
   const router = useRouter();
@@ -216,8 +216,8 @@ export function ResourceDetailClient({
 
   return (
     <div className="resource-detail-redesign mx-auto max-w-[1100px] px-5 py-8 sm:px-[28px]">
-      <nav className="mb-6 flex flex-wrap items-center gap-2 text-[13px] text-[#888]">
-        <Link href="/resources" className="transition hover:text-[#1a1a1a]">
+      <nav className="mb-6 flex flex-wrap items-center gap-2 text-[13px] text-[var(--org-brand-muted)]">
+        <Link href="/resources" className="transition hover:text-[var(--org-brand-text)]">
           Resource library
         </Link>
         <span className="text-[10px] opacity-50" aria-hidden>
@@ -227,7 +227,7 @@ export function ResourceDetailClient({
           <>
             <Link
               href={`/resources?folder=${initial.folder.id}`}
-              className="transition hover:text-[#1a1a1a]"
+              className="transition hover:text-[var(--org-brand-text)]"
             >
               {initial.folder.name}
             </Link>
@@ -236,37 +236,41 @@ export function ResourceDetailClient({
             </span>
           </>
         ) : null}
-        <span className="text-[#1a1a1a]">{initial.title}</span>
+        <span className="text-[var(--org-brand-text)]">{initial.title}</span>
       </nav>
 
       {manageErr ? <p className="status-banner-error mb-4 rounded-lg px-3 py-2 text-[13px]">{manageErr}</p> : null}
 
       {isArchived ? (
-        <div className="mb-4 rounded-xl border border-[#d8d8d8] bg-[#f5f4f1] px-4 py-3 text-[13px] text-[#121212]">
+        <div className="mb-4 rounded-xl border border-[var(--org-brand-border)] bg-[var(--org-brand-surface)] px-4 py-3 text-[13px] text-[var(--org-brand-text)]">
           <strong className="font-semibold">Archived</strong> — hidden from the resource library and search. Restore to
           make it visible again, or delete permanently.
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-black/[0.08] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="overflow-hidden rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_35%,transparent)]">
+          <div className="flex flex-col gap-3 border-b border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="min-w-0 flex-1">
-              <h1 className={`${displayFont} text-lg font-semibold tracking-tight text-[#1a1a1a] sm:text-[18px]`}>
+              <h1
+                className={`${displayFont} text-lg font-semibold tracking-tight text-[var(--org-brand-text)] sm:text-[18px]`}
+              >
                 {initial.title}
               </h1>
-              <p className="mt-1 text-[12px] text-[#888]">
+              <p className="mt-1 text-[12px] text-[var(--org-brand-muted)]">
                 {initial.file_name} · {formatBytes(initial.byte_size)} · Updated {updatedLabel}
               </p>
               {initial.description ? (
-                <p className="mt-2 text-[13px] leading-relaxed text-[#555]">{initial.description}</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-[var(--org-brand-muted)]">
+                  {initial.description}
+                </p>
               ) : null}
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
               {canManage ? (
                 <Link
                   href="/resources/new"
-                  className="inline-flex h-9 items-center rounded-lg border border-black/[0.08] bg-transparent px-3.5 text-[13px] font-medium text-[#1a1a1a] transition hover:bg-[#f5f4f0]"
+                  className="inline-flex h-9 items-center rounded-lg border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-transparent px-3.5 text-[13px] font-medium text-[var(--org-brand-text)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_6%,var(--org-brand-bg))]"
                 >
                   Upload another
                 </Link>
@@ -276,7 +280,7 @@ export function ResourceDetailClient({
                   type="button"
                   disabled={manageBusy}
                   onClick={() => void setArchiveState(new Date().toISOString())}
-                  className="inline-flex h-9 items-center rounded-lg border border-black/[0.12] bg-transparent px-3.5 text-[13px] font-medium text-[#555] transition hover:bg-[#f5f4f0] disabled:opacity-50"
+                  className="inline-flex h-9 items-center rounded-lg border border-[color-mix(in_oklab,var(--org-brand-border)_95%,transparent)] bg-transparent px-3.5 text-[13px] font-medium text-[var(--org-brand-muted)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_6%,var(--org-brand-bg))] disabled:opacity-50"
                 >
                   Archive
                 </button>
@@ -286,7 +290,7 @@ export function ResourceDetailClient({
                   type="button"
                   disabled={manageBusy}
                   onClick={() => void setArchiveState(null)}
-                  className="inline-flex h-9 items-center rounded-lg border border-black/[0.08] bg-transparent px-3.5 text-[13px] font-medium text-[#1a1a1a] transition hover:bg-[#f5f4f0] disabled:opacity-50"
+                  className="inline-flex h-9 items-center rounded-lg border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-transparent px-3.5 text-[13px] font-medium text-[var(--org-brand-text)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_6%,var(--org-brand-bg))] disabled:opacity-50"
                 >
                   Restore
                 </button>
@@ -296,7 +300,7 @@ export function ResourceDetailClient({
                   type="button"
                   disabled={manageBusy}
                   onClick={() => void deleteForever()}
-                  className="inline-flex h-9 items-center rounded-lg border border-red-200 bg-white px-3.5 text-[13px] font-medium text-red-800 transition hover:bg-red-50 disabled:opacity-50"
+                  className="inline-flex h-9 items-center rounded-lg border border-red-200 bg-[var(--org-brand-bg)] px-3.5 text-[13px] font-medium text-red-800 transition hover:bg-red-50 disabled:opacity-50"
                 >
                   Delete permanently
                 </button>
@@ -304,30 +308,30 @@ export function ResourceDetailClient({
               {downloadUrl ? (
                 <a
                   href={downloadUrl}
-                  className="inline-flex h-9 items-center rounded-lg bg-[#1a1a1a] px-3.5 text-[13px] font-medium text-white transition hover:bg-[#333]"
+                  className="inline-flex h-9 items-center rounded-lg bg-[var(--org-brand-primary)] px-3.5 text-[13px] font-medium text-[var(--org-brand-on-primary)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_88%,black)]"
                 >
                   ↓ Download
                 </a>
               ) : (
-                <span className="inline-flex h-9 items-center text-[13px] text-[#888]">
+                <span className="inline-flex h-9 items-center text-[13px] text-[var(--org-brand-muted)]">
                   {downloadUrlErr ? downloadUrlErr : 'Preparing file…'}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-black/[0.08] px-5 py-3">
-            <span className="mr-1 text-[12px] text-[#888]">Tags</span>
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] px-5 py-3">
+            <span className="mr-1 text-[12px] text-[var(--org-brand-muted)]">Tags</span>
             {initial.folder ? (
-              <span className="rounded-full bg-[#eaf3de] px-2.5 py-1 text-[11px] font-medium text-[#3B6D11]">
+              <span className="rounded-full bg-[color-mix(in_oklab,var(--org-brand-primary)_14%,var(--org-brand-bg))] px-2.5 py-1 text-[11px] font-medium text-[var(--org-brand-primary)]">
                 {initial.folder.name}
               </span>
             ) : null}
-            <span className="rounded-full bg-[#e6f1fb] px-2.5 py-1 text-[11px] font-medium text-[#185FA5]">
+            <span className="rounded-full bg-[color-mix(in_oklab,var(--org-brand-primary)_10%,var(--org-brand-surface))] px-2.5 py-1 text-[11px] font-medium text-[var(--org-brand-primary)]">
               {fileKindLabel(initial.mime_type, initial.file_name)}
             </span>
             {monthTag ? (
-              <span className="rounded-full bg-[#efefeb] px-2.5 py-1 text-[11px] font-medium text-[#555]">
+              <span className="rounded-full bg-[color-mix(in_oklab,var(--org-brand-surface)_85%,var(--org-brand-border))] px-2.5 py-1 text-[11px] font-medium text-[var(--org-brand-muted)]">
                 {monthTag}
               </span>
             ) : null}
@@ -339,15 +343,17 @@ export function ResourceDetailClient({
 
           {hasPreview ? (
             <div className="resource-doc-preview">
-              <div className="flex items-center justify-between border-b border-black/[0.08] bg-[#f9f8f5] px-5 py-2.5">
-                <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#888]">Preview</span>
+              <div className="flex items-center justify-between border-b border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-surface)] px-5 py-2.5">
+                <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--org-brand-muted)]">
+                  Preview
+                </span>
               </div>
-              <div className="bg-white p-4 sm:p-6">
+              <div className="bg-[var(--org-brand-bg)] p-4 sm:p-6">
                 {previewKind === 'pdf' ? (
                   <iframe
                     title="Document preview"
                     src={previewUrl!}
-                    className="h-[min(72vh,680px)] w-full rounded-lg border border-black/[0.06] bg-[#fafafa]"
+                    className="h-[min(72vh,680px)] w-full rounded-lg border border-[color-mix(in_oklab,var(--org-brand-border)_80%,transparent)] bg-[color-mix(in_oklab,var(--org-brand-surface)_50%,white)]"
                   />
                 ) : null}
                 {previewKind === 'image' ? (
@@ -364,13 +370,13 @@ export function ResourceDetailClient({
                   <audio src={previewUrl!} controls className="w-full" />
                 ) : null}
                 {previewKind === 'text' ? (
-                  <div className="max-h-[min(72vh,520px)] overflow-auto rounded-lg border border-black/[0.06] bg-[#f9f8f5] p-4">
+                  <div className="max-h-[min(72vh,520px)] overflow-auto rounded-lg border border-[color-mix(in_oklab,var(--org-brand-border)_80%,transparent)] bg-[var(--org-brand-surface)] p-4">
                     {textBusy ? (
-                      <p className="text-[13px] text-[#888]">Loading text…</p>
+                      <p className="text-[13px] text-[var(--org-brand-muted)]">Loading text…</p>
                     ) : textErr ? (
                       <p className="text-[13px] text-red-800">{textErr}</p>
                     ) : textBody != null ? (
-                      <pre className="whitespace-pre-wrap break-words font-mono text-[13px] text-[#1a1a1a]">
+                      <pre className="whitespace-pre-wrap break-words font-mono text-[13px] text-[var(--org-brand-text)]">
                         {textBody}
                       </pre>
                     ) : null}
@@ -379,17 +385,17 @@ export function ResourceDetailClient({
               </div>
             </div>
           ) : noPreviewButFile ? (
-            <div className="px-5 py-8 text-center text-[13px] text-[#888]">
+            <div className="px-5 py-8 text-center text-[13px] text-[var(--org-brand-muted)]">
               No inline preview for this file type. Use Download to open it.
             </div>
           ) : !previewUrl ? (
-            <div className="px-5 py-8 text-[13px] text-[#888]">Preparing preview…</div>
+            <div className="px-5 py-8 text-[13px] text-[var(--org-brand-muted)]">Preparing preview…</div>
           ) : null}
         </div>
 
         <aside className="lg:sticky lg:top-4">
           {isArchived ? (
-            <div className="rounded-2xl border border-black/[0.08] bg-white px-4 py-4 text-[13px] text-[#888] shadow-sm">
+            <div className="rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] px-4 py-4 text-[13px] text-[var(--org-brand-muted)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_35%,transparent)]">
               Scout is disabled while this file is archived. Restore the resource to ask questions about it.
             </div>
           ) : (

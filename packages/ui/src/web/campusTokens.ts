@@ -20,16 +20,19 @@ export const campusSurface = {
   canvas: 'bg-[#faf9f6]',
   panel: 'bg-white',
   tableHead: 'bg-[#fafafa]',
+  /** Light row tint (tables, dense lists). */
   rowHover: 'hover:bg-[#f5f4f1]',
   pill: 'bg-[#f5f4f1]',
+  /**
+   * Full bordered card / list row hover (resource library file rows, hub tiles, profile shortcuts).
+   * Use on the same element as `border`, `rounded-*`, and base `bg-*` / `shadow-*`.
+   */
+  interactiveSheetRow:
+    'transition-[background-color,border-color,box-shadow] duration-150 ease-out hover:border-[color-mix(in_oklab,var(--org-brand-border,#d8d8d8)_75%,#e0e0e0)] hover:bg-[#eeeeee] hover:shadow-none focus-within:border-[color-mix(in_oklab,var(--org-brand-border,#d8d8d8)_75%,#e0e0e0)] focus-within:bg-[#eeeeee] focus-within:shadow-none',
 } as const;
 
 export const campusFocusRing =
   'transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]';
-
-/** Form control row (filters, selects) — matches hiring/job list toolbars. */
-export const campusFormControl =
-  'h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none ' + campusFocusRing;
 
 export const recruitmentStatusChips: Record<string, string> = {
   pending_review: 'bg-[#fff7ed] text-[#c2410c]',

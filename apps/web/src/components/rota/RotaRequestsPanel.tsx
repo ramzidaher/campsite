@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { canFinalApproveRotaRequests, type ProfileRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 import { addWeeks, endOfWeekExclusive, startOfWeekMonday } from '@/lib/datetime';
@@ -312,7 +313,7 @@ export function RotaRequestsPanel({
             <p className="text-[13px] font-semibold text-[#121212]">Swap shifts</p>
             <label className="block text-[13px] font-medium text-[#121212]">
               Your shift
-              <select
+              <FormSelect
                 className={field}
                 value={swapFromId}
                 onChange={(e) => setSwapFromId(e.target.value)}
@@ -323,11 +324,11 @@ export function RotaRequestsPanel({
                     {fmtShift(s)}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
             <label className="block text-[13px] font-medium text-[#121212]">
               Their shift
-              <select
+              <FormSelect
                 className={field}
                 value={swapToId}
                 onChange={(e) => setSwapToId(e.target.value)}
@@ -338,7 +339,7 @@ export function RotaRequestsPanel({
                     {fmtShift(s)}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
             <div className="rounded-xl border border-[#e4e2dc] bg-white p-3 sm:p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -432,7 +433,7 @@ export function RotaRequestsPanel({
             <p className="text-[13px] font-semibold text-[#121212]">Request to be unassigned</p>
             <label className="block text-[13px] font-medium text-[#121212]">
               Shift
-              <select
+              <FormSelect
                 className={field}
                 value={changeShiftId}
                 onChange={(e) => setChangeShiftId(e.target.value)}
@@ -443,7 +444,7 @@ export function RotaRequestsPanel({
                     {fmtShift(s)}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
             <label className="block text-[13px] font-medium text-[#121212]">
               Note to approvers

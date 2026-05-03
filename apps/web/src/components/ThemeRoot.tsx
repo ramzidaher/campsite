@@ -1,21 +1,37 @@
 'use client';
 
+import {
+  accentPresets,
+  DEFAULT_ACCENT_PRESET,
+  type AccentPreset,
+} from '@campsite/theme';
 import { ThemeProvider, ToastProvider } from '@campsite/ui';
 import { useEffect, useState } from 'react';
 
-export function ThemeRoot({ children }: { children: React.ReactNode }) {
-  const [scheme, setScheme] = useState<'light' | 'dark'>('light');
+function normalizeAccentPreset(raw: string | null | undefined): AccentPreset {
+  const k = raw?.trim().toLowerCase();
+  if (k && k in accentPresets) return k as AccentPreset;
+  return DEFAULT_ACCENT_PRESET;
+}
+
+export function ThemeRoot({
+  children,
+  initialAccentPreset = DEFAULT_ACCENT_PRESET,
+}: {
+  children: React.ReactNode;
+  /** From shell bundle `profile_accent_preset` */
+  initialAccentPreset?: string;
+}) {
+  const [accent, setAccent] = useState<AccentPreset>(() =>
+    normalizeAccentPreset(initialAccentPreset)
+  );
 
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => setScheme(mq.matches ? 'dark' : 'light');
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
+    setAccent(normalizeAccentPreset(initialAccentPreset));
+  }, [initialAccentPreset]);
 
   return (
-    <ThemeProvider scheme={scheme} accent="midnight">
+    <ThemeProvider scheme="light" accent={accent}>
       <ToastProvider>{children}</ToastProvider>
     </ThemeProvider>
   );

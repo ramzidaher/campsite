@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -107,7 +108,7 @@ export function ScanLogsClient({ initialRows }: { initialRows: ScanLogRow[] }) {
             aria-label="Search scan logs"
           />
         </div>
-        <select
+        <FormSelect
           className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
           value={resultFilter}
           onChange={(e) => setResultFilter(e.target.value as ResultFilter)}
@@ -116,8 +117,8 @@ export function ScanLogsClient({ initialRows }: { initialRows: ScanLogRow[] }) {
           <option value="all">All results</option>
           <option value="valid">Valid only</option>
           <option value="invalid">Invalid only</option>
-        </select>
-        <select
+        </FormSelect>
+        <FormSelect
           className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
           value={period}
           onChange={(e) => setPeriod(e.target.value as PeriodFilter)}
@@ -127,7 +128,7 @@ export function ScanLogsClient({ initialRows }: { initialRows: ScanLogRow[] }) {
           <option value="30">Last 30 days</option>
           <option value="90">Last 90 days</option>
           <option value="all">All loaded</option>
-        </select>
+        </FormSelect>
         <button
           type="button"
           disabled={busy}

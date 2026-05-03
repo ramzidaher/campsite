@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -219,10 +220,10 @@ export function TaxDocumentsClient({
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-[12.5px] font-medium text-[#6b6b6b]">
               Document type
-              <select value={documentType} onChange={(e) => setDocumentType(e.target.value as 'p45' | 'p60')} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
+              <FormSelect value={documentType} onChange={(e) => setDocumentType(e.target.value as 'p45' | 'p60')} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
                 <option value="p45">P45</option>
                 <option value="p60">P60</option>
-              </select>
+              </FormSelect>
             </label>
             <label className="text-[12.5px] font-medium text-[#6b6b6b]">
               Tax year
@@ -238,11 +239,11 @@ export function TaxDocumentsClient({
             </label>
             <label className="text-[12.5px] font-medium text-[#6b6b6b]">
               Status
-              <select value={docStatus} onChange={(e) => setDocStatus(e.target.value as 'draft' | 'final' | 'issued')} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
+              <FormSelect value={docStatus} onChange={(e) => setDocStatus(e.target.value as 'draft' | 'final' | 'issued')} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
                 <option value="draft">Draft</option>
                 <option value="final">Final</option>
                 <option value="issued">Issued</option>
-              </select>
+              </FormSelect>
             </label>
             <label className="text-[12.5px] font-medium text-[#6b6b6b]">
               Finance reference

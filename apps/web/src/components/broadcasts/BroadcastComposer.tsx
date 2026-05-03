@@ -1,4 +1,5 @@
 'use client';
+import { FormSelect } from '@campsite/ui/web';
 import type { ReactNode, SelectHTMLAttributes } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -134,13 +135,13 @@ function SelectWithChevron({
 }: SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }) {
   return (
     <div className="relative w-full">
-      <select
+      <FormSelect
         {...selectProps}
         className={[SELECT_FIELD_CLASS, className].filter(Boolean).join(' ')}
         style={{ ...SELECT_FIELD_STYLE, ...style }}
       >
         {children}
-      </select>
+      </FormSelect>
       <span
         className="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#6b6b6b]"
         aria-hidden

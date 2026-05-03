@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import type { PermissionPickerItem } from '@/lib/authz/customRolePickerContract';
 import { validateCustomRolePermissionKeys } from '@/lib/authz/validateCustomRolePermissions';
 import Link from 'next/link';
@@ -1071,7 +1072,7 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
               <label className="mb-1 block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#6B6963]">
                 Start from founder preset (optional)
               </label>
-              <select
+              <FormSelect
                 value={selectedPresetId}
                 onChange={(e) => {
                   const presetId = e.target.value;
@@ -1097,7 +1098,7 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                     {preset.name} ({preset.key}) - v{preset.source_version_no}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </div>
             <div>
               <label className="mb-1 block text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#6B6963]">

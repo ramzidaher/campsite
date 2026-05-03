@@ -6,6 +6,7 @@ import {
   isBroadcastApproverRole,
   isBroadcastDraftOnlyRole,
 } from '@campsite/types';
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -340,36 +341,29 @@ export function BroadcastsClient({
     else setWorkspaceView('feed');
   }, [searchParams, composeAllowed, showScheduledTab]);
 
-  const workspaceSelectClass =
-    'h-9 min-w-[200px] appearance-none rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10';
+  const feedSelectChrome =
+    'rounded-xl border-[#e8e8e8] focus:border-[#121212] focus:shadow-none focus:ring-[3px] focus:ring-[#121212]/10';
 
   const workspaceToolbar =
     composeAllowed ? (
       <div className="border-b border-[#e8e8e8] py-3">
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="relative shrink-0">
-            <select
-              value={workspaceView}
-              onChange={(e) => goWorkspace(e.target.value as WorkspaceView)}
-              className={workspaceSelectClass}
-              aria-label="Broadcast view"
-            >
-              <option value="feed">
-                Feed{unread > 0 ? ` (${unread} unread)` : ''}
-              </option>
-              <option value="drafts">My drafts</option>
-              <option value="submitted">
-                Sent for approval{submittedInboxBadge > 0 ? ` (${submittedInboxBadge})` : ''}
-              </option>
-              {showScheduledTab ? <option value="scheduled">Scheduled</option> : null}
-            </select>
-            <span
-              aria-hidden
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
-            >
-              ▾
-            </span>
-          </div>
+          <FormSelect
+            wrapperClassName="!w-auto min-w-[200px] shrink-0"
+            className={feedSelectChrome}
+            value={workspaceView}
+            onChange={(e) => goWorkspace(e.target.value as WorkspaceView)}
+            aria-label="Broadcast view"
+          >
+            <option value="feed">
+              Feed{unread > 0 ? ` (${unread} unread)` : ''}
+            </option>
+            <option value="drafts">My drafts</option>
+            <option value="submitted">
+              Sent for approval{submittedInboxBadge > 0 ? ` (${submittedInboxBadge})` : ''}
+            </option>
+            {showScheduledTab ? <option value="scheduled">Scheduled</option> : null}
+          </FormSelect>
           {primaryComposeCta ? (
             <button
               type="button"
@@ -443,29 +437,22 @@ export function BroadcastsClient({
           <div className="border-b border-[#e8e8e8] py-3">
             <div className="flex flex-wrap items-center gap-2.5">
               {composeAllowed ? (
-                <div className="relative min-w-[220px] flex-[1_1_220px] sm:flex-[0_0_auto]">
-                  <select
-                    value={workspaceView}
-                    onChange={(e) => goWorkspace(e.target.value as WorkspaceView)}
-                    className={workspaceSelectClass}
-                    aria-label="Broadcast view"
-                  >
-                    <option value="feed">
-                      Feed{unread > 0 ? ` (${unread} unread)` : ''}
-                    </option>
-                    <option value="drafts">My drafts</option>
-                    <option value="submitted">
-                      Sent for approval{submittedInboxBadge > 0 ? ` (${submittedInboxBadge})` : ''}
-                    </option>
-                    {showScheduledTab ? <option value="scheduled">Scheduled</option> : null}
-                  </select>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
-                  >
-                    ▾
-                  </span>
-                </div>
+                <FormSelect
+                  wrapperClassName="min-w-[220px] flex-[1_1_220px] sm:flex-[0_0_auto]"
+                  className={feedSelectChrome}
+                  value={workspaceView}
+                  onChange={(e) => goWorkspace(e.target.value as WorkspaceView)}
+                  aria-label="Broadcast view"
+                >
+                  <option value="feed">
+                    Feed{unread > 0 ? ` (${unread} unread)` : ''}
+                  </option>
+                  <option value="drafts">My drafts</option>
+                  <option value="submitted">
+                    Sent for approval{submittedInboxBadge > 0 ? ` (${submittedInboxBadge})` : ''}
+                  </option>
+                  {showScheduledTab ? <option value="scheduled">Scheduled</option> : null}
+                </FormSelect>
               ) : null}
               <div className="relative min-w-[240px] flex-[2_1_360px]">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9b9b9b]">
@@ -480,70 +467,50 @@ export function BroadcastsClient({
                 />
               </div>
               <div className="flex min-w-[220px] flex-[1_1_520px] flex-wrap items-center gap-2.5">
-                <div className="relative min-w-[170px] flex-[1_1_180px]">
-                  <select
-                    value={feedDepartmentId}
-                    onChange={(e) => setFeedDepartmentId(e.target.value)}
-                    disabled={feedDeptsSorted.length === 0}
-                    className="h-9 w-full appearance-none truncate rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10 disabled:cursor-not-allowed disabled:opacity-60"
-                    aria-label="Department"
-                  >
-                    <option value="">All departments</option>
-                    {feedDeptsSorted.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
-                  >
-                    ▾
-                  </span>
-                </div>
-                <div className="relative min-w-[170px] flex-[1_1_180px]">
-                  <select
-                    value={advancedFilter}
-                    onChange={(e) => setAdvancedFilter(e.target.value as AdvancedFeedFilter)}
-                    className="h-9 w-full appearance-none rounded-xl border border-[#e8e8e8] bg-white px-3 pr-9 text-[13px] text-[#121212] outline-none focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
-                    aria-label="Filter broadcasts"
-                  >
-                    <option value="all">All broadcasts</option>
-                    <option value="unread_only">Unread only</option>
-                    <option value="my_departments">My departments</option>
-                    <option value="pinned">Pinned only</option>
-                    <option value="mandatory">Mandatory only</option>
-                    <option value="org_wide">Org-wide only</option>
-                  </select>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]"
-                  >
-                    ▾
-                  </span>
-                </div>
+                <FormSelect
+                  wrapperClassName="min-w-[170px] flex-[1_1_180px]"
+                  className={`truncate ${feedSelectChrome}`}
+                  value={feedDepartmentId}
+                  onChange={(e) => setFeedDepartmentId(e.target.value)}
+                  disabled={feedDeptsSorted.length === 0}
+                  aria-label="Department"
+                >
+                  <option value="">All departments</option>
+                  {feedDeptsSorted.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </FormSelect>
+                <FormSelect
+                  wrapperClassName="min-w-[170px] flex-[1_1_180px]"
+                  className={feedSelectChrome}
+                  value={advancedFilter}
+                  onChange={(e) => setAdvancedFilter(e.target.value as AdvancedFeedFilter)}
+                  aria-label="Filter broadcasts"
+                >
+                  <option value="all">All broadcasts</option>
+                  <option value="unread_only">Unread only</option>
+                  <option value="my_departments">My departments</option>
+                  <option value="pinned">Pinned only</option>
+                  <option value="mandatory">Mandatory only</option>
+                  <option value="org_wide">Org-wide only</option>
+                </FormSelect>
               </div>
               <div className="ml-auto flex shrink-0 items-center gap-2">
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as BroadcastSort)}
-                    className="h-8 appearance-none rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-2.5 pr-7 text-[11.5px] font-medium text-[#121212] outline-none transition focus:border-[#121212] focus:ring-[3px] focus:ring-[#121212]/10"
-                    aria-label="Sort broadcasts"
-                  >
-                    <option value="newest">Newest first</option>
-                    <option value="oldest">Oldest first</option>
-                    <option value="title_asc">Title A-Z</option>
-                    <option value="title_desc">Title Z-A</option>
-                  </select>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-[#6b6b6b]"
-                  >
-                    ▾
-                  </span>
-                </div>
+                <FormSelect
+                  controlSize="sm"
+                  wrapperClassName="!w-auto shrink-0"
+                  className="rounded-lg border-[#d8d8d8] bg-[#f5f4f1] text-[11.5px] font-medium focus:shadow-none focus:ring-[3px] focus:ring-[#121212]/10"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as BroadcastSort)}
+                  aria-label="Sort broadcasts"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="title_asc">Title A-Z</option>
+                  <option value="title_desc">Title Z-A</option>
+                </FormSelect>
                 <ExperienceLensBar
                   ariaLabel="Broadcast feed layout"
                   value={feedLayout}

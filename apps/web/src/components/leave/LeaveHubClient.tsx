@@ -14,6 +14,7 @@ import { countOrgLeaveDaysInclusive, overlapInclusiveRange, type OrgLeaveDayOpti
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { CampfireLoaderInline } from '@/components/CampfireLoaderInline';
+import { FormSelect } from '@campsite/ui/web';
 import { Calendar, ChevronDown, Info } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -1339,9 +1340,18 @@ export function LeaveHubClient({
           <div className="flex flex-wrap items-center justify-end gap-2">
             <label className="flex flex-wrap items-center justify-end gap-2 text-[12px] text-[#6b6b6b]">
               Leave year
-              <select value={year} onChange={(e) => setYear(e.target.value)} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] focus:border-[#121212] focus:outline-none">
-                {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
+              <FormSelect
+                controlSize="sm"
+                wrapperClassName="!w-auto shrink-0"
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </FormSelect>
             </label>
             {canManage ? (
               <Link href="/hr/leave" className="inline-flex h-8 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]">
@@ -1690,15 +1700,16 @@ export function LeaveHubClient({
               </label>
               <label className="block w-full sm:w-44">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Unit</span>
-                <select
+                <FormSelect
+                  controlSize="lg"
                   value={toilEarnUnit}
                   onChange={(e) => setToilEarnUnit(e.target.value as 'minutes' | 'hours' | 'days')}
-                  className="w-full rounded-xl border border-[#d8d8d8] bg-white px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                  className="rounded-xl"
                 >
                   <option value="minutes">Minutes</option>
                   <option value="hours">Hours</option>
                   <option value="days">Days ({toilMinutesPerDay} min = 1 day)</option>
-                </select>
+                </FormSelect>
               </label>
             </div>
             {toilEarnAmount && Number(toilEarnAmount) > 0 ? (
@@ -1735,14 +1746,20 @@ export function LeaveHubClient({
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">From leave year</span>
-                <select
+                <FormSelect
+                  controlSize="lg"
+                  tone="canvas"
                   value={carryoverFromYear}
                   onChange={(e) => setCarryoverFromYear(e.target.value)}
-                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                  className="rounded-xl"
                 >
                   <option value="">Select year</option>
-                  {yearOptions.map((y) => <option key={`carry-${y}`} value={y}>{y}</option>)}
-                </select>
+                  {yearOptions.map((y) => (
+                    <option key={`carry-${y}`} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </FormSelect>
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Days requested</span>
@@ -1792,14 +1809,20 @@ export function LeaveHubClient({
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Leave year</span>
-                <select
+                <FormSelect
+                  controlSize="lg"
+                  tone="canvas"
                   value={encashmentYear}
                   onChange={(e) => setEncashmentYear(e.target.value)}
-                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                  className="rounded-xl"
                 >
                   <option value="">Select year</option>
-                  {yearOptions.map((y) => <option key={`encash-${y}`} value={y}>{y}</option>)}
-                </select>
+                  {yearOptions.map((y) => (
+                    <option key={`encash-${y}`} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </FormSelect>
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Days requested</span>
@@ -1912,39 +1935,35 @@ export function LeaveHubClient({
             {formKind === 'parental' ? (
               <label className="block">
                 <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Parental leave type</span>
-                <div className="relative">
-                  <select
-                    value={formParentalSubtype}
-                    onChange={(e) => setFormParentalSubtype(e.target.value as ParentalSubtype)}
-                    className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
-                  >
-                    <option value="maternity">Maternity</option>
-                    <option value="paternity">Paternity</option>
-                    <option value="adoption">Adoption</option>
-                    <option value="shared_parental">Shared parental</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
-                </div>
+                <FormSelect
+                  value={formParentalSubtype}
+                  onChange={(e) => setFormParentalSubtype(e.target.value as ParentalSubtype)}
+                  className="border-[#e0e0e0] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                >
+                  <option value="maternity">Maternity</option>
+                  <option value="paternity">Paternity</option>
+                  <option value="adoption">Adoption</option>
+                  <option value="shared_parental">Shared parental</option>
+                </FormSelect>
               </label>
             ) : null}
             {SUPPORTING_DOC_LEAVE_KINDS.includes(formKind) ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Supporting document type</span>
-                  <div className="relative">
-                    <select
-                      value={formSupportingDocKind}
-                      onChange={(e) => setFormSupportingDocKind(e.target.value as LeaveRequestDocument['document_kind'])}
-                      className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
-                    >
-                      <option value="fit_note">Fit note</option>
-                      <option value="medical_letter">Medical letter</option>
-                      <option value="adoption_document">Adoption document</option>
-                      <option value="bereavement_evidence">Bereavement evidence</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
-                  </div>
+                  <FormSelect
+                    value={formSupportingDocKind}
+                    onChange={(e) =>
+                      setFormSupportingDocKind(e.target.value as LeaveRequestDocument['document_kind'])
+                    }
+                    className="border-[#e0e0e0] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  >
+                    <option value="fit_note">Fit note</option>
+                    <option value="medical_letter">Medical letter</option>
+                    <option value="adoption_document">Adoption document</option>
+                    <option value="bereavement_evidence">Bereavement evidence</option>
+                    <option value="other">Other</option>
+                  </FormSelect>
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Supporting file (optional)</span>
@@ -1989,32 +2008,26 @@ export function LeaveHubClient({
             <div className="space-y-4">
               <label className="block">
                 <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Duration</span>
-                <div className="relative">
-                  <select
-                    value={formDayMode}
-                    onChange={(e) => setFormDayMode(e.target.value as 'full' | 'half')}
-                    className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
-                  >
-                    <option value="full">Full day(s)</option>
-                    <option value="half">Half day</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
-                </div>
+                <FormSelect
+                  value={formDayMode}
+                  onChange={(e) => setFormDayMode(e.target.value as 'full' | 'half')}
+                  className="border-[#e0e0e0] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                >
+                  <option value="full">Full day(s)</option>
+                  <option value="half">Half day</option>
+                </FormSelect>
               </label>
               {formDayMode === 'half' ? (
                 <label className="block sm:max-w-md">
                   <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Half-day slot</span>
-                  <div className="relative">
-                    <select
-                      value={formHalfDayPortion}
-                      onChange={(e) => setFormHalfDayPortion(e.target.value as 'am' | 'pm')}
-                      className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
-                    >
-                      <option value="am">Morning (AM)</option>
-                      <option value="pm">Afternoon (PM)</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
-                  </div>
+                  <FormSelect
+                    value={formHalfDayPortion}
+                    onChange={(e) => setFormHalfDayPortion(e.target.value as 'am' | 'pm')}
+                    className="border-[#e0e0e0] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  >
+                    <option value="am">Morning (AM)</option>
+                    <option value="pm">Afternoon (PM)</option>
+                  </FormSelect>
                 </label>
               ) : null}
             </div>
@@ -2101,26 +2114,30 @@ export function LeaveHubClient({
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Duration</span>
-                <select
+                <FormSelect
+                  controlSize="lg"
+                  tone="canvas"
                   value={sickDayMode}
                   onChange={(e) => setSickDayMode(e.target.value as 'full' | 'half')}
-                  className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                  className="rounded-xl"
                 >
                   <option value="full">Full day(s)</option>
                   <option value="half">Half day</option>
-                </select>
+                </FormSelect>
               </label>
               {sickDayMode === 'half' ? (
                 <label className="block">
                   <span className="mb-1.5 block text-[12px] font-semibold text-[#6b6b6b]">Half-day slot</span>
-                  <select
+                  <FormSelect
+                    controlSize="lg"
+                    tone="canvas"
                     value={sickHalfDayPortion}
                     onChange={(e) => setSickHalfDayPortion(e.target.value as 'am' | 'pm')}
-                    className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
+                    className="rounded-xl"
                   >
                     <option value="am">Morning (AM)</option>
                     <option value="pm">Afternoon (PM)</option>
-                  </select>
+                  </FormSelect>
                 </label>
               ) : <div />}
             </div>
@@ -2195,19 +2212,16 @@ export function LeaveHubClient({
             {editKind === 'parental' ? (
               <label className="block">
                 <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Parental leave type</span>
-                <div className="relative">
-                  <select
-                    value={editParentalSubtype}
-                    onChange={(e) => setEditParentalSubtype(e.target.value as ParentalSubtype)}
-                    className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
-                  >
-                    <option value="maternity">Maternity</option>
-                    <option value="paternity">Paternity</option>
-                    <option value="adoption">Adoption</option>
-                    <option value="shared_parental">Shared parental</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
-                </div>
+                <FormSelect
+                  value={editParentalSubtype}
+                  onChange={(e) => setEditParentalSubtype(e.target.value as ParentalSubtype)}
+                  className="border-[#e0e0e0] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                >
+                  <option value="maternity">Maternity</option>
+                  <option value="paternity">Paternity</option>
+                  <option value="adoption">Adoption</option>
+                  <option value="shared_parental">Shared parental</option>
+                </FormSelect>
               </label>
             ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
@@ -2243,32 +2257,26 @@ export function LeaveHubClient({
             <div className="space-y-4">
               <label className="block">
                 <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Duration</span>
-                <div className="relative">
-                  <select
-                    value={editDayMode}
-                    onChange={(e) => setEditDayMode(e.target.value as 'full' | 'half')}
-                    className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
-                  >
-                    <option value="full">Full day(s)</option>
-                    <option value="half">Half day</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
-                </div>
+                <FormSelect
+                  value={editDayMode}
+                  onChange={(e) => setEditDayMode(e.target.value as 'full' | 'half')}
+                  className="border-[#e0e0e0] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                >
+                  <option value="full">Full day(s)</option>
+                  <option value="half">Half day</option>
+                </FormSelect>
               </label>
               {editDayMode === 'half' ? (
                 <label className="block sm:max-w-md">
                   <span className="mb-1.5 block text-[12px] text-[#6b6b6b]">Half-day slot</span>
-                  <div className="relative">
-                    <select
-                      value={editHalfDayPortion}
-                      onChange={(e) => setEditHalfDayPortion(e.target.value as 'am' | 'pm')}
-                      className="w-full appearance-none rounded-lg border border-[#e0e0e0] bg-white py-2.5 pl-3 pr-10 text-[13px] text-[#121212] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
-                    >
-                      <option value="am">Morning (AM)</option>
-                      <option value="pm">Afternoon (PM)</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737373]" aria-hidden />
-                  </div>
+                  <FormSelect
+                    value={editHalfDayPortion}
+                    onChange={(e) => setEditHalfDayPortion(e.target.value as 'am' | 'pm')}
+                    className="border-[#e0e0e0] shadow-sm focus:border-[#121212] focus:outline-none focus:ring-2 focus:ring-[#121212]/10"
+                  >
+                    <option value="am">Morning (AM)</option>
+                    <option value="pm">Afternoon (PM)</option>
+                  </FormSelect>
                 </label>
               ) : null}
             </div>
@@ -2533,10 +2541,11 @@ export function LeaveHubClient({
               {teamCalendarDeptOptions.length > 0 ? (
                 <label className="flex items-center gap-1.5 text-[12px] text-[#6b6b6b]">
                   <span className="whitespace-nowrap">Department</span>
-                  <select
+                  <FormSelect
+                    controlSize="sm"
+                    wrapperClassName="max-w-[min(100vw-2rem,220px)] !w-auto shrink-0"
                     value={teamCalendarDeptFilter}
                     onChange={(e) => setTeamCalendarDeptFilter(e.target.value as 'all' | string)}
-                    className="max-w-[min(100vw-2rem,220px)] rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] focus:border-[#121212] focus:outline-none"
                   >
                     <option value="all">All departments</option>
                     {teamCalendarDeptOptions.map((d) => (
@@ -2544,7 +2553,7 @@ export function LeaveHubClient({
                         {d.name}
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </label>
               ) : null}
               <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { JobScreeningQuestionsSection } from '@/components/admin/JobScreeningQuestionsSection';
 import { type JobScreeningQuestionPersist } from '@/app/(main)/admin/jobs/actions';
 import {
@@ -157,7 +158,7 @@ export function HiringApplicationFormEditorClient({
             <label className="mb-2 block text-[12px] font-semibold text-[#6b6b6b]" htmlFor="form_department">
               Department
             </label>
-            <select
+            <FormSelect
               id="form_department"
               className="mt-0 w-full rounded-xl border border-[#d8d8d8] bg-white px-4 py-3 text-[14px] leading-relaxed text-[#121212] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
               value={departmentId}
@@ -169,7 +170,7 @@ export function HiringApplicationFormEditorClient({
                   {d.name}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </div>
         </div>
       </section>

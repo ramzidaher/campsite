@@ -24,7 +24,8 @@ export const getCachedHrOverviewPageData = cache(async (): Promise<CachedHrOverv
   if (shellBundleProfileStatus(bundle) !== 'active') return { kind: 'redirect', to: '/broadcasts' };
 
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!getMainShellHrNavItemsByPermissions(permissionKeys)?.length) {
+  const timesheetClockEnabled = bundle['timesheet_clock_enabled'] === true;
+  if (!getMainShellHrNavItemsByPermissions(permissionKeys, { timesheetClockEnabled })?.length) {
     return { kind: 'redirect', to: '/broadcasts' };
   }
 

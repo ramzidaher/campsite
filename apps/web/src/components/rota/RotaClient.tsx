@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import {
   canCreateRota,
   canEditRotaShifts,
@@ -854,26 +855,26 @@ export function RotaClient({ profile }: { profile: Profile }) {
         <div className="flex flex-wrap gap-3 border-b border-[#ebe9e4] bg-[#faf9f6] px-4 py-3 sm:px-6">
       <label className="flex items-center gap-2 text-[13px] text-[#6b6b6b]">
             Staff
-            <select className={fieldSelect} value={filterUser} onChange={(e) => setFilterUser(e.target.value)}>
+            <FormSelect className={fieldSelect} value={filterUser} onChange={(e) => setFilterUser(e.target.value)}>
               <option value="">All</option>
               {staff.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.full_name}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           {view === 'full' ? (
             <label className="flex items-center gap-2 text-[13px] text-[#6b6b6b]">
               Department
-              <select className={fieldSelect} value={filterDept} onChange={(e) => setFilterDept(e.target.value)}>
+              <FormSelect className={fieldSelect} value={filterDept} onChange={(e) => setFilterDept(e.target.value)}>
                 <option value="">All</option>
                 {departments.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
           ) : null}
         </div>
@@ -1266,7 +1267,7 @@ function RotaManagePanel({
             </label>
             <label className="mt-4 block text-[13px] font-medium text-[#121212]">
               Kind
-              <select
+              <FormSelect
                 className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
                 value={kind}
                 onChange={(e) => setKind(e.target.value)}
@@ -1275,7 +1276,7 @@ function RotaManagePanel({
                 <option value="activity">Activity</option>
                 <option value="reception">Reception</option>
                 <option value="other">Other</option>
-              </select>
+              </FormSelect>
             </label>
             <label className="mt-4 block text-[13px] font-medium text-[#121212]">
               Department
@@ -1284,7 +1285,7 @@ function RotaManagePanel({
               ) : (
                 <span className="font-normal text-[#6b6b6b]"> (optional)</span>
               )}
-              <select
+              <FormSelect
                 className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
                 value={deptId}
                 onChange={(e) => setDeptId(e.target.value)}
@@ -1295,18 +1296,18 @@ function RotaManagePanel({
                     {d.name}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
             <label className="mt-4 block text-[13px] font-medium text-[#121212]">
               Visibility
-              <select
+              <FormSelect
                 className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
                 value={newRotaStatus}
                 onChange={(e) => setNewRotaStatus(e.target.value as 'draft' | 'published')}
               >
                 <option value="published">Published (visible to roster)</option>
                 <option value="draft">Draft (editors only)</option>
-              </select>
+              </FormSelect>
             </label>
             <button type="button" className={`${BTN_PRIMARY} mt-5 w-full sm:w-auto`} onClick={() => void createRota()}>
               Create rota
@@ -1318,7 +1319,7 @@ function RotaManagePanel({
               <p className="mt-1 text-[13px] text-[#6b6b6b]">Org admin only - hand a rota to another staff member.</p>
               <label className="mt-4 block text-[13px] font-medium text-[#121212]">
                 Rota
-                <select
+                <FormSelect
                   className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
                   value={xferRota}
                   onChange={(e) => setXferRota(e.target.value)}
@@ -1329,11 +1330,11 @@ function RotaManagePanel({
                       {r.title}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </label>
               <label className="mt-4 block text-[13px] font-medium text-[#121212]">
                 New owner
-                <select
+                <FormSelect
                   className="mt-1.5 w-full rounded-xl border border-[#d4d2cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
                   value={xferUser}
                   onChange={(e) => setXferUser(e.target.value)}
@@ -1344,7 +1345,7 @@ function RotaManagePanel({
                       {s.full_name}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </label>
               <button type="button" className={`${BTN_PRIMARY} mt-5 w-full sm:w-auto`} onClick={() => void transfer()}>
                 Transfer
@@ -1364,7 +1365,7 @@ function RotaManagePanel({
                     className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#d4d2cc] bg-white px-4 py-3 text-[13px]"
                   >
                     <span className="font-medium text-[#121212]">{r.title}</span>
-                    <select
+                    <FormSelect
                       className="rounded-lg border border-[#d4d2cc] bg-[#faf9f6] px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-[#121212]/10"
                       value={r.status === 'draft' ? 'draft' : 'published'}
                       onChange={(e) =>
@@ -1373,7 +1374,7 @@ function RotaManagePanel({
                     >
                       <option value="published">Published</option>
                       <option value="draft">Draft</option>
-                    </select>
+                    </FormSelect>
                   </li>
                 ))}
               </ul>
@@ -1686,14 +1687,14 @@ function ShiftEditor({
       <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6 sm:py-6">
           <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">
             Rota {requireRota ? '(required)' : '(optional - link shifts to a named rota)'}
-            <select className={fieldClass} value={rotaId} onChange={(e) => setRotaId(e.target.value)}>
+            <FormSelect className={fieldClass} value={rotaId} onChange={(e) => setRotaId(e.target.value)}>
               <option value="">-</option>
               {rotas.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.title} ({r.kind}){r.status === 'draft' ? ' - draft' : ''}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <div className="sm:col-span-2 rounded-xl border border-dashed border-[#d4d2cc] bg-[#faf9f6] p-4 sm:p-5">
             <p className="text-[13px] font-semibold text-[#121212]">Need a new rota?</p>
@@ -1708,7 +1709,7 @@ function ShiftEditor({
                 onChange={(e) => setNewRotaTitle(e.target.value)}
                 disabled={isEdit}
               />
-              <select
+              <FormSelect
                 className={fieldClass + ' max-w-[140px]'}
                 value={newRotaKind}
                 onChange={(e) => setNewRotaKind(e.target.value)}
@@ -1718,8 +1719,8 @@ function ShiftEditor({
                 <option value="activity">activity</option>
                 <option value="reception">reception</option>
                 <option value="other">other</option>
-              </select>
-              <select
+              </FormSelect>
+              <FormSelect
                 className={fieldClass + ' max-w-[160px]'}
                 value={newRotaDept}
                 onChange={(e) => setNewRotaDept(e.target.value)}
@@ -1731,7 +1732,7 @@ function ShiftEditor({
                     {d.name}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
               <button
                 type="button"
                 className={`${BTN_SECONDARY} text-[12.5px] disabled:opacity-40`}
@@ -1744,26 +1745,26 @@ function ShiftEditor({
           </div>
           <label className="text-[13px] font-medium text-[#6b6b6b]">
             Department
-            <select className={fieldClass} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
+            <FormSelect className={fieldClass} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
               <option value="">-</option>
               {deptOptions.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[13px] font-medium text-[#6b6b6b]">
             Level
-            <select className={fieldClass} value={level} onChange={(e) => setLevel(e.target.value as 'all' | 'csa' | 'dm')}>
+            <FormSelect className={fieldClass} value={level} onChange={(e) => setLevel(e.target.value as 'all' | 'csa' | 'dm')}>
               <option value="all">All levels</option>
               <option value="csa">CSA</option>
               <option value="dm">DM</option>
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[13px] font-medium text-[#6b6b6b]">
             Assignee
-            <select className={fieldClass} value={userId} onChange={(e) => setUserId(e.target.value)}>
+            <FormSelect className={fieldClass} value={userId} onChange={(e) => setUserId(e.target.value)}>
               <option value="">Open slot</option>
               {eligibleStaff.map((s) => {
                 const hint = assigneeHintById.get(s.id);
@@ -1775,7 +1776,7 @@ function ShiftEditor({
                   </option>
                 );
               })}
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">
             Role label

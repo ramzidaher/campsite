@@ -17,6 +17,7 @@ import {
   suggestedBrandTokensFromHexes,
   type OrgBrandTokenKey,
 } from '@/lib/orgBranding';
+import { FormSelect } from '@campsite/ui/web';
 import { useRouter } from 'next/navigation';
 import {
   useEffect,
@@ -1234,8 +1235,9 @@ export function OrgSettingsClient({
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   <label className="text-[11.5px] text-[#6b6b6b]">
                     Preset
-                    <select
-                      className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-2 text-[12px] text-[#121212]"
+                    <FormSelect
+                      wrapperClassName="mt-1"
+                      controlSize="sm"
                       value={brandPresetKey}
                       onChange={(e) => {
                         const k = e.target.value as keyof typeof ORG_BRAND_PRESETS;
@@ -1249,12 +1251,13 @@ export function OrgSettingsClient({
                           {k}
                         </option>
                       ))}
-                    </select>
+                    </FormSelect>
                   </label>
                   <label className="text-[11.5px] text-[#6b6b6b]">
                     Celebration + brand policy
-                    <select
-                      className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-2 text-[12px] text-[#121212]"
+                    <FormSelect
+                      wrapperClassName="mt-1"
+                      controlSize="sm"
                       value={brandPolicy}
                       onChange={(e) => setBrandPolicy(e.target.value)}
                     >
@@ -1263,7 +1266,7 @@ export function OrgSettingsClient({
                           {opt.label}
                         </option>
                       ))}
-                    </select>
+                    </FormSelect>
                   </label>
                 </div>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -1728,8 +1731,8 @@ export function OrgSettingsClient({
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
                           <label className="text-[12px] text-[#6b6b6b]">
                             Start month
-                            <select
-                              className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                            <FormSelect
+                              wrapperClassName="mt-1"
                               value={selectedCelebrationRow.auto_start_month ?? ''}
                               onChange={(e) =>
                                 setModeField(
@@ -1747,12 +1750,12 @@ export function OrgSettingsClient({
                                   {month.label}
                                 </option>
                               ))}
-                            </select>
+                            </FormSelect>
                           </label>
                           <label className="text-[12px] text-[#6b6b6b]">
                             Start day
-                            <select
-                              className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                            <FormSelect
+                              wrapperClassName="mt-1"
                               value={selectedCelebrationRow.auto_start_day ?? ''}
                               onChange={(e) =>
                                 setModeField(
@@ -1770,12 +1773,12 @@ export function OrgSettingsClient({
                                   {day}
                                 </option>
                               ))}
-                            </select>
+                            </FormSelect>
                           </label>
                           <label className="text-[12px] text-[#6b6b6b]">
                             End month
-                            <select
-                              className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                            <FormSelect
+                              wrapperClassName="mt-1"
                               value={selectedCelebrationRow.auto_end_month ?? ''}
                               onChange={(e) =>
                                 setModeField(
@@ -1793,12 +1796,12 @@ export function OrgSettingsClient({
                                   {month.label}
                                 </option>
                               ))}
-                            </select>
+                            </FormSelect>
                           </label>
                           <label className="text-[12px] text-[#6b6b6b]">
                             End day
-                            <select
-                              className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
+                            <FormSelect
+                              wrapperClassName="mt-1"
                               value={selectedCelebrationRow.auto_end_day ?? ''}
                               onChange={(e) =>
                                 setModeField(
@@ -1816,7 +1819,7 @@ export function OrgSettingsClient({
                                   {day}
                                 </option>
                               ))}
-                            </select>
+                            </FormSelect>
                           </label>
                         </div>
                         <p className="mt-3 text-[11.5px] text-[#6b6b6b]">

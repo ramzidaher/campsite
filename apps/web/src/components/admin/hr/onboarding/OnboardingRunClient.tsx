@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -268,17 +269,17 @@ export function OnboardingRunClient({
                 </label>
                 <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                   Assignee
-                  <select value={addAssignee} onChange={(e) => setAddAssignee(e.target.value)} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]">
+                  <FormSelect value={addAssignee} onChange={(e) => setAddAssignee(e.target.value)} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]">
                     <option value="hr">HR</option>
                     <option value="manager">Manager</option>
                     <option value="employee">New hire</option>
-                  </select>
+                  </FormSelect>
                 </label>
                 <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                   Category
-                  <select value={addCategory} onChange={(e) => setAddCategory(e.target.value)} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]">
+                  <FormSelect value={addCategory} onChange={(e) => setAddCategory(e.target.value)} className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]">
                     {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
+                  </FormSelect>
                 </label>
                 <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                   Due date (optional)

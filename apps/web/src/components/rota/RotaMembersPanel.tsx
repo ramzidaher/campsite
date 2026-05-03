@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { friendlyDbError } from '@/lib/rota/friendlyDbError';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -81,7 +82,7 @@ export function RotaMembersPanel({
           </p>
           <label className="block text-[13px] font-semibold text-[#121212]">
             Rota
-            <select
+            <FormSelect
               className="mt-1.5 w-full max-w-md rounded-xl border border-[#d4d2cc] bg-[#faf9f6] px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
               value={rotaId}
               onChange={(e) => setRotaId(e.target.value)}
@@ -92,14 +93,14 @@ export function RotaMembersPanel({
                   {r.title}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           {rotaId ? (
             <>
               <div className="flex flex-wrap items-end gap-3">
                 <label className="text-[13px] font-semibold text-[#121212]">
                   Add person
-                  <select
+                  <FormSelect
                     className="mt-1.5 block w-full min-w-[220px] rounded-xl border border-[#d4d2cc] bg-[#faf9f6] px-3 py-2.5 text-sm outline-none focus:border-[#121212] focus:ring-2 focus:ring-[#121212]/10"
                     value={addUserId}
                     onChange={(e) => setAddUserId(e.target.value)}
@@ -112,7 +113,7 @@ export function RotaMembersPanel({
                           {s.full_name}
                         </option>
                       ))}
-                  </select>
+                  </FormSelect>
                 </label>
                 <button
                   type="button"

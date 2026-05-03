@@ -32,10 +32,6 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Label>Rota</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'list.bullet.clipboard', selected: 'list.bullet.clipboard.fill' }} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="discount">
-        <NativeTabs.Trigger.Label>Discount</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'ticket', selected: 'ticket.fill' }} />
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="hr">
         <NativeTabs.Trigger.Label>My HR</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'briefcase', selected: 'briefcase.fill' }} />

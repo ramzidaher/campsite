@@ -18,12 +18,13 @@ export function HrHubScreen({ profile }: { profile: ProfileRow }) {
   const isDark = scheme === 'dark';
   const [tab, setTab] = useState<HrTab>('leave');
   const [showOneOnOne, setShowOneOnOne] = useState(false);
+  const [showAttendanceTab, setShowAttendanceTab] = useState(false);
 
   useEffect(() => {
     if (!profile.org_id) return;
     const supabase = getSupabase();
     void (async () => {
-      const [a, b] = await Promise.all([
+      const [a, b, hrRow] = await Promise.all([
         supabase.rpc('has_permission', {
           p_user_id: profile.id,
           p_org_id: profile.org_id,
@@ -36,14 +37,25 @@ export function HrHubScreen({ profile }: { profile: ProfileRow }) {
           p_permission_key: 'hr.view_records',
           p_context: {},
         }),
+        supabase
+          .from('employee_hr_records')
+          .select('timesheet_clock_enabled')
+          .eq('org_id', profile.org_id)
+          .eq('user_id', profile.id)
+          .maybeSingle(),
       ]);
       setShowOneOnOne(!!a.data || !!b.data);
+      setShowAttendanceTab(Boolean(hrRow.data?.timesheet_clock_enabled));
     })();
   }, [profile.id, profile.org_id]);
 
+  useEffect(() => {
+    if (!showAttendanceTab && tab === 'attendance') setTab('leave');
+  }, [showAttendanceTab, tab]);
+
   const tabs: { key: HrTab; label: string }[] = [
     { key: 'leave', label: 'Time off' },
-    { key: 'attendance', label: 'Attendance' },
+    ...(showAttendanceTab ? [{ key: 'attendance' as const, label: 'Attendance' }] : []),
     { key: 'performance', label: 'Reviews' },
     ...(showOneOnOne ? [{ key: 'one_on_one' as const, label: '1:1' }] : []),
     { key: 'onboarding', label: 'Onboarding' },

@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -183,14 +184,14 @@ export function PrivacyAdminClient() {
             </label>
             <label className="block">
               <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Final action</span>
-              <select
+              <FormSelect
                 value={draftPolicy.action}
                 onChange={(e) => setDraftPolicy((d) => ({ ...d, action: e.target.value }))}
                 className={fieldClass}
               >
                 <option value="anonymize">Anonymize</option>
                 <option value="delete">Delete</option>
-              </select>
+              </FormSelect>
             </label>
             <label className="block sm:col-span-2">
               <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">

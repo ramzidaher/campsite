@@ -1,5 +1,6 @@
 'use client';
 
+import { campusSurface } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -97,7 +98,8 @@ export function ApplicationNotificationsClient({
                     if (isUnread) void markRead(n.id);
                   }}
                   className={[
-                    'flex items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-[#faf9f6]',
+                    'flex items-start gap-3 rounded-xl border p-4',
+                    campusSurface.interactiveSheetRow,
                     isUnread ? 'border-[#fde68a] bg-[#fffbeb]' : 'border-[#d8d8d8] bg-white',
                   ].join(' ')}
                 >

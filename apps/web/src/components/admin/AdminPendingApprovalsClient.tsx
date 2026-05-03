@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -228,7 +229,7 @@ export function AdminPendingApprovalsClient({
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-[12px] text-[#6b6b6b]">
               Role for all
-              <select
+              <FormSelect
                 value={bulkApproveRole}
                 onChange={(e) => setBulkApproveRole(e.target.value)}
                 className="h-9 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-2 text-[13px] text-[#121212]"
@@ -238,7 +239,7 @@ export function AdminPendingApprovalsClient({
                     {r.label}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
             <button
               type="button"
@@ -339,7 +340,7 @@ export function AdminPendingApprovalsClient({
                     </div>
                   ) : (
                     <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-                      <select
+                      <FormSelect
                         value={approveRoleById[p.id] ?? defaultApproveRole}
                         onChange={(e) =>
                           setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value }))
@@ -352,7 +353,7 @@ export function AdminPendingApprovalsClient({
                             {r.label}
                           </option>
                         ))}
-                      </select>
+                      </FormSelect>
                       <div className="flex items-center gap-2">
                       <button
                         type="button"

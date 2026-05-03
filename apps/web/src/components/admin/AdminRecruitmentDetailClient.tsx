@@ -7,6 +7,7 @@ import {
   recruitmentHireReasonLabel,
   recruitmentStatusLabel,
 } from '@/lib/recruitment/labels';
+import { FormSelect } from '@campsite/ui/web';
 import { RECRUITMENT_REQUEST_STATUSES, type RecruitmentRequestStatus } from '@campsite/types';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
@@ -421,29 +422,24 @@ export function AdminRecruitmentDetailClient({
             <label className="mt-1 block text-[12px] font-medium text-[#6b6b6b]" htmlFor="request-status-select">
               Status
             </label>
-            <div className="relative mt-2">
-              <span
-                className={`pointer-events-none absolute left-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full ${STATUS_DOT[status] ?? 'bg-[#9b9b9b]'}`}
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-[#4b5563]/85">
-                ▾
-              </span>
-              <select
-                id="request-status-select"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as RecruitmentRequestStatus)}
-                className={[
-                  'h-10 w-full appearance-none rounded-xl border pl-8 pr-10 text-[13px] font-medium capitalize focus:outline-none',
-                  STATUS_STYLE[status] ?? 'bg-[#f5f4f1] text-[#6b6b6b] border-[#e8e8e8]',
-                ].join(' ')}
-              >
-                {(RECRUITMENT_REQUEST_STATUSES as readonly RecruitmentRequestStatus[]).map((s) => (
-                  <option key={s} value={s}>
-                    {recruitmentStatusLabel(s)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              id="request-status-select"
+              controlSize="lg"
+              wrapperClassName="mt-2"
+              leading={<span className={`h-2 w-2 rounded-full ${STATUS_DOT[status] ?? 'bg-[#9b9b9b]'}`} />}
+              value={status}
+              onChange={(e) => setStatus(e.target.value as RecruitmentRequestStatus)}
+              className={[
+                'rounded-xl font-medium capitalize focus:outline-none',
+                STATUS_STYLE[status] ?? 'bg-[#f5f4f1] text-[#6b6b6b] border-[#e8e8e8]',
+              ].join(' ')}
+            >
+              {(RECRUITMENT_REQUEST_STATUSES as readonly RecruitmentRequestStatus[]).map((s) => (
+                <option key={s} value={s}>
+                  {recruitmentStatusLabel(s)}
+                </option>
+              ))}
+            </FormSelect>
 
             <label className="mt-4 block text-[12px] font-medium text-[#6b6b6b]">
               Note <span className="font-normal text-[#9b9b9b]">(optional)</span>

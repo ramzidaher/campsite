@@ -1,5 +1,6 @@
 'use client';
 
+import { campusSurface, FormSelect } from '@campsite/ui/web';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -116,7 +117,7 @@ export function OneOnOnesHubClient({
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-[12px] text-[#6b6b6b]">
                   Direct report
-                  <select
+                  <FormSelect
                     className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
                     value={reportId}
                     onChange={(e) => setReportId(e.target.value)}
@@ -126,7 +127,7 @@ export function OneOnOnesHubClient({
                         {r.full_name}
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </label>
                 <label className="block text-[12px] text-[#6b6b6b]">
                   Starts
@@ -168,7 +169,7 @@ export function OneOnOnesHubClient({
               <Link
                 key={m.id}
                 href={`/one-on-ones/${m.id}`}
-                className="block rounded-xl border border-[#e8e8e8] bg-white p-4 transition-colors hover:bg-[#faf9f6]"
+                className={`block rounded-xl border border-[#e8e8e8] bg-white p-4 ${campusSurface.interactiveSheetRow}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-[14px] font-medium text-[#121212]">
@@ -211,7 +212,7 @@ export function OneOnOnesHubClient({
                   <div className="grid gap-3">
                     <label className="block text-[12px] text-[#6b6b6b]">
                       Direct report
-                      <select
+                      <FormSelect
                         className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
                         value={reportId}
                         onChange={(e) => setReportId(e.target.value)}
@@ -221,7 +222,7 @@ export function OneOnOnesHubClient({
                             {r.full_name}
                           </option>
                         ))}
-                      </select>
+                      </FormSelect>
                     </label>
                     <label className="block text-[12px] text-[#6b6b6b]">
                       Starts
@@ -302,7 +303,7 @@ function TemplatePicker({
     })();
   }, [supabase]);
   return (
-    <select
+    <FormSelect
       className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -313,6 +314,6 @@ function TemplatePicker({
           {t.name}
         </option>
       ))}
-    </select>
+    </FormSelect>
   );
 }

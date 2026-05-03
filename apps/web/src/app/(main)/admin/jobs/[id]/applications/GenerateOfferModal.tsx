@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import {
   previewMergedOfferLetter,
   sendOfferLetterForApplication,
@@ -146,7 +147,7 @@ export function GenerateOfferModal({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="text-[12px] font-medium text-[#505050]">Template</label>
-            <select
+            <FormSelect
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
@@ -156,7 +157,7 @@ export function GenerateOfferModal({
                   {t.name}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </div>
           <div>
             <label className="text-[12px] font-medium text-[#505050]">

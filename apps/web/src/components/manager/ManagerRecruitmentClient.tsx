@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createRecruitmentRequest } from '@/app/(main)/manager/recruitment/actions';
 import {
   recruitmentContractLabel,
@@ -244,14 +245,14 @@ export function ManagerRecruitmentClient({
               <label className={labelClass} htmlFor="departmentId">
                 Department
               </label>
-              <select id="departmentId" name="departmentId" required className={fieldClass}>
+              <FormSelect id="departmentId" name="departmentId" required className={fieldClass}>
                 <option value="">Select department…</option>
                 {managedDepartments.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="sm:col-span-2 lg:col-span-3">
@@ -270,10 +271,10 @@ export function ManagerRecruitmentClient({
                 <label className={labelClass} htmlFor="headcountType">
                   Is this a new role or direct replacement?
                 </label>
-                <select id="headcountType" name="headcountType" required className={fieldClass} defaultValue="new">
+                <FormSelect id="headcountType" name="headcountType" required className={fieldClass} defaultValue="new">
                   <option value="new">New</option>
                   <option value="backfill">Direct replacement</option>
-                </select>
+                </FormSelect>
               </div>
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className={labelClass} htmlFor="numberOfPositions">
@@ -285,25 +286,25 @@ export function ManagerRecruitmentClient({
                 <label className={labelClass} htmlFor="regradeStatus">
                   Re-grading confirmation
                 </label>
-                <select id="regradeStatus" name="regradeStatus" required className={fieldClass} defaultValue={REGRADE_OPTIONS[0].value}>
+                <FormSelect id="regradeStatus" name="regradeStatus" required className={fieldClass} defaultValue={REGRADE_OPTIONS[0].value}>
                   {REGRADE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
               <div className="sm:col-span-2 lg:col-span-3">
                 <label className={labelClass} htmlFor="approvalStatus">
                   Approval status
                 </label>
-                <select id="approvalStatus" name="approvalStatus" required className={fieldClass} defaultValue={APPROVAL_OPTIONS[0].value}>
+                <FormSelect id="approvalStatus" name="approvalStatus" required className={fieldClass} defaultValue={APPROVAL_OPTIONS[0].value}>
                   {APPROVAL_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
               <div className="sm:col-span-2 lg:col-span-3 border-b border-[#ececec] pb-2 pt-1">
                 <p className={sectionHeadingClass}>Advertising setup</p>
@@ -337,10 +338,10 @@ export function ManagerRecruitmentClient({
                 <label className={labelClass} htmlFor="needsAdvertCopyHelp">
                   Advertisement support
                 </label>
-                <select id="needsAdvertCopyHelp" name="needsAdvertCopyHelp" className={fieldClass} defaultValue="no_help">
+                <FormSelect id="needsAdvertCopyHelp" name="needsAdvertCopyHelp" className={fieldClass} defaultValue="no_help">
                   <option value="needs_help">I need assistance from HR to write the advertisement</option>
                   <option value="no_help">I dont need assistance</option>
-                </select>
+                </FormSelect>
               </div>
               <div className="sm:col-span-2 lg:col-span-3 border-b border-[#ececec] pb-2 pt-1">
                 <p className={sectionHeadingClass}>Hiring details</p>
@@ -349,37 +350,37 @@ export function ManagerRecruitmentClient({
                 <label className={labelClass} htmlFor="reasonForHire">
                   Reason for hire
                 </label>
-                <select id="reasonForHire" name="reasonForHire" required className={fieldClass}>
+                <FormSelect id="reasonForHire" name="reasonForHire" required className={fieldClass}>
                   {RECRUITMENT_HIRE_REASONS.map((v) => (
                     <option key={v} value={v}>
                       {recruitmentHireReasonLabel(v)}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
               <div>
                 <label className={labelClass} htmlFor="eligibility">
                   Eligible applicants
                 </label>
-                <select id="eligibility" name="eligibility" required className={fieldClass} defaultValue={ELIGIBILITY_OPTIONS[1].value}>
+                <FormSelect id="eligibility" name="eligibility" required className={fieldClass} defaultValue={ELIGIBILITY_OPTIONS[1].value}>
                   {ELIGIBILITY_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
               <div>
                 <label className={labelClass} htmlFor="contractType">
                   Contract type
                 </label>
-                <select id="contractType" name="contractType" required className={fieldClass}>
+                <FormSelect id="contractType" name="contractType" required className={fieldClass}>
                   {RECRUITMENT_CONTRACT_TYPES.map((v) => (
                     <option key={v} value={v}>
                       {recruitmentContractLabel(v)}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
               <div className="sm:col-span-2 lg:col-span-3">
                 <label className={labelClass} htmlFor="contractLengthDetail">
@@ -499,7 +500,7 @@ export function ManagerRecruitmentClient({
                     />
                   </div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <select
+                    <FormSelect
                       required={idx === 0}
                       value={row.slotMinutes}
                       onChange={(e) => {
@@ -513,8 +514,8 @@ export function ManagerRecruitmentClient({
                       <option value="45">45 minutes slot</option>
                       <option value="60">60 minutes slot</option>
                       <option value="90">90 minutes slot</option>
-                    </select>
-                    <select
+                    </FormSelect>
+                    <FormSelect
                       required={idx === 0}
                       value={row.breakMinutes}
                       onChange={(e) => {
@@ -529,7 +530,7 @@ export function ManagerRecruitmentClient({
                       <option value="15">15 minutes break</option>
                       <option value="20">20 minutes break</option>
                       <option value="30">30 minutes break</option>
-                    </select>
+                    </FormSelect>
                   </div>
                   {interviewSchedule.length > 1 ? (
                     <button
@@ -636,7 +637,7 @@ export function ManagerRecruitmentClient({
                 Archived
               </button>
             </div>
-            <select
+            <FormSelect
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'date' | 'urgency' | 'status')}
               className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px]"
@@ -644,15 +645,15 @@ export function ManagerRecruitmentClient({
               <option value="date">Sort: Date</option>
               <option value="urgency">Sort: Urgency</option>
               <option value="status">Sort: Status</option>
-            </select>
-            <select
+            </FormSelect>
+            <FormSelect
               value={sortDir}
               onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}
               className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px]"
             >
               <option value="desc">Desc</option>
               <option value="asc">Asc</option>
-            </select>
+            </FormSelect>
           </div>
         </div>
 

@@ -1371,18 +1371,6 @@
   margin-top: 5px;
 }
 
-.founder-hq-root .fh-muted-select {
-  height: 36px;
-  padding: 0 10px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text2);
-  font-family: inherit;
-  font-size: 12.5px;
-  outline: none;
-}
-
 .founder-hq-root .fh-link {
   color: var(--blue);
   text-decoration: none;

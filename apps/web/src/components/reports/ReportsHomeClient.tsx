@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { useEffect, useMemo, useState } from 'react';
 import { REPORT_FIELDS } from '@/lib/reports/catalog';
 
@@ -301,17 +302,17 @@ export function ReportsHomeClient({ canManage }: { canManage: boolean }) {
           <div className="mt-3 rounded-lg border border-[#efefef] p-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[12px] font-semibold text-[#6b6b6b]">Chart</span>
-              <select className="rounded border border-[#d8d8d8] px-2 py-1 text-[12px]" value={chartDimension} onChange={(e) => setChartDimension(e.target.value)}>
+              <FormSelect className="rounded border border-[#d8d8d8] px-2 py-1 text-[12px]" value={chartDimension} onChange={(e) => setChartDimension(e.target.value)}>
                 {previewColumns.map((field) => (
                   <option key={field} value={field}>{field}</option>
                 ))}
-              </select>
-              <select className="rounded border border-[#d8d8d8] px-2 py-1 text-[12px]" value={chartMetric} onChange={(e) => setChartMetric(e.target.value)}>
+              </FormSelect>
+              <FormSelect className="rounded border border-[#d8d8d8] px-2 py-1 text-[12px]" value={chartMetric} onChange={(e) => setChartMetric(e.target.value)}>
                 <option value="count">count</option>
                 {numericChartFields.map((field) => (
                   <option key={field} value={field}>{`sum(${field})`}</option>
                 ))}
-              </select>
+              </FormSelect>
             </div>
             <div className="mt-3 space-y-2">
               {chartRows.length ? (

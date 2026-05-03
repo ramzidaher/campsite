@@ -1,3 +1,4 @@
+import { FormSelect } from '@campsite/ui/web';
 import { HideInHiringHub } from '@/app/(main)/hr/hiring/HideInHiringHub';
 import { getCachedAdminApplicationsPageData } from '@/lib/jobs/getCachedAdminApplicationsPageData';
 import { jobApplicationStageLabel } from '@/lib/jobs/labels';
@@ -83,7 +84,7 @@ export default async function AdminApplicationsPage({
           <label className="mb-1 block text-[11px] font-medium text-[#6b6b6b]" htmlFor="f-job">
             Job
           </label>
-          <select
+          <FormSelect
             id="f-job"
             name="job"
             defaultValue={filterJobId}
@@ -96,13 +97,13 @@ export default async function AdminApplicationsPage({
                 {j.status !== 'live' ? ` (${String(j.status)})` : ''}
               </option>
             ))}
-          </select>
+          </FormSelect>
         </div>
         <div>
           <label className="mb-1 block text-[11px] font-medium text-[#6b6b6b]" htmlFor="f-stage">
             Stage
           </label>
-          <select
+          <FormSelect
             id="f-stage"
             name="stage"
             defaultValue={filterStage}
@@ -114,13 +115,13 @@ export default async function AdminApplicationsPage({
                 {jobApplicationStageLabel(s)}
               </option>
             ))}
-          </select>
+          </FormSelect>
         </div>
         <div>
           <label className="mb-1 block text-[11px] font-medium text-[#6b6b6b]" htmlFor="f-dept">
             Department
           </label>
-          <select
+          <FormSelect
             id="f-dept"
             name="dept"
             defaultValue={filterDept}
@@ -132,7 +133,7 @@ export default async function AdminApplicationsPage({
                 {(d.name as string)?.trim() || '—'}
               </option>
             ))}
-          </select>
+          </FormSelect>
         </div>
         <div>
           <label className="mb-1 block text-[11px] font-medium text-[#6b6b6b]" htmlFor="f-from">

@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewModal';
 import { MemberPermissionOverridesPanel } from '@/components/admin/MemberPermissionOverridesPanel';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
@@ -639,7 +640,7 @@ export function AdminUsersClient({
           />
         </div>
 
-        <select
+        <FormSelect
           value={roleFilter}
           onChange={(e) => {
             setRoleFilter(e.target.value);
@@ -655,9 +656,9 @@ export function AdminUsersClient({
               {r.label}
             </option>
           ))}
-        </select>
+        </FormSelect>
 
-        <select
+        <FormSelect
           value={deptFilter}
           onChange={(e) => {
             setDeptFilter(e.target.value);
@@ -672,7 +673,7 @@ export function AdminUsersClient({
               {d.name}
             </option>
           ))}
-        </select>
+        </FormSelect>
 
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => { setStatusFilter('all'); setPage(0); }} className={pillClass(statusFilter === 'all')}>
@@ -693,7 +694,7 @@ export function AdminUsersClient({
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 text-[12.5px] text-[#6b6b6b]">
           Role when approving
-          <select
+          <FormSelect
             value={bulkApproveRole}
             onChange={(e) => setBulkApproveRole(e.target.value)}
             className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2 text-[13px] text-[#121212]"
@@ -704,7 +705,7 @@ export function AdminUsersClient({
                 {r.label}
               </option>
             ))}
-          </select>
+          </FormSelect>
         </label>
         <button
           type="button"
@@ -1036,7 +1037,7 @@ export function AdminUsersClient({
               </label>
               <label className="mt-4 block text-[12.5px] font-medium text-[#6b6b6b]">
                 Access level
-                <select
+                <FormSelect
                   className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
@@ -1047,7 +1048,7 @@ export function AdminUsersClient({
                       {r.is_system ? ' (predefined)' : ''}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </label>
               <fieldset className="mt-4">
                 <legend className="text-[12.5px] font-medium text-[#6b6b6b]">
@@ -1142,7 +1143,7 @@ export function AdminUsersClient({
                     Role
                   </h3>
                   {canEditRoles ? (
-                    <select
+                    <FormSelect
                       className="mt-2 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                       value={editRole}
                       onChange={(e) => setEditRole(e.target.value)}
@@ -1157,7 +1158,7 @@ export function AdminUsersClient({
                               : ''}
                         </option>
                       ))}
-                    </select>
+                    </FormSelect>
                   ) : (
                     <div className="mt-2 flex gap-3 rounded-lg border border-[#e8e8e8] bg-[#faf9f6] p-4">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#6b6b6b] shadow-sm ring-1 ring-[#e8e8e8]">
@@ -1180,7 +1181,7 @@ export function AdminUsersClient({
                     Line manager
                   </h3>
                   <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">Approves this person&apos;s leave requests</p>
-                  <select
+                  <FormSelect
                     className="mt-3 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13.5px] text-[#121212] outline-none focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)] disabled:opacity-60"
                     value={editReportsTo}
                     onChange={(e) => setEditReportsTo(e.target.value)}
@@ -1194,7 +1195,7 @@ export function AdminUsersClient({
                           {m.full_name}
                         </option>
                       ))}
-                  </select>
+                  </FormSelect>
                 </section>
 
                 <fieldset className="border-t border-[#e8e8e8] pt-8">

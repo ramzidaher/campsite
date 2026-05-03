@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -159,7 +160,7 @@ export function TrainingRecordsClient({
             placeholder="Provider"
             className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
           />
-          <select
+          <FormSelect
             value={form.status}
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as TrainingStatus }))}
             className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
@@ -168,7 +169,7 @@ export function TrainingRecordsClient({
             <option value="in_progress">In progress</option>
             <option value="completed">Completed</option>
             <option value="expired">Expired</option>
-          </select>
+          </FormSelect>
           <input
             type="date"
             value={form.started_on}

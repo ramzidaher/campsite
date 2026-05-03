@@ -2,7 +2,7 @@
 
 import { useInHiringHub } from '@/app/(main)/hr/hiring/HiringHubContext';
 import { archiveJobListing } from '@/app/(main)/admin/jobs/actions';
-import { campusFormControl, campusText } from '@campsite/ui/web';
+import { FormSelect, campusText } from '@campsite/ui/web';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
@@ -129,7 +129,8 @@ export function AdminJobsListClient({
     if (next !== 'all') setStatus('');
   }
 
-  const sel = `${campusFormControl} px-2.5`;
+  const filterSelectWrap = '!w-auto max-w-[220px] shrink-0';
+  const filterSelectClass = 'pl-2.5';
 
   const scopeBtn = (on: boolean) =>
     `rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
@@ -181,43 +182,69 @@ export function AdminJobsListClient({
           />
         </div>
         {listScope === 'all' ? (
-          <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
+          <FormSelect
+            wrapperClassName={filterSelectWrap}
+            className={filterSelectClass}
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            aria-label="Status"
+          >
             <option value="">All states</option>
             <option value="live">Live</option>
             <option value="archived">Archived</option>
             <option value="draft">Draft</option>
-          </select>
+          </FormSelect>
         ) : null}
-        <select className={sel} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
+        <FormSelect
+          wrapperClassName={filterSelectWrap}
+          className={filterSelectClass}
+          value={deptId}
+          onChange={(e) => setDeptId(e.target.value)}
+        >
           <option value="">All departments</option>
           {departments.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
             </option>
           ))}
-        </select>
-        <select className={sel} value={grade} onChange={(e) => setGrade(e.target.value)}>
+        </FormSelect>
+        <FormSelect
+          wrapperClassName={filterSelectWrap}
+          className={filterSelectClass}
+          value={grade}
+          onChange={(e) => setGrade(e.target.value)}
+        >
           <option value="">All grades</option>
           {gradeOptions.map((g) => (
             <option key={g} value={g}>
               {g}
             </option>
           ))}
-        </select>
-        <select className={sel} value={contract} onChange={(e) => setContract(e.target.value)}>
+        </FormSelect>
+        <FormSelect
+          wrapperClassName={filterSelectWrap}
+          className={filterSelectClass}
+          value={contract}
+          onChange={(e) => setContract(e.target.value)}
+        >
           <option value="">All contract types</option>
           <option value="full_time">{recruitmentContractLabel('full_time')}</option>
           <option value="part_time">{recruitmentContractLabel('part_time')}</option>
           <option value="seasonal">{recruitmentContractLabel('seasonal')}</option>
-        </select>
-        <select className={sel} value={year} onChange={(e) => setYear(e.target.value)}>
+        </FormSelect>
+        <FormSelect
+          wrapperClassName={filterSelectWrap}
+          className={filterSelectClass}
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+        >
           <option value="">All years</option>
           {years.map((y) => (
             <option key={y} value={String(y)}>
               {y}
             </option>
           ))}
-        </select>
+        </FormSelect>
       </div>
 
       {filtered.length === 0 ? (

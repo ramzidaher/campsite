@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { OrgStateOverlay } from '@/components/tenant/OrgStateOverlay';
-import { ShieldCheck } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 /**
@@ -40,7 +39,7 @@ export function TenantReauthEnforcer({
 
   return (
     <OrgStateOverlay
-      icon={ShieldCheck}
+      badge="Security"
       title="Session updated"
       message="Your organisation admin requested reauthentication for all members. Signing you out now."
       liveMessage="assertive"

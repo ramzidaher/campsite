@@ -279,9 +279,11 @@ export function getMainShellAdminNavItemsByPermissions(
 }
 
 export function getMainShellHrNavItemsByPermissions(
-  permissions: readonly string[] | null | undefined
+  permissions: readonly string[] | null | undefined,
+  opts?: { timesheetClockEnabled?: boolean }
 ): MainShellAdminNavItem[] | null {
   const p = permissions ?? [];
+  const timesheetClockEnabled = opts?.timesheetClockEnabled === true;
   const canSeeAnyHr = p.some(
     (k) =>
       k.startsWith('recruitment.') ||
@@ -345,7 +347,7 @@ export function getMainShellHrNavItemsByPermissions(
     items.push({ href: '/hr/onboarding', label: 'Onboarding', icon: 'onboarding', section: 'People' });
   if (p.includes('performance.manage_cycles') || p.includes('performance.view_reports'))
     items.push({ href: '/hr/performance', label: 'Performance reviews', icon: 'performance', section: 'Reporting' });
-  if (p.includes('leave.view_own'))
+  if (timesheetClockEnabled && p.includes('leave.view_own'))
     items.push({ href: '/attendance', label: 'Attendance', icon: 'attendance', section: 'Reporting' });
   if (
     p.includes('privacy.retention_policy.view') ||

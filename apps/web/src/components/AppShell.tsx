@@ -24,12 +24,17 @@ import {
   type OrgCelebrationModeOverride,
   type CelebrationMode,
 } from '@/lib/holidayThemes';
-import { orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
+import {
+  orgBrandingCssVarsForColorScheme,
+  resolveOrgBranding,
+} from '@/lib/orgBranding';
 import { createClient } from '@/lib/supabase/client';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
 import { nextUiMode, type UiMode } from '@/lib/uiMode';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { isApproverRole } from '@campsite/types';
+import { themeToInlineCssVars } from '@campsite/theme';
+import { useCampsiteTheme } from '@campsite/ui';
 
 const ADMIN_NAV_EXPANDED_KEY = 'campsite_nav_admin_expanded';
 const MANAGER_NAV_EXPANDED_KEY = 'campsite_nav_manager_expanded';
@@ -89,7 +94,6 @@ function getGlobalBackLink(pathname: string): { href: string; label: string } | 
     '/broadcasts',
     '/calendar',
     '/rota',
-    '/discount',
     '/leave',
     '/attendance',
     '/performance',
@@ -270,6 +274,9 @@ export function AppShell({
   initialCelebrationMode = 'off',
   initialCelebrationAutoEnabled = true,
   orgCelebrationOverrides = [],
+  profileDndEnabled = false,
+  profileDndStart = null,
+  profileDndEnd = null,
   initialShellBadgeCounts,
   initialUiMode = 'classic',
   shellDegraded = false,
@@ -330,6 +337,9 @@ export function AppShell({
   initialCelebrationMode?: CelebrationMode;
   initialCelebrationAutoEnabled?: boolean;
   orgCelebrationOverrides?: OrgCelebrationModeOverride[];
+  profileDndEnabled?: boolean;
+  profileDndStart?: string | null;
+  profileDndEnd?: string | null;
   /** Hydrated from merged server shell bundle — avoids duplicate badge RPC right after load. */
   initialShellBadgeCounts?: ShellBadgeCounts;
   initialUiMode?: UiMode;
@@ -494,8 +504,34 @@ export function AppShell({
       }),
     [orgBrandPresetKey, orgBrandTokens, orgBrandPolicy, effectiveMode]
   );
-  const brandVars = useMemo(() => orgBrandingCssVars(resolvedBranding.tokens), [resolvedBranding.tokens]);
+  const { scheme: themeScheme, accent: themeAccent } = useCampsiteTheme();
+  const brandVars = useMemo(
+    () => orgBrandingCssVarsForColorScheme(resolvedBranding.tokens, themeScheme, themeAccent),
+    [resolvedBranding.tokens, themeScheme, themeAccent],
+  );
+  const campsiteThemeVars = useMemo(
+    () => themeToInlineCssVars(themeScheme, themeAccent),
+    [themeScheme, themeAccent]
+  );
   const shellGradientAllowed = resolvedBranding.shouldApplyCelebrationGradient ? shellGradient : null;
+
+  const mainWorkspaceStyle = useMemo(() => {
+    if (shellGradientAllowed) {
+      if (themeScheme === 'dark') {
+        return {
+          backgroundImage: `linear-gradient(rgba(18,18,18,0.84),rgba(18,18,18,0.84)), ${shellGradientAllowed}`,
+          backgroundBlendMode: 'normal,normal' as const,
+          backgroundColor: 'var(--org-brand-bg)',
+        } as const;
+      }
+      return {
+        backgroundImage: `linear-gradient(rgba(250,249,246,0.84),rgba(250,249,246,0.84)), ${shellGradientAllowed}`,
+        backgroundBlendMode: 'normal,normal' as const,
+        backgroundColor: 'var(--org-brand-bg)',
+      } as const;
+    }
+    return { backgroundColor: 'var(--org-brand-bg)' } as const;
+  }, [shellGradientAllowed, themeScheme]);
 
 
   const safeOrgLogo = useMemo(() => safeHttpImageUrl(orgLogoUrl ?? null), [orgLogoUrl]);
@@ -596,8 +632,14 @@ export function AppShell({
 
   return (
     <div
-      className="campsite-paper flex min-h-screen text-[#121212]"
-      style={{ ...brandVars, background: 'var(--org-brand-bg)', color: 'var(--org-brand-text)' }}
+      className="campsite-paper flex min-h-screen text-[var(--org-brand-text)]"
+      style={{
+        ...campsiteThemeVars,
+        ...brandVars,
+        background: 'var(--org-brand-bg)',
+        color: 'var(--org-brand-text)',
+        colorScheme: themeScheme === 'dark' ? 'dark' : 'light',
+      }}
     >
       <CheckboxUiSoundCapture />
       <HolidayOverlay mode={effectiveMode} />
@@ -715,7 +757,6 @@ export function AppShell({
               }
               onNavigate={closeMobile}
             />
-            <NavLink href="/discount" icon="discount" label="Discount Card" onNavigate={closeMobile} />
             {showLeaveNav ? (
               <NavLink
                 href="/leave"
@@ -1360,15 +1401,7 @@ export function AppShell({
           'flex min-h-screen flex-1 flex-col transition-[margin] duration-200',
           desktopNavOpen ? 'md:ml-[240px]' : 'md:ml-[58px]',
         ].join(' ')}
-        style={
-          shellGradientAllowed
-            ? {
-                backgroundImage: `linear-gradient(rgba(250,249,246,0.84),rgba(250,249,246,0.84)), ${shellGradientAllowed}`,
-                backgroundBlendMode: 'normal,normal',
-                backgroundColor: 'var(--org-brand-bg)',
-              }
-            : { backgroundColor: 'var(--org-brand-bg)' }
-        }
+        style={mainWorkspaceStyle}
       >
         <AppTopBar
           userInitials={userInitials}
@@ -1382,6 +1415,10 @@ export function AppShell({
           paletteSections={paletteSections}
           uiMode={uiMode}
           onToggleUiMode={toggleUiMode}
+          dndEnabled={profileDndEnabled}
+          dndStart={profileDndStart}
+          dndEnd={profileDndEnd}
+          hasTenantProfile={hasTenantProfile}
           onOpenMobileNav={() => {
             setMobileNav(true);
             playUiSound('menu_open');
@@ -1415,9 +1452,14 @@ export function AppShell({
               <Link
                 href={globalBackLink.href}
                 prefetch={false}
-                className="inline-flex text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
+                className="group inline-flex items-center gap-1 text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
               >
-                {`\u2190 ${globalBackLink.label}`}
+                <ChevronLeft
+                  className="h-3.5 w-3.5 shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+                  aria-hidden
+                  strokeWidth={2}
+                />
+                {globalBackLink.label}
               </Link>
             </div>
           ) : null}

@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { rolesAssignableOnApprove } from '@campsite/types';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { useRouter } from 'next/navigation';
@@ -173,27 +174,27 @@ export function PendingApprovalsClient({
 
   if (!rows.length) {
     return (
-      <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
-        <div className="border-b border-[#d8d8d8] px-[18px] py-4">
-          <div className="flex items-center gap-2 text-[14px] font-medium text-[#121212]">
+      <div className="overflow-hidden rounded-xl border border-campsite-border bg-campsite-elevated">
+        <div className="border-b border-campsite-border px-[18px] py-4">
+          <div className="flex items-center gap-2 text-[14px] font-medium text-campsite-text">
             Pending verifications
-            <span className="rounded-full bg-[#d8d8d8] px-[7px] py-0.5 text-[10.5px] font-semibold text-[#6b6b6b]">
+            <span className="rounded-full bg-[#d8d8d8] px-[7px] py-0.5 text-[10.5px] font-semibold text-campsite-text-secondary">
               0
             </span>
           </div>
         </div>
         <div className="px-[18px] py-12 text-center">
-          <p className="text-[15px] font-medium text-[#121212]">No pending registrations</p>
-          <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-[#6b6b6b]">
+          <p className="text-[15px] font-medium text-campsite-text">No pending registrations</p>
+          <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-campsite-text-secondary">
             You&apos;re all caught up. New joiners will show here when they request access.
           </p>
           {scoped ? (
-            <div className="mx-auto mt-6 max-w-lg rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-left text-[12.5px] leading-relaxed text-[#6b6b6b]">
-              <p className="font-medium text-[#121212]">Scoped to your departments</p>
+            <div className="mx-auto mt-6 max-w-lg rounded-xl border border-campsite-border bg-campsite-bg px-4 py-3 text-left text-[12.5px] leading-relaxed text-campsite-text-secondary">
+              <p className="font-medium text-campsite-text">Scoped to your departments</p>
               <p className="mt-1.5">
                 You only see people who picked at least one department you manage (managers) or belong to
                 (coordinators). Joiners who chose other teams appear for your{' '}
-                <span className="font-medium text-[#121212]">organisation admin</span> under Admin → Pending
+                <span className="font-medium text-campsite-text">organisation admin</span> under Admin → Pending
                 approval or All members (filter: Pending).
               </p>
             </div>
@@ -205,8 +206,8 @@ export function PendingApprovalsClient({
 
   return (
     <div>
-      <div className="mb-4 flex h-9 w-full max-w-[280px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3">
-        <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
+      <div className="mb-4 flex h-9 w-full max-w-[280px] items-center gap-2 rounded-lg border border-campsite-border bg-campsite-surface px-3">
+        <span className="text-[13px] text-campsite-text-muted" aria-hidden>
           🔍
         </span>
         <input
@@ -214,7 +215,7 @@ export function PendingApprovalsClient({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name, email, or department..."
-          className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-campsite-text outline-none placeholder:text-campsite-text-muted"
           aria-label="Search pending members"
         />
       </div>
@@ -225,9 +226,9 @@ export function PendingApprovalsClient({
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
-        <div className="flex items-center justify-between gap-3 border-b border-[#d8d8d8] px-[18px] py-4">
-          <div className="flex items-center gap-2 text-[14px] font-medium text-[#121212]">
+      <div className="overflow-hidden rounded-xl border border-campsite-border bg-campsite-elevated">
+        <div className="flex items-center justify-between gap-3 border-b border-campsite-border px-[18px] py-4">
+          <div className="flex items-center gap-2 text-[14px] font-medium text-campsite-text">
             Pending verifications
             <span className="rounded-full bg-[#E11D48] px-[7px] py-0.5 text-[10.5px] font-bold text-white">
               {count > 99 ? '99+' : count}
@@ -236,7 +237,7 @@ export function PendingApprovalsClient({
         </div>
 
         {filtered.length === 0 ? (
-          <p className="px-[18px] py-12 text-center text-[13px] text-[#9b9b9b]">No matches for your search.</p>
+          <p className="px-[18px] py-12 text-center text-[13px] text-campsite-text-muted">No matches for your search.</p>
         ) : (
           <ul className="flex flex-col">
             {filtered.map((p) => {
@@ -244,16 +245,16 @@ export function PendingApprovalsClient({
               return (
                 <li
                   key={p.id}
-                  className="flex flex-col gap-3 border-b border-[#d8d8d8] px-[18px] py-3 transition-colors last:border-b-0 hover:bg-[#f5f4f1]/80 sm:flex-row sm:items-center sm:gap-3"
+                  className="flex flex-col gap-3 border-b border-campsite-border px-[18px] py-3 transition-colors last:border-b-0 hover:bg-campsite-surface/80 sm:flex-row sm:items-center sm:gap-3"
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[12px] font-semibold text-[#121212]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-campsite-border bg-campsite-surface text-[12px] font-semibold text-campsite-text">
                       {initials(p.full_name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-[14px] font-medium text-[#121212]">{p.full_name}</div>
-                      <div className="text-[12.5px] text-[#6b6b6b]">{metaLine(p)}</div>
-                      <div className="mt-0.5 text-[11px] text-[#9b9b9b]">
+                      <div className="text-[14px] font-medium text-campsite-text">{p.full_name}</div>
+                      <div className="text-[12.5px] text-campsite-text-secondary">{metaLine(p)}</div>
+                      <div className="mt-0.5 text-[11px] text-campsite-text-muted">
                         {p.email ?? '-'} · Requested {new Date(p.created_at).toLocaleString()}
                       </div>
                     </div>
@@ -261,10 +262,10 @@ export function PendingApprovalsClient({
 
                   {openReject ? (
                     <div className="flex w-full flex-col gap-2 sm:max-w-[280px] sm:shrink-0">
-                      <label className="text-[11px] text-[#6b6b6b]">
+                      <label className="text-[11px] text-campsite-text-secondary">
                         Rejection note (optional)
                         <input
-                          className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
+                          className="mt-1 w-full rounded-lg border border-campsite-border bg-campsite-elevated px-2.5 py-1.5 text-[13px] text-campsite-text outline-none focus:ring-1 focus:ring-campsite-text"
                           value={note[p.id] ?? ''}
                           onChange={(e) => setNote((n) => ({ ...n, [p.id]: e.target.value }))}
                         />
@@ -273,14 +274,14 @@ export function PendingApprovalsClient({
                         <button
                           type="button"
                           disabled={busy === p.id}
-                          className="rounded-lg bg-[#b91c1c] px-3 py-1.5 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                          className="rounded-lg bg-campsite-warning px-3 py-1.5 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                           onClick={() => void reject(p.id)}
                         >
                           Confirm reject
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6]"
+                          className="rounded-lg border border-campsite-border bg-campsite-elevated px-3 py-1.5 text-[12.5px] font-medium text-campsite-text-secondary hover:bg-campsite-bg"
                           onClick={() => setRejectingId(null)}
                         >
                           Cancel
@@ -292,26 +293,26 @@ export function PendingApprovalsClient({
                       <label className="sr-only" htmlFor={`approve-role-${p.id}`}>
                         Role after approval
                       </label>
-                      <select
+                      <FormSelect
                         id={`approve-role-${p.id}`}
                         value={approveRoleById[p.id] ?? defaultApproveRole}
                         onChange={(e) =>
                           setApproveRoleById((m) => ({ ...m, [p.id]: e.target.value }))
                         }
-                        className="h-9 min-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[12px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
+                        className="h-9 min-w-[160px] rounded-lg border border-campsite-border bg-campsite-elevated px-2.5 text-[12px] text-campsite-text outline-none focus:ring-1 focus:ring-campsite-text"
                       >
                         {assignableOptions.map((r) => (
                           <option key={r.key} value={r.key}>
                             {r.label}
                           </option>
                         ))}
-                      </select>
+                      </FormSelect>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           title="Approve"
                           disabled={busy === p.id}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#15803d] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-campsite-success text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                           onClick={() => void approve(p.id)}
                         >
                           ✓
@@ -320,7 +321,7 @@ export function PendingApprovalsClient({
                           type="button"
                           title="Reject"
                           disabled={busy === p.id}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-[#b91c1c] bg-white text-[15px] font-semibold text-[#b91c1c] transition-colors hover:bg-[#fef2f2] disabled:opacity-50"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-campsite-warning bg-campsite-elevated text-[15px] font-semibold text-campsite-warning transition-colors hover:bg-[#fef2f2] disabled:opacity-50"
                           onClick={() => setRejectingId(p.id)}
                         >
                           ✕

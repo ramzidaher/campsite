@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { PROFILE_ROLES, type ProfileRole } from '@campsite/types';
 import { createClient } from '@/lib/supabase/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -128,7 +129,7 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
         </p>
         <label className="mt-3 block text-[13px] font-medium text-[#121212]">
           Role
-          <select
+          <FormSelect
             className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
             value={previewRole}
             onChange={(e) => setPreviewRole(e.target.value as ProfileRole)}
@@ -138,7 +139,7 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
                 {r.replace(/_/g, ' ')}
               </option>
             ))}
-          </select>
+          </FormSelect>
         </label>
         <div className="mt-3 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] p-3 text-[13px]">
           {previewTier ? (
@@ -219,7 +220,7 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="text-[13px] font-medium text-[#121212]">
             Role
-            <select
+            <FormSelect
               disabled={!!editing}
               className="mt-1.5 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212] disabled:opacity-60"
               value={role}
@@ -230,7 +231,7 @@ export function DiscountTiersClient({ orgId }: { orgId: string }) {
                   {r.replace(/_/g, ' ')}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[13px] font-medium text-[#121212] sm:col-span-2">
             Label (shown on card)

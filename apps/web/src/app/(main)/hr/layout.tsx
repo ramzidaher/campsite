@@ -16,7 +16,10 @@ export default async function HrLayout({ children }: { children: React.ReactNode
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
 
   const permissionKeys = parseShellPermissionKeys(bundle);
-  const hrNavItemsRaw = getMainShellHrNavItemsByPermissions(permissionKeys);
+  const timesheetClockEnabled = bundle['timesheet_clock_enabled'] === true;
+  const hrNavItemsRaw = getMainShellHrNavItemsByPermissions(permissionKeys, {
+    timesheetClockEnabled,
+  });
   const shellBadges = parseShellBadgeCounts(bundle);
   const recruitmentPendingReviewCount = shellBadges.recruitment_pending_review;
   const navItems =

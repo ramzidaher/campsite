@@ -1,5 +1,6 @@
 'use client';
 
+import { campusSurface } from '@campsite/ui/web';
 import Link from 'next/link';
 
 type ReviewSummary = {
@@ -69,7 +70,8 @@ function ReviewCard({ r }: { r: ReviewSummary }) {
     <Link
       href={`/performance/${r.id}`}
       className={[
-        'flex items-start justify-between gap-4 rounded-xl border p-4 transition-colors hover:bg-[#faf9f6]',
+        'flex items-start justify-between gap-4 rounded-xl border p-4',
+        campusSurface.interactiveSheetRow,
         isOverdue ? 'border-[#fca5a5] bg-white' : 'border-[#e8e8e8] bg-white',
       ].join(' ')}
     >

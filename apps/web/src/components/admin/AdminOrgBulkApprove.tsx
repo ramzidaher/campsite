@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { rolesAssignableOnApprove, type ProfileRole } from '@campsite/types';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
@@ -72,7 +73,7 @@ export function AdminOrgBulkApprove({
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 text-sm text-amber-950">
             Role
-            <select
+            <FormSelect
               value={bulkApproveRole}
               onChange={(e) => setBulkApproveRole(e.target.value as ProfileRole)}
               className="rounded-md border border-amber-800/30 bg-white px-2 py-1 text-sm text-amber-950"
@@ -82,7 +83,7 @@ export function AdminOrgBulkApprove({
                   {r.replace(/_/g, ' ')}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <button
             type="button"

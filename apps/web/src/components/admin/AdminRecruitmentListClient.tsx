@@ -1,7 +1,7 @@
 'use client';
 
 import { useInHiringHub } from '@/app/(main)/hr/hiring/HiringHubContext';
-import { recruitmentStatusChips, recruitmentUrgencyChips } from '@campsite/ui/web';
+import { FormSelect, recruitmentStatusChips, recruitmentUrgencyChips } from '@campsite/ui/web';
 import { recruitmentStatusLabel, recruitmentUrgencyLabel } from '@/lib/recruitment/labels';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -317,7 +317,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
           {!inHiringHub ? (
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Status</span>
-              <select
+              <FormSelect
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="min-w-[12rem] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] focus:border-[#121212] focus:outline-none"
@@ -327,14 +327,14 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                     {s === 'all' ? 'All statuses' : recruitmentStatusLabel(s)}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
           ) : null}
         </div>
 
         <div className={`flex flex-col gap-2 sm:flex-row sm:items-center ${inHiringHub ? 'w-full sm:w-auto sm:min-w-0 sm:flex-1 sm:justify-end' : ''}`}>
           {inHiringHub ? (
-            <select
+            <FormSelect
               aria-label="Filter by workflow status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -345,7 +345,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                   {s === 'all' ? 'All statuses' : recruitmentStatusLabel(s)}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           ) : null}
 
           <label className={`flex w-full flex-col gap-1 sm:w-auto sm:min-w-[14rem] ${inHiringHub ? 'sm:min-w-[min(100%,18rem)]' : ''}`}>
@@ -354,7 +354,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
             ) : (
               <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Sort</span>
             )}
-            <select
+            <FormSelect
               value={sortPreset}
               onChange={(e) => setSortPreset(e.target.value)}
               className="h-10 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] focus:border-[#121212] focus:outline-none"
@@ -364,7 +364,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                   {p.label}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
         </div>
       </div>
@@ -436,7 +436,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                       </div>
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <select
+                      <FormSelect
                         aria-label={`Status for ${r.job_title}`}
                         value={selectedStatus}
                         onChange={(e) =>
@@ -453,7 +453,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                             {recruitmentStatusLabel(status)}
                           </option>
                         ))}
-                      </select>
+                      </FormSelect>
                     </td>
                     <td className="px-4 py-3 align-top text-[13px] text-[#121212]">{submitterName(r.submitter)}</td>
                   </tr>

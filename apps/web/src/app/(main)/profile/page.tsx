@@ -27,6 +27,7 @@ import {
   getCachedProfilePageSectionsData,
   updateProfileUiMode,
 } from '@/lib/profile/profilePageRouteData';
+import { campusSurface } from '@campsite/ui/web';
 
 function labelContract(value: string | null) {
   if (value === 'full_time') return 'Full-time';
@@ -722,19 +723,31 @@ export default async function MyProfilePage({
                     <span className="text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Quick actions</span>
                   </div>
                   <div className="grid gap-3 p-4 sm:grid-cols-2">
-                    <Link href="/leave" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
+                    <Link
+                      href="/leave"
+                      className={`flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] ${campusSurface.interactiveSheetRow}`}
+                    >
                       <span>Book annual leave</span>
                       <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
                     </Link>
-                    <Link href="/rota" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
+                    <Link
+                      href="/rota"
+                      className={`flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] ${campusSurface.interactiveSheetRow}`}
+                    >
                       <span>View rota</span>
                       <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
                     </Link>
-                    <Link href="/performance" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
+                    <Link
+                      href="/performance"
+                      className={`flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] ${campusSurface.interactiveSheetRow}`}
+                    >
                       <span>Start performance review</span>
                       <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
                     </Link>
-                    <Link href="?tab=other" className="flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] transition hover:bg-[#faf9f6]">
+                    <Link
+                      href="?tab=other"
+                      className={`flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] ${campusSurface.interactiveSheetRow}`}
+                    >
                       <span>View payslips</span>
                       <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
                     </Link>

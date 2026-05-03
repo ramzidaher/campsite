@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import {
   type JobScreeningQuestionPersist,
 } from '@/app/(main)/admin/jobs/actions';
@@ -218,7 +219,7 @@ export function JobScreeningQuestionsSection({
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <fieldset className="min-w-0 space-y-1">
                     <legend className={labelClass}>Answer format</legend>
-                    <select
+                    <FormSelect
                       className={fieldClass}
                       disabled={disabled || q.locked}
                       value={q.questionType}
@@ -257,7 +258,7 @@ export function JobScreeningQuestionsSection({
                                 : 'Yes / No'}
                         </option>
                       ))}
-                    </select>
+                    </FormSelect>
                   </fieldset>
 
                   <div className="flex items-end">
@@ -277,7 +278,7 @@ export function JobScreeningQuestionsSection({
                     <label className={labelClass} htmlFor={`scoring-enabled-${q.id}`}>
                       Scoring
                     </label>
-                    <select
+                    <FormSelect
                       id={`scoring-enabled-${q.id}`}
                       className={fieldClass}
                       disabled={disabled || q.locked || q.isPageBreak}
@@ -292,14 +293,14 @@ export function JobScreeningQuestionsSection({
                     >
                       <option value="enabled">Enable scoring</option>
                       <option value="disabled">Disable scoring</option>
-                    </select>
+                    </FormSelect>
                   </div>
 
                   <div className="space-y-1">
                     <label className={labelClass} htmlFor={`score-scale-${q.id}`}>
                       Scale
                     </label>
-                    <select
+                    <FormSelect
                       id={`score-scale-${q.id}`}
                       className={fieldClass}
                       disabled={disabled || q.locked || q.isPageBreak || !q.scoringEnabled}
@@ -315,7 +316,7 @@ export function JobScreeningQuestionsSection({
                           0-{n}
                         </option>
                       ))}
-                    </select>
+                    </FormSelect>
                   </div>
                 </div>
 

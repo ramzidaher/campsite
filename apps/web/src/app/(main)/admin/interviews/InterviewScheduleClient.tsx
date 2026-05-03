@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { useInHiringHub } from '@/app/(main)/hr/hiring/HiringHubContext';
 import {
   bulkCreateInterviewSlots,
@@ -371,7 +372,7 @@ export function InterviewScheduleClient({
           <div className="flex flex-wrap items-center gap-3">
             <label className="text-[12px] font-medium text-[#505050]">
               Duration
-              <select
+              <FormSelect
                 value={durationMin}
                 onChange={(e) => { setDurationMin(Number(e.target.value)); setParsedSlots([]); }}
                 className="ml-2 rounded-lg border border-[#d8d8d8] px-2 py-1.5 text-[12px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
@@ -381,7 +382,7 @@ export function InterviewScheduleClient({
                 <option value={60}>1 hour</option>
                 <option value={90}>1.5 hours</option>
                 <option value={120}>2 hours</option>
-              </select>
+              </FormSelect>
             </label>
             <label className="text-[12px] font-medium text-[#505050]">
               Slot label
@@ -440,7 +441,7 @@ export function InterviewScheduleClient({
               <Link href="/hr/jobs" className="text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">Create one first</Link>.
             </p>
           ) : (
-            <select
+            <FormSelect
               value={jobId}
               onChange={(e) => setJobId(e.target.value)}
               className="w-full max-w-sm rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px] outline-none transition-[box-shadow,border-color] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
@@ -450,7 +451,7 @@ export function InterviewScheduleClient({
                   {(j.title || 'Untitled').trim()}{j.status !== 'live' ? ` (${j.status})` : ''}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           )}
         </div>
 

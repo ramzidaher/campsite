@@ -1,5 +1,6 @@
 'use client';
 
+import { campusSurface } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { useUiSound } from '@/lib/sound/useUiSound';
 import Link from 'next/link';
@@ -117,7 +118,8 @@ export function RecruitmentNotificationsClient({
                     else playUiSound('recruitment_read');
                   }}
                   className={[
-                    'flex items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-[#faf9f6]',
+                    'flex items-start gap-3 rounded-xl border p-4',
+                    campusSurface.interactiveSheetRow,
                     isUnread ? 'border-[#fde68a] bg-[#fffbeb]' : 'border-[#d8d8d8] bg-white',
                   ].join(' ')}
                 >

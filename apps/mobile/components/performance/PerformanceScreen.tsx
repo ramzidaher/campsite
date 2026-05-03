@@ -91,9 +91,10 @@ export function PerformanceScreen({ profile }: { profile: ProfileRow }) {
         id, status, overall_rating, self_submitted_at, manager_submitted_at, completed_at,
         reviewee_id, reviewer_id,
         reviewee:profiles!performance_reviews_reviewee_id_fkey(full_name),
-        performance_cycles(name, type, status, self_assessment_due, manager_assessment_due)
+        review_cycles(name, type, status, self_assessment_due, manager_assessment_due)
         `,
       )
+      .eq('org_id', orgId)
       .or(`reviewee_id.eq.${userId},reviewer_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .limit(40);
@@ -107,7 +108,7 @@ export function PerformanceScreen({ profile }: { profile: ProfileRow }) {
           ? (revieweeRaw[0] as { full_name: string })?.full_name ?? null
           : (revieweeRaw as { full_name: string }).full_name ?? null
         : null;
-      const cycleRaw = raw.performance_cycles;
+      const cycleRaw = raw.review_cycles;
       const cycle = cycleRaw
         ? Array.isArray(cycleRaw)
           ? (cycleRaw[0] as Record<string, unknown>) ?? null

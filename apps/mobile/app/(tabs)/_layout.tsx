@@ -128,15 +128,6 @@ export default function TabLayout() {
         listeners={{ tabPress: () => playUiSound('menu_open') }}
       />
       <Tabs.Screen
-        name="discount"
-        options={{
-          title: 'Discount',
-          tabBarLabel: 'Discount',
-          tabBarIcon: icon('tag', 'tag-outline'),
-        }}
-        listeners={{ tabPress: () => playUiSound('menu_open') }}
-      />
-      <Tabs.Screen
         name="hr"
         options={{
           title: 'My HR',

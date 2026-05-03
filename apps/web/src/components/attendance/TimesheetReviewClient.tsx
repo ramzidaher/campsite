@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -276,7 +277,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
         <div className="mb-4 flex max-w-xl flex-wrap gap-3">
           <label className="flex-1 text-[12px] text-[#6b6b6b]">
             Employee
-            <select
+            <FormSelect
               value={sickUser}
               onChange={(e) => setSickUser(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
@@ -287,11 +288,11 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
                   {p.full_name ?? p.id}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[12px] text-[#6b6b6b]">
             Reason code
-            <select
+            <FormSelect
               value={voidReason}
               onChange={(e) => setVoidReason(e.target.value)}
               className="mt-1 block rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
@@ -300,7 +301,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
               <option value="actually_worked">Actually worked / paid another way</option>
               <option value="converted_leave">Converted to leave</option>
               <option value="other">Other</option>
-            </select>
+            </FormSelect>
           </label>
           <label className="min-w-[12rem] flex-1 text-[12px] text-[#6b6b6b]">
             Notes
@@ -344,7 +345,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
         <div className="flex max-w-xl flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <label className="block flex-1 text-[12px] text-[#6b6b6b]">
             Employee
-            <select
+            <FormSelect
               value={proxyUserId}
               onChange={(e) => setProxyUserId(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
@@ -355,18 +356,18 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
                   {p.full_name ?? p.id}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[12px] text-[#6b6b6b]">
             Direction
-            <select
+            <FormSelect
               value={proxyDir}
               onChange={(e) => setProxyDir(e.target.value as 'in' | 'out')}
               className="mt-1 block rounded-lg border border-[#d8d8d8] px-3 py-2 text-[13px]"
             >
               <option value="in">In</option>
               <option value="out">Out</option>
-            </select>
+            </FormSelect>
           </label>
           <label className="min-w-[12rem] flex-1 text-[12px] text-[#6b6b6b]">
             Reason

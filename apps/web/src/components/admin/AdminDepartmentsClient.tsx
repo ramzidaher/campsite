@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { adminDepartmentsChannelsHeading, adminDepartmentsChannelsHint } from '@/lib/broadcasts/channelCopy';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
@@ -546,7 +547,7 @@ export function AdminDepartmentsClient({
             </label>
             <label className="text-[13px] text-[#121212]">
               Type
-              <select
+              <FormSelect
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
                 value={nType}
                 onChange={(e) => setNType(e.target.value as typeof nType)}
@@ -554,7 +555,7 @@ export function AdminDepartmentsClient({
                 <option value="department">Department</option>
                 <option value="society">Society</option>
                 <option value="club">Club</option>
-              </select>
+              </FormSelect>
             </label>
             <label className="text-[13px] text-[#121212]">
               Description
@@ -895,7 +896,7 @@ function DeptDetailForm({
             </label>
             <label className="text-[13px] text-[#121212]">
               Type
-              <select
+              <FormSelect
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
                 value={edit.type}
                 onChange={(e) => setEdit({ ...edit, type: e.target.value })}
@@ -903,7 +904,7 @@ function DeptDetailForm({
                 <option value="department">Department</option>
                 <option value="society">Society</option>
                 <option value="club">Club</option>
-              </select>
+              </FormSelect>
             </label>
             <label className="flex items-center gap-2 text-[13px] text-[#121212]">
               <input
@@ -944,7 +945,7 @@ function DeptDetailForm({
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
                 <label className="flex-1 text-[13px] text-[#121212]">
                   Merge into
-                  <select
+                  <FormSelect
                     className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] outline-none"
                     value={mergeTargetId}
                     onChange={(e) => setMergeTargetId(e.target.value)}
@@ -955,7 +956,7 @@ function DeptDetailForm({
                         {d.name}
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </label>
                 <button
                   type="button"
@@ -1055,7 +1056,7 @@ function DeptDetailForm({
                       <div className="text-[12px] text-[#6b6b6b]">
                         <span className="font-medium text-[#121212]">Owner</span>
                         {canSetTeamOwner ? (
-                          <select
+                          <FormSelect
                             className="ml-2 mt-1 max-w-full rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] sm:ml-2 sm:mt-0 sm:inline-block sm:max-w-[280px]"
                             value={t.lead_user_id ?? ''}
                             onChange={(e) =>
@@ -1071,7 +1072,7 @@ function DeptDetailForm({
                                 {s.full_name} ({s.role})
                               </option>
                             ))}
-                          </select>
+                          </FormSelect>
                         ) : (
                           <span className="ml-1 text-[#9b9b9b]">{ownerLabel ?? '-'}</span>
                         )}
@@ -1112,7 +1113,7 @@ function DeptDetailForm({
                   </ul>
                   {rosterOk ? (
                     <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <select
+                      <FormSelect
                         className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px]"
                         value={pick}
                         onChange={(e) => setTeamMemberPick((prev) => ({ ...prev, [t.id]: e.target.value }))}
@@ -1126,7 +1127,7 @@ function DeptDetailForm({
                               {s.full_name} ({s.role})
                             </option>
                           ))}
-                      </select>
+                      </FormSelect>
                       <button
                         type="button"
                         className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
@@ -1155,7 +1156,7 @@ function DeptDetailForm({
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
               />
-              <select
+              <FormSelect
                 className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] sm:max-w-xs"
                 value={newTeamOwnerId}
                 onChange={(e) => setNewTeamOwnerId(e.target.value)}
@@ -1167,7 +1168,7 @@ function DeptDetailForm({
                     {s.full_name} ({s.role})
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </div>
             <button
               type="button"
@@ -1214,7 +1215,7 @@ function DeptDetailForm({
           )}
         </ul>
         <div className="mt-2 flex gap-2">
-          <select
+          <FormSelect
             className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
             value={memberPick}
             onChange={(e) => setMemberPick(e.target.value)}
@@ -1228,7 +1229,7 @@ function DeptDetailForm({
                   {s.full_name} ({s.role})
                 </option>
               ))}
-          </select>
+          </FormSelect>
           <button
             type="button"
             className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
@@ -1280,7 +1281,7 @@ function DeptDetailForm({
                     </span>
                   </label>
                   {enabled && def.minRoleOptions.length > 1 ? (
-                    <select
+                    <FormSelect
                       className="w-full shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[12px] text-[#121212] sm:w-[200px]"
                       value={safeMin}
                       disabled={busy}
@@ -1294,7 +1295,7 @@ function DeptDetailForm({
                           {minRoleLabel(r)}
                         </option>
                       ))}
-                    </select>
+                    </FormSelect>
                   ) : enabled ? (
                     <span className="shrink-0 rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11px] text-[#6b6b6b]">
                       {minRoleLabel(def.minRoleOptions[0])}
@@ -1377,7 +1378,7 @@ function DeptDetailForm({
         </ul>
         {isOrgAdmin ? (
           <div className="mt-2 flex gap-2">
-            <select
+            <FormSelect
               className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
               value={mgrPick}
               onChange={(e) => setMgrPick(e.target.value)}
@@ -1390,7 +1391,7 @@ function DeptDetailForm({
                     {s.full_name} ({s.role})
                   </option>
                 ))}
-            </select>
+            </FormSelect>
             <button
               type="button"
               className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"

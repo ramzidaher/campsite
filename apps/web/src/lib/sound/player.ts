@@ -1,4 +1,5 @@
 import type { UiSoundEvent, UiSoundToneSpec } from '@campsite/types';
+import { isDndScheduleSuppressingUiSoundsNow } from '@/lib/dndScheduleGate';
 import { UI_SOUND_PRESETS } from './presets';
 import { readUiSoundPreferences } from './prefs';
 
@@ -52,6 +53,7 @@ function scheduleTone(ctx: AudioContext, tone: UiSoundToneSpec, startAt: number,
 export async function playUiSound(event: UiSoundEvent): Promise<void> {
   const prefs = readUiSoundPreferences();
   if (!prefs.enabled || prefs.volume <= 0) return;
+  if (typeof window !== 'undefined' && isDndScheduleSuppressingUiSoundsNow()) return;
 
   const preset = UI_SOUND_PRESETS[event];
   const nowMs = Date.now();

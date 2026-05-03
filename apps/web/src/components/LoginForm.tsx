@@ -229,9 +229,9 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
         Don&apos;t have an account?{' '}
         <Link
           href="/register"
-          className="inline-block rounded-md border border-[#d8d8d8] px-2 py-0.5 font-medium text-[#121212] underline decoration-[#121212] underline-offset-2"
+          className="font-medium text-[#e8622a] underline underline-offset-[3px] decoration-[#e8622a]/45 hover:decoration-[#e8622a]"
         >
-          Create one
+          Create one!
         </Link>
       </p>
 

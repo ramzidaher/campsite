@@ -11,11 +11,12 @@ export default async function EmployeePerformancePage() {
   if (!orgId || !userId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
+  const canViewOwn = permissionKeys.includes('performance.view_own');
   const canReviewDirectReports = permissionKeys.includes('performance.review_direct_reports');
+  if (!canViewOwn && !canReviewDirectReports) redirect('/broadcasts');
+
   const pageData = await getCachedPerformanceIndexPageData(orgId, userId, canReviewDirectReports);
   const reviews = pageData.reviews;
-
-  if (!reviews?.length && !canReviewDirectReports) redirect('/broadcasts');
 
   return (
     <EmployeePerformanceIndexClient

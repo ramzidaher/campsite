@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -184,22 +185,22 @@ export function UkTaxDetailsClient({
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <input value={form.ni_number} onChange={(e) => setForm((f) => ({ ...f, ni_number: e.target.value.toUpperCase() }))} placeholder="NI number" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
             <input value={form.tax_code} onChange={(e) => setForm((f) => ({ ...f, tax_code: e.target.value.toUpperCase() }))} placeholder="Tax code" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
-            <select value={form.starter_declaration} onChange={(e) => setForm((f) => ({ ...f, starter_declaration: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
+            <FormSelect value={form.starter_declaration} onChange={(e) => setForm((f) => ({ ...f, starter_declaration: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
               <option value="A">Starter declaration A</option>
               <option value="B">Starter declaration B</option>
               <option value="C">Starter declaration C</option>
-            </select>
-            <select value={form.student_loan_plan} onChange={(e) => setForm((f) => ({ ...f, student_loan_plan: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
+            </FormSelect>
+            <FormSelect value={form.student_loan_plan} onChange={(e) => setForm((f) => ({ ...f, student_loan_plan: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
               <option value="none">No student loan</option>
               <option value="plan_1">Plan 1</option>
               <option value="plan_2">Plan 2</option>
               <option value="plan_4">Plan 4</option>
               <option value="plan_5">Plan 5</option>
-            </select>
-            <select value={form.tax_basis} onChange={(e) => setForm((f) => ({ ...f, tax_basis: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
+            </FormSelect>
+            <FormSelect value={form.tax_basis} onChange={(e) => setForm((f) => ({ ...f, tax_basis: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
               <option value="cumulative">Cumulative</option>
               <option value="week1_month1">Week1 / Month1</option>
-            </select>
+            </FormSelect>
             <input type="date" value={form.effective_from} onChange={(e) => setForm((f) => ({ ...f, effective_from: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
             <label className="inline-flex items-center gap-2 text-[12.5px] text-[#6b6b6b]">
               <input type="checkbox" checked={form.postgraduate_loan} onChange={(e) => setForm((f) => ({ ...f, postgraduate_loan: e.target.checked }))} />

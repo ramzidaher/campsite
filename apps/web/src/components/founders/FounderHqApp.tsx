@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -1564,9 +1565,10 @@ export function FounderHqApp({
                           <td>{org.name}</td>
                           <td>{org.plan_tier ?? 'starter'}</td>
                           <td>
-                            <select
-                              className="btn btn-ghost btn-sm"
-                              style={{ maxWidth: 140 }}
+                            <FormSelect
+                              tone="subtle"
+                              controlSize="sm"
+                              wrapperClassName="max-w-[140px]"
                               value={org.subscription_status ?? 'active'}
                               disabled={busy}
                               onChange={(e) => {
@@ -1595,7 +1597,7 @@ export function FounderHqApp({
                               <option value="active">active</option>
                               <option value="limited">limited</option>
                               <option value="suspended">suspended</option>
-                            </select>
+                            </FormSelect>
                           </td>
                           <td>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 200 }}>
@@ -1880,14 +1882,24 @@ export function FounderHqApp({
                   onChange={(e) => setMemberQuery(e.target.value)}
                 />
               </div>
-              <select className="fh-muted-select" value={memberSite} onChange={(e) => setMemberSite(e.target.value)}>
+              <FormSelect
+                tone="subtle"
+                wrapperClassName="!w-auto shrink-0"
+                value={memberSite}
+                onChange={(e) => setMemberSite(e.target.value)}
+              >
                 {memberSiteOptions.map((s) => (
                   <option key={s} value={s}>
                     {s === 'all' ? 'All organisations' : s}
                   </option>
                 ))}
-              </select>
-              <select className="fh-muted-select" value={memberRole} onChange={(e) => setMemberRole(e.target.value)}>
+              </FormSelect>
+              <FormSelect
+                tone="subtle"
+                wrapperClassName="!w-auto shrink-0"
+                value={memberRole}
+                onChange={(e) => setMemberRole(e.target.value)}
+              >
                 <option value="all">All roles</option>
                 <option value="org_admin">Org admin</option>
                 <option value="manager">Manager</option>
@@ -1896,7 +1908,7 @@ export function FounderHqApp({
                 <option value="duty_manager">Duty manager</option>
                 <option value="csa">CSA</option>
                 <option value="society_leader">Society leader</option>
-              </select>
+              </FormSelect>
               {(['all', 'active', 'pending', 'inactive'] as const).map((tab) => (
                 <button
                   key={tab}
@@ -2336,22 +2348,32 @@ export function FounderHqApp({
             <div className="page-title">Platform Audit Log</div>
             <div className="page-sub">Cross-org timeline for catalog, presets, support, and governance events.</div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-              <select className="fh-muted-select" value={auditOrgFilter} onChange={(e) => setAuditOrgFilter(e.target.value)}>
+              <FormSelect
+                tone="subtle"
+                wrapperClassName="!w-auto shrink-0"
+                value={auditOrgFilter}
+                onChange={(e) => setAuditOrgFilter(e.target.value)}
+              >
                 <option value="all">All organisations</option>
                 {orgs.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.name}
                   </option>
                 ))}
-              </select>
-              <select className="fh-muted-select" value={auditEventFilter} onChange={(e) => setAuditEventFilter(e.target.value)}>
+              </FormSelect>
+              <FormSelect
+                tone="subtle"
+                wrapperClassName="!w-auto shrink-0"
+                value={auditEventFilter}
+                onChange={(e) => setAuditEventFilter(e.target.value)}
+              >
                 <option value="all">All event types</option>
                 {[...new Set(auditEvents.map((a) => a.event_type))].map((eventType) => (
                   <option key={eventType} value={eventType}>
                     {eventType}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </div>
             <div className="card card-pad">
               <div className="section-title" style={{ marginBottom: 14 }}>
@@ -2826,18 +2848,20 @@ export function FounderHqApp({
             </div>
             <div className="field">
               <label>Audience</label>
-              <select
+              <FormSelect
+                tone="subtle"
                 value={broadcastDraft.audience}
                 onChange={(e) => setBroadcastDraft((d) => ({ ...d, audience: e.target.value as 'all' | 'site' }))}
               >
                 <option value="all">All members (company-wide)</option>
                 <option value="site">Single organisation</option>
-              </select>
+              </FormSelect>
             </div>
             {broadcastDraft.audience === 'site' && (
               <div className="field">
                 <label>Organisation</label>
-                <select
+                <FormSelect
+                  tone="subtle"
                   value={broadcastDraft.siteId}
                   onChange={(e) => setBroadcastDraft((d) => ({ ...d, siteId: e.target.value }))}
                 >
@@ -2846,7 +2870,7 @@ export function FounderHqApp({
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
             )}
             <div className="field">

@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { currentLeaveYearKey } from '@/lib/datetime';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { useShellRefresh } from '@/hooks/useShellRefresh';
@@ -386,7 +387,7 @@ export function OrgLeaveAdminClient({
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Team member
-              <select
+              <FormSelect
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value)}
@@ -396,11 +397,11 @@ export function OrgLeaveAdminClient({
                     {m.full_name}{m.email ? ` — ${m.email}` : ''}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Leave year
-              <select
+              <FormSelect
                 className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px]"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
@@ -408,7 +409,7 @@ export function OrgLeaveAdminClient({
                 {yearOptions.map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
           </div>
 
@@ -560,7 +561,7 @@ export function OrgLeaveAdminClient({
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Type
-                <select
+                <FormSelect
                   value={holidayKind}
                   onChange={(e) => setHolidayKind(e.target.value as HolidayPeriod['holiday_kind'])}
                   className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
@@ -569,7 +570,7 @@ export function OrgLeaveAdminClient({
                   <option value="public_holiday">Public holiday</option>
                   <option value="org_break">Organisation break</option>
                   <option value="custom">Custom</option>
-                </select>
+                </FormSelect>
               </label>
               <div />
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
@@ -865,7 +866,7 @@ export function OrgLeaveAdminClient({
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Policy profile
-                <select
+                <FormSelect
                   value={leaveLawProfile}
                   onChange={(e) => setLeaveLawProfile(e.target.value)}
                   className="mt-1 w-full max-w-[220px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
@@ -876,7 +877,7 @@ export function OrgLeaveAdminClient({
                   <option value="ca_general">Canada (general)</option>
                   <option value="au_general">Australia (general)</option>
                   <option value="custom">Custom</option>
-                </select>
+                </FormSelect>
               </label>
             </div>
           </div>
@@ -897,14 +898,14 @@ export function OrgLeaveAdminClient({
             </label>
             <label className="mt-3 block text-[12.5px] font-medium text-[#6b6b6b]">
               Accrual frequency
-              <select
+              <FormSelect
                 value={leaveAccrualFrequency}
                 onChange={(e) => setLeaveAccrualFrequency(e.target.value)}
                 disabled={!leaveAccrualEnabled}
                 className="mt-1 w-full max-w-[180px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] disabled:opacity-50"
               >
                 <option value="monthly">Monthly</option>
-              </select>
+              </FormSelect>
             </label>
           </div>
 
@@ -916,7 +917,7 @@ export function OrgLeaveAdminClient({
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Leave year
-                <select
+                <FormSelect
                   className="mt-1 block w-full min-w-[120px] rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
@@ -924,7 +925,7 @@ export function OrgLeaveAdminClient({
                   {yearOptions.map((y) => (
                     <option key={y} value={y}>{y}</option>
                   ))}
-                </select>
+                </FormSelect>
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-[#6b6b6b] sm:pb-2">
                 <input

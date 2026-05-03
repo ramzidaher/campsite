@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { adminBroadcastsFilterChannelAria, channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -257,7 +258,7 @@ export function AdminBroadcastsClient({
             aria-label="Search broadcasts"
           />
         </div>
-        <select
+        <FormSelect
           className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
           value={filterDept}
           onChange={(e) => {
@@ -272,8 +273,8 @@ export function AdminBroadcastsClient({
               {d.name}
             </option>
           ))}
-        </select>
-        <select
+        </FormSelect>
+        <FormSelect
           className="h-9 min-w-[140px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
           value={filterCat}
           onChange={(e) => setFilterCat(e.target.value)}
@@ -286,7 +287,7 @@ export function AdminBroadcastsClient({
               {c.name}
             </option>
           ))}
-        </select>
+        </FormSelect>
       </div>
 
       <div className="flex flex-col gap-2.5">

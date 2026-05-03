@@ -320,3 +320,84 @@ ${q}`,
 
   return { reply: text };
 }
+
+const LIBRARY_SYSTEM_PREFIX = `You are Scout, helping staff navigate their organisation's resource library (policies, handbooks, reference files).
+
+Rules:
+- Base answers ONLY on the RESOURCE LIBRARY DATA block in your instructions. Do not invent policies, numbers, or filenames that are not supported by that data.
+- PDFs and many binary files appear in the catalog with title and description only; their full text is usually NOT included. If the question needs inside-document detail that is not in the excerpts, say so and name which documents to open (use titles from the catalog).
+- For counts (e.g. how many documents about X), count only items clearly matching the question in the catalog/excerpts; if ambiguous, explain what you counted and what is missing.
+- Be concise. Use short bullets when helpful. When citing, use document titles.`;
+
+/** Library-wide chat: full catalog (and optional excerpts) lives in systemInstruction; conversation turns are normal user/model messages. */
+export async function chatStaffResourceLibraryWithGemini(opts: {
+  apiKey: string;
+  model?: string;
+  /** Catalog + optional text excerpts; caller caps size. */
+  resourceLibraryData: string;
+  messages: StaffResourceChatTurn[];
+}): Promise<{ reply: string } | { error: string }> {
+  const model = (opts.model ?? DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+  const msgs = opts.messages;
+  if (msgs.length < 1 || msgs[msgs.length - 1]?.role !== 'user') {
+    return { error: 'Invalid conversation: last message must be from the user.' };
+  }
+  if (msgs.length > 24) {
+    return { error: 'Conversation is too long; start a new topic.' };
+  }
+
+  const dataBlock = opts.resourceLibraryData.trim() || '(No documents in catalog.)';
+  const systemText = `${LIBRARY_SYSTEM_PREFIX}
+
+--- RESOURCE LIBRARY DATA ---
+${dataBlock}
+--- END RESOURCE LIBRARY DATA ---`;
+
+  const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
+  for (const m of msgs) {
+    contents.push({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.content.trim() }],
+    });
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(opts.apiKey)}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemText }] },
+        contents,
+        generationConfig: {
+          temperature: 0.35,
+          maxOutputTokens: 1024,
+        },
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+  } catch (e) {
+    return { error: userFacingScoutError(e instanceof Error ? e.message : 'Request failed') };
+  }
+
+  let json: GenerateResponse;
+  try {
+    json = (await res.json()) as GenerateResponse;
+  } catch {
+    return { error: 'Invalid response from AI service' };
+  }
+
+  if (!res.ok) {
+    const raw = json.error?.message ?? res.statusText ?? 'AI request failed';
+    return { error: userFacingScoutError(raw) };
+  }
+
+  const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('')?.trim();
+  if (!text) {
+    return { error: 'No reply returned; try a shorter question.' };
+  }
+
+  return { reply: text };
+}

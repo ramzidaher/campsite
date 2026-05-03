@@ -1,18 +1,17 @@
 'use client';
 
-import { ExperienceLensBar } from '@/components/experience/ExperienceLensBar';
+import { ResourceLibraryAssistant } from '@/components/resources/ResourceLibraryAssistant';
 import { createClient } from '@/lib/supabase/client';
 import { isMissingArchivedAtColumn, isMissingFolderHierarchyColumn } from '@/lib/staffResourceArchiveCompat';
 import { parseStaffResourceFolderEmbed } from '@/lib/staffResourceFolderEmbed';
-import { MoreVertical } from 'lucide-react';
+import { campusSurface } from '@campsite/ui/web';
+import { MoreVertical, Search, X } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { PostgrestError } from '@supabase/supabase-js';
 import type { RefObject } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-
-const RESOURCE_FILE_LENS_KEY = 'campsite_resources_file_lens';
 
 export type StaffResourceFolderRow = {
   id: string;
@@ -84,21 +83,23 @@ export function ResourcesListClient({
   orgId,
   canManage,
   folderFilter,
-  initialSearch = '',
+  initialScoutPrompt = '',
+  initialFileSearch = '',
   viewArchived = false,
 }: {
   orgId: string;
   canManage: boolean;
   /** `null` = all (grouped by folder); UUID = that folder; `none` = uncategorised only */
   folderFilter: string | null | 'none';
-  /** Prefill from top bar or shared links, e.g. `?q=handbook` */
-  initialSearch?: string;
+  /** Prefills Scout (URL `?q=`). */
+  initialScoutPrompt?: string;
+  /** Initial library file search (URL `?search=`). */
+  initialFileSearch?: string;
   /** Managers only: show archived documents instead of the active library (from `?archived=1`). */
   viewArchived?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [q, setQ] = useState(initialSearch);
-  const [debounced, setDebounced] = useState('');
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const [rows, setRows] = useState<StaffResourceRow[]>([]);
   const [folders, setFolders] = useState<StaffResourceFolderRow[]>([]);
   const [busy, setBusy] = useState(true);
@@ -113,7 +114,6 @@ export function ResourcesListClient({
   const [folderHierarchyOk, setFolderHierarchyOk] = useState(true);
   const [moveFileRow, setMoveFileRow] = useState<StaffResourceRow | null>(null);
   const [moveFolderId, setMoveFolderId] = useState<string | null>(null);
-  const [fileLens, setFileLens] = useState<'list' | 'grid'>('list');
   const [newFolderPanelOpen, setNewFolderPanelOpen] = useState(false);
   const [folderMenuOpenId, setFolderMenuOpenId] = useState<string | null>(null);
   const [renameFolderId, setRenameFolderId] = useState<string | null>(null);
@@ -138,6 +138,63 @@ export function ResourcesListClient({
   const fileMenuAnchorRef = useRef<HTMLButtonElement | null>(null);
 
   const router = useRouter();
+  const urlFileSearch = searchParams.get('search') ?? '';
+
+  const [fileSearchInput, setFileSearchInput] = useState(initialFileSearch);
+  const [debouncedFileSearch, setDebouncedFileSearch] = useState(initialFileSearch.trim());
+
+  useEffect(() => {
+    setFileSearchInput(urlFileSearch);
+    setDebouncedFileSearch(urlFileSearch.trim());
+  }, [urlFileSearch]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedFileSearch(fileSearchInput.trim()), 300);
+    return () => window.clearTimeout(id);
+  }, [fileSearchInput]);
+
+  const fileSearchActive = debouncedFileSearch.trim().length >= 2;
+  const [fileSearchPanelOpen, setFileSearchPanelOpen] = useState(false);
+  const fileSearchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (urlFileSearch.trim().length >= 2) setFileSearchPanelOpen(true);
+  }, [urlFileSearch]);
+
+  useEffect(() => {
+    if (!fileSearchPanelOpen) return;
+    const id = window.requestAnimationFrame(() => fileSearchInputRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, [fileSearchPanelOpen]);
+
+  useEffect(() => {
+    if (!fileSearchPanelOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setFileSearchPanelOpen(false);
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [fileSearchPanelOpen]);
+
+  const syncFileSearchQueryParam = useCallback(
+    (term: string) => {
+      const p = new URLSearchParams(searchParams.toString());
+      const t = term.trim();
+      if (t.length >= 2) p.set('search', t);
+      else p.delete('search');
+      const s = p.toString();
+      router.replace(s ? `/resources?${s}` : '/resources');
+    },
+    [router, searchParams],
+  );
+
+  useEffect(() => {
+    const t = debouncedFileSearch.trim();
+    const inUrl = (searchParams.get('search') ?? '').trim();
+    const wantInUrl = t.length >= 2 ? t : '';
+    if (inUrl === wantInUrl) return;
+    syncFileSearchQueryParam(t);
+  }, [debouncedFileSearch, searchParams, syncFileSearchQueryParam]);
 
   useLayoutEffect(() => {
     const anyOpen = Boolean(folderMenuOpenId || fileMenuOpenId);
@@ -186,46 +243,25 @@ export function ResourcesListClient({
     };
   }, [folderMenuOpenId, fileMenuOpenId]);
 
-  useEffect(() => {
-    setQ(initialSearch);
-  }, [initialSearch]);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(RESOURCE_FILE_LENS_KEY);
-      if (raw === 'list' || raw === 'grid') setFileLens(raw);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const persistFileLens = (next: 'list' | 'grid') => {
-    setFileLens(next);
-    try {
-      window.localStorage.setItem(RESOURCE_FILE_LENS_KEY, next);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebounced(q.trim()), q.trim().length >= 2 ? 300 : 0);
-    return () => window.clearTimeout(t);
-  }, [q]);
-
-  const searchActive = debounced.length >= 2;
   const archiveOnly = Boolean(canManage && viewArchived && archiveColumnOk);
 
   const resourcesHref = useCallback(
-    (opts: { folder?: string | null | 'none'; archived?: boolean }) => {
-      const p = new URLSearchParams();
-      if (opts.archived) p.set('archived', '1');
-      if (opts.folder === 'none') p.set('folder', 'none');
-      else if (opts.folder) p.set('folder', opts.folder);
+    (opts: { folder?: string | null | 'none'; archived?: boolean; clearFileSearch?: boolean } = {}) => {
+      const p = new URLSearchParams(searchParams.toString());
+      if (opts.archived !== undefined) {
+        if (opts.archived) p.set('archived', '1');
+        else p.delete('archived');
+      }
+      if (opts.folder !== undefined) {
+        if (opts.folder === 'none') p.set('folder', 'none');
+        else if (opts.folder === null) p.delete('folder');
+        else p.set('folder', opts.folder);
+      }
+      if (opts.clearFileSearch) p.delete('search');
       const s = p.toString();
       return s ? `/resources?${s}` : '/resources';
     },
-    [],
+    [searchParams],
   );
 
   const fetchFolderRows = useCallback(
@@ -310,32 +346,43 @@ export function ResourcesListClient({
             })),
           );
         }
-      } else if (searchActive) {
-        const { data, error } = await supabase.rpc('search_staff_resources', {
-          q: debounced,
-          limit_n: 80,
-        });
-        if (error) throw error;
-        const raw = (data ?? []) as Record<string, unknown>[];
-        let list: StaffResourceRow[] = raw.map((r) => ({
-          id: String(r.id ?? ''),
-          title: String(r.title ?? ''),
-          description: r.description != null ? String(r.description) : '',
-          file_name: String(r.file_name ?? ''),
-          mime_type: String(r.mime_type ?? ''),
-          byte_size: Number(r.byte_size ?? 0),
-          updated_at: String(r.updated_at ?? ''),
-          storage_path: r.storage_path != null && String(r.storage_path) !== '' ? String(r.storage_path) : null,
-          folder_id: r.folder_id != null ? String(r.folder_id) : null,
-          staff_resource_folders: parseStaffResourceFolderEmbed(r.staff_resource_folders),
-        }));
-        if (folderFilter === 'none') {
-          list = list.filter((r) => !r.folder_id);
-        } else if (folderFilter) {
-          list = list.filter((r) => r.folder_id === folderFilter);
-        }
-        setRows(list);
       } else {
+        const term = debouncedFileSearch.trim();
+        if (!archiveOnly && term.length >= 2) {
+          const { data, error } = await supabase.rpc('search_staff_resources', {
+            q: term,
+            limit_n: 80,
+          });
+          if (error) throw error;
+          const raw = (data ?? []) as Record<string, unknown>[];
+          const byFolderId = new Map(folderRows.map((f) => [f.id, f]));
+          let list: StaffResourceRow[] = raw.map((r) => {
+            const folderId = r.folder_id != null ? String(r.folder_id) : null;
+            const folderMeta =
+              folderId && byFolderId.has(folderId)
+                ? { id: folderId, name: byFolderId.get(folderId)!.name }
+                : null;
+            return {
+              id: String(r.id ?? ''),
+              title: String(r.title ?? ''),
+              description: r.description != null ? String(r.description) : '',
+              file_name: String(r.file_name ?? ''),
+              mime_type: String(r.mime_type ?? ''),
+              byte_size: Number(r.byte_size ?? 0),
+              updated_at: String(r.updated_at ?? ''),
+              storage_path: r.storage_path != null && String(r.storage_path) !== '' ? String(r.storage_path) : null,
+              archived_at: r.archived_at != null ? String(r.archived_at) : null,
+              folder_id: folderId,
+              staff_resource_folders: folderMeta,
+            };
+          });
+          if (folderFilter === 'none') {
+            list = list.filter((row) => !row.folder_id);
+          } else if (folderFilter) {
+            list = list.filter((row) => row.folder_id === folderFilter);
+          }
+          setRows(list);
+        } else {
         let q = supabase
           .from('staff_resources')
           .select(
@@ -386,6 +433,7 @@ export function ResourcesListClient({
             staff_resource_folders: parseStaffResourceFolderEmbed(r.staff_resource_folders),
           })),
         );
+        }
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load resources.');
@@ -396,8 +444,6 @@ export function ResourcesListClient({
   }, [
     supabase,
     orgId,
-    searchActive,
-    debounced,
     folderFilter,
     fetchFolderRows,
     archiveOnly,
@@ -405,6 +451,7 @@ export function ResourcesListClient({
     canManage,
     viewArchived,
     folderHierarchyOk,
+    debouncedFileSearch,
   ]);
 
   useEffect(() => {
@@ -577,7 +624,7 @@ export function ResourcesListClient({
       setFolderMenuOpenId(null);
       await load();
       if (wasViewing) {
-        router.replace(resourcesHref({ archived: archiveOnly }));
+        router.replace(resourcesHref({ folder: null, clearFileSearch: true }));
       }
     } catch (e) {
       setFolderErr(e instanceof Error ? e.message : 'Could not delete folder.');
@@ -660,7 +707,7 @@ export function ResourcesListClient({
       const wasViewing = folderFilter === id;
       await load();
       if (wasViewing) {
-        router.replace(resourcesHref({ archived: archiveOnly }));
+        router.replace(resourcesHref({ folder: null, clearFileSearch: true }));
       }
     } catch (e) {
       setFolderErr(e instanceof Error ? e.message : 'Could not archive folder.');
@@ -794,17 +841,26 @@ export function ResourcesListClient({
     return m;
   }, [rows]);
 
-  const showFolderStrip =
-    !searchActive && (folders.length > 0 || (!archiveOnly && canManage));
+  /** Sidebar + folder affordances stay visible while searching (matches library layout expectations). */
+  const showFolderStrip = folders.length > 0 || (!archiveOnly && canManage);
 
   const outlineHeaderBtn =
-    'inline-flex h-9 shrink-0 items-center rounded-xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,var(--org-brand-primary)_10%)] bg-[var(--org-brand-bg)] px-3.5 text-[13px] font-medium text-[var(--org-brand-text)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_40%,transparent)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_8%,var(--org-brand-bg))]';
+    'inline-flex h-10 shrink-0 items-center rounded-full border border-[color-mix(in_oklab,var(--org-brand-text)_88%,var(--org-brand-border))] bg-[var(--org-brand-bg)] px-5 text-[13px] font-medium text-[var(--org-brand-text)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-border)_45%,var(--org-brand-bg))]';
+
+  const headerSearchIconBtn =
+    'relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--org-brand-text)_88%,var(--org-brand-border))] bg-[var(--org-brand-bg)] text-[var(--org-brand-text)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-border)_45%,var(--org-brand-bg))]';
+
+  const primaryHeaderBtn =
+    'inline-flex h-10 shrink-0 items-center rounded-full border border-transparent bg-[var(--org-brand-text)] px-5 text-[13px] font-medium text-[var(--org-brand-bg)] transition hover:opacity-[0.92]';
 
   const filterChipBase =
-    'inline-flex h-9 max-w-[260px] items-center gap-1.5 truncate rounded-full px-3.5 text-[12.5px] font-medium transition';
-  const filterChipInactive = `${filterChipBase} border border-[color-mix(in_oklab,var(--org-brand-border)_100%,transparent)] bg-[var(--org-brand-bg)] text-[var(--org-brand-text)] hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_7%,var(--org-brand-bg))]`;
-  const filterChipActive = `${filterChipBase} border border-transparent text-white shadow-sm`;
-  const filterActiveStyle = { background: 'var(--org-brand-primary)', color: '#fff' } as const;
+    'inline-flex h-9 max-w-[220px] items-center justify-center truncate rounded-full px-4 text-[12.5px] font-medium transition';
+  const filterChipInactive = `${filterChipBase} border border-[color-mix(in_oklab,var(--org-brand-border)_100%,transparent)] bg-[var(--org-brand-bg)] text-[var(--org-brand-text)] hover:bg-[color-mix(in_oklab,var(--org-brand-border)_35%,var(--org-brand-bg))]`;
+  const filterChipActive = `${filterChipBase} border border-transparent shadow-sm`;
+  const filterActiveStyle = {
+    background: 'var(--org-brand-text)',
+    color: 'var(--org-brand-bg)',
+  } as const;
 
   function openNewFolderPanel() {
     setNewFolderPanelOpen(true);
@@ -816,9 +872,9 @@ export function ResourcesListClient({
   const movingFolderRow = moveFolderId ? (folders.find((f) => f.id === moveFolderId) ?? null) : null;
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
+    <div className="font-sans mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-xl">
           <h1 className="campsite-title text-[var(--org-brand-text)]">
             Resource library
             {archiveOnly ? (
@@ -827,185 +883,239 @@ export function ResourcesListClient({
               </span>
             ) : null}
           </h1>
-          <p className="campsite-body mt-1 text-[var(--org-brand-muted)]">
+          <p className="campsite-body mt-2 text-[var(--org-brand-muted)]">
             {archiveOnly
               ? 'Documents hidden from the main library. Restore or delete them from the resource page.'
-              : 'Policies, handbooks, and reference files for your organisation.'}
+              : 'Search policies, handbooks, files, and internal knowledge in one place.'}
           </p>
         </div>
-        {canManage ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {archiveColumnOk ? (
-              <Link href={archiveOnly ? '/resources' : '/resources?archived=1'} className={outlineHeaderBtn}>
-                {archiveOnly ? 'Active library' : 'Archived'}
-              </Link>
+        {!archiveOnly || canManage ? (
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2.5">
+            {!archiveOnly ? (
+              <>
+                {!fileSearchPanelOpen ? (
+                  <button
+                    type="button"
+                    className={headerSearchIconBtn}
+                    aria-label="Search files"
+                    aria-expanded={false}
+                    title="Search files"
+                    onClick={() => setFileSearchPanelOpen(true)}
+                  >
+                    <Search className="size-[18px]" strokeWidth={2} aria-hidden />
+                    {fileSearchActive ? (
+                      <span
+                        className="absolute right-2 top-2 size-2 rounded-full bg-[var(--org-brand-text)] ring-2 ring-[var(--org-brand-bg)]"
+                        aria-hidden
+                      />
+                    ) : null}
+                  </button>
+                ) : (
+                  <div className="flex min-w-0 max-w-full items-center gap-1.5 sm:max-w-none">
+                    <div className="relative min-w-0 flex-1 sm:min-w-[16rem] sm:max-w-[20rem] sm:flex-none">
+                      <Search
+                        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--org-brand-muted)]"
+                        aria-hidden
+                      />
+                      <input
+                        ref={fileSearchInputRef}
+                        id="resource-file-search"
+                        type="search"
+                        autoComplete="off"
+                        value={fileSearchInput}
+                        onChange={(e) => setFileSearchInput(e.target.value)}
+                        placeholder="Titles & indexed text…"
+                        className="h-10 w-full min-w-[12rem] rounded-full border border-[color-mix(in_oklab,var(--org-brand-text)_88%,var(--org-brand-border))] bg-[var(--org-brand-bg)] py-0 pl-10 pr-[3.25rem] text-[13px] text-[var(--org-brand-text)] outline-none ring-0 transition placeholder:text-[var(--org-brand-muted)] focus:border-[var(--org-brand-text)] sm:min-w-[16rem]"
+                      />
+                      {fileSearchInput.trim() ? (
+                        <button
+                          type="button"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-[11px] font-medium text-[var(--org-brand-muted)] hover:text-[var(--org-brand-text)]"
+                          onClick={() => setFileSearchInput('')}
+                          aria-label="Clear file search"
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      className={`${headerSearchIconBtn} shrink-0`}
+                      aria-label="Close file search"
+                      title="Close"
+                      onClick={() => setFileSearchPanelOpen(false)}
+                    >
+                      <X className="size-[18px]" strokeWidth={2} aria-hidden />
+                    </button>
+                  </div>
+                )}
+              </>
             ) : null}
-            <Link
-              href={uploadHref}
-              className={`${outlineHeaderBtn} border-[color-mix(in_oklab,var(--org-brand-primary)_35%,var(--org-brand-border))]`}
-            >
-              Upload file
-            </Link>
+            {canManage ? (
+              <>
+                {archiveColumnOk ? (
+                  <Link
+                    href={
+                      archiveOnly
+                        ? resourcesHref({ archived: false, clearFileSearch: true })
+                        : resourcesHref({ archived: true, clearFileSearch: true })
+                    }
+                    className={outlineHeaderBtn}
+                  >
+                    {archiveOnly ? 'Active library' : 'Archived'}
+                  </Link>
+                ) : null}
+                <Link href={uploadHref} className={primaryHeaderBtn}>
+                  Upload file
+                </Link>
+              </>
+            ) : null}
           </div>
         ) : null}
       </div>
 
       {archiveOnly ? (
-        <p className="mb-6 rounded-lg border border-amber-100 bg-amber-50/80 px-3 py-2 text-[13px] text-[#5c4a21]">
+        <p className="mb-6 rounded-full border border-amber-200/80 bg-amber-50/90 px-4 py-2.5 text-[13px] text-[#5c4a21]">
           Full-text search applies to the <strong className="font-semibold">active</strong> library only. Switch to
           Active library to search, or browse archived files below.
         </p>
       ) : (
-        <div className="relative mb-8">
-          <span className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[var(--org-brand-muted)]">
-            <SearchIcon className="h-4 w-4" />
-          </span>
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search files…"
-            className="h-11 w-full rounded-xl border border-[color-mix(in_oklab,var(--org-brand-border)_95%,transparent)] bg-[var(--org-brand-bg)] py-2 pl-10 pr-3 text-[13px] text-[var(--org-brand-text)] outline-none placeholder:text-[var(--org-brand-muted)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_35%,transparent)] focus:border-[var(--org-brand-primary)] focus:ring-[3px] focus:ring-[color-mix(in_oklab,var(--org-brand-primary)_18%,transparent)]"
-            aria-label="Search files"
-          />
+        <div className="mb-8">
+          <ResourceLibraryAssistant variant="topBar" initialPrompt={initialScoutPrompt} />
+          {fileSearchPanelOpen && fileSearchActive ? (
+            <p className="mt-3 text-[12px] text-[var(--org-brand-muted)]">
+              Matching titles and full-text in the active library
+              {folderFilter ? ' (folder filter applied).' : '.'}
+            </p>
+          ) : null}
         </div>
       )}
 
-      {showFolderStrip ? (
-        <div className="mb-10" id="resource-new-folder-anchor">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--org-brand-muted)]">
-            Folders
-          </p>
-          <div className="-mx-1 flex gap-3 overflow-x-auto pb-1 pt-0.5 [scrollbar-width:thin]">
-            {folders.map((f) => {
-              const n = fileCountByFolderId.get(f.id) ?? 0;
-              const pathLabel = folderDisplayPath(f.id, folderById);
-              const nested = pathLabel.includes(' / ');
-              const selected = folderFilter === f.id && !searchActive;
-              const menuOpen = folderMenuOpenId === f.id;
-              return (
-                <div
-                  key={f.id}
-                  className={`relative flex min-w-[200px] max-w-[280px] shrink-0 rounded-2xl border transition ${
-                    selected
-                      ? 'border-[var(--org-brand-primary)] bg-[color-mix(in_oklab,var(--org-brand-primary)_9%,var(--org-brand-bg))] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-primary)_25%,transparent)]'
-                      : 'border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] hover:border-[color-mix(in_oklab,var(--org-brand-primary)_45%,var(--org-brand-border))]'
-                  }`}
-                >
-                  <Link
-                    href={resourcesHref({ archived: archiveOnly, folder: f.id })}
-                    title={pathLabel}
-                    className="flex min-w-0 flex-1 items-start gap-3 p-4 pr-2"
-                  >
-                    <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${
+      <div
+        className={
+          showFolderStrip
+            ? 'lg:grid lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:items-start lg:gap-12'
+            : 'min-w-0'
+        }
+      >
+        {showFolderStrip ? (
+          <aside className="mb-10 shrink-0 lg:mb-0" id="resource-new-folder-anchor">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--org-brand-muted)]">
+              Folders
+            </p>
+            <ul className="flex flex-col gap-1">
+              {folders.map((f) => {
+                const n = fileCountByFolderId.get(f.id) ?? 0;
+                const pathLabel = folderDisplayPath(f.id, folderById);
+                const nested = pathLabel.includes(' / ');
+                const selected = folderFilter === f.id;
+                const menuOpen = folderMenuOpenId === f.id;
+                return (
+                  <li key={f.id} className="relative">
+                    <Link
+                      href={resourcesHref({ archived: archiveOnly, folder: f.id, clearFileSearch: true })}
+                      title={pathLabel}
+                      className={`flex min-w-0 items-center gap-2.5 rounded-full py-2 pl-3 pr-11 transition ${
                         selected
-                          ? 'bg-[color-mix(in_oklab,var(--org-brand-primary)_16%,white)] text-[var(--org-brand-primary)] ring-[color-mix(in_oklab,var(--org-brand-primary)_35%,transparent)]'
-                          : 'bg-[color-mix(in_oklab,var(--org-brand-surface)_80%,white)] text-[var(--org-brand-primary)] ring-[color-mix(in_oklab,var(--org-brand-border)_55%,transparent)]'
+                          ? 'bg-[color-mix(in_oklab,var(--org-brand-border)_55%,var(--org-brand-bg))]'
+                          : 'hover:bg-[color-mix(in_oklab,var(--org-brand-border)_35%,var(--org-brand-bg))]'
                       }`}
                     >
-                      <FolderIconLarge className="h-6 w-6" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-semibold leading-snug text-[var(--org-brand-text)]">
+                      <FolderIconSmall className="shrink-0 text-[var(--org-brand-muted)]" />
+                      <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-snug text-[var(--org-brand-text)]">
                         {f.name}
                       </span>
                       {nested ? (
-                        <span className="mt-0.5 block truncate text-[11px] leading-snug text-[var(--org-brand-muted)]">
-                          {pathLabel.split(' / ').slice(0, -1).join(' · ')}
-                        </span>
+                        <span className="sr-only">{pathLabel}</span>
                       ) : null}
-                      <span className="mt-0.5 block text-[12px] text-[var(--org-brand-muted)]">
-                        {n === 0 ? 'Empty' : `${n} file${n === 1 ? '' : 's'}`}
-                      </span>
-                    </span>
-                  </Link>
-                  {canManage ? (
-                    <div className="relative shrink-0 py-2 pr-2" data-resource-folder-menu>
-                      <button
-                        ref={menuOpen ? folderMenuAnchorRef : undefined}
-                        type="button"
-                        aria-expanded={menuOpen}
-                        aria-haspopup="menu"
-                        aria-label={`Actions for folder ${f.name}`}
-                        disabled={folderBusy}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--org-brand-muted)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_10%,var(--org-brand-bg))] hover:text-[var(--org-brand-text)] disabled:opacity-50"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setFileMenuOpenId(null);
-                          setFolderMenuOpenId(menuOpen ? null : f.id);
-                        }}
-                      >
-                        <MoreVertical className="h-5 w-5" strokeWidth={2} />
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
+                      <span className="shrink-0 tabular-nums text-[12.5px] text-[var(--org-brand-muted)]">{n}</span>
+                    </Link>
+                    {canManage ? (
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2" data-resource-folder-menu>
+                        <button
+                          ref={menuOpen ? folderMenuAnchorRef : undefined}
+                          type="button"
+                          aria-expanded={menuOpen}
+                          aria-haspopup="menu"
+                          aria-label={`Actions for folder ${f.name}`}
+                          disabled={folderBusy}
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--org-brand-muted)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-border)_50%,var(--org-brand-bg))] hover:text-[var(--org-brand-text)] disabled:opacity-50"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setFileMenuOpenId(null);
+                            setFolderMenuOpenId(menuOpen ? null : f.id);
+                          }}
+                        >
+                          <MoreVertical className="h-4 w-4" strokeWidth={2} />
+                        </button>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
             {canManage ? (
               <button
                 type="button"
                 onClick={openNewFolderPanel}
-                className="flex min-w-[200px] max-w-[260px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[color-mix(in_oklab,var(--org-brand-border)_85%,var(--org-brand-primary)_15%)] bg-[color-mix(in_oklab,var(--org-brand-surface)_35%,var(--org-brand-bg))] px-4 py-6 text-[13px] font-medium text-[var(--org-brand-muted)] transition hover:border-[var(--org-brand-primary)] hover:text-[var(--org-brand-text)]"
+                className="mt-2 flex w-full items-center gap-2 rounded-full py-2 pl-3 text-left text-[13px] font-medium text-[var(--org-brand-muted)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-border)_35%,var(--org-brand-bg))] hover:text-[var(--org-brand-text)]"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--org-brand-border)_70%,transparent)] bg-[var(--org-brand-bg)] text-[var(--org-brand-primary)]">
-                  <PlusIcon className="h-5 w-5" />
-                </span>
+                <PlusIcon className="h-4 w-4 shrink-0" />
                 New folder
               </button>
             ) : null}
-          </div>
 
-          {canManage && newFolderPanelOpen ? (
-            <form
-              onSubmit={addFolder}
-              className="mt-4 flex flex-wrap items-end gap-2 rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] p-3.5 shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_35%,transparent)]"
-            >
-              <div className="min-w-[200px] flex-1">
-                <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[var(--org-brand-muted)]">
-                  Folder name
-                </label>
-                <input
-                  id="resource-new-folder-input"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="e.g. Policies"
-                  className="h-9 w-full rounded-xl border border-[color-mix(in_oklab,var(--org-brand-border)_95%,transparent)] bg-[color-mix(in_oklab,var(--org-brand-surface)_40%,var(--org-brand-bg))] px-3 text-[13px] text-[var(--org-brand-text)] outline-none focus:border-[var(--org-brand-primary)] focus:ring-[3px] focus:ring-[color-mix(in_oklab,var(--org-brand-primary)_15%,transparent)]"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={folderBusy || !newFolderName.trim()}
-                className="h-9 rounded-xl px-4 text-[13px] font-medium text-white shadow-[0_6px_16px_color-mix(in_oklab,var(--org-brand-primary)_35%,transparent)] disabled:opacity-50"
-                style={{ background: 'var(--org-brand-primary)' }}
+            {canManage && newFolderPanelOpen ? (
+              <form
+                onSubmit={addFolder}
+                className="mt-4 space-y-3 rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_88%,transparent)] bg-[var(--org-brand-bg)] p-4 shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_30%,transparent)]"
               >
-                {folderBusy ? '…' : 'Add folder'}
-              </button>
-              <button
-                type="button"
-                className="h-9 rounded-xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] px-3 text-[13px] font-medium text-[var(--org-brand-muted)] hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_6%,var(--org-brand-bg))]"
-                onClick={() => setNewFolderPanelOpen(false)}
-              >
-                Cancel
-              </button>
-              {folderMsg ? (
-                <p className="w-full text-[12px] text-[#15803d]" role="status">
-                  {folderMsg}
-                </p>
-              ) : null}
-              {folderErr ? (
-                <p className="w-full text-[12px] text-red-800" role="alert">
-                  {folderErr}
-                </p>
-              ) : null}
-            </form>
-          ) : null}
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-[var(--org-brand-muted)]">
+                    Folder name
+                  </label>
+                  <input
+                    id="resource-new-folder-input"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="e.g. Policies"
+                    className="h-10 w-full rounded-xl border border-[color-mix(in_oklab,var(--org-brand-border)_95%,transparent)] bg-[color-mix(in_oklab,var(--org-brand-surface)_40%,var(--org-brand-bg))] px-3 text-[13px] text-[var(--org-brand-text)] outline-none focus:border-[var(--org-brand-text)] focus:ring-[3px] focus:ring-[color-mix(in_oklab,var(--org-brand-text)_10%,transparent)]"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="submit"
+                    disabled={folderBusy || !newFolderName.trim()}
+                    className="h-9 rounded-full px-4 text-[13px] font-medium text-[var(--org-brand-bg)] disabled:opacity-50"
+                    style={{ background: 'var(--org-brand-text)' }}
+                  >
+                    {folderBusy ? '…' : 'Add folder'}
+                  </button>
+                  <button
+                    type="button"
+                    className="h-9 rounded-full border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] px-4 text-[13px] font-medium text-[var(--org-brand-muted)] hover:bg-[color-mix(in_oklab,var(--org-brand-border)_30%,var(--org-brand-bg))]"
+                    onClick={() => setNewFolderPanelOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {folderMsg ? (
+                  <p className="text-[12px] text-[var(--campsite-success)]" role="status">
+                    {folderMsg}
+                  </p>
+                ) : null}
+                {folderErr ? (
+                  <p className="text-[12px] text-red-800" role="alert">
+                    {folderErr}
+                  </p>
+                ) : null}
+              </form>
+            ) : null}
+          </aside>
+        ) : null}
 
-        </div>
-      ) : null}
-
+        <section className="min-w-0">
       {renameFolderId && typeof document !== 'undefined'
         ? createPortal(
             <div
@@ -1065,7 +1175,7 @@ export function ResourcesListClient({
                   <button
                     type="button"
                     disabled={folderBusy || !renameFolderName.trim()}
-                    className="h-9 rounded-xl px-4 text-[13px] font-medium text-white disabled:opacity-50"
+                    className="h-9 rounded-xl px-4 text-[13px] font-medium text-[var(--org-brand-on-primary)] disabled:opacity-50"
                     style={{ background: 'var(--org-brand-primary)' }}
                     onClick={() => void saveRenameFolder()}
                   >
@@ -1365,51 +1475,29 @@ export function ResourcesListClient({
           )
         : null}
 
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--org-brand-muted)]">Files</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--org-brand-muted)]">Files</p>
           {!busy ? (
             <span className="text-[12.5px] tabular-nums text-[var(--org-brand-muted)]">{rows.length} total</span>
           ) : null}
         </div>
-        {!archiveOnly ? (
-          <ExperienceLensBar
-            ariaLabel="Resource files layout"
-            value={fileLens}
-            onChange={persistFileLens}
-            choices={[
-              { value: 'list', label: 'List' },
-              { value: 'grid', label: 'Tiles' },
-            ]}
-            className="shrink-0 border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[color-mix(in_oklab,var(--org-brand-surface)_65%,var(--org-brand-bg))]"
-          />
-        ) : null}
       </div>
 
       {!archiveOnly ? (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-5 flex flex-wrap gap-2">
           <Link
-            href={resourcesHref({ archived: archiveOnly })}
-            className={folderFilter === null && !searchActive ? filterChipActive : filterChipInactive}
-            style={folderFilter === null && !searchActive ? filterActiveStyle : undefined}
+            href={resourcesHref({ archived: archiveOnly, folder: null, clearFileSearch: true })}
+            className={folderFilter === null ? filterChipActive : filterChipInactive}
+            style={folderFilter === null ? filterActiveStyle : undefined}
           >
-            <FolderIconSmall
-              className={
-                folderFilter === null && !searchActive ? 'text-white' : 'text-[var(--org-brand-primary)]'
-              }
-            />
             All
           </Link>
           <Link
-            href={resourcesHref({ archived: archiveOnly, folder: 'none' })}
-            className={folderFilter === 'none' && !searchActive ? filterChipActive : filterChipInactive}
-            style={folderFilter === 'none' && !searchActive ? filterActiveStyle : undefined}
+            href={resourcesHref({ archived: archiveOnly, folder: 'none', clearFileSearch: true })}
+            className={folderFilter === 'none' ? filterChipActive : filterChipInactive}
+            style={folderFilter === 'none' ? filterActiveStyle : undefined}
           >
-            <FolderOutlineIconSmall
-              className={
-                folderFilter === 'none' && !searchActive ? 'text-white' : 'text-[var(--org-brand-muted)]'
-              }
-            />
             Uncategorised
           </Link>
           {folders.map((f) => {
@@ -1417,16 +1505,11 @@ export function ResourcesListClient({
             return (
               <Link
                 key={f.id}
-                href={resourcesHref({ archived: archiveOnly, folder: f.id })}
-                className={folderFilter === f.id && !searchActive ? filterChipActive : filterChipInactive}
-                style={folderFilter === f.id && !searchActive ? filterActiveStyle : undefined}
+                href={resourcesHref({ archived: archiveOnly, folder: f.id, clearFileSearch: true })}
+                className={folderFilter === f.id ? filterChipActive : filterChipInactive}
+                style={folderFilter === f.id ? filterActiveStyle : undefined}
                 title={chipPath}
               >
-                <FolderIconSmall
-                  className={
-                    folderFilter === f.id && !searchActive ? 'text-white' : 'text-[var(--org-brand-primary)]'
-                  }
-                />
                 <span className="truncate">{chipPath}</span>
               </Link>
             );
@@ -1434,12 +1517,15 @@ export function ResourcesListClient({
         </div>
       ) : null}
 
-      {currentFolderLabel && !searchActive && folderFilter !== null ? (
+      {currentFolderLabel && folderFilter !== null ? (
         <p className="mb-4 text-[13px] text-[var(--org-brand-muted)]">
           Viewing{' '}
           <span className="font-medium text-[var(--org-brand-text)]">{currentFolderLabel}</span>
           {' · '}
-          <Link href={resourcesHref({ archived: archiveOnly })} className="text-[var(--org-brand-primary)] underline">
+          <Link
+            href={resourcesHref({ archived: archiveOnly, folder: null, clearFileSearch: true })}
+            className="text-[var(--org-brand-text)] underline decoration-[color-mix(in_oklab,var(--org-brand-border)_80%,transparent)] underline-offset-2"
+          >
             Show all files
           </Link>
         </p>
@@ -1453,48 +1539,23 @@ export function ResourcesListClient({
         <p className="text-[13px] text-[var(--org-brand-muted)]">Loading…</p>
       ) : rows.length === 0 ? (
         <div className="rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] px-4 py-8 text-center text-[13px] text-[var(--org-brand-muted)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_30%,transparent)]">
-          {searchActive
-            ? 'No resources match your search.'
-            : archiveOnly
-              ? 'No archived resources.'
+          {archiveOnly
+            ? 'No archived resources.'
+            : fileSearchActive
+              ? 'No resources match your file search. Try different words or clear the search.'
               : 'No resources yet.'}
-          {canManage && !searchActive && !archiveOnly ? (
+          {canManage && !archiveOnly ? (
             <>
               {' '}
-              <Link href={uploadHref} className="font-medium text-[var(--org-brand-primary)] underline">
+              <Link href={uploadHref} className="font-medium text-[var(--org-brand-text)] underline underline-offset-2">
                 Upload the first file
               </Link>
               .
             </>
           ) : null}
         </div>
-      ) : fileLens === 'grid' ? (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {rows.map((r) => {
-            const folderCategory =
-              r.folder_id && folderById.has(r.folder_id)
-                ? folderDisplayPath(r.folder_id, folderById)
-                : (r.staff_resource_folders?.name ?? 'Uncategorised');
-            return (
-              <li key={r.id}>
-                <ResourceGridCard
-                  r={r}
-                  folderCategory={folderCategory}
-                  canManage={canManage}
-                  menuOpen={fileMenuOpenId === r.id}
-                  actionBusy={fileActionBusyId === r.id}
-                  menuAnchorRef={fileMenuOpenId === r.id ? fileMenuAnchorRef : undefined}
-                  onToggleMenu={() => {
-                    setFolderMenuOpenId(null);
-                    setFileMenuOpenId((prev) => (prev === r.id ? null : r.id));
-                  }}
-                />
-              </li>
-            );
-          })}
-        </ul>
       ) : (
-        <ul className="divide-y divide-[color-mix(in_oklab,var(--org-brand-border)_45%,transparent)] overflow-visible rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_35%,transparent)]">
+        <ul className="flex flex-col gap-3">
           {rows.map((r) => {
             const folderCategory =
               r.folder_id && folderById.has(r.folder_id)
@@ -1518,16 +1579,9 @@ export function ResourcesListClient({
           })}
         </ul>
       )}
+        </section>
+      </div>
     </div>
-  );
-}
-
-function SearchIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <circle cx="11" cy="11" r="7" />
-      <path strokeLinecap="round" d="M20 20l-3.5-3.5" />
-    </svg>
   );
 }
 
@@ -1544,89 +1598,6 @@ function FolderIconSmall({ className }: { className?: string }) {
     <svg className={`h-4 w-4 ${className ?? ''}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
     </svg>
-  );
-}
-
-function FolderOutlineIconSmall({ className }: { className?: string }) {
-  return (
-    <svg
-      className={`h-4 w-4 ${className ?? ''}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      aria-hidden
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 7.5V18a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-7.5L9.22 4.72A2 2 0 007.78 4H5a2 2 0 00-2 2v1.5z"
-      />
-    </svg>
-  );
-}
-
-function FolderIconLarge({ className }: { className?: string }) {
-  return (
-    <svg className={`h-8 w-8 ${className ?? ''}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-    </svg>
-  );
-}
-
-function ResourceGridCard({
-  r,
-  folderCategory,
-  canManage,
-  menuOpen,
-  actionBusy,
-  menuAnchorRef,
-  onToggleMenu,
-}: {
-  r: StaffResourceRow;
-  folderCategory: string;
-  canManage: boolean;
-  menuOpen: boolean;
-  actionBusy: boolean;
-  menuAnchorRef?: RefObject<HTMLButtonElement | null>;
-  onToggleMenu: () => void;
-}) {
-  return (
-    <div className="relative h-full min-h-[120px] rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_35%,transparent)] transition hover:-translate-y-px hover:border-[color-mix(in_oklab,var(--org-brand-primary)_35%,var(--org-brand-border))] hover:shadow-[0_10px_24px_color-mix(in_oklab,var(--org-brand-border)_45%,transparent)]">
-      <Link
-        href={`/resources/${r.id}`}
-        className="flex h-full min-h-[120px] flex-col p-4 pr-12"
-      >
-        <p className="text-[14px] font-semibold leading-snug text-[var(--org-brand-text)]">{r.title}</p>
-        {r.description ? (
-          <p className="mt-1 line-clamp-3 text-[12.5px] leading-relaxed text-[var(--org-brand-muted)]">{r.description}</p>
-        ) : null}
-        <p className="mt-auto pt-3 text-[11.5px] text-[var(--org-brand-muted)]">
-          {folderCategory !== 'Uncategorised' ? `${folderCategory} · ` : null}
-          {formatBytes(r.byte_size)}
-        </p>
-      </Link>
-      {canManage ? (
-        <div className="absolute right-2 top-2" data-resource-file-menu>
-          <button
-            ref={menuAnchorRef}
-            type="button"
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            aria-label={`Actions for ${r.title}`}
-            disabled={actionBusy}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--org-brand-muted)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_10%,var(--org-brand-bg))] hover:text-[var(--org-brand-text)] disabled:opacity-50"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleMenu();
-            }}
-          >
-            <MoreVertical className="h-5 w-5" strokeWidth={2} />
-          </button>
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -1671,30 +1642,32 @@ function ResourceRow({
     : `Updated ${updated.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   return (
-    <li className="relative">
-      <div className="flex items-stretch">
+    <li>
+      <div
+        className={`group flex items-stretch overflow-hidden rounded-2xl border border-[color-mix(in_oklab,var(--org-brand-border)_88%,transparent)] bg-[var(--org-brand-bg)] shadow-[0_1px_0_color-mix(in_oklab,var(--org-brand-border)_28%,transparent)] ${campusSurface.interactiveSheetRow}`}
+      >
         <Link
           href={`/resources/${r.id}`}
-          className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3.5 pr-2 transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_5%,var(--org-brand-bg))]"
+          className="flex min-w-0 flex-1 items-start gap-3.5 px-4 py-4 pr-2 outline-none ring-inset ring-transparent ring-offset-0 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--org-brand-text)_22%,transparent)]"
         >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[color-mix(in_oklab,var(--org-brand-border)_75%,transparent)] bg-[color-mix(in_oklab,var(--org-brand-surface)_55%,var(--org-brand-bg))] text-[10px] font-bold tracking-wide text-[var(--org-brand-muted)]">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[color-mix(in_oklab,var(--org-brand-border)_72%,transparent)] bg-[color-mix(in_oklab,var(--org-brand-surface)_48%,var(--org-brand-bg))] text-[10px] font-bold tracking-wide text-[var(--org-brand-muted)]">
             {kind}
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2 gap-y-1">
-              <span className="text-[14px] font-semibold leading-snug text-[var(--org-brand-text)]">{r.title}</span>
-              <span className="rounded-full border border-[color-mix(in_oklab,var(--org-brand-primary)_28%,var(--org-brand-border))] bg-[color-mix(in_oklab,var(--org-brand-primary)_10%,var(--org-brand-bg))] px-2 py-0.5 text-[11px] font-medium text-[var(--org-brand-primary)]">
+              <span className="text-[15px] font-semibold leading-snug text-[var(--org-brand-text)]">{r.title}</span>
+              <span className="rounded-full bg-[color-mix(in_oklab,var(--org-brand-border)_32%,var(--org-brand-bg))] px-2.5 py-0.5 text-[11px] font-medium text-[var(--org-brand-text)]">
                 {category}
               </span>
             </span>
-            <p className="mt-1 text-[12px] text-[var(--org-brand-muted)]">
+            <p className="mt-1.5 text-[12px] text-[var(--org-brand-muted)]">
               {r.file_name} · {formatBytes(r.byte_size)}
               {updatedLabel ? ` · ${updatedLabel}` : ''}
             </p>
           </span>
         </Link>
         {canManage ? (
-          <div className="relative flex shrink-0 items-start py-2 pr-2" data-resource-file-menu>
+          <div className="relative flex shrink-0 items-start py-2 pr-2.5 pt-3" data-resource-file-menu>
             <button
               ref={menuAnchorRef}
               type="button"
@@ -1702,7 +1675,7 @@ function ResourceRow({
               aria-haspopup="menu"
               aria-label={`Actions for ${r.title}`}
               disabled={actionBusy}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--org-brand-muted)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-primary)_10%,var(--org-brand-bg))] hover:text-[var(--org-brand-text)] disabled:opacity-50"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--org-brand-muted)] transition-colors duration-150 hover:bg-[color-mix(in_oklab,var(--org-brand-text)_8%,transparent)] hover:text-[var(--org-brand-text)] disabled:opacity-50"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

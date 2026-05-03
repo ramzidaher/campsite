@@ -1,6 +1,6 @@
 'use client';
 
-import { campusFormControl } from '@campsite/ui/web';
+import { FormSelect } from '@campsite/ui/web';
 import { Copy, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -116,7 +116,8 @@ export function HiringApplicationFormsTableClient({ rows }: { rows: FormRow[] })
     });
   }, [rows, search, yearFilter, roleFilter, gradeFilter, departmentFilter]);
 
-  const sel = `${campusFormControl} px-2.5`;
+  const filterSelectWrap = '!w-auto max-w-[220px] shrink-0';
+  const filterSelectClass = 'pl-2.5';
   const actionCircle =
     'inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d8d8d8] bg-white text-[#505050] transition-colors hover:border-[#121212] hover:text-[#121212] disabled:cursor-not-allowed disabled:opacity-50';
   const allVisibleSelected =
@@ -143,38 +144,62 @@ export function HiringApplicationFormsTableClient({ rows }: { rows: FormRow[] })
             className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
           />
         </div>
-        <select className={sel} value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)} aria-label="Department filter">
+        <FormSelect
+          wrapperClassName={filterSelectWrap}
+          className={filterSelectClass}
+          value={departmentFilter}
+          onChange={(e) => setDepartmentFilter(e.target.value)}
+          aria-label="Department filter"
+        >
           <option value="">All departments</option>
           {departmentOptions.map((dept) => (
             <option key={dept} value={dept}>
               {dept}
             </option>
           ))}
-        </select>
-        <select className={sel} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} aria-label="Role filter">
+        </FormSelect>
+        <FormSelect
+          wrapperClassName={filterSelectWrap}
+          className={filterSelectClass}
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          aria-label="Role filter"
+        >
           <option value="">All roles</option>
           {roleOptions.map((role) => (
             <option key={role} value={role}>
               {role}
             </option>
           ))}
-        </select>
-        <select className={sel} value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)} aria-label="Grade filter">
+        </FormSelect>
+        <FormSelect
+          wrapperClassName={filterSelectWrap}
+          className={filterSelectClass}
+          value={gradeFilter}
+          onChange={(e) => setGradeFilter(e.target.value)}
+          aria-label="Grade filter"
+        >
           <option value="">All grades</option>
           {gradeOptions.map((grade) => (
             <option key={grade} value={grade}>
               {grade}
             </option>
           ))}
-        </select>
-        <select className={sel} value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} aria-label="Year filter">
+        </FormSelect>
+        <FormSelect
+          wrapperClassName={filterSelectWrap}
+          className={filterSelectClass}
+          value={yearFilter}
+          onChange={(e) => setYearFilter(e.target.value)}
+          aria-label="Year filter"
+        >
           <option value="">All years</option>
           {years.map((year) => (
             <option key={year} value={year}>
               {year}
             </option>
           ))}
-        </select>
+        </FormSelect>
       </div>
 
       {error ? <p className="mb-3 text-[12px] text-[#b42318]">{error}</p> : null}

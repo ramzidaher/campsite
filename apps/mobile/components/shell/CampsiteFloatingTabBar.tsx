@@ -1,11 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCampsiteTheme } from '@campsite/ui';
-import {
-  BottomTabBarHeightCallbackContext,
-  type BottomTabBarProps,
-} from '@react-navigation/bottom-tabs';
-import { useCallback, useContext } from 'react';
-import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Tabs } from 'expo-router';
+import { type ComponentProps } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { mainShell, mainShellText } from '@/constants/mainShell';
@@ -24,12 +21,15 @@ interface TabSpec {
   iconFilled: Ion;
 }
 
+type CampsiteFloatingTabBarProps = Parameters<
+  NonNullable<ComponentProps<typeof Tabs>['tabBar']>
+>[0];
+
 const TABS: TabSpec[] = [
   { name: 'index', label: 'Home', icon: 'home-outline', iconFilled: 'home' },
   { name: 'broadcasts', label: 'Broadcasts', icon: 'megaphone-outline', iconFilled: 'megaphone' },
   { name: 'calendar', label: 'Calendar', icon: 'calendar-outline', iconFilled: 'calendar' },
   { name: 'rota', label: 'Rota', icon: 'clipboard-outline', iconFilled: 'clipboard' },
-  { name: 'discount', label: 'Discount', icon: 'pricetag-outline', iconFilled: 'pricetag' },
   { name: 'hr', label: 'My HR', icon: 'briefcase-outline', iconFilled: 'briefcase' },
 ];
 
@@ -41,9 +41,8 @@ export function campsiteAndroidFloatingTabBarSlotHeight(bottomInset: number): nu
 /**
  * Single floating pill tab bar (Android). Campsite paper chrome; no center FAB.
  */
-export function CampsiteFloatingTabBar({ state, navigation }: BottomTabBarProps) {
+export function CampsiteFloatingTabBar({ state, navigation }: CampsiteFloatingTabBarProps) {
   const insets = useSafeAreaInsets();
-  const onTabBarHeightChange = useContext(BottomTabBarHeightCallbackContext);
   const { tokens, scheme } = useCampsiteTheme();
   const isDark = scheme === 'dark';
 
@@ -58,13 +57,6 @@ export function CampsiteFloatingTabBar({ state, navigation }: BottomTabBarProps)
   /** Must match `tabBarStyle.height` in `_layout.android.tsx` — never use `flex:1` here (it splits the screen with the tab scenes). */
   const slotHeight = campsiteAndroidFloatingTabBarSlotHeight(insets.bottom);
 
-  const reportHeight = useCallback(
-    (e: LayoutChangeEvent) => {
-      onTabBarHeightChange?.(e.nativeEvent.layout.height);
-    },
-    [onTabBarHeightChange],
-  );
-
   const handlePress = (name: string) => {
     const route = state.routes.find((r) => r.name === name);
     if (!route) return;
@@ -74,7 +66,7 @@ export function CampsiteFloatingTabBar({ state, navigation }: BottomTabBarProps)
   const lift = Math.max(insets.bottom, FLOATING_GAP) + FLOATING_GAP;
 
   return (
-    <View style={[styles.barSlot, { height: slotHeight }]} onLayout={reportHeight}>
+    <View style={[styles.barSlot, { height: slotHeight }]}>
       <View style={[styles.inner, { paddingHorizontal: HORIZONTAL_MARGIN, marginBottom: lift }]}>
         <View style={[styles.segment, { minHeight: ROW_MIN_HEIGHT }]}>
           <View style={[styles.surface, { backgroundColor: barBg }]} pointerEvents="none" />

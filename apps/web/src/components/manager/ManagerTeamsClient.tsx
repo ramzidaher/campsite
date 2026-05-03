@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -199,7 +200,7 @@ export function ManagerTeamsClient({
                             </div>
                             <label className="flex flex-col gap-1 text-[12px] text-[#6b6b6b] sm:flex-row sm:items-center">
                               <span className="shrink-0 font-medium text-[#121212]">Owner</span>
-                              <select
+                              <FormSelect
                                 className="max-w-full rounded-lg border border-[#d8d8d8] bg-white px-2 py-1 text-[12px] sm:max-w-md"
                                 value={t.lead_user_id ?? ''}
                                 onChange={(e) =>
@@ -214,7 +215,7 @@ export function ManagerTeamsClient({
                                     {s.full_name} ({s.role})
                                   </option>
                                 ))}
-                              </select>
+                              </FormSelect>
                             </label>
                             {youOwn ? (
                               <p className="text-[11px] text-[#9b9b9b]">You are the owner of this team.</p>
@@ -243,7 +244,7 @@ export function ManagerTeamsClient({
                             )}
                           </ul>
                           <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <select
+                            <FormSelect
                               className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px]"
                               value={pick}
                               disabled={Boolean(busyKey?.startsWith(`add:${t.id}:`))}
@@ -258,7 +259,7 @@ export function ManagerTeamsClient({
                                     {s.full_name} ({s.role})
                                   </option>
                                 ))}
-                            </select>
+                            </FormSelect>
                             <button
                               type="button"
                               disabled={!pick.trim() || Boolean(busyKey?.startsWith(`add:${t.id}:`))}
@@ -291,7 +292,7 @@ export function ManagerTeamsClient({
                         }
                       }}
                     />
-                    <select
+                    <FormSelect
                       className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] sm:max-w-xs"
                       value={newOwnerByDept[d.id] ?? ''}
                       disabled={busyDept}
@@ -304,7 +305,7 @@ export function ManagerTeamsClient({
                           {s.full_name} ({s.role})
                         </option>
                       ))}
-                    </select>
+                    </FormSelect>
                   </div>
                   <button
                     type="button"

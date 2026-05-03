@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -75,14 +76,14 @@ export function CustomHrFieldDefinitionsClient({
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <input placeholder="Key (e.g. visa_status)" value={draft.key} onChange={(e) => setDraft((d) => ({ ...d, key: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
         <input placeholder="Label" value={draft.label} onChange={(e) => setDraft((d) => ({ ...d, label: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
-        <select value={draft.section} onChange={(e) => setDraft((d) => ({ ...d, section: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
+        <FormSelect value={draft.section} onChange={(e) => setDraft((d) => ({ ...d, section: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
           <option value="personal">Personal</option>
           <option value="job">Job</option>
           <option value="payroll">Payroll</option>
           <option value="compliance">Compliance</option>
           <option value="medical_summary">Medical summary</option>
-        </select>
-        <select value={draft.field_type} onChange={(e) => setDraft((d) => ({ ...d, field_type: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
+        </FormSelect>
+        <FormSelect value={draft.field_type} onChange={(e) => setDraft((d) => ({ ...d, field_type: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
           <option value="text">Text</option>
           <option value="textarea">Textarea</option>
           <option value="number">Number</option>
@@ -94,7 +95,7 @@ export function CustomHrFieldDefinitionsClient({
           <option value="email">Email</option>
           <option value="phone">Phone</option>
           <option value="currency">Currency</option>
-        </select>
+        </FormSelect>
       </div>
       <div className="mt-3 flex flex-wrap gap-3 text-[12.5px] text-[#6b6b6b]">
         <label className="inline-flex items-center gap-2"><input type="checkbox" checked={draft.is_required} onChange={(e) => setDraft((d) => ({ ...d, is_required: e.target.checked }))} />Required</label>

@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { LegalMarkdownArticle } from '@/components/legal/LegalMarkdownArticle';
 import { PUBLIC_LEGAL_DOCS, type LegalPublicDocId } from '@/lib/legal/publicLegalDocs';
 import type { MarkdownHeading } from '@/lib/legal/markdownHeadings';
@@ -58,6 +59,21 @@ export function LegalPolicyPublicLayout({
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12 text-[var(--campsite-text)] sm:px-6 lg:px-8 lg:py-16">
+      <header className="mb-10 border-b border-[var(--campsite-border)] pb-8">
+        <Link
+          href="/"
+          prefetch={false}
+          className="inline-flex max-w-full items-center gap-2.5 rounded-lg outline-none ring-offset-2 ring-offset-[var(--campsite-bg)] transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--campsite-text-muted)]"
+          aria-label="Campsite home"
+        >
+          <CampsiteLogoMark className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#121212]" />
+          <span className="font-authSerif text-[22px] tracking-tight text-[var(--campsite-text)]">Campsite</span>
+        </Link>
+        <p className="mt-3 text-[13px] leading-relaxed text-[var(--campsite-text-secondary)]">
+          Internal communications and staff management - Common Ground Studios Ltd
+        </p>
+      </header>
+
       <div className="flex flex-col gap-10 lg:flex-row lg:gap-12 lg:items-start">
         <aside
           className="flex w-full shrink-0 flex-col rounded-xl border border-[var(--campsite-border)] bg-[var(--campsite-surface)] p-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3.5rem)] lg:w-[280px]"

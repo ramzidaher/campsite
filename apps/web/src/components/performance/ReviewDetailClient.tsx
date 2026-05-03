@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -329,7 +330,7 @@ export function ReviewDetailClient({
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Progress
-                <select
+                <FormSelect
                   value={goalStatus}
                   onChange={(e) => setGoalStatus(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
@@ -337,11 +338,11 @@ export function ReviewDetailClient({
                   {GOAL_STATUS_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
-                </select>
+                </FormSelect>
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
                 Rating (optional)
-                <select
+                <FormSelect
                   value={goalRating}
                   onChange={(e) => setGoalRating(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none"
@@ -350,7 +351,7 @@ export function ReviewDetailClient({
                   {RATING_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
-                </select>
+                </FormSelect>
               </label>
             </div>
             <div className="flex gap-2">

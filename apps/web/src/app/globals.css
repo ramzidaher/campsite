@@ -2,9 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Campsite tokens - light (default) */
+/* Campsite tokens - light only (dark mode disabled until UI is audited) */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --campsite-bg: #faf9f6;
   --campsite-surface: #f5f4f1;
   --campsite-text: #121212;
@@ -27,24 +27,9 @@
   --campsite-font-body: 0.875rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --campsite-bg: #121212;
-    --campsite-surface: #1a1a1a;
-    --campsite-text: #faf9f6;
-    --campsite-text-secondary: #808080;
-    --campsite-text-muted: #b0b0b0;
-    --campsite-border: #2a2a2a;
-    --campsite-warning: #f87171;
-    --campsite-success: #4ade80;
-    --campsite-accent: #faf9f6;
-  }
-}
-
 /**
- * Main app chrome uses a fixed light “paper” surface. Without this, OS dark mode
- * flips :root tokens to light text colours while AppShell keeps a cream
- * background, so var(--campsite-text) disappears against the page.
+ * Main app chrome uses a fixed light “paper” surface so shell tokens stay readable
+ * on the cream workspace background.
  */
 .campsite-paper {
   color-scheme: only light;
@@ -385,10 +370,6 @@ html[data-a11y-dim-flashing-lights='1'] video {
 
   .auth-btn-ghost:hover {
     @apply bg-[#f5f4f1];
-  }
-
-  .auth-link {
-    @apply border-0 bg-transparent p-0 font-sans text-sm font-medium text-[#121212] underline decoration-[#121212] underline-offset-2;
   }
 
   .auth-divider {

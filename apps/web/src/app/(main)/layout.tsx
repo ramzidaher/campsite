@@ -10,10 +10,10 @@ import {
   getMainShellManagerNavItemsByPermissions,
   getMainShellManagerNavSectionLabel,
 } from '@/lib/adminGates';
-import { CreditCard, Lock, Wrench } from 'lucide-react';
 import { normalizeCelebrationMode } from '@/lib/holidayThemes';
 import type { OrgCelebrationModeOverride } from '@/lib/holidayThemes';
 import { parseShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
+import { enforceTenantHostMatchesActiveOrg } from '@/lib/tenant/enforceTenantHostActiveOrg';
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { normalizeUiMode } from '@/lib/uiMode';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
@@ -45,6 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Shell bundle is loaded once and cached per request so child routes reuse it.
   // Runtime loader prefers a single merged RPC on Nano to reduce round trips.
   const b = await withServerPerf('/(main)/layout', 'main_shell_layout_bundle_cached', getCachedMainShellLayoutBundle());
+  await enforceTenantHostMatchesActiveOrg(b);
   const initialShellBadgeCounts = parseShellBadgeCounts(b);
 
   const str = (k: string): string | null =>
@@ -69,9 +70,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ? 'org_locked'
         : orgMaintenanceMode
           ? 'maintenance'
-          : trialExpired
-            ? 'trial_ended'
-            : null;
+          : orgSubscriptionStatus === 'suspended'
+            ? 'subscription_suspended'
+            : trialExpired
+              ? 'trial_ended'
+              : null;
 
   const num = (k: string): number => {
     const v = b[k];
@@ -157,7 +160,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     permissionKeys.includes('leave.view_own') ||
     permissionKeys.includes('leave.approve_direct_reports') ||
     permissionKeys.includes('leave.manage_org');
-  const showAttendanceNav = hasTenantProfile;
+  const timesheetClockEnabled = b['timesheet_clock_enabled'] === true;
+  const showAttendanceNav = hasTenantProfile && timesheetClockEnabled;
   const showMyHrRecordNav = permissionKeys.includes('hr.view_own');
   const showOneOnOneNav =
     permissionKeys.includes('one_on_one.view_own') || permissionKeys.includes('hr.view_records');
@@ -188,7 +192,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       k.startsWith('interviews.')
   );
   const canApproveRecruitment = permissionKeys.includes('recruitment.approve_request');
-  const showPerformanceNav    = permissionKeys.includes('performance.review_direct_reports');
+  const showPerformanceNav =
+    permissionKeys.includes('performance.view_own') ||
+    permissionKeys.includes('performance.review_direct_reports');
 
   const managerNavItems = managesPeople
     ? getMainShellManagerNavItemsByPermissions(permissionKeys, {
@@ -197,7 +203,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     : null;
 
   const adminNavItemsRaw = getMainShellAdminNavItemsByPermissions(permissionKeys);
-  const hrNavItemsRaw    = getMainShellHrNavItemsByPermissions(permissionKeys);
+  const hrNavItemsRaw    = getMainShellHrNavItemsByPermissions(permissionKeys, {
+    timesheetClockEnabled,
+  });
   const financeNavItemsRaw = getMainShellFinanceNavItemsByPermissions(permissionKeys);
 
   const mapHrBadges = <T extends { href: string }>(items: T[] | null) =>
@@ -296,8 +304,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const profileReauthRequiredAt = str('profile_reauth_required_at');
   const shellRealtimeUserId = str('user_id');
 
+  const profileAccentPreset = str('profile_accent_preset')?.trim() || 'midnight';
+  const profileDndEnabled = Boolean(b['profile_dnd_enabled']);
+  const profileDndStart = str('profile_dnd_start');
+  const profileDndEnd = str('profile_dnd_end');
+
   const view = (
-    <ThemeRoot>
+    <ThemeRoot initialAccentPreset={profileAccentPreset}>
       <MainProviders
         reauthRequiredAt={profileReauthRequiredAt}
         skipTenantReauth={isPlatformOperator}
@@ -351,12 +364,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           initialUiMode={initialUiMode}
           initialCelebrationAutoEnabled={initialCelebrationAutoEnabled}
           orgCelebrationOverrides={orgCelebrationOverrides}
+          profileDndEnabled={profileDndEnabled}
+          profileDndStart={profileDndStart}
+          profileDndEnd={profileDndEnd}
         >
           <>
             {children}
             {blockedState === 'maintenance' ? (
               <OrgStateOverlay
-                icon={Wrench}
+                badge="Maintenance"
                 title="We'll be back shortly"
                 message="Your organisation is temporarily in maintenance mode while updates are being applied. Please check back in a little while."
                 actionHref="/login"
@@ -366,7 +382,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             ) : null}
             {blockedState === 'org_locked' ? (
               <OrgStateOverlay
-                icon={Lock}
+                badge="Account"
                 title="Account locked"
                 message="Access to this organisation is currently locked. Billing or subscription updates may be required before access can be restored."
                 actionHref="/login"
@@ -374,9 +390,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 footerText="You can use another account, or wait for your organisation admin to restore access."
               />
             ) : null}
+            {blockedState === 'subscription_suspended' ? (
+              <OrgStateOverlay
+                badge="Billing"
+                title="Subscription suspended"
+                message="This organisation's subscription is suspended. Billing may need to be updated before access can be restored."
+                actionHref="/login"
+                actionLabel="Sign out"
+                footerText="Contact your organisation admin or Campsite support if you need help."
+              />
+            ) : null}
             {blockedState === 'trial_ended' ? (
               <OrgStateOverlay
-                icon={CreditCard}
+                badge="Trial"
                 title="Trial ended"
                 message="Your organisation's trial period has ended. A subscription step is now needed to continue using Campsite."
                 actionHref="/login"

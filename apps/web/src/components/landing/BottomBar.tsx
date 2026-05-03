@@ -42,47 +42,6 @@ function Clock() {
   return <div className="font-mono">{location} {time}</div>;
 }
 
-function ThemeToggle() {
-  const [mode, setMode] = useState<'light' | 'dark'>('light');
-
-  useEffect(() => {
-    const root = document.body;
-    const saved = window.localStorage.getItem('campsite_landing_theme');
-    const nextMode = saved === 'dark' || saved === 'light'
-      ? saved
-      : root.classList.contains('dark')
-        ? 'dark'
-        : 'light';
-
-    root.classList.toggle('dark', nextMode === 'dark');
-    setMode(nextMode);
-  }, []);
-
-  const toggleMode = () => {
-    const root = document.body;
-    const nextMode = mode === 'dark' ? 'light' : 'dark';
-    root.classList.toggle('dark', nextMode === 'dark');
-    window.localStorage.setItem('campsite_landing_theme', nextMode);
-    setMode(nextMode);
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={toggleMode}
-      data-mode={mode}
-      className="font-mono v5-theme-toggle"
-      aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
-      title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
-    >
-      <span className="lp-sr-only">
-        {mode === 'dark' ? 'Dark mode active. Switch to light mode.' : 'Light mode active. Switch to dark mode.'}
-      </span>
-      <span className="v5-theme-toggle-thumb" aria-hidden="true" />
-    </button>
-  );
-}
-
 function BottomLeftTagline() {
   const index = useMemo(() => {
     const daySeed = new Date().getUTCDate();
@@ -93,12 +52,20 @@ function BottomLeftTagline() {
 }
 
 export function BottomBar() {
+  useEffect(() => {
+    document.body.classList.remove('dark');
+    try {
+      window.localStorage.removeItem('campsite_landing_theme');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   return (
     <div className="v5-bottom-bar">
       <BottomLeftTagline />
       <div className="v5-bottom-right">
         <Clock />
-        <ThemeToggle />
       </div>
     </div>
   );

@@ -100,6 +100,7 @@ export default async function SettingsPage({
         initialBroadcastChannels={[]}
         canManageDiscounts={false}
         celebrationModeOptions={getCelebrationModeOptions(orgCelebrationOverrides)}
+        orgCelebrationOverrides={orgCelebrationOverrides}
       />
     </div>
   );

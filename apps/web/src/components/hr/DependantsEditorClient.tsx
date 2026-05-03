@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -139,7 +140,7 @@ export function DependantsEditorClient({
               </label>
               <label className="text-[12.5px] font-medium text-[#6b6b6b]">
                 Relationship
-                <select
+                <FormSelect
                   value={r.relationship}
                   disabled={!canEdit || busy}
                   onChange={(e) => setRow(i, { relationship: e.target.value })}
@@ -150,7 +151,7 @@ export function DependantsEditorClient({
                   <option value="partner">Partner</option>
                   <option value="parent">Parent</option>
                   <option value="other">Other</option>
-                </select>
+                </FormSelect>
               </label>
               <label className="text-[12.5px] font-medium text-[#6b6b6b]">
                 Date of birth

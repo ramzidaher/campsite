@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -258,7 +259,7 @@ export function DisciplinaryGrievanceLogClient({
                   </label>
                   <label className="text-[12.5px] font-medium text-[#6b6b6b]">
                     Status
-                    <select
+                    <FormSelect
                       value={r.status}
                       disabled={!canManage || busy}
                       onChange={(e) => setRow(i, { status: e.target.value as CaseStatus })}
@@ -270,7 +271,7 @@ export function DisciplinaryGrievanceLogClient({
                       <option value="outcome_issued">Outcome issued</option>
                       <option value="appeal">Appeal</option>
                       <option value="closed">Closed</option>
-                    </select>
+                    </FormSelect>
                   </label>
                   <label className="text-[12.5px] font-medium text-[#6b6b6b]">
                     Category

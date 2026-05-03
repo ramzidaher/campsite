@@ -2,6 +2,7 @@
 
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -77,29 +78,33 @@ function StepProgress({ step, labels }: { step: number; labels: readonly string[
               </div>
             );
             return (
-              <div key={label} className="flex min-w-0 flex-1 flex-col items-center">
-                <div className="flex w-full items-center">
-                  <div
-                    className={[
-                      'h-px min-w-2 flex-1',
-                      i === 0 ? 'max-w-0 min-w-0 flex-[0]' : '',
-                      i > 0 && step > i ? 'bg-[#15803d]' : i > 0 ? 'bg-[#d8d8d8]' : '',
-                    ].join(' ')}
-                    aria-hidden
-                  />
-                  {circle}
-                  <div
-                    className={[
-                      'h-px min-w-2 flex-1',
-                      i === labels.length - 1 ? 'max-w-0 min-w-0 flex-[0]' : '',
-                      i < labels.length - 1 && step > i + 1 ? 'bg-[#15803d]' : i < labels.length - 1 ? 'bg-[#d8d8d8]' : '',
-                    ].join(' ')}
-                    aria-hidden
-                  />
+              <div key={label} className="relative flex min-w-0 flex-1 flex-col items-center">
+                <div className="relative h-7 w-full">
+                  {i > 0 ? (
+                    <div
+                      className={[
+                        'absolute left-0 top-1/2 right-1/2 z-0 h-px -translate-y-1/2',
+                        step > i ? 'bg-[#15803d]' : 'bg-[#d8d8d8]',
+                      ].join(' ')}
+                      aria-hidden
+                    />
+                  ) : null}
+                  {i < labels.length - 1 ? (
+                    <div
+                      className={[
+                        'absolute left-1/2 top-1/2 right-0 z-0 h-px -translate-y-1/2',
+                        step > i + 1 ? 'bg-[#15803d]' : 'bg-[#d8d8d8]',
+                      ].join(' ')}
+                      aria-hidden
+                    />
+                  ) : null}
+                  <div className="absolute left-1/2 top-1/2 z-[1] -translate-x-1/2 -translate-y-1/2">
+                    {circle}
+                  </div>
                 </div>
                 <span
                   className={[
-                    'mt-2 w-full px-0.5 text-center text-[11px] font-medium leading-tight',
+                    'mt-2 w-full max-w-[10rem] px-1 text-center text-[11px] font-medium leading-tight',
                     isActive ? 'text-[#121212]' : 'text-[#9b9b9b]',
                   ].join(' ')}
                 >
@@ -660,9 +665,15 @@ export function RegisterWizard({
       {step === 1 ? (
         <Link
           href="/login"
-          className="inline-flex items-center gap-1.5 campsite-body text-[#9b9b9b] transition-colors hover:text-[#121212]"
+          prefetch={false}
+          className="group inline-flex items-center gap-1 self-start text-[13px] font-medium text-[#6b6b6b] underline-offset-2 hover:text-[#121212] hover:underline"
         >
-          ← Back to sign in
+          <ChevronLeft
+            className="h-3.5 w-3.5 shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+            aria-hidden
+            strokeWidth={2}
+          />
+          Back to sign in
         </Link>
       ) : null}
 
@@ -750,7 +761,7 @@ export function RegisterWizard({
               required
             />
           </div>
-          <div className="mb-8 flex gap-3 rounded-[10px] border border-[#ebe9e6] bg-[#faf9f7] px-3 py-3">
+          <div className="mb-8 flex gap-3">
             <input
               id="reg-legal-consent"
               type="checkbox"

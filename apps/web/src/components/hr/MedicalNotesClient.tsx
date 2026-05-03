@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -148,12 +149,12 @@ export function MedicalNotesClient({
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <input value={form.case_ref} onChange={(e) => setForm((f) => ({ ...f, case_ref: e.target.value }))} placeholder="Case ref (optional)" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
             <input value={form.referral_reason} onChange={(e) => setForm((f) => ({ ...f, referral_reason: e.target.value }))} placeholder="Referral reason" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
-            <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
+            <FormSelect value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]">
               <option value="open">Open</option>
               <option value="under_review">Under review</option>
               <option value="fit_note_received">Fit note received</option>
               <option value="closed">Closed</option>
-            </select>
+            </FormSelect>
             <input value={form.fit_for_work_outcome} onChange={(e) => setForm((f) => ({ ...f, fit_for_work_outcome: e.target.value }))} placeholder="Fit for work outcome" className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
             <input type="date" value={form.review_date} onChange={(e) => setForm((f) => ({ ...f, review_date: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />
             <input type="date" value={form.next_review_date} onChange={(e) => setForm((f) => ({ ...f, next_review_date: e.target.value }))} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]" />

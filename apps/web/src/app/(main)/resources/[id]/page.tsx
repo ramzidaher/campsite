@@ -7,21 +7,8 @@ import {
 } from '@/lib/staffResourceArchiveCompat';
 import { createClient } from '@/lib/supabase/server';
 import { getMyPermissions } from '@/lib/supabase/getMyPermissions';
-import { DM_Sans, Syne } from 'next/font/google';
 import { notFound, redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
-
-const resourceDetailSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  display: 'swap',
-});
-
-const resourceDetailDisplay = Syne({
-  subsets: ['latin'],
-  weight: ['600', '700'],
-  display: 'swap',
-});
 
 export default async function ResourceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -61,11 +48,10 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
   const canManage = permissionKeys.includes('resources.manage');
 
   return (
-    <div className={`${resourceDetailSans.className} min-h-0 bg-[var(--campsite-bg,#faf9f6)] text-[var(--campsite-text,#121212)]`}>
+    <div className="font-sans min-h-0 bg-[var(--campsite-bg,#faf9f6)] text-[var(--campsite-text,#121212)]">
       <ResourceDetailClient
         canManage={canManage}
         archiveSupported={archiveSupported}
-        titleFontClassName={resourceDetailDisplay.className}
         initial={{
           id: data.id as string,
           title: data.title as string,

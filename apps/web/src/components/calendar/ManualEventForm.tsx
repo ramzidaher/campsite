@@ -1,5 +1,6 @@
 'use client';
 
+import { FormSelect } from '@campsite/ui/web';
 import { canManageCalendarManualEvents, type ProfileRole } from '@campsite/types';
 import { queueEntityCalendarSync } from '@/lib/calendar/queueEntityCalendarSync';
 import { createClient } from '@/lib/supabase/client';
@@ -242,18 +243,18 @@ export function ManualEventForm({
           )}
           <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">
             Department (optional)
-            <select className={fieldClass} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
+            <FormSelect className={fieldClass} value={deptId} onChange={(e) => setDeptId(e.target.value)}>
               <option value="">-</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">
             Invite people (optional)
-            <select
+            <FormSelect
               multiple
               className={`${fieldClass} min-h-[88px]`}
               value={inviteeIds}
@@ -267,7 +268,7 @@ export function ManualEventForm({
                   {m.full_name?.trim() || 'Member'}
                 </option>
               ))}
-            </select>
+            </FormSelect>
             <span className="mt-1 block text-[11px] text-[#9b9b9b]">Hold Cmd/Ctrl to select multiple.</span>
           </label>
           <label className="text-[13px] font-medium text-[#6b6b6b] sm:col-span-2">
