@@ -2,19 +2,16 @@ import { createHmac, timingSafeEqual } from 'crypto';
 
 import { buildOAuthAppBaseUrl } from '@/lib/oauth/oauthAppBaseUrl';
 
-type GoogleOAuthType = 'sheets' | 'calendar';
-
-type GoogleOAuthStatePayload = {
+type MicrosoftOAuthStatePayload = {
   uid: string;
-  type: GoogleOAuthType;
   returnTo: string;
   exp: number;
 };
 
 function getStateSecret(): string {
-  const secret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  const secret = (process.env.MICROSOFT_CLIENT_SECRET ?? process.env.CLIENT_SECRET)?.trim();
   if (!secret) {
-    throw new Error('Google OAuth is not configured (missing GOOGLE_CLIENT_SECRET).');
+    throw new Error('Microsoft OAuth is not configured (missing MICROSOFT_CLIENT_SECRET / CLIENT_SECRET).');
   }
   return secret;
 }
@@ -23,22 +20,14 @@ function signPayload(payload: string): string {
   return createHmac('sha256', getStateSecret()).update(payload).digest('base64url');
 }
 
-export function buildGoogleOAuthBaseUrl(req: Request): string {
-  return buildOAuthAppBaseUrl(req);
+/** Callback under `/api` so middleware (which skips `api/*`) does not require a session on the apex host. */
+export function buildMicrosoftOAuthRedirectUri(req: Request): string {
+  return `${buildOAuthAppBaseUrl(req)}/api/microsoft/oauth/callback`;
 }
 
-export function buildGoogleOAuthRedirectUri(req: Request): string {
-  return `${buildGoogleOAuthBaseUrl(req)}/api/google/oauth/callback`;
-}
-
-export function createGoogleOAuthState(input: {
-  uid: string;
-  type: GoogleOAuthType;
-  returnTo: string;
-}): string {
-  const payload: GoogleOAuthStatePayload = {
+export function createMicrosoftOAuthState(input: { uid: string; returnTo: string }): string {
+  const payload: MicrosoftOAuthStatePayload = {
     uid: input.uid,
-    type: input.type,
     returnTo: input.returnTo,
     exp: Date.now() + 10 * 60 * 1000,
   };
@@ -47,7 +36,7 @@ export function createGoogleOAuthState(input: {
   return `${encoded}.${signature}`;
 }
 
-export function parseGoogleOAuthState(raw: string | null | undefined): GoogleOAuthStatePayload | null {
+export function parseMicrosoftOAuthState(raw: string | null | undefined): MicrosoftOAuthStatePayload | null {
   if (!raw) return null;
   const dot = raw.lastIndexOf('.');
   if (dot <= 0 || dot === raw.length - 1) return null;
@@ -62,14 +51,12 @@ export function parseGoogleOAuthState(raw: string | null | undefined): GoogleOAu
   }
 
   try {
-    const parsed = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as Partial<GoogleOAuthStatePayload>;
-    if (parsed.type !== 'sheets' && parsed.type !== 'calendar') return null;
+    const parsed = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as Partial<MicrosoftOAuthStatePayload>;
     if (typeof parsed.uid !== 'string' || !parsed.uid.trim()) return null;
     if (typeof parsed.returnTo !== 'string' || !parsed.returnTo.trim()) return null;
     if (typeof parsed.exp !== 'number' || parsed.exp < Date.now()) return null;
     return {
       uid: parsed.uid,
-      type: parsed.type,
       returnTo: parsed.returnTo,
       exp: parsed.exp,
     };
@@ -78,7 +65,7 @@ export function parseGoogleOAuthState(raw: string | null | undefined): GoogleOAu
   }
 }
 
-export function appendGoogleAuthParam(urlLike: string, key: string, value: string): string {
+export function appendMicrosoftOAuthReturnParam(urlLike: string, key: string, value: string): string {
   const url = new URL(urlLike);
   url.searchParams.set(key, value);
   return url.toString();

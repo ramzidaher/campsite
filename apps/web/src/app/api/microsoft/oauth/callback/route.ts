@@ -1,7 +1,11 @@
-import { getAuthUser } from '@/lib/supabase/getAuthUser';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import {
+  appendMicrosoftOAuthReturnParam,
+  buildMicrosoftOAuthRedirectUri,
+  parseMicrosoftOAuthState,
+} from '@/lib/microsoft/microsoftOAuth';
+import { buildOAuthAppBaseUrl } from '@/lib/oauth/oauthAppBaseUrl';
 import { invalidateSettingsPageDataForUser } from '@/lib/settings/getCachedSettingsPageData';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 /** Handles the Microsoft OAuth callback. Stores tokens in microsoft_connections. */
@@ -10,45 +14,34 @@ export async function GET(req: Request) {
   const clientSecret = (process.env.MICROSOFT_CLIENT_SECRET ?? process.env.CLIENT_SECRET)?.trim();
   const tenantId = (process.env.MICROSOFT_TENANT_ID ?? process.env.TENANT_ID)?.trim();
 
+  const { searchParams } = new URL(req.url);
+  const stateRaw = searchParams.get('state');
+  const oauthState = parseMicrosoftOAuthState(stateRaw);
+  const fallbackReturnTo = new URL('/settings', buildOAuthAppBaseUrl(req)).toString();
+  const returnTo = oauthState?.returnTo ?? fallbackReturnTo;
+
   if (!clientId || !clientSecret || !tenantId) {
-    return NextResponse.redirect(new URL('/settings?outlook_error=not_configured', req.url));
+    return NextResponse.redirect(
+      appendMicrosoftOAuthReturnParam(returnTo, 'outlook_error', 'not_configured')
+    );
   }
 
-  const { searchParams } = new URL(req.url);
   const err = searchParams.get('error');
   if (err) {
     const desc = searchParams.get('error_description') ?? err;
     return NextResponse.redirect(
-      new URL(`/settings?outlook_error=${encodeURIComponent(desc.slice(0, 100))}`, req.url)
+      appendMicrosoftOAuthReturnParam(returnTo, 'outlook_error', desc.slice(0, 100))
     );
   }
 
   const code = searchParams.get('code');
-  const state = searchParams.get('state');
-  const jar = await cookies();
-  const expected = jar.get('ms_oauth_state')?.value;
-  const metaRaw = jar.get('ms_oauth_meta')?.value;
-  jar.delete('ms_oauth_state');
-  jar.delete('ms_oauth_meta');
-
-  if (!code || !state || !expected || state !== expected || !metaRaw) {
-    return NextResponse.redirect(new URL('/settings?outlook_error=invalid_state', req.url));
+  if (!code || !oauthState) {
+    return NextResponse.redirect(
+      appendMicrosoftOAuthReturnParam(returnTo, 'outlook_error', 'invalid_state')
+    );
   }
 
-  let meta: { uid: string };
-  try {
-    meta = JSON.parse(Buffer.from(metaRaw, 'base64url').toString('utf8')) as { uid: string };
-  } catch {
-    return NextResponse.redirect(new URL('/settings?outlook_error=bad_meta', req.url));
-  }
-
-  const user = await getAuthUser();
-  if (!user || user.id !== meta.uid) {
-    return NextResponse.redirect(new URL('/settings?outlook_error=session', req.url));
-  }
-
-  const origin = new URL(req.url).origin;
-  const redirectUri = `${origin}/auth/outlook/callback`;
+  const redirectUri = buildMicrosoftOAuthRedirectUri(req);
 
   const tokenRes = await fetch(`https://login.microsoftonline.com/common/oauth2/v2.0/token`, {
     method: 'POST',
@@ -66,7 +59,7 @@ export async function GET(req: Request) {
   if (!tokenRes.ok) {
     const t = await tokenRes.text().catch(() => '');
     return NextResponse.redirect(
-      new URL(`/settings?outlook_error=${encodeURIComponent('token_' + t.slice(0, 80))}`, req.url)
+      appendMicrosoftOAuthReturnParam(returnTo, 'outlook_error', `token_${t.slice(0, 80)}`)
     );
   }
 
@@ -79,19 +72,15 @@ export async function GET(req: Request) {
 
   if (!tokens.access_token) {
     return NextResponse.redirect(
-      new URL(
-        `/settings?outlook_error=${encodeURIComponent(tokens.error ?? 'no_access_token')}`,
-        req.url
-      )
+      appendMicrosoftOAuthReturnParam(returnTo, 'outlook_error', tokens.error ?? 'no_access_token')
     );
   }
   if (!tokens.refresh_token) {
     return NextResponse.redirect(
-      new URL('/settings?outlook_error=no_refresh_token_re_consent', req.url)
+      appendMicrosoftOAuthReturnParam(returnTo, 'outlook_error', 'no_refresh_token_re_consent')
     );
   }
 
-  // Fetch the user's Microsoft email for display.
   let microsoftEmail: string | null = null;
   try {
     const meRes = await fetch(
@@ -107,11 +96,19 @@ export async function GET(req: Request) {
   }
 
   const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000).toISOString();
-  const supabase = await createClient();
 
-  const { error } = await supabase.from('microsoft_connections').upsert(
+  let admin;
+  try {
+    admin = createServiceRoleClient();
+  } catch {
+    return NextResponse.redirect(
+      appendMicrosoftOAuthReturnParam(returnTo, 'outlook_error', 'service_role_missing')
+    );
+  }
+
+  const { error } = await admin.from('microsoft_connections').upsert(
     {
-      user_id: user.id,
+      user_id: oauthState.uid,
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expires_at: expiresAt,
@@ -123,11 +120,11 @@ export async function GET(req: Request) {
 
   if (error) {
     return NextResponse.redirect(
-      new URL(`/settings?outlook_error=${encodeURIComponent(error.message)}`, req.url)
+      appendMicrosoftOAuthReturnParam(returnTo, 'outlook_error', error.message)
     );
   }
 
-  await invalidateSettingsPageDataForUser(user.id).catch(() => null);
+  await invalidateSettingsPageDataForUser(oauthState.uid).catch(() => null);
 
-  return NextResponse.redirect(new URL('/settings?outlook_connected=1', req.url));
+  return NextResponse.redirect(appendMicrosoftOAuthReturnParam(returnTo, 'outlook_connected', '1'));
 }
