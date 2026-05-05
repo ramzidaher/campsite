@@ -2,6 +2,7 @@ import { runReport } from '@/lib/reports/engine';
 import { getReportsViewerFromRequest } from '@/lib/reports/auth';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import * as XLSX from 'xlsx';
 
 function csvEscape(value: unknown) {
   const s = value == null ? '' : String(value);
@@ -39,7 +40,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!viewer.canView) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { id } = await params;
   const format = (new URL(req.url).searchParams.get('format') ?? 'csv').toLowerCase();
-  if (format !== 'csv' && format !== 'pdf') return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
+  if (format !== 'csv' && format !== 'pdf' && format !== 'xlsx') {
+    return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
+  }
 
   const supabase = await createClient();
   const { data: report } = await supabase
@@ -65,6 +68,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const cols = rows.length ? Object.keys(rows[0] as Record<string, unknown>) : [];
   const stamp = new Date().toISOString();
 
+  if ((format === 'pdf' || format === 'xlsx') && result.totalRows === 0) {
+    console.warn('[reports.export] blocked_empty_export', {
+      reportId: id,
+      orgId: viewer.orgId,
+      format,
+      requestDurationMs: Date.now() - requestStartedAt,
+      ...result.diagnostics,
+    });
+    return NextResponse.json(
+      {
+        error: 'No rows matched your current scope and filters. This export requires at least one row.',
+        noDataReason: result.diagnostics.noDataReason,
+      },
+      { status: 422 }
+    );
+  }
+
   const { error: exportLogError } = await supabase.from('report_exports').insert({
     org_id: viewer.orgId,
     report_id: id,
@@ -75,22 +95,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   });
   if (exportLogError) {
     return NextResponse.json({ error: exportLogError.message }, { status: 400 });
-  }
-
-  if (format === 'pdf' && result.totalRows === 0) {
-    console.warn('[reports.export] blocked_empty_pdf', {
-      reportId: id,
-      orgId: viewer.orgId,
-      requestDurationMs: Date.now() - requestStartedAt,
-      ...result.diagnostics,
-    });
-    return NextResponse.json(
-      {
-        error: 'No rows matched your current scope and filters. PDF export requires at least one row.',
-        noDataReason: result.diagnostics.noDataReason,
-      },
-      { status: 422 }
-    );
   }
 
   console.info('[reports.export] completed', {
@@ -114,6 +118,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="report-${id}.pdf"`,
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
+
+  if (format === 'xlsx') {
+    const sheetRows = rows.length ? (rows as Record<string, unknown>[]) : [{}];
+    const ws = XLSX.utils.json_to_sheet(sheetRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+    return new NextResponse(new Uint8Array(buf), {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="report-${id}.xlsx"`,
         'Cache-Control': 'no-store',
       },
     });

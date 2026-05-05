@@ -86,7 +86,7 @@ export function ApplyJobFormClient({
   const screeningPayloadJson = useMemo(() => {
     const rows = screeningQuestions ?? [];
     const arr = rows.map((q) => {
-      if (q.is_page_break) return { question_id: q.id };
+      if (q.is_page_break || q.question_type === 'section_title') return { question_id: q.id };
       const a = screeningAnswers[q.id] ?? {};
       const base: Record<string, unknown> = { question_id: q.id };
       if (q.question_type === 'short_text' || q.question_type === 'paragraph') {
@@ -119,7 +119,7 @@ export function ApplyJobFormClient({
     const rows = screeningQuestions ?? [];
     if (rows.length === 0) return true;
     return rows.every((q) => {
-      if (q.is_page_break) return true;
+      if (q.is_page_break || q.question_type === 'section_title') return true;
       const a = screeningAnswers[q.id];
       if (!q.required) return true;
       if (q.question_type === 'short_text' || q.question_type === 'paragraph') {
@@ -587,6 +587,16 @@ export function ApplyJobFormClient({
                             Page break
                           </p>
                           <p className="mt-1 text-[14px] font-medium text-[#0f172a]">{q.prompt}</p>
+                        </div>
+                      );
+                    }
+                    if (q.question_type === 'section_title') {
+                      return (
+                        <div key={q.id} className="border-b border-[#e8e8e8] pb-4 pt-1">
+                          <h3 className="text-[17px] font-semibold text-[#121212]">{q.prompt}</h3>
+                          {q.help_text ? (
+                            <p className="mt-1 text-[13px] leading-relaxed text-[#6b6b6b]">{q.help_text}</p>
+                          ) : null}
                         </div>
                       );
                     }

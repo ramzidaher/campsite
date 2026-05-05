@@ -118,6 +118,13 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 | Performance | Jane, Darcey | Cycles/reviews per seeded org (create cycle in UI if empty) |
 | Onboarding | orgadmin | Templates / runs; staff completes assigned tasks |
 
+### Reports
+
+| Scenario | User | Expect |
+|----------|------|--------|
+| Saved sample reports | org admin or anyone with `reports.view` | After **`npm run seed-qa-full`**, `/reports` lists three org-visible **Sample:** reports (active employees, staff directory, time & pay). Use **Run** for preview rows and CSV / Excel / PDF export. |
+| Minimal local org (`demo` slug) | user in that org | After **`supabase db reset`** (applies `supabase/seed.sql`), the same fixtures load when at least one **profile** exists for the demo org. Fixture JSON lives at `apps/web/src/lib/reports/fixtures/report-seed-fixtures.json` — keep it in sync with `seed.sql` if you edit columns. |
+
 ### Recruitment pipeline
 
 | Scenario | User | Expect |
@@ -176,7 +183,7 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 
 | Command | Purpose |
 |---------|---------|
-| `npm run seed-qa-full` | **This doc** — deterministic QA org, SU-style departments + ~45 staff, HR sample + draft broadcast + team |
+| `npm run seed-qa-full` | **This doc** — deterministic QA org, SU-style departments + ~45 staff, HR sample + draft broadcast + team + **three sample saved reports** for `/reports` |
 | `node scripts/generate-qa-login-csv.mjs` | Writes gitignored `scripts/qa-login-import.csv` — logins for local and production `/login` (uses `CAMPSITE_QA_PASSWORD` or seed default). |
 | `npm run seed-demo-org` | 18 users, random emails, department overlap lab |
 | `npm run create-super-admin` | Initial org admin / bootstrap |

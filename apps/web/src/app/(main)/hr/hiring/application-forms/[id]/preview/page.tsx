@@ -9,6 +9,7 @@ type QuestionRow = {
   prompt: string | null;
   help_text: string | null;
   required: boolean | null;
+  is_page_break: boolean | null;
   options: unknown;
   max_length: number | null;
   sort_order: number | null;
@@ -44,7 +45,7 @@ export default async function ApplicationFormPreviewPage({
       .maybeSingle(),
     supabase
       .from('org_application_question_set_items')
-      .select('id, question_type, prompt, help_text, required, options, max_length, sort_order')
+      .select('id, question_type, prompt, help_text, required, is_page_break, options, max_length, sort_order')
       .eq('set_id', formId)
       .order('sort_order', { ascending: true }),
   ]);
@@ -80,6 +81,31 @@ export default async function ApplicationFormPreviewPage({
                   .map((o) => ({ id: String(o.id ?? '').trim(), label: String(o.label ?? '').trim() }))
                   .filter((o) => o.id && o.label)
               : [];
+
+            if (q.is_page_break) {
+              return (
+                <div
+                  key={q.id}
+                  className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-[13px] text-[#475569]"
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wide">Page break</span>
+                  <p className="mt-1 font-medium text-[#0f172a]">{String(q.prompt ?? '').trim()}</p>
+                </div>
+              );
+            }
+
+            if (type === 'section_title') {
+              return (
+                <div key={q.id} className="border-b border-[#e8e8e8] pb-4 pt-2">
+                  <h3 className="font-authSerif text-[22px] leading-snug tracking-tight text-[#121212]">
+                    {String(q.prompt ?? '').trim()}
+                  </h3>
+                  {q.help_text ? (
+                    <p className="mt-2 text-[13px] leading-relaxed text-[#6b6b6b]">{String(q.help_text).trim()}</p>
+                  ) : null}
+                </div>
+              );
+            }
 
             return (
               <article key={q.id} className="rounded-xl border border-[#e8e8e8] bg-[#fcfcfb] p-4">

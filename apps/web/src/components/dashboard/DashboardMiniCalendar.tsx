@@ -1,5 +1,6 @@
 'use client';
 
+import { mergeOrgTimeZoneIntoFormatOptions } from '@/lib/datetime';
 import { useMemo, useState } from 'react';
 
 const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
@@ -32,6 +33,7 @@ export function DashboardMiniCalendar({
   todayD,
   /** When true, omit outer card border/radius (parent provides unified widget shell). */
   embedded = false,
+  orgTimeZone = null,
 }: {
   eventDays: number[];
   initialYear: number;
@@ -40,6 +42,7 @@ export function DashboardMiniCalendar({
   todayM: number;
   todayD: number;
   embedded?: boolean;
+  orgTimeZone?: string | null;
 }) {
   const [cursor, setCursor] = useState({ y: initialYear, m: initialMonth });
   const matrix = useMemo(() => monthMatrix(cursor.y, cursor.m), [cursor.y, cursor.m]);
@@ -48,10 +51,13 @@ export function DashboardMiniCalendar({
     return new Set(eventDays);
   }, [cursor.y, cursor.m, initialYear, initialMonth, eventDays]);
 
-  const label = new Date(cursor.y, cursor.m, 1).toLocaleString('en-GB', { timeZone: 'UTC', 
-    month: 'long',
-    year: 'numeric',
-  });
+  const label = new Date(cursor.y, cursor.m, 1).toLocaleString(
+    'en-GB',
+    mergeOrgTimeZoneIntoFormatOptions(orgTimeZone, {
+      month: 'long',
+      year: 'numeric',
+    }),
+  );
 
   function prev() {
     setCursor((c) => {

@@ -1,9 +1,15 @@
 import { CareersHeader } from '@/app/(public)/jobs/CareersBranding';
+import {
+  advertClosingDateToApplicationsCloseAtIso,
+  advertReleaseDateToScheduledPublishAtIso,
+} from '@/lib/datetime/advertClosingDateToApplicationsCloseAtIso';
+import { mergeOrgTimeZoneIntoFormatOptions } from '@/lib/datetime';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { createClient } from '@/lib/supabase/server';
 import { tenantJobApplyRelativePath, tenantPublicJobsIndexRelativePath } from '@/lib/tenant/adminUrl';
+import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -49,6 +55,18 @@ type RecruitmentTimelineRow = {
   role_profile_link: string | null;
 };
 
+function isTransientDataAccessError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('fetch failed') ||
+    m.includes('timed out') ||
+    m.includes('connect timeout') ||
+    m.includes('enotfound') ||
+    m.includes('econnrefused') ||
+    m.includes('eai_again')
+  );
+}
+
 function formatSalary(raw: string): string {
   const t = raw?.trim() ?? '';
   if (!t) return '—';
@@ -77,18 +95,30 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatDateValue(iso: string | null | undefined): string {
+function formatDateValue(iso: string | null | undefined, orgTz: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(
+    'en-GB',
+    mergeOrgTimeZoneIntoFormatOptions(orgTz, { day: 'numeric', month: 'short', year: 'numeric' }),
+  );
 }
 
-function formatDateTimeValue(iso: string | null | undefined): string {
+function formatDateTimeValue(iso: string | null | undefined, orgTz: string | null | undefined): string {
   if (!iso) return 'Rolling — apply while listed';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return 'Rolling — apply while listed';
-  return d.toLocaleString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(
+    'en-GB',
+    mergeOrgTimeZoneIntoFormatOptions(orgTz, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  );
 }
 
 function parseDateList(value: unknown): string[] {
@@ -159,33 +189,94 @@ function parseInterviewDateList(value: unknown): string[] {
     .filter(Boolean);
 }
 
-export default async function PublicJobPage({ params }: { params: Promise<{ slug: string }> }) {
+function deriveOrgSlugFromHost(hostHeader: string | null): string | null {
+  const host = String(hostHeader ?? '').trim().toLowerCase();
+  const hostname = host.split(':')[0] ?? '';
+  if (!hostname) return null;
+  if (hostname.endsWith('.localhost')) return hostname.replace(/\.localhost$/, '') || null;
+  const root = getTenantRootDomain().toLowerCase();
+  if (hostname.endsWith(`.${root}`)) return hostname.replace(`.${root}`, '') || null;
+  return null;
+}
+
+export default async function PublicJobPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ org?: string }>;
+}) {
   const { slug: rawSlug } = await params;
+  const resolvedSearchParams = await searchParams;
   const jobSlug = rawSlug?.trim();
   if (!jobSlug) notFound();
 
   const h = await headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? '';
-  const orgSlug = h.get('x-campsite-org-slug')?.trim();
+  const orgFromHeader = h.get('x-campsite-org-slug')?.trim() ?? '';
+  const orgFromQuery = String(resolvedSearchParams.org ?? '').trim();
+  const orgFromHost = deriveOrgSlugFromHost(host);
+  const orgSlug = orgFromHeader || orgFromQuery || orgFromHost;
   if (!orgSlug) notFound();
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc('public_job_listing_by_slug', {
-    p_org_slug: orgSlug,
-    p_job_slug: jobSlug,
-  });
+  const orgCandidates = Array.from(new Set([orgSlug, orgFromQuery, orgFromHost].filter(Boolean)));
+  let data: unknown = null;
+  let error: { message?: string | null } | null = null;
+  for (const candidateOrgSlug of orgCandidates) {
+    const result = await supabase.rpc('public_job_listing_by_slug', {
+      p_org_slug: candidateOrgSlug,
+      p_job_slug: jobSlug,
+    });
+    if (result.error) {
+      error = result.error;
+      continue;
+    }
+    if (Array.isArray(result.data) && result.data.length > 0) {
+      data = result.data;
+      error = null;
+      break;
+    }
+  }
 
-  if (error || !data || !Array.isArray(data) || data.length === 0) notFound();
+  if (error) {
+    const errorMessage = String(error.message ?? '');
+    if (isTransientDataAccessError(errorMessage)) {
+      return (
+        <main className="mx-auto w-full max-w-3xl px-6 py-12 text-[#121212]">
+          <section className="rounded-2xl border border-[#e8e8e8] bg-white p-8 shadow-sm">
+            <h1 className="font-authSerif text-[30px] leading-tight tracking-[-0.03em]">
+              This job is temporarily unavailable
+            </h1>
+            <p className="mt-3 text-[14px] leading-relaxed text-[#6b6b6b]">
+              We couldn&apos;t load this listing right now due to a temporary connection issue. Please refresh in a
+              moment.
+            </p>
+          </section>
+        </main>
+      );
+    }
+    notFound();
+  }
+
+  if (!data || !Array.isArray(data) || data.length === 0) notFound();
 
   const job = data[0] as PublicJobRow;
 
-  const jobDetailsWithNewCols = await supabase
-    .from('job_listings')
-    .select(
-      'recruitment_request_id, applications_close_at, start_date_needed, shortlisting_dates, interview_dates, role_profile_link, hide_posted_date, scheduled_publish_at'
-    )
-    .eq('id', job.job_listing_id)
-    .maybeSingle();
+  const [jobDetailsWithNewCols, { data: orgBrand }] = await Promise.all([
+    supabase
+      .from('job_listings')
+      .select(
+        'recruitment_request_id, applications_close_at, start_date_needed, shortlisting_dates, interview_dates, role_profile_link, hide_posted_date, scheduled_publish_at'
+      )
+      .eq('id', job.job_listing_id)
+      .maybeSingle(),
+    supabase
+      .from('organisations')
+      .select('name, logo_url, brand_preset_key, brand_tokens, brand_policy, timezone')
+      .eq('slug', orgSlug)
+      .maybeSingle(),
+  ]);
   const fallbackJobDetails = jobDetailsWithNewCols.error
     ? await supabase
         .from('job_listings')
@@ -209,11 +300,13 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
     reqTimeline = (reqResult.data ?? null) as RecruitmentTimelineRow | null;
   }
 
+  const orgTimeZone = String((orgBrand as { timezone?: string | null } | null)?.timezone ?? '').trim() || null;
+
   const jobDetails = ({
     recruitment_request_id: recruitmentRequestId,
     applications_close_at:
       String((detailsRaw as { applications_close_at?: unknown } | null)?.applications_close_at ?? '').trim() ||
-      (reqTimeline?.advert_closing_date ? `${String(reqTimeline.advert_closing_date)}T23:59:00.000Z` : null),
+      advertClosingDateToApplicationsCloseAtIso(reqTimeline?.advert_closing_date ?? null, orgTimeZone),
     start_date_needed:
       String((detailsRaw as { start_date_needed?: unknown } | null)?.start_date_needed ?? '').trim() ||
       String(reqTimeline?.start_date_needed ?? '').trim() ||
@@ -233,14 +326,8 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
     hide_posted_date: Boolean((detailsRaw as { hide_posted_date?: unknown } | null)?.hide_posted_date),
     scheduled_publish_at:
       String((detailsRaw as { scheduled_publish_at?: unknown } | null)?.scheduled_publish_at ?? '').trim() ||
-      (reqTimeline?.advert_release_date ? `${String(reqTimeline.advert_release_date)}T09:00:00.000Z` : null),
+      advertReleaseDateToScheduledPublishAtIso(reqTimeline?.advert_release_date ?? null, orgTimeZone),
   } satisfies PublicJobDetailsRow);
-
-  const { data: orgBrand } = await supabase
-    .from('organisations')
-    .select('name, logo_url, brand_preset_key, brand_tokens, brand_policy')
-    .eq('slug', orgSlug)
-    .maybeSingle();
 
   const resolvedBranding = resolveOrgBranding({
     presetKey: orgBrand?.brand_preset_key,
@@ -274,11 +361,14 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   const jobsIndexHref = tenantPublicJobsIndexRelativePath(orgSlug, host);
 
   const postedLong = job.published_at
-    ? new Date(job.published_at).toLocaleDateString('en-GB', { timeZone: 'UTC', 
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
+    ? new Date(job.published_at).toLocaleDateString(
+        'en-GB',
+        mergeOrgTimeZoneIntoFormatOptions(orgTimeZone, {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        }),
+      )
     : null;
   const shortlistingDates = parseDateList(jobDetails.shortlisting_dates);
   const interviewDates = parseDateList(jobDetails.interview_dates);
@@ -298,13 +388,13 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   if (jobDetails.start_date_needed) {
     otherKeyDates.push({
       label: 'Start date',
-      value: formatDateValue(jobDetails.start_date_needed),
+      value: formatDateValue(jobDetails.start_date_needed, orgTimeZone),
     });
   }
   if (jobDetails.scheduled_publish_at && !jobDetails.hide_posted_date) {
     otherKeyDates.push({
       label: 'Posted',
-      value: formatDateValue(jobDetails.scheduled_publish_at),
+      value: formatDateValue(jobDetails.scheduled_publish_at, orgTimeZone),
     });
   }
 
@@ -443,7 +533,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
                 {job.grade_level?.trim() ? (
                   <MetaRow label="Grade / level" value={job.grade_level} />
                 ) : null}
-                <MetaRow label="Closing" value={formatDateTimeValue(jobDetails.applications_close_at)} />
+                <MetaRow label="Closing" value={formatDateTimeValue(jobDetails.applications_close_at, orgTimeZone)} />
                 {otherKeyDates.length > 0 ? (
                   <div className="pt-2">
                     <p

@@ -1,10 +1,13 @@
 'use client';
 
+import { setRecruitmentRequestStatusAction } from '@/app/(main)/admin/recruitment/actions';
 import { useInHiringHub } from '@/app/(main)/hr/hiring/HiringHubContext';
 import { FormSelect, recruitmentStatusChips, recruitmentUrgencyChips } from '@campsite/ui/web';
 import { recruitmentStatusLabel, recruitmentUrgencyLabel } from '@/lib/recruitment/labels';
+import { RECRUITMENT_REQUEST_STATUSES, type RecruitmentRequestStatus, isRecruitmentRequestStatus } from '@campsite/types';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState, useTransition } from 'react';
 
 export type AdminRecruitmentListRow = {
   id: string;
@@ -144,7 +147,9 @@ function submitterName(p: AdminRecruitmentListRow['submitter']): string {
 }
 
 const STATUS_OPTIONS = ['all', 'pending_review', 'approved', 'in_progress', 'filled', 'rejected'] as const;
-const SHEET_STATUS_OPTIONS = ['approved', 'rejected', 'in_progress', 'filled'] as const;
+
+/** Same pipeline order as `RECRUITMENT_REQUEST_STATUSES` / request detail page. */
+const ROW_STATUS_OPTIONS = RECRUITMENT_REQUEST_STATUSES;
 
 function isRequestArchived(row: Pick<AdminRecruitmentListRow, 'archived_at' | 'status'>): boolean {
   return Boolean(row.archived_at) || row.status === 'filled' || row.status === 'rejected';
@@ -184,10 +189,12 @@ const SORT_PRESETS: { value: string; sort: SortKey; dir: 'asc' | 'desc'; label: 
 
 export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentListRow[] }) {
   const inHiringHub = useInHiringHub();
+  const router = useRouter();
+  const [rowStatusError, setRowStatusError] = useState<string | null>(null);
+  const [statusSavePending, startStatusSave] = useTransition();
   const [filter, setFilter] = useState<'open' | 'archived'>('open');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortPreset, setSortPreset] = useState('date-desc');
-  const [sheetStatuses, setSheetStatuses] = useState<Record<string, (typeof SHEET_STATUS_OPTIONS)[number]>>({});
 
   const preset = SORT_PRESETS.find((p) => p.value === sortPreset) ?? SORT_PRESETS[0];
   const sort = preset.sort;
@@ -226,6 +233,22 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
     });
     return copy;
   }, [filtered, sort, sortDir]);
+
+  function rowStatusValue(status: string): RecruitmentRequestStatus {
+    return isRecruitmentRequestStatus(status) ? status : 'pending_review';
+  }
+
+  function saveRowStatus(requestId: string, jobTitle: string, next: RecruitmentRequestStatus) {
+    setRowStatusError(null);
+    startStatusSave(async () => {
+      const res = await setRecruitmentRequestStatusAction(requestId, next, null);
+      if (!res.ok) {
+        setRowStatusError(`${jobTitle}: ${res.error}`);
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   const queueCells = [
     { label: 'Open', labelUpper: 'OPEN', value: openCount, hint: 'Not archived' },
@@ -376,6 +399,11 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
         </div>
       ) : inHiringHub ? (
         <div className="overflow-x-auto rounded-xl border border-[#e8e8e8] bg-white shadow-sm">
+          {rowStatusError ? (
+            <p className="border-b border-[#fecaca] bg-[#fef2f2] px-4 py-2 text-[12px] text-[#991b1b]" role="alert">
+              {rowStatusError}
+            </p>
+          ) : null}
           <table className="min-w-full table-fixed border-collapse">
             <thead>
               <tr className="border-b border-[#ececec] bg-[#faf9f6]">
@@ -395,11 +423,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
             </thead>
             <tbody>
               {sorted.map((r, i) => {
-                const selectedStatus =
-                  sheetStatuses[r.id] ??
-                  (SHEET_STATUS_OPTIONS.includes(r.status as (typeof SHEET_STATUS_OPTIONS)[number])
-                    ? (r.status as (typeof SHEET_STATUS_OPTIONS)[number])
-                    : 'in_progress');
+                const selectedStatus = rowStatusValue(r.status);
 
                 return (
                   <tr key={r.id} className={i < sorted.length - 1 ? 'border-b border-[#f0efe9]' : ''}>
@@ -439,16 +463,16 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                       <FormSelect
                         aria-label={`Status for ${r.job_title}`}
                         value={selectedStatus}
-                        onChange={(e) =>
-                          setSheetStatuses((prev) => ({
-                            ...prev,
-                            [r.id]: e.target.value as (typeof SHEET_STATUS_OPTIONS)[number],
-                          }))
-                        }
-                        className={`h-9 min-w-[10.5rem] rounded-full border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium capitalize focus:border-[#121212] focus:outline-none ${hiringHubStatusChipClass(selectedStatus)}`}
+                        disabled={statusSavePending}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (!isRecruitmentRequestStatus(v) || v === r.status) return;
+                          saveRowStatus(r.id, r.job_title, v);
+                        }}
+                        className={`h-9 min-w-[10.5rem] rounded-full border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium capitalize focus:border-[#121212] focus:outline-none disabled:opacity-60 ${hiringHubStatusChipClass(selectedStatus)}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {SHEET_STATUS_OPTIONS.map((status) => (
+                        {ROW_STATUS_OPTIONS.map((status) => (
                           <option key={status} value={status}>
                             {recruitmentStatusLabel(status)}
                           </option>

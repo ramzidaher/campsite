@@ -1,42 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ChronologyTimeline, type ChronoGroup } from '@/components/experience/ChronologyTimeline';
 import { ExperienceLensBar } from '@/components/experience/ExperienceLensBar';
 import { DashboardMiniCalendar } from '@/components/dashboard/DashboardMiniCalendar';
 import type { UpcomingEventRow } from '@/lib/dashboard/loadDashboardHome';
-
-const EVENT_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
-  hour: 'numeric',
-  minute: '2-digit',
-  hour12: true,
-  timeZone: 'UTC',
-});
-
-const EVENT_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  timeZone: 'UTC',
-});
+import { calendarYmdInTimeZone, mergeOrgTimeZoneIntoFormatOptions } from '@/lib/datetime';
 
 const UPCOMING_LENS_KEY = 'campsite_dashboard_upcoming_lens';
 
-function toUtcDayKey(d: Date) {
-  return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
-}
-
-function formatEventWhen(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-  const isToday = toUtcDayKey(d) === toUtcDayKey(now);
-  const isTomorrow = toUtcDayKey(d) === toUtcDayKey(tomorrow);
-  const time = EVENT_TIME_FORMATTER.format(d);
-  if (isToday) return `Today · ${time}`;
-  if (isTomorrow) return `Tomorrow · ${time}`;
-  return `${EVENT_DATE_FORMATTER.format(d)} · ${time}`;
+function orgDayKey(d: Date, orgTz: string | null | undefined) {
+  const { y, m, d: day } = calendarYmdInTimeZone(d, orgTz);
+  return `${y}-${m}-${day}`;
 }
 
 export function DashboardCalendarWidget({
@@ -47,6 +24,7 @@ export function DashboardCalendarWidget({
   todayM,
   todayD,
   upcomingEvents,
+  orgTimeZone = null,
 }: {
   eventDays: number[];
   initialYear: number;
@@ -55,8 +33,45 @@ export function DashboardCalendarWidget({
   todayM: number;
   todayD: number;
   upcomingEvents: UpcomingEventRow[];
+  orgTimeZone?: string | null;
 }) {
   const [upcomingLens, setUpcomingLens] = useState<'peek' | 'timeline'>('peek');
+
+  const eventTimeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(
+        'en-US',
+        mergeOrgTimeZoneIntoFormatOptions(orgTimeZone, {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        }),
+      ),
+    [orgTimeZone],
+  );
+  const eventDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(
+        'en-US',
+        mergeOrgTimeZoneIntoFormatOptions(orgTimeZone, { month: 'short', day: 'numeric' }),
+      ),
+    [orgTimeZone],
+  );
+
+  const formatEventWhen = useCallback(
+    (iso: string) => {
+      const d = new Date(iso);
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const isToday = orgDayKey(d, orgTimeZone) === orgDayKey(now, orgTimeZone);
+      const isTomorrow = orgDayKey(d, orgTimeZone) === orgDayKey(tomorrow, orgTimeZone);
+      const time = eventTimeFormatter.format(d);
+      if (isToday) return `Today · ${time}`;
+      if (isTomorrow) return `Tomorrow · ${time}`;
+      return `${eventDateFormatter.format(d)} · ${time}`;
+    },
+    [eventDateFormatter, eventTimeFormatter, orgTimeZone],
+  );
 
   useEffect(() => {
     try {
@@ -87,12 +102,15 @@ export function DashboardCalendarWidget({
     const groups: G[] = [];
     for (const ev of sorted) {
       const d = new Date(ev.start_time);
-      const heading = d.toLocaleDateString('en-GB', { timeZone: 'UTC', 
-        weekday: 'long',
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
+      const heading = d.toLocaleDateString(
+        'en-GB',
+        mergeOrgTimeZoneIntoFormatOptions(orgTimeZone, {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        }),
+      );
       const prev = groups[groups.length - 1];
       const item = {
         id: ev.id,
@@ -105,7 +123,7 @@ export function DashboardCalendarWidget({
       else groups.push({ heading, items: [item] });
     }
     return groups;
-  }, [upcomingEvents]);
+  }, [upcomingEvents, orgTimeZone, formatEventWhen]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#d8d8d8] bg-white">
@@ -117,6 +135,7 @@ export function DashboardCalendarWidget({
         todayY={todayY}
         todayM={todayM}
         todayD={todayD}
+        orgTimeZone={orgTimeZone}
       />
       <div className="border-t border-[#d8d8d8] px-3.5 pb-3 pt-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

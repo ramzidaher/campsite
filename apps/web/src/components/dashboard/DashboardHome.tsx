@@ -7,6 +7,7 @@ import { channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { deptTagClass } from '@/lib/broadcasts/deptTagClass';
 import { broadcastFirstImage, broadcastMarkdownPreview } from '@/lib/broadcasts/markdownPreview';
 import type { DashboardHomeModel } from '@/lib/dashboard/loadDashboardHome';
+import { mergeOrgTimeZoneIntoFormatOptions } from '@/lib/datetime';
 import { relTime } from '@/lib/format/relTime';
 
 function statFillPct(value: number, cap: number) {
@@ -56,6 +57,7 @@ export function DashboardHome({
   const statGridLg =
     statTileCount <= 2 ? 'lg:grid-cols-2' : statTileCount === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4';
 
+  const orgTz = data.orgTimeZone;
   const statScope = data.dashboardStatScope;
   const isStale = data.dashboardDataFreshness === 'stale';
   const lastUpdatedSeconds =
@@ -105,12 +107,15 @@ export function DashboardHome({
             {greetingLine}
           </h2>
           <p className="campsite-subheading">
-            {now.toLocaleDateString('en-GB', { timeZone: 'UTC', 
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
+            {now.toLocaleDateString(
+              'en-GB',
+              mergeOrgTimeZoneIntoFormatOptions(orgTz, {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              }),
+            )}
             {' · '}
             {data.orgName}
           </p>
@@ -282,10 +287,13 @@ export function DashboardHome({
                 const senderName = b.profiles?.full_name?.trim() || 'Unknown sender';
                 const previewImage = broadcastFirstImage(b.body);
                 const sentLabel = b.sent_at
-                  ? new Date(b.sent_at).toLocaleString('en-GB', { timeZone: 'UTC', 
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })
+                  ? new Date(b.sent_at).toLocaleString(
+                      'en-GB',
+                      mergeOrgTimeZoneIntoFormatOptions(orgTz, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      }),
+                    )
                   : 'Send time unavailable';
                 return (
                   <Link
@@ -412,6 +420,7 @@ export function DashboardHome({
             todayM={data.calendarTodayM}
             todayD={data.calendarTodayD}
             upcomingEvents={data.upcomingEvents}
+            orgTimeZone={orgTz}
           />
         </div>
       </div>

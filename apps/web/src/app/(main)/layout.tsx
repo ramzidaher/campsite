@@ -303,6 +303,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const profileReauthRequiredAt = str('profile_reauth_required_at');
   const shellRealtimeUserId = str('user_id');
+  const orgTimeZone = str('org_timezone')?.trim() || null;
 
   const profileAccentPreset = str('profile_accent_preset')?.trim() || 'midnight';
   const profileDndEnabled = Boolean(b['profile_dnd_enabled']);
@@ -316,6 +317,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         skipTenantReauth={isPlatformOperator}
         shellRealtimeUserId={shellRealtimeUserId}
         shellRealtimeOrgId={currentOrgId}
+        orgTimeZone={orgTimeZone}
       >
         <AppShell
           orgName={orgName}

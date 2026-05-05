@@ -10,6 +10,7 @@ import {
   endOfWeekExclusive,
   formatDateTimeRangeLocal,
   formatDayLabel,
+  mergeOrgTimeZoneIntoFormatOptions,
   monthCalendarWeeks,
   startOfDayLocal,
   startOfMonth,
@@ -19,7 +20,7 @@ import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ManualEventForm } from '@/components/calendar/ManualEventForm';
 import { TimeGridCalendar, type TimeGridItem } from '@/components/calendar/TimeGridCalendar';
-import { CalendarPlus, RefreshCw } from 'lucide-react';
+import { useOrgTimeZone } from '@/components/providers/OrgTimeZoneContext';
 import Link from 'next/link';
 
 type Profile = {
@@ -165,6 +166,8 @@ export function CalendarClient({
   profile: Profile;
   canViewAllOneOnOneCheckins: boolean;
 }) {
+  const shellOrgTz = useOrgTimeZone();
+  const orgTzForDisplay = profile.org_timezone?.trim() || shellOrgTz;
   const supabase = useMemo(() => createClient(), []);
   const formSectionRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<ViewMode>('month');
@@ -434,30 +437,42 @@ export function CalendarClient({
     }, 0);
   }
 
-  const subtitleMonthYear = anchor.toLocaleString('en-GB', { timeZone: 'UTC',  month: 'long', year: 'numeric' });
+  const subtitleMonthYear = anchor.toLocaleString(
+    'en-GB',
+    mergeOrgTimeZoneIntoFormatOptions(orgTzForDisplay, { month: 'long', year: 'numeric' }),
+  );
 
   const cardTitleLabel = useMemo(() => {
     if (view === 'month') {
-      return anchor.toLocaleString('en-GB', { timeZone: 'UTC',  month: 'long', year: 'numeric' });
+      return anchor.toLocaleString(
+        'en-GB',
+        mergeOrgTimeZoneIntoFormatOptions(orgTzForDisplay, { month: 'long', year: 'numeric' }),
+      );
     }
     if (view === 'time7') {
-      return `Week of ${formatDayLabel(startOfWeekMonday(gridStart))}`;
+      return `Week of ${formatDayLabel(startOfWeekMonday(gridStart), orgTzForDisplay)}`;
     }
     if (view === 'time1') {
-      return gridStart.toLocaleDateString('en-GB', { timeZone: 'UTC', 
+      return gridStart.toLocaleDateString(
+        'en-GB',
+        mergeOrgTimeZoneIntoFormatOptions(orgTzForDisplay, {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+      );
+    }
+    return selectedDay.toLocaleDateString(
+      'en-GB',
+      mergeOrgTimeZoneIntoFormatOptions(orgTzForDisplay, {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
         year: 'numeric',
-      });
-    }
-    return selectedDay.toLocaleDateString('en-GB', { timeZone: 'UTC', 
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  }, [view, anchor, gridStart, selectedDay]);
+      }),
+    );
+  }, [view, anchor, gridStart, selectedDay, orgTzForDisplay]);
 
   function goPrev() {
     if (view === 'month') setAnchor((a) => addMonths(a, -1));
@@ -510,9 +525,8 @@ export function CalendarClient({
         <div className="flex flex-wrap gap-2">
           <a
             href="/api/google/oauth/start?type=calendar"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3.5 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
+            className="rounded-lg border border-[#d8d8d8] bg-white px-3.5 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
           >
-            <RefreshCw className="h-4 w-4" aria-hidden />
             Sync Google Calendar
           </a>
           {canManage ? (
@@ -521,8 +535,7 @@ export function CalendarClient({
               className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
               onClick={openAddEvent}
             >
-              <CalendarPlus className="h-4 w-4" aria-hidden />
-              Add event
+              + Add event
             </button>
           ) : null}
         </div>

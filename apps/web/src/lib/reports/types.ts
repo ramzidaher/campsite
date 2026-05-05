@@ -26,4 +26,6 @@ export type ReportConfig = {
   sort?: { field: string; direction: 'asc' | 'desc' }[];
   groupBy?: string[];
   quickFilters?: string[];
+  /** When non-empty, only include rows whose primary department id matches one of these ids. */
+  departmentIds?: string[];
 };

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { createAnimatable } from 'animejs';
 
 const WORDS = [
   'COMMUNICATIONS', '/', 'SCHEDULING', '/', 'RECRUITMENT', '/',
@@ -25,14 +24,8 @@ export function MarqueeRail() {
     const elB = railBRef.current;
     if (!elA || !elB) return;
 
-    // createAnimatable keeps a live interpolated target — calling the setter
-    // mid-flight re-targets from the current position, giving natural deceleration.
-    const aA = createAnimatable(elA, {
-      translateX: { duration: 700, ease: 'outExpo' },
-    });
-    const aB = createAnimatable(elB, {
-      translateX: { duration: 700, ease: 'outExpo' },
-    });
+    elA.style.transition = 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1)';
+    elB.style.transition = 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1)';
 
     let xA = 0;
     let xB = -160; // stagger the two rails so they don't feel mirrored
@@ -43,15 +36,15 @@ export function MarqueeRail() {
       lastScrollY = window.scrollY;
       xA += -delta * 0.45; // left row drifts left on scroll down
       xB += delta * 0.45;  // right row drifts right on scroll down
-      aA.translateX(xA);
-      aB.translateX(xB);
+      elA.style.transform = `translateX(${xA}px)`;
+      elB.style.transform = `translateX(${xB}px)`;
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', onScroll);
-      aA.revert();
-      aB.revert();
+      elA.style.transition = '';
+      elB.style.transition = '';
     };
   }, []);
 

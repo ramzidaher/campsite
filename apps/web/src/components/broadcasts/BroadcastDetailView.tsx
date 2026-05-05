@@ -25,7 +25,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { useOrgTimeZone } from '@/components/providers/OrgTimeZoneContext';
 import { BroadcastRepliesClient, type BroadcastReplyRow } from '@/components/broadcasts/BroadcastRepliesClient';
+import { mergeOrgTimeZoneIntoFormatOptions } from '@/lib/datetime';
 import { broadcastNavigationFromFeedCache } from '@/lib/broadcasts/broadcastNavigationFromFeedCache';
 import {
   BROADCAST_LAST_VIEWED_ID_KEY,
@@ -78,6 +80,7 @@ export function BroadcastDetailView({
   mayEdit: boolean;
   initialReplies: BroadcastReplyRow[] | null;
 }) {
+  const orgTz = useOrgTimeZone();
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -611,10 +614,13 @@ export function BroadcastDetailView({
             <>
               <span className="mx-2 text-[#9b9b9b]">·</span>
               <time dateTime={initial.sent_at} suppressHydrationWarning>
-                {new Date(initial.sent_at).toLocaleString('en-GB', { timeZone: 'UTC', 
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
+                {new Date(initial.sent_at).toLocaleString(
+                  'en-GB',
+                  mergeOrgTimeZoneIntoFormatOptions(orgTz, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  }),
+                )}
               </time>
             </>
           ) : null}
@@ -704,11 +710,18 @@ export function BroadcastDetailView({
           <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-4 text-sm text-amber-950">
             <p className="font-medium text-amber-950">Date or time in this message</p>
             <p className="mt-1 text-amber-950/90" suppressHydrationWarning>
-              {parsedRange.start.toLocaleString('en-GB', { timeZone: 'UTC', 
-                dateStyle: 'full',
-                timeStyle: 'short',
-              })}{' '}
-              - {parsedRange.end.toLocaleTimeString('en-GB', { timeZone: 'UTC',  timeStyle: 'short' })}
+              {parsedRange.start.toLocaleString(
+                'en-GB',
+                mergeOrgTimeZoneIntoFormatOptions(orgTz, {
+                  dateStyle: 'full',
+                  timeStyle: 'short',
+                }),
+              )}{' '}
+              -{' '}
+              {parsedRange.end.toLocaleTimeString(
+                'en-GB',
+                mergeOrgTimeZoneIntoFormatOptions(orgTz, { timeStyle: 'short' }),
+              )}
             </p>
             <button
               type="button"

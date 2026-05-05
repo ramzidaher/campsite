@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { animate, splitText } from 'animejs';
 import { useAnimeReveal } from '@/hooks/useAnimeReveal';
 
 const ISSUES = [
@@ -32,20 +31,41 @@ export function ProblemSection() {
     const quoteEls = Array.from(chaos.querySelectorAll<HTMLElement>('.problem-quote'));
     if (!quoteEls.length) return;
 
-    // Split every quote into individual word spans
-    const splitters = quoteEls.map((el) => splitText(el, { words: true }));
+    const splitters = quoteEls.map((el) => {
+      const originalText = el.textContent ?? '';
+      const words = originalText.split(/\s+/).filter(Boolean);
+      const fragments: HTMLElement[] = [];
+      el.textContent = '';
+      words.forEach((word, index) => {
+        const span = document.createElement('span');
+        span.textContent = word;
+        span.style.display = 'inline-block';
+        span.style.opacity = '0';
+        fragments.push(span);
+        el.appendChild(span);
+        if (index < words.length - 1) {
+          el.appendChild(document.createTextNode(' '));
+        }
+      });
+      return {
+        words: fragments,
+        revert: () => {
+          el.textContent = originalText;
+        },
+      };
+    });
 
     // Pre-hide all words + assign staggered delays that leave a visible gap between quotes
     const allWords: HTMLElement[] = [];
     let cursor = 80; // initial delay before first word
     splitters.forEach((s) => {
-      (s.words as HTMLElement[]).forEach((w, wi) => {
+      s.words.forEach((w, wi) => {
         w.style.opacity = '0';
         w.style.display = 'inline-block'; // needed for translateY
         w.dataset.wd = String(cursor + wi * 22);
         allWords.push(w);
       });
-      cursor += (s.words as HTMLElement[]).length * 22 + 90; // inter-quote pause
+      cursor += s.words.length * 22 + 90; // inter-quote pause
     });
 
     // Hide the row numbers + source tags too so they reveal together with the first word
@@ -63,20 +83,29 @@ export function ProblemSection() {
         observer.disconnect();
 
         // Animate all words using the precomputed per-word delay
-        animate(allWords, {
-          opacity: [0, 1],
-          translateY: [12, 0],
-          duration: 560,
-          delay: (el: HTMLElement) => parseInt(el.dataset.wd ?? '0'),
-          ease: 'outCubic',
+        allWords.forEach((wordEl) => {
+          wordEl.animate(
+            [
+              { opacity: 0, transform: 'translateY(12px)' },
+              { opacity: 1, transform: 'translateY(0px)' },
+            ],
+            {
+              duration: 560,
+              delay: parseInt(wordEl.dataset.wd ?? '0', 10),
+              easing: 'cubic-bezier(0.33, 1, 0.68, 1)',
+              fill: 'forwards',
+            }
+          );
         });
 
         // Row side-labels fade in aligned to each quote
-        animate(sideTags, {
-          opacity: [0, 1],
-          duration: 400,
-          delay: (el: HTMLElement) => parseInt(el.dataset.wd ?? '0') + 60,
-          ease: 'outExpo',
+        sideTags.forEach((tagEl) => {
+          tagEl.animate([{ opacity: 0 }, { opacity: 1 }], {
+            duration: 400,
+            delay: parseInt(tagEl.dataset.wd ?? '0', 10) + 60,
+            easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+            fill: 'forwards',
+          });
         });
       },
       { threshold: 0.08, rootMargin: '0px 0px -60px 0px' }

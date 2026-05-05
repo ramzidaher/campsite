@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { animate, onScroll, stagger } from 'animejs';
 
 const STATS = [
   { display: '500+', end: 500, suffix: '+', label: 'Teams running shifts on Campsite' },
@@ -27,55 +26,64 @@ export function StatsSection() {
     const items = Array.from(el.querySelectorAll<HTMLElement>('.stat-item'));
     const numberEls = Array.from(el.querySelectorAll<HTMLElement>('.stat-number'));
     let triggered = false;
+    const rafIds: number[] = [];
+    const runCounter = (stat: (typeof STATS)[number], numEl: HTMLElement, delayMs: number) => {
+      const duration = 1600;
+      const startAt = performance.now() + delayMs;
+      const tick = (now: number) => {
+        if (now < startAt) {
+          rafIds.push(requestAnimationFrame(tick));
+          return;
+        }
+        const progress = Math.min((now - startAt) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const value = Math.round(stat.end * eased);
+        numEl.textContent = `${stat.prefix ?? ''}${value}${stat.suffix}`;
+        if (progress < 1) {
+          rafIds.push(requestAnimationFrame(tick));
+          return;
+        }
+        numEl.textContent = stat.display;
+      };
+      rafIds.push(requestAnimationFrame(tick));
+    };
 
-    // Create the entry animation (paused — scroll observer controls playback)
-    const entryAnim = animate(items, {
-      opacity: [0, 1],
-      translateY: [40, 0],
-      duration: 700,
-      delay: stagger(130),
-      ease: 'outExpo',
-      autoplay: false,
-    });
-
-    const scrollObs = onScroll({
-      target: el,
-      enter: { container: 'bottom', target: 'bottom' },
-      onEnter: () => {
-        if (triggered) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (triggered || !entries.some((entry) => entry.isIntersecting)) return;
         triggered = true;
 
-        // Play the stagger reveal
-        entryAnim.play();
+        items.forEach((item, index) => {
+          item.animate(
+            [
+              { opacity: 0, transform: 'translateY(40px)' },
+              { opacity: 1, transform: 'translateY(0px)' },
+            ],
+            {
+              duration: 700,
+              delay: index * 130,
+              easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+              fill: 'forwards',
+            }
+          );
+        });
 
-        // Count up each number, each with its own staggered delay
         STATS.forEach((stat, i) => {
           const numEl = numberEls[i];
           if (!numEl) return;
-          const counter = { n: 0 };
-          animate(counter, {
-            n: [0, stat.end],
-            duration: 1600,
-            delay: i * 130 + 300,
-            ease: 'outExpo',
-            onUpdate: () => {
-              const v = Math.round(counter.n);
-              numEl.textContent = `${stat.prefix ?? ''}${v}${stat.suffix}`;
-            },
-            onComplete: () => {
-              // Snap to exact final value in case of rounding
-              numEl.textContent = stat.display;
-            },
-          });
+          runCounter(stat, numEl, i * 130 + 300);
         });
 
-        scrollObs.revert();
+        observer.disconnect();
       },
-    });
+      { threshold: 0.2, rootMargin: '0px 0px -10% 0px' }
+    );
+
+    observer.observe(el);
 
     return () => {
-      scrollObs.revert();
-      entryAnim.revert();
+      observer.disconnect();
+      rafIds.forEach((id) => cancelAnimationFrame(id));
     };
   }, []);
 

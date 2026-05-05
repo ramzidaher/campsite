@@ -39,7 +39,7 @@ export function sanitizeReportConfig(input: unknown, domains: string[]): ReportC
   const raw = (input && typeof input === 'object' ? input : {}) as Partial<ReportConfig>;
   const normalizedDomains = domains.filter((domain): domain is 'hr' | 'finance' => ALLOWED_DOMAINS.has(domain));
   const domainSet = new Set(normalizedDomains);
-  const fields = asStringList(raw.fields, 80).filter((fieldKey) => {
+  const fields = asStringList(raw.fields, 120).filter((fieldKey) => {
     const def = REPORT_FIELD_BY_KEY.get(fieldKey);
     return Boolean(def && domainSet.has(def.domain));
   });
@@ -62,6 +62,7 @@ export function sanitizeReportConfig(input: unknown, domains: string[]): ReportC
     .filter((entry): entry is { field: string; direction: 'asc' | 'desc' } => Boolean(entry))
     .slice(0, 4);
   const groupBy = asStringList(raw.groupBy, 4).filter((field) => REPORT_FIELD_BY_KEY.has(field));
+  const departmentIds = asStringList(raw.departmentIds, 200);
 
   return {
     domains: normalizedDomains.length ? normalizedDomains : ['hr'],
@@ -71,6 +72,7 @@ export function sanitizeReportConfig(input: unknown, domains: string[]): ReportC
     sort,
     groupBy,
     quickFilters: asStringList(raw.quickFilters, 12),
+    departmentIds,
   };
 }
 

@@ -1,5 +1,7 @@
 import { CareersHeader, CareersJobsHero } from '@/app/(public)/jobs/CareersBranding';
 import { buildPublicJobsHref } from '@/app/(public)/jobs/buildPublicJobsHref';
+import { advertClosingDateToApplicationsCloseAtIso } from '@/lib/datetime/advertClosingDateToApplicationsCloseAtIso';
+import { mergeOrgTimeZoneIntoFormatOptions } from '@/lib/datetime';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
@@ -69,18 +71,30 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-function formatDateValue(iso: string | null | undefined): string {
+function formatDateValue(iso: string | null | undefined, orgTz: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(
+    'en-GB',
+    mergeOrgTimeZoneIntoFormatOptions(orgTz, { day: 'numeric', month: 'short', year: 'numeric' }),
+  );
 }
 
-function formatDateTimeValue(iso: string | null | undefined): string {
+function formatDateTimeValue(iso: string | null | undefined, orgTz: string | null | undefined): string {
   if (!iso) return 'Rolling';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return 'Rolling';
-  return d.toLocaleString('en-GB', { timeZone: 'UTC',  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(
+    'en-GB',
+    mergeOrgTimeZoneIntoFormatOptions(orgTz, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  );
 }
 
 function parseDateList(value: unknown): string[] {
@@ -187,7 +201,7 @@ export default async function PublicJobsPage({
       }),
       supabase
         .from('organisations')
-        .select('name, logo_url, brand_preset_key, brand_tokens, brand_policy')
+        .select('name, logo_url, brand_preset_key, brand_tokens, brand_policy, timezone')
         .eq('slug', orgSlug)
         .maybeSingle(),
     ]);
@@ -203,6 +217,7 @@ export default async function PublicJobsPage({
   const hasNext = ((data as PublicJobListRow[] | null) ?? []).length > PAGE_SIZE;
   const hasPrev = page > 1;
   const listingIds = rows.map((r) => r.job_listing_id);
+  const orgTimeZone = String((orgLookup as { timezone?: string | null } | null)?.timezone ?? '').trim() || null;
 
   const timelineMap = new Map<string, PublicJobTimelineRow>();
   if (listingIds.length > 0) {
@@ -246,7 +261,7 @@ export default async function PublicJobsPage({
         recruitment_request_id: reqId || null,
         applications_close_at:
           String(row.applications_close_at ?? '').trim() ||
-          (req?.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null),
+          advertClosingDateToApplicationsCloseAtIso(req?.advert_closing_date ?? null, orgTimeZone),
         start_date_needed:
           String(row.start_date_needed ?? '').trim() ||
           String(req?.start_date_needed ?? '').trim() ||
@@ -467,10 +482,13 @@ export default async function PublicJobsPage({
                   ? 'Yesterday'
                   : daysAgo < 30
                   ? `${daysAgo}d ago`
-                  : new Date(job.published_at!).toLocaleDateString('en-GB', { timeZone: 'UTC', 
-                      month: 'short',
-                      year: 'numeric',
-                    });
+                  : new Date(job.published_at!).toLocaleDateString(
+                      'en-GB',
+                      mergeOrgTimeZoneIntoFormatOptions(orgTimeZone, {
+                        month: 'short',
+                        year: 'numeric',
+                      }),
+                    );
 
               return (
                 <li key={job.job_listing_id}>
@@ -527,11 +545,11 @@ export default async function PublicJobsPage({
                     <div className="mt-3 space-y-1.5 text-[11px]" style={{ color: 'var(--org-brand-muted)' }}>
                       <p>
                         <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>Closing:</span>{' '}
-                        {formatDateTimeValue(timeline?.applications_close_at)}
+                        {formatDateTimeValue(timeline?.applications_close_at, orgTimeZone)}
                       </p>
                       <p>
                         <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>Start:</span>{' '}
-                        {formatDateValue(timeline?.start_date_needed)}
+                        {formatDateValue(timeline?.start_date_needed, orgTimeZone)}
                       </p>
                       <p>
                         <span className="font-medium" style={{ color: 'var(--org-brand-text)' }}>Shortlisting:</span>{' '}

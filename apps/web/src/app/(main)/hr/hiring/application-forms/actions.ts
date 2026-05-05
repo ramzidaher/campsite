@@ -260,6 +260,12 @@ function validateFormQuestions(questions: FormQuestionPersist[]): string | null 
     if (q.maxLength != null && (q.maxLength < 1 || q.maxLength > 20000)) {
       return 'Max length must be between 1 and 20000.';
     }
+    if (q.questionType === 'section_title') {
+      if (q.required) return 'Section titles cannot be required.';
+      if (q.scoringEnabled) return 'Section titles cannot use scoring.';
+      if (q.scoringScaleMax !== 0) return 'Section titles must use scoring scale 0.';
+      if (q.isPageBreak) return 'Section title cannot be combined with a page break.';
+    }
     if (!Number.isInteger(q.scoringScaleMax) || q.scoringScaleMax < 0 || q.scoringScaleMax > 5) {
       return 'Scoring scale must be an integer between 0 and 5.';
     }
