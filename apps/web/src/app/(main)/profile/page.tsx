@@ -489,11 +489,9 @@ export default async function MyProfilePage({
   }
 
   const initials = getProfileInitials(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
+  const rawAvatarUrl = (profile as { avatar_url?: string | null }).avatar_url;
   const profileAvatarUrl =
-    typeof (profile as { avatar_url?: string | null }).avatar_url === 'string' &&
-    (profile as { avatar_url?: string | null }).avatar_url.trim().length > 0
-      ? (profile as { avatar_url: string }).avatar_url
-      : null;
+    typeof rawAvatarUrl === 'string' && rawAvatarUrl.trim().length > 0 ? rawAvatarUrl : null;
   const leaveDaysLeft = Math.max(0, Number(annualEntitlementDays ?? 0) - annualUsed);
   const tenureLabel =
     typeof (fileRow as { length_of_service_years?: number } | undefined)?.length_of_service_years === 'number' &&

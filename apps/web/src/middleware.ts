@@ -62,7 +62,8 @@ export async function middleware(request: NextRequest) {
   if (supabaseUrl && supabasePublicKey) {
     const supabase = createServerClient(supabaseUrl, supabasePublicKey, {
       global: {
-        fetch: (input, init) => fetchWithTimeout(input, init, getSupabaseFetchTimeoutMs()),
+        fetch: (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+          fetchWithTimeout(input, init, getSupabaseFetchTimeoutMs()),
       },
       cookies: {
         getAll() {
