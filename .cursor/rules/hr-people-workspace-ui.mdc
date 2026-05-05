@@ -58,7 +58,7 @@ Use these patterns when adding or changing HR, hiring, job listing, or recruitme
 
 ## Snapshot / metric cards (People home, similar hubs)
 
-1. Optional **4px colored top border** per category + `rounded-xl` + `p-6` + divider above footer “View details →”.
+1. Optional **4px colored top border** per category + `rounded-xl` + `p-6` + divider above footer “View details” (no unicode arrow glyphs in label text).
 2. Keep **serif off the card**; cards are sans.
 
 When in doubt, open **`LeaveHubClient`** and **`apps/web/src/app/(main)/hr/page.tsx`** as reference implementations.

@@ -39,14 +39,21 @@ export default async function HROrgChartPage() {
       getCachedOrgChartPageData(orgId),
       500
     );
-  } catch {
-    return <AccessMessage message="You do not have access to this org chart right now." />;
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : 'Unknown error';
+    return (
+      <AccessMessage message={`Could not load org chart data (${detail}). Try refreshing the page, or confirm you are signed in with access to this organisation.`} />
+    );
   }
   const chartTitle = `${shellBundleOrgName(bundle) ?? 'Organisation'} Chart`;
 
   const view = (
-    <div style={{ height: 'calc(100dvh - 60px)', background: '#0a0a0c' }}>
-      <OrgChartClient rows={(pageData.rows ?? []) as HRDirectoryRow[]} chartTitle={chartTitle} />
+    <div className="h-[calc(100dvh-60px)] bg-[#faf9f6] font-sans text-[#121212]">
+      <OrgChartClient
+        key={orgId}
+        rows={(pageData.rows ?? []) as HRDirectoryRow[]}
+        chartTitle={chartTitle}
+      />
     </div>
   );
   warnIfSlowServerPath('/admin/hr/org-chart', pathStartedAtMs);

@@ -395,6 +395,14 @@ export function AppShell({
     }
   };
 
+  // Sum of all badge counts in a section — shown on the collapsed header.
+  const sectionBadgeTotal = (items: MainShellAdminNavItem[] | null) =>
+    items ? items.reduce((s, i) => { const r = withLiveBadge(i); return s + (r.badge ?? 0) + (r.secondaryBadge ?? 0); }, 0) : 0;
+  const adminSectionBadge   = sectionBadgeTotal(adminNavItems);
+  const managerSectionBadge = sectionBadgeTotal(managerNavItems);
+  const hrSectionBadge      = sectionBadgeTotal(hrNavItems);
+  const financeSectionBadge = sectionBadgeTotal(financeNavItems);
+
   // Top-bar notification bell — rebuilt from live counts so new items appear
   // even if they were zero on the initial server render (and thus filtered out).
   const liveTopBarNotifications = useMemo<TopBarNotificationItem[]>(() => {
@@ -546,6 +554,7 @@ export function AppShell({
 
   const pathname = usePathname() ?? '';
   const showApprovals = isApproverRole(profileRole);
+  const suppressHolidayOverlay = pathname === '/hr';
   const totalNotifCount = useMemo(
     () => liveTopBarNotifications.reduce((sum, item) => sum + item.count, 0),
     [liveTopBarNotifications]
@@ -642,7 +651,7 @@ export function AppShell({
       }}
     >
       <CheckboxUiSoundCapture />
-      <HolidayOverlay mode={effectiveMode} />
+      {suppressHolidayOverlay ? null : <HolidayOverlay mode={effectiveMode} decorations={shellTheme.decorations} />}
       {mobileNav ? (
         <button
           type="button"
@@ -745,7 +754,7 @@ export function AppShell({
               badge={liveUnreadBroadcasts > 0 ? liveUnreadBroadcasts : undefined}
               onNavigate={closeMobile}
             />
-            <NavLink href="/calendar" icon="calendar" label="Calendar" onNavigate={closeMobile} />
+            <NavLink href="/calendar" icon="calendar" label="Calendar" badge={liveCalendarNotifications > 0 ? liveCalendarNotifications : undefined} onNavigate={closeMobile} />
             <NavLink
               href="/rota"
               icon="rota"
@@ -845,6 +854,11 @@ export function AppShell({
                 <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.02em] text-[#ea9b84]">
                   Admin
                 </span>
+                {!adminNavExpanded && adminSectionBadge > 0 ? (
+                  <span className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
+                    {adminSectionBadge > 99 ? '99+' : adminSectionBadge}
+                  </span>
+                ) : null}
                 <ChevronDown
                   className={[
                     'shrink-0 text-[#a86052] transition-transform duration-200',
@@ -906,6 +920,20 @@ export function AppShell({
                               <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#cb6f35]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
+                            {((item_.badge ?? 0) > 0 || (item_.secondaryBadge ?? 0) > 0) ? (
+                              <span className="flex shrink-0 items-center gap-1">
+                                {(item_.secondaryBadge ?? 0) > 0 ? (
+                                  <span className="min-w-[18px] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-[10px] font-semibold text-amber-950" title={item_.secondaryBadgeTitle ?? 'Needs attention'}>
+                                    {item_.secondaryBadge! > 99 ? '99+' : item_.secondaryBadge}
+                                  </span>
+                                ) : null}
+                                {(item_.badge ?? 0) > 0 ? (
+                                  <span className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
+                                    {item_.badge! > 99 ? '99+' : item_.badge}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : null}
                           </Link>
                         </Fragment>
                       );
@@ -958,6 +986,11 @@ export function AppShell({
                 <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.02em] text-[#a89af7]">
                   {managerNavSectionLabel}
                 </span>
+                {!managerNavExpanded && managerSectionBadge > 0 ? (
+                  <span className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
+                    {managerSectionBadge > 99 ? '99+' : managerSectionBadge}
+                  </span>
+                ) : null}
                 <ChevronDown
                   className={[
                     'shrink-0 text-[#7e74d9] transition-transform duration-200',
@@ -1019,6 +1052,20 @@ export function AppShell({
                               <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#8f7cf7]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
+                            {((item_.badge ?? 0) > 0 || (item_.secondaryBadge ?? 0) > 0) ? (
+                              <span className="flex shrink-0 items-center gap-1">
+                                {(item_.secondaryBadge ?? 0) > 0 ? (
+                                  <span className="min-w-[18px] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-[10px] font-semibold text-amber-950" title={item_.secondaryBadgeTitle ?? 'Needs attention'}>
+                                    {item_.secondaryBadge! > 99 ? '99+' : item_.secondaryBadge}
+                                  </span>
+                                ) : null}
+                                {(item_.badge ?? 0) > 0 ? (
+                                  <span className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
+                                    {item_.badge! > 99 ? '99+' : item_.badge}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : null}
                           </Link>
                         </Fragment>
                       );
@@ -1071,6 +1118,11 @@ export function AppShell({
                 <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.02em] text-[#80d5ad]">
                   Finance
                 </span>
+                {!financeNavExpanded && financeSectionBadge > 0 ? (
+                  <span className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
+                    {financeSectionBadge > 99 ? '99+' : financeSectionBadge}
+                  </span>
+                ) : null}
                 <ChevronDown
                   className={[
                     'shrink-0 text-[#6dc69b] transition-transform duration-200',
@@ -1132,6 +1184,20 @@ export function AppShell({
                               <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#2da772]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
+                            {((item_.badge ?? 0) > 0 || (item_.secondaryBadge ?? 0) > 0) ? (
+                              <span className="flex shrink-0 items-center gap-1">
+                                {(item_.secondaryBadge ?? 0) > 0 ? (
+                                  <span className="min-w-[18px] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-[10px] font-semibold text-amber-950" title={item_.secondaryBadgeTitle ?? 'Needs attention'}>
+                                    {item_.secondaryBadge! > 99 ? '99+' : item_.secondaryBadge}
+                                  </span>
+                                ) : null}
+                                {(item_.badge ?? 0) > 0 ? (
+                                  <span className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
+                                    {item_.badge! > 99 ? '99+' : item_.badge}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : null}
                           </Link>
                         </Fragment>
                       );
@@ -1184,6 +1250,11 @@ export function AppShell({
                 <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.02em] text-[#7ecaf2]">
                   HR
                 </span>
+                {!hrNavExpanded && hrSectionBadge > 0 ? (
+                  <span className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
+                    {hrSectionBadge > 99 ? '99+' : hrSectionBadge}
+                  </span>
+                ) : null}
                 <ChevronDown
                   className={[
                     'shrink-0 text-[#368fb8] transition-transform duration-200',
@@ -1245,6 +1316,20 @@ export function AppShell({
                               <span className={['h-[7px] w-[7px] shrink-0 rounded-full bg-[#2f9cd4]', active ? 'opacity-100' : 'opacity-75'].join(' ')} />
                             )}
                             <span className="min-w-0 flex-1 truncate">{item_.label}</span>
+                            {((item_.badge ?? 0) > 0 || (item_.secondaryBadge ?? 0) > 0) ? (
+                              <span className="flex shrink-0 items-center gap-1">
+                                {(item_.secondaryBadge ?? 0) > 0 ? (
+                                  <span className="min-w-[18px] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-[10px] font-semibold text-amber-950" title={item_.secondaryBadgeTitle ?? 'Needs attention'}>
+                                    {item_.secondaryBadge! > 99 ? '99+' : item_.secondaryBadge}
+                                  </span>
+                                ) : null}
+                                {(item_.badge ?? 0) > 0 ? (
+                                  <span className="min-w-[18px] rounded-full bg-[#E11D48] px-1.5 py-0.5 text-center text-[10px] font-semibold text-white">
+                                    {item_.badge! > 99 ? '99+' : item_.badge}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : null}
                           </Link>
                         </Fragment>
                       );

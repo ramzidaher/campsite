@@ -20,11 +20,18 @@ export const getAuthUser = cache(async () => {
     return user;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code ?? '')
+        : '';
     const isRetryableFetchFailure =
       message.toLowerCase().includes('fetch failed') ||
       message.includes('AuthRetryableFetchError');
-    if (isRetryableFetchFailure) {
-      // Fail open on transient auth network issues so SSR routes can still render.
+    const isRefreshRotationRace =
+      code === 'refresh_token_already_used' ||
+      code === 'refresh_token_not_found' ||
+      message.includes('Invalid Refresh Token: Already Used');
+    if (isRetryableFetchFailure || isRefreshRotationRace) {
       return null;
     }
     throw error;

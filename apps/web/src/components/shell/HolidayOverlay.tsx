@@ -1004,19 +1004,68 @@ function EarlyMayOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// GENERIC (org custom / API-added holidays)
+// ═══════════════════════════════════════════════════════════════════════════
+function GenericCelebrationOverlay({ emojis }: { emojis: string[] }) {
+  const primary = emojis[0] ?? '✨';
+  const secondary = emojis[1] ?? '🎉';
+  const count = 14;
+  const positions = useMemo(() => spreadLeft(count), []);
+  const items = useMemo(
+    () =>
+      positions.map((left, i) => ({
+        left,
+        drop: rand(18, 48, i * 2.1),
+        delay: rand(0, 2.2, i * 1.7),
+        dur: rand(1.6, 3.2, i * 2.5),
+        useEmoji: i % 3 === 0,
+        emoji: i % 2 === 0 ? primary : secondary,
+      })),
+    [positions, primary, secondary]
+  );
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[99]" aria-hidden>
+      {items.map((item, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: item.left,
+            top: `${item.drop}%`,
+            animation: `cs-sparkle ${item.dur}s ease-in-out ${item.delay}s infinite`,
+            fontSize: item.useEmoji ? '22px' : '10px',
+            opacity: item.useEmoji ? 0.85 : 0.55,
+          }}
+        >
+          {item.useEmoji ? item.emoji : '✦'}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT
 // ═══════════════════════════════════════════════════════════════════════════
-export function HolidayOverlay({ mode }: { mode: CelebrationMode }) {
+export function HolidayOverlay({
+  mode,
+  decorations,
+}: {
+  mode: CelebrationMode;
+  /** When set (e.g. from org overrides), used for generic `org_custom:` overlays. */
+  decorations?: string[];
+}) {
   if (mode === 'off') return null;
   return (
     <>
       {styleTag(KEYFRAMES)}
-      <Decoration mode={mode} />
+      <Decoration mode={mode} decorations={decorations} />
     </>
   );
 }
 
-function Decoration({ mode }: { mode: CelebrationMode }) {
+function Decoration({ mode, decorations }: { mode: CelebrationMode; decorations?: string[] }) {
   switch (mode) {
     case 'christmas':
     case 'boxing_day':             return <ChristmasLights />;
@@ -1046,6 +1095,14 @@ function Decoration({ mode }: { mode: CelebrationMode }) {
     case 'black_friday':           return <BlackFridayOverlay />;
     case 'fathers_day':            return <FathersDayOverlay />;
     case 'early_may_bank_holiday': return <EarlyMayOverlay />;
-    default:                       return null;
+    default:
+      if (typeof mode === 'string' && mode.startsWith('org_custom:')) {
+        const em =
+          decorations && decorations.length > 0
+            ? decorations.filter(Boolean).slice(0, 2)
+            : (['✨', '🎉'] as string[]);
+        return <GenericCelebrationOverlay emojis={em} />;
+      }
+      return null;
   }
 }

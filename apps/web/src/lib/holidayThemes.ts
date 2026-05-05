@@ -472,6 +472,11 @@ function toCustomWindow(override: OrgCelebrationModeOverride): ((now: Date) => b
     );
 }
 
+/**
+ * Merges org rows into built-in celebration defs. If an org row sets all four
+ * `auto_*` fields, those dates drive `isActiveNow` (e.g. after Calendarific sync).
+ * Otherwise built-in `MODE_DEFS.isActiveNow` remains the fallback until sync runs.
+ */
 function buildModeDefs(overrides: OrgCelebrationModeOverride[] = []): CelebrationModeDef[] {
   const byKey = new Map(overrides.map((o) => [o.mode_key, o]));
   const builtIns: CelebrationModeDef[] = MODE_DEFS.flatMap((base) => {

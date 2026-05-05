@@ -8,7 +8,11 @@ import { resolveHostRequestContext } from './lib/middleware/resolveHostRequestCo
 import { getSupabasePublicKey, getSupabaseUrl } from './lib/supabase/env';
 import { getPlatformAdminHost } from './lib/tenant/hostConfig';
 
-const MIDDLEWARE_AUTH_TIMEOUT_MS = 1500;
+/** `getUser()` can block on refresh + network; short timeouts falsely redirect to login under load. */
+const MIDDLEWARE_AUTH_TIMEOUT_MS = Number.parseInt(
+  process.env.CAMPSITE_MIDDLEWARE_AUTH_TIMEOUT_MS ?? '8000',
+  10
+);
 const AUTH_COOKIE_NAME_PATTERNS = [
   /^sb-[^-]+-auth-token(?:\.\d+)?$/,
   /^sb-[^-]+-auth-token-code-verifier$/,
@@ -52,7 +56,8 @@ export async function middleware(request: NextRequest) {
   const supabasePublicKey = getSupabasePublicKey();
 
   let user: User | null = null;
-  let authCheckTimedOut = false;
+  /** Let the request reach the app so RSC can re-run auth instead of bouncing to login on stalls/races. */
+  let authTransientFailure = false;
   if (supabaseUrl && supabasePublicKey) {
     const supabase = createServerClient(supabaseUrl, supabasePublicKey, {
       cookies: {
@@ -81,22 +86,29 @@ export async function middleware(request: NextRequest) {
       user = authResult.data.user ?? null;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error ?? '');
+      const lowerMessage = message.toLowerCase();
       const code =
         typeof error === 'object' && error !== null && 'code' in error
           ? String((error as { code?: unknown }).code ?? '')
           : '';
-      authCheckTimedOut = message.includes('middleware auth timeout');
+      const authTimedOut = message.includes('middleware auth timeout');
       const isRefreshTokenAlreadyUsed =
         code === 'refresh_token_already_used' || message.includes('Invalid Refresh Token: Already Used');
       const isRefreshTokenNotFound = code === 'refresh_token_not_found';
-      if (isRefreshTokenAlreadyUsed) {
-        // Supabase refresh tokens rotate; concurrent requests can transiently race on refresh.
-        // Treat this as fail-open in middleware to avoid spurious logouts.
-        authCheckTimedOut = true;
-      } else if (message.includes('Invalid Refresh Token') || isRefreshTokenNotFound) {
+      const isTransientNetworkAuthError =
+        lowerMessage.includes('fetch failed') || message.includes('AuthRetryableFetchError');
+      if (
+        authTimedOut ||
+        isRefreshTokenAlreadyUsed ||
+        isRefreshTokenNotFound ||
+        isTransientNetworkAuthError
+      ) {
+        // Concurrent tab/navigation refreshes can lose the rotation race (`already_used` / `not_found`).
+        // Slow auth must not clear cookies or force login — layouts and pages call `getUser()` again.
+        authTransientFailure = true;
+      } else if (message.includes('Invalid Refresh Token')) {
         clearStaleSupabaseAuthCookies(request, response);
       }
-      // Fail open on transient auth/provider stalls so public/login routes remain responsive.
       user = null;
     }
   }
@@ -140,6 +152,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(dest);
     }
     if (!user) {
+      if (authTransientFailure) {
+        return response;
+      }
       dest.pathname = '/login';
       dest.searchParams.set('next', '/dashboard');
       return NextResponse.redirect(dest);
@@ -172,12 +187,12 @@ export async function middleware(request: NextRequest) {
     pathname !== '/' &&
     !isAuthEmailReturn
   ) {
+    if (authTransientFailure) {
+      return response;
+    }
     const login = request.nextUrl.clone();
     login.pathname = '/login';
     login.searchParams.set('next', pathname);
-    if (authCheckTimedOut) {
-      login.searchParams.set('error', 'auth_temporarily_unavailable');
-    }
     return NextResponse.redirect(login);
   }
 

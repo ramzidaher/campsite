@@ -1,6 +1,7 @@
 'use client';
 
 import { FormSelect } from '@campsite/ui/web';
+import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -1154,8 +1155,8 @@ export function FounderHqApp({
                   <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
                     <div className="section-head" style={{ margin: 0 }}>
                       <div className="section-title">Largest organisations (by members)</div>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => navTo('campsites')}>
-                        View all →
+                      <button type="button" className="btn btn-ghost btn-sm inline-flex items-center gap-1" onClick={() => navTo('campsites')}>
+                        View all <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                       </button>
                     </div>
                   </div>

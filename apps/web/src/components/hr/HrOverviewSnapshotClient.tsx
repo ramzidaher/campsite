@@ -4,16 +4,6 @@ import type { ShellBadgeCounts } from '@/lib/shell/shellBadgeCounts';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
-type SnapshotAccent =
-  | 'hiring'
-  | 'jobsLive'
-  | 'jobsDraft'
-  | 'applicants'
-  | 'schedule'
-  | 'directory'
-  | 'alerts'
-  | 'onboarding';
-
 type HrOverviewStats = {
   liveJobs: number | null;
   draftJobs: number | null;
@@ -23,54 +13,81 @@ type HrOverviewStats = {
   upcomingInterviewSlots: number | null;
 };
 
-const SNAPSHOT_ACCENT_TOP: Record<SnapshotAccent, string> = {
-  hiring: 'border-t-[#7c3aed]',
-  jobsLive: 'border-t-[#16a34a]',
-  jobsDraft: 'border-t-[#a8a29e]',
-  applicants: 'border-t-[#2563eb]',
-  schedule: 'border-t-[#f59e0b]',
-  directory: 'border-t-[#ea580c]',
-  alerts: 'border-t-[#dc2626]',
-  onboarding: 'border-t-[#0d9488]',
-};
-
-function StatTile({
-  href,
-  accent,
-  eyebrow,
-  value,
-  label,
-  sub,
-}: {
+type OverviewRow = {
   href: string;
-  accent: SnapshotAccent;
+  group: 'Hiring & jobs' | 'Schedule & org' | 'Alerts';
   eyebrow: string;
   value: number | string;
   label: string;
-  sub?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      prefetch={false}
-      className={`group flex min-h-[11.5rem] flex-col overflow-hidden rounded-xl border border-[#e8e8e8] bg-white border-t-4 p-6 shadow-sm transition-shadow hover:shadow-[0_6px_24px_rgba(0,0,0,0.06)] ${SNAPSHOT_ACCENT_TOP[accent]}`}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">{eyebrow}</p>
-      <p className="mt-2 text-[30px] font-bold leading-none tracking-tight text-[#121212] tabular-nums">{value}</p>
-      <p className="mt-2 text-[13px] font-semibold leading-snug text-[#121212]">{label}</p>
-      {sub ? <p className="mt-1 text-[12px] leading-relaxed text-[#6b6b6b]">{sub}</p> : null}
-      <div className="mt-auto border-t border-[#f0f0f0] pt-4">
-        <span className="text-[12.5px] font-medium text-[#121212] transition-colors group-hover:underline">
-          View details -&gt;
-        </span>
-      </div>
-    </Link>
-  );
-}
+  sub: string;
+  status: string;
+  statusTone: 'blue' | 'green' | 'amber' | 'stone';
+  order: number;
+};
+
+const STATUS_TONE_CLASS: Record<OverviewRow['statusTone'], string> = {
+  blue: 'bg-[#e8f1fb] text-[#1f5da8]',
+  green: 'bg-[#edf5e3] text-[#4d7f20]',
+  amber: 'bg-[#f8ecd9] text-[#9c6513]',
+  stone: 'bg-[#f1eee8] text-[#66635d]',
+};
 
 function countDisplay(value: number | null | undefined, loading: boolean): number | string {
   if (typeof value === 'number') return value;
   return loading ? '...' : '-';
+}
+
+function OverviewSection({
+  title,
+  rows,
+}: {
+  title: OverviewRow['group'];
+  rows: OverviewRow[];
+}) {
+  return (
+    <section aria-labelledby={`people-group-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="mt-10 first:mt-0">
+      <h2
+        id={`people-group-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+        className="border-b border-[#e8e8e8] pb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]"
+      >
+        {title}
+      </h2>
+      <div>
+        {rows.map((row) => (
+          <Link
+            key={`${title}-${row.eyebrow}-${row.label}`}
+            href={row.href}
+            prefetch={false}
+            className="group grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-4 border-b border-[#f0f0f0] py-7 transition-colors hover:bg-[#fafaf9] sm:grid-cols-[96px_minmax(0,1fr)_170px] sm:gap-6"
+          >
+            <div className="text-[40px] font-semibold leading-none tracking-[-0.04em] text-[#121212] tabular-nums sm:text-[52px]">
+              {row.value}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">{row.eyebrow}</p>
+              <p className="mt-2 text-[13px] font-semibold leading-snug text-[#121212] sm:text-[14px]">
+                {row.label}
+              </p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#6b6b6b] sm:text-[13px]">{row.sub}</p>
+            </div>
+            <div className="flex items-center justify-end gap-4 self-center">
+              <span
+                className={[
+                  'inline-flex min-h-[30px] min-w-[96px] items-center justify-center rounded-md px-3 text-[11px] font-semibold uppercase tracking-wide sm:min-w-[108px]',
+                  STATUS_TONE_CLASS[row.statusTone],
+                ].join(' ')}
+              >
+                {row.status}
+              </span>
+              <span className="text-[22px] leading-none text-[#8a857d] transition-transform group-hover:translate-x-1" aria-hidden>
+                →
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function HrOverviewSnapshotClient({
@@ -156,122 +173,184 @@ export function HrOverviewSnapshotClient({
     };
   }, [needsCounts]);
 
+  const rows = useMemo<OverviewRow[]>(() => {
+    const allRows: OverviewRow[] = [];
+
+    if (canViewApplications) {
+      const recentApplications =
+        typeof counts?.applicationsWeek === 'number' && counts.applicationsWeek > 0
+          ? `${counts.applicationsWeek} new in the last 7 days`
+          : badges.application_notifications > 0
+            ? `${badges.application_notifications} unread update${badges.application_notifications === 1 ? '' : 's'}`
+            : countsLoading
+              ? 'Loading recent applications'
+              : 'All stages';
+      allRows.push({
+        href: '/hr/applications',
+        group: 'Hiring & jobs',
+        eyebrow: 'Applicants',
+        value: countDisplay(counts?.applications, countsLoading),
+        label: 'Across all open roles',
+        sub: recentApplications,
+        status: 'Active',
+        statusTone: 'blue',
+        order: 10,
+      });
+    }
+
+    if (canRecruitment || canCreateRequest) {
+      allRows.push({
+        href: '/hr/hiring/requests',
+        group: 'Hiring & jobs',
+        eyebrow: 'Hiring',
+        value: badges.recruitment_pending_review,
+        label: 'Requests awaiting review',
+        sub:
+          badges.recruitment_notifications > 0
+            ? `${badges.recruitment_notifications} unread recruitment update${badges.recruitment_notifications === 1 ? '' : 's'}`
+            : badges.recruitment_pending_review === 0
+              ? 'Nothing waiting in the queue'
+              : 'Needs your attention',
+        status: badges.recruitment_pending_review > 0 ? 'Pending' : 'Clear',
+        statusTone: badges.recruitment_pending_review > 0 ? 'amber' : 'stone',
+        order: 20,
+      });
+    }
+
+    if (canViewJobs) {
+      allRows.push({
+        href: '/hr/jobs',
+        group: 'Hiring & jobs',
+        eyebrow: 'Jobs',
+        value: countDisplay(counts?.liveJobs, countsLoading),
+        label: 'Live listings',
+        sub: countsLoading && counts?.liveJobs == null ? 'Loading published roles' : 'Published and active roles',
+        status: 'Published',
+        statusTone: 'green',
+        order: 30,
+      });
+      allRows.push({
+        href: '/hr/jobs',
+        group: 'Hiring & jobs',
+        eyebrow: 'Jobs',
+        value: countDisplay(counts?.draftJobs, countsLoading),
+        label: 'Draft listings',
+        sub: countsLoading && counts?.draftJobs == null ? 'Loading unpublished roles' : 'Not yet published',
+        status: 'Draft',
+        statusTone: 'stone',
+        order: 40,
+      });
+    }
+
+    if (canViewInterviews) {
+      allRows.push({
+        href: '/hr/interviews',
+        group: 'Schedule & org',
+        eyebrow: 'Schedule',
+        value: countDisplay(counts?.upcomingInterviewSlots, countsLoading),
+        label: 'Interview slots in next 14 days',
+        sub: countsLoading && counts?.upcomingInterviewSlots == null ? 'Loading schedule' : 'Available and booked',
+        status: 'Upcoming',
+        statusTone: 'blue',
+        order: 50,
+      });
+    }
+
+    if (canViewAllRecords) {
+      allRows.push({
+        href: '/hr/records',
+        group: 'Schedule & org',
+        eyebrow: 'Directory',
+        value: countDisplay(counts?.activeMembers, countsLoading),
+        label: 'Active people in your org',
+        sub: countsLoading && counts?.activeMembers == null ? 'Loading member count' : 'Search and HR files',
+        status: 'Active',
+        statusTone: 'green',
+        order: 60,
+      });
+    } else if (canViewTeamRecords) {
+      allRows.push({
+        href: '/hr/records',
+        group: 'Schedule & org',
+        eyebrow: 'Directory',
+        value: '-',
+        label: 'Team HR records',
+        sub: "Your team's files",
+        status: 'Active',
+        statusTone: 'green',
+        order: 60,
+      });
+    }
+
+    if (canViewMetricAlerts) {
+      allRows.push({
+        href: '/hr/hr-metric-alerts',
+        group: 'Alerts',
+        eyebrow: 'Alerts',
+        value: badges.hr_metric_notifications,
+        label: 'HR metric notifications',
+        sub: badges.hr_metric_notifications === 0 ? 'Inbox clear' : 'Unread items',
+        status: badges.hr_metric_notifications === 0 ? 'All clear' : 'Unread',
+        statusTone: badges.hr_metric_notifications === 0 ? 'green' : 'amber',
+        order: 70,
+      });
+    }
+
+    if (canViewOnboarding && badges.onboarding_active > 0) {
+      allRows.push({
+        href: '/hr/onboarding',
+        group: 'Alerts',
+        eyebrow: 'Onboarding',
+        value: badges.onboarding_active,
+        label: 'Runs in progress',
+        sub: 'Active runs',
+        status: 'Active',
+        statusTone: 'blue',
+        order: 80,
+      });
+    }
+
+    return allRows.sort((a, b) => a.order - b.order);
+  }, [
+    badges.application_notifications,
+    badges.hr_metric_notifications,
+    badges.onboarding_active,
+    badges.recruitment_notifications,
+    badges.recruitment_pending_review,
+    canCreateRequest,
+    canRecruitment,
+    canViewAllRecords,
+    canViewApplications,
+    canViewInterviews,
+    canViewJobs,
+    canViewMetricAlerts,
+    canViewOnboarding,
+    canViewTeamRecords,
+    counts?.activeMembers,
+    counts?.applications,
+    counts?.applicationsWeek,
+    counts?.draftJobs,
+    counts?.liveJobs,
+    counts?.upcomingInterviewSlots,
+    countsLoading,
+  ]);
+
+  const groupedRows = useMemo(
+    () =>
+      (['Hiring & jobs', 'Schedule & org', 'Alerts'] as const)
+        .map((group) => ({ group, rows: rows.filter((row) => row.group === group) }))
+        .filter((section) => section.rows.length > 0),
+    [rows]
+  );
+
   return (
-    <section className="mt-2" aria-labelledby="people-snapshot-heading">
-      <h2 id="people-snapshot-heading" className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">
-        Snapshot
+    <section className="mt-8" aria-labelledby="people-snapshot-heading">
+      <h2 id="people-snapshot-heading" className="sr-only">
+        People overview
       </h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {canRecruitment || canCreateRequest ? (
-          <StatTile
-            href="/hr/hiring/requests"
-            accent="hiring"
-            eyebrow="Hiring"
-            value={badges.recruitment_pending_review}
-            label="Requests awaiting review"
-            sub={
-              badges.recruitment_notifications > 0
-                ? `${badges.recruitment_notifications} unread recruitment update${badges.recruitment_notifications === 1 ? '' : 's'}`
-                : badges.recruitment_pending_review === 0
-                  ? 'Nothing waiting in the queue'
-                  : undefined
-            }
-          />
-        ) : null}
-
-        {canViewJobs ? (
-          <>
-            <StatTile
-              href="/hr/jobs"
-              accent="jobsLive"
-              eyebrow="Jobs"
-              value={countDisplay(counts?.liveJobs, countsLoading)}
-              label="Live listings"
-              sub={countsLoading && counts?.liveJobs == null ? 'Loading published roles' : 'Published roles'}
-            />
-            <StatTile
-              href="/hr/jobs"
-              accent="jobsDraft"
-              eyebrow="Jobs"
-              value={countDisplay(counts?.draftJobs, countsLoading)}
-              label="Draft listings"
-              sub={countsLoading && counts?.draftJobs == null ? 'Loading unpublished roles' : 'Not yet published'}
-            />
-          </>
-        ) : null}
-
-        {canViewApplications ? (
-          <StatTile
-            href="/hr/applications"
-            accent="applicants"
-            eyebrow="Applicants"
-            value={countDisplay(counts?.applications, countsLoading)}
-            label="Across all open roles"
-            sub={
-              typeof counts?.applicationsWeek === 'number' && counts.applicationsWeek > 0
-                ? `${counts.applicationsWeek} new in the last 7 days`
-                : badges.application_notifications > 0
-                  ? `${badges.application_notifications} unread update${badges.application_notifications === 1 ? '' : 's'}`
-                  : countsLoading
-                    ? 'Loading recent applications'
-                    : 'All stages'
-            }
-          />
-        ) : null}
-
-        {canViewInterviews ? (
-          <StatTile
-            href="/hr/interviews"
-            accent="schedule"
-            eyebrow="Schedule"
-            value={countDisplay(counts?.upcomingInterviewSlots, countsLoading)}
-            label="Interview slots (14 days)"
-            sub={countsLoading && counts?.upcomingInterviewSlots == null ? 'Loading schedule' : 'Available and booked'}
-          />
-        ) : null}
-
-        {canViewAllRecords ? (
-          <StatTile
-            href="/hr/records"
-            accent="directory"
-            eyebrow="Directory"
-            value={countDisplay(counts?.activeMembers, countsLoading)}
-            label="Active people in your org"
-            sub={countsLoading && counts?.activeMembers == null ? 'Loading member count' : 'Search and HR files'}
-          />
-        ) : canViewTeamRecords ? (
-          <StatTile
-            href="/hr/records"
-            accent="directory"
-            eyebrow="Directory"
-            value="-"
-            label="Team HR records"
-            sub="Your team's files"
-          />
-        ) : null}
-
-        {canViewMetricAlerts ? (
-          <StatTile
-            href="/hr/hr-metric-alerts"
-            accent="alerts"
-            eyebrow="Alerts"
-            value={badges.hr_metric_notifications}
-            label="HR metric notifications"
-            sub={badges.hr_metric_notifications === 0 ? 'Inbox clear' : 'Unread items'}
-          />
-        ) : null}
-
-        {canViewOnboarding && badges.onboarding_active > 0 ? (
-          <StatTile
-            href="/hr/onboarding"
-            accent="onboarding"
-            eyebrow="Onboarding"
-            value={badges.onboarding_active}
-            label="Runs in progress"
-            sub="Active runs"
-          />
-        ) : null}
-      </div>
+      {groupedRows.map((section) => (
+        <OverviewSection key={section.group} title={section.group} rows={section.rows} />
+      ))}
     </section>
   );
 }

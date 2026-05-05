@@ -46,16 +46,16 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 
 const featurePlan = [
   "Org shell: multi-org membership, active org switching target, roles, departments, teams, manager assignments, profile states, and shell preferences.",
-  "Broadcasts: org-wide, department, team targeted, mandatory, pinned, draft, pending approval, scheduled, cancelled, sent, read, unread, replies, and subscriptions.",
+  "Broadcasts: org-wide, department, team targeted, mandatory, pinned, draft, pending approval, scheduled, cancelled, sent, read, unread, replies, subscriptions, finance/comms/student-voice channels, and performance-adjacent HR posts.",
   "Notifications: read and unread notification rows across broadcast, leave, hiring, and application workflows where schemas are present.",
   "Calendar and rota-adjacent states: manual, rota, and broadcast events with attendee response states.",
   "Attendance and payroll: work sites, clock-in/out events, submitted/approved/rejected/draft timesheets, wagesheet lines, adjustments, and review rows where available.",
   "Leave and absence: allowances, pending, approved, rejected, cancelled leave, sickness episodes, TOIL credit requests, in-app leave notifications, and org leave-year settings.",
-  "HR records: employee records, contract/pay states, documents/categories, training, bank/tax approval states, medical notes, dependants, employment history, and custom fields where available.",
-  "Hiring: recruitment requests, job listings, applications across the candidate pipeline, interviews, notes, messages, offer templates, offers, and portal tokens.",
-  "Onboarding: templates, template tasks, active/completed/cancelled runs, and pending/completed/skipped run tasks.",
-  "Performance: review cycles, reviews, goals, development actions, and multiple completion states.",
-  "One-on-ones: settings, templates, scheduled/in-progress/completed/cancelled meetings, actions, shared/private notes, and note edit approvals.",
+  "HR records: employee records (contract, RTW, address, emergency contacts), payroll pay profiles and role rates, bank/tax/P60 documents, custom document categories, training, medical notes, dependants, employment history, disciplinary/grievance cases, leave encashment/carry-over requests, and custom fields.",
+  "Hiring: recruitment requests (incl. filled/archived + status audit), job listings, panelists, application question sets, screening Q&A and scores, applications across the pipeline, interviews, notes, messages, offers, contract assignments, start readiness, and portal tokens.",
+  "Onboarding: templates, template tasks, runs for pending + active staff + completed + cancelled paths, and per-run tasks (HR logins use CHRO / HR officer roles so admin onboarding RLS is satisfied).",
+  "Performance: review cycles, reviews, goals, and multiple completion states (incl. closed-cycle history); primary HR persona can manage cycles and view org reports.",
+  "One-on-ones: org cadence settings, templates (agenda → structured doc), scheduled/in-progress/completed/cancelled meetings with doc payloads, and note edit requests.",
   "Resources and reports: folders, active/archived resources, report definitions, runs, schedules, exports, and pinned reports.",
   "Privacy and admin ops: retention policies, erasure requests, audit entries, discount tiers, QR tokens, scan logs, and integration placeholders where available.",
 ];
@@ -83,7 +83,8 @@ const personas = [
     key: "olga_saskova",
     fullName: "Olga Saskova",
     email: "olga.saskova@camp-site.co.uk",
-    role: "manager",
+    // CHRO-shaped role so QA can open HR onboarding + performance admin (generic manager lacks those grants).
+    role: "chro_hr_director",
     status: "active",
     department: "HR",
     title: "HR Manager",
@@ -92,7 +93,8 @@ const personas = [
     key: "sarthak_peshin",
     fullName: "Sarthak Peshin",
     email: "sarthak.peshin@camp-site.co.uk",
-    role: "coordinator",
+    // HR officer: run onboarding + view records without full cycle-admin surface.
+    role: "hr_officer",
     status: "active",
     department: "HR",
     title: "HR Coordinator",
@@ -594,6 +596,9 @@ async function seedOrgFoundation(org) {
       role: persona.role,
       status: persona.status,
       avatar_url: null,
+      // Clear when re-pointing profiles at this org: trigger requires reports_to
+      // to reference a profile with the same org_id (stale IDs fail on upsert).
+      reports_to_user_id: null,
     });
 
     let profile = null;
@@ -630,7 +635,9 @@ async function seedOrgFoundation(org) {
     if (
       persona.role === "org_admin" ||
       persona.role === "manager" ||
-      persona.role === "duty_manager"
+      persona.role === "duty_manager" ||
+      persona.role === "chro_hr_director" ||
+      persona.role === "head_hr"
     ) {
       await maybeUpsert(
         "dept_managers",
@@ -669,19 +676,16 @@ async function seedOrgFoundation(org) {
       {
         dept_id: byKey(deptMap, "Activities").id,
         name: "Activities Morning Cover",
-        description: "Visible team targeting and rota adjacency.",
         lead_user_id: byKey(userMap, "jane_trueman").id,
       },
       {
         dept_id: byKey(deptMap, "Events").id,
         name: "Event Duty Team",
-        description: "Duty manager and coordinator QA team.",
         lead_user_id: byKey(userMap, "ruby_gislingham").id,
       },
       {
         dept_id: byKey(deptMap, "Commercial").id,
         name: "Late Bar Team",
-        description: "Attendance, payroll, and shift QA team.",
         lead_user_id: byKey(userMap, "sophie_morland").id,
       },
     ],
@@ -696,7 +700,6 @@ async function seedOrgFoundation(org) {
       teamMemberRows.push({
         team_id: team.id,
         user_id: byKey(userMap, key).id,
-        role: key === "jane_trueman" ? "lead" : "member",
       });
     }
   }
@@ -706,17 +709,15 @@ async function seedOrgFoundation(org) {
       teamMemberRows.push({
         team_id: team.id,
         user_id: byKey(userMap, key).id,
-        role: key === "ruby_gislingham" ? "lead" : "member",
       });
     }
   }
-  for (const key of ["sophie_morland", "qa_inactive"]) {
+  for (const key of ["sophie_morland", "marcela_gomez_valdes"]) {
     const team = teamMap.get("Late Bar Team");
     if (team) {
       teamMemberRows.push({
         team_id: team.id,
         user_id: byKey(userMap, key).id,
-        role: key === "sophie_morland" ? "lead" : "member",
       });
     }
   }
@@ -730,7 +731,7 @@ async function seedOrgFoundation(org) {
       dnd_end: "08:00",
       shift_reminder_before_minutes: 60,
       rota_open_slot_alerts_enabled: true,
-      ui_mode: "dark",
+      ui_mode: "interactive",
     },
     "id",
     byKey(userMap, "olga_saskova").id,
@@ -741,7 +742,7 @@ async function seedOrgFoundation(org) {
       dnd_enabled: false,
       shift_reminder_before_minutes: 30,
       rota_open_slot_alerts_enabled: false,
-      ui_mode: "light",
+      ui_mode: "classic",
     },
     "id",
     byKey(userMap, "timothy_bartlett").id,
@@ -751,29 +752,19 @@ async function seedOrgFoundation(org) {
 }
 
 async function seedBroadcasts(org, deptMap, userMap, teamMap) {
+  const di = (deptName) => byKey(deptMap, deptName).id;
+
   const channelRows = await maybeInsert(
     "broadcast_channels",
     [
-      {
-        dept_id: byKey(deptMap, "Senior Leadership").id,
-        name: "Leadership Announcements",
-      },
-      {
-        dept_id: byKey(deptMap, "HR").id,
-        name: "HR Policy Updates",
-      },
-      {
-        dept_id: byKey(deptMap, "Activities").id,
-        name: "Activities Ops",
-      },
-      {
-        dept_id: byKey(deptMap, "Events").id,
-        name: "Events Ops",
-      },
-      {
-        dept_id: byKey(deptMap, "Commercial").id,
-        name: "Commercial Ops",
-      },
+      { dept_id: di("Senior Leadership"), name: "Leadership Announcements" },
+      { dept_id: di("HR"), name: "HR Policy Updates" },
+      { dept_id: di("Activities"), name: "Activities Ops" },
+      { dept_id: di("Events"), name: "Events Ops" },
+      { dept_id: di("Commercial"), name: "Commercial Ops" },
+      { dept_id: di("Finance"), name: "Finance Ops" },
+      { dept_id: di("Communications & Digital Support"), name: "Digital Support" },
+      { dept_id: di("Student Voice"), name: "Student Voice Updates" },
     ],
     "*",
   );
@@ -783,37 +774,34 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
   const eventsChannel = channelMap.get("Events Ops");
   const commercialChannel = channelMap.get("Commercial Ops");
   const hrChannel = channelMap.get("HR Policy Updates");
-  const leadershipChannel = channelMap.get("Leadership Announcements");
+  const financeChannel = channelMap.get("Finance Ops");
+  const commsChannel = channelMap.get("Digital Support");
+  const studentVoiceChannel = channelMap.get("Student Voice Updates");
 
   await maybeInsert(
     "user_subscriptions",
     [
-      {
-        user_id: byKey(userMap, "darcey_james").id,
-        channel_id: activityChannel?.id,
-        subscribed: true,
-      },
-      {
-        user_id: byKey(userMap, "imogen_greene").id,
-        channel_id: activityChannel?.id,
-        subscribed: false,
-      },
-      {
-        user_id: byKey(userMap, "isla_thorpe").id,
-        channel_id: eventsChannel?.id,
-        subscribed: true,
-      },
+      { user_id: byKey(userMap, "darcey_james").id, channel_id: activityChannel?.id, subscribed: true },
+      { user_id: byKey(userMap, "imogen_greene").id, channel_id: activityChannel?.id, subscribed: false },
+      { user_id: byKey(userMap, "isla_thorpe").id, channel_id: eventsChannel?.id, subscribed: true },
+      { user_id: byKey(userMap, "aarun_palmer").id, channel_id: financeChannel?.id, subscribed: true },
+      { user_id: byKey(userMap, "timothy_bartlett").id, channel_id: commsChannel?.id, subscribed: true },
+      { user_id: byKey(userMap, "damien_pearson").id, channel_id: hrChannel?.id, subscribed: true },
     ].filter((row) => row.channel_id),
     "*",
   );
+
+  const eventDutyTeamId = teamMap.get("Event Duty Team")?.id ?? null;
+  const lateBarTeamId = teamMap.get("Late Bar Team")?.id ?? null;
 
   const broadcasts = await maybeInsert(
     "broadcasts",
     [
       {
         org_id: org.id,
+        dept_id: di("Senior Leadership"),
         created_by: byKey(userMap, "james_hann").id,
-        channel_id: leadershipChannel?.id ?? null,
+        channel_id: null,
         team_id: null,
         title: "Mandatory org update - read receipt required",
         body: "Seeded mandatory org-wide update for read/unread, pinned, and announcement banner checks.",
@@ -825,6 +813,21 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
       },
       {
         org_id: org.id,
+        dept_id: di("Senior Leadership"),
+        created_by: byKey(userMap, "tarek_khalil").id,
+        channel_id: null,
+        team_id: null,
+        title: "Wellbeing week — org-wide kickoff",
+        body: "Non-mandatory org-wide broadcast for feed variety and search snippets.",
+        status: "sent",
+        is_org_wide: true,
+        is_mandatory: false,
+        is_pinned: false,
+        sent_at: nowPlus(-6, 9),
+      },
+      {
+        org_id: org.id,
+        dept_id: di("Activities"),
         created_by: byKey(userMap, "jane_trueman").id,
         channel_id: activityChannel?.id ?? null,
         team_id: null,
@@ -838,9 +841,24 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
       },
       {
         org_id: org.id,
+        dept_id: di("Activities"),
+        created_by: byKey(userMap, "jane_trueman").id,
+        channel_id: activityChannel?.id ?? null,
+        team_id: teamMap.get("Activities Morning Cover")?.id ?? null,
+        title: "Morning cover stand-up notes",
+        body: "Team-scoped activities broadcast for roster and handover UI.",
+        status: "sent",
+        is_org_wide: false,
+        is_mandatory: false,
+        is_pinned: false,
+        sent_at: nowPlus(-3, 8),
+      },
+      {
+        org_id: org.id,
+        dept_id: di("Events"),
         created_by: byKey(userMap, "ruby_gislingham").id,
         channel_id: eventsChannel?.id ?? null,
-        team_id: teamMap.get("Event Duty Team")?.id ?? null,
+        team_id: eventDutyTeamId,
         title: "Team targeted event cover note",
         body: "Team-targeted broadcast for duty-team visibility checks.",
         status: "sent",
@@ -851,6 +869,48 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
       },
       {
         org_id: org.id,
+        dept_id: di("Events"),
+        created_by: byKey(userMap, "ruby_gislingham").id,
+        channel_id: eventsChannel?.id ?? null,
+        team_id: null,
+        title: "Rota change — extra stewards needed",
+        body: "Draft rota comms for composer and approval flows.",
+        status: "draft",
+        is_org_wide: false,
+        is_mandatory: false,
+        is_pinned: false,
+      },
+      {
+        org_id: org.id,
+        dept_id: di("HR"),
+        created_by: byKey(userMap, "olga_saskova").id,
+        channel_id: hrChannel?.id ?? null,
+        team_id: null,
+        title: "Mid-year performance review window",
+        body: "Performance cycle reminder: complete self-assessment before manager conversations. Links to review hub and HR drop-in sessions.",
+        status: "sent",
+        is_org_wide: false,
+        is_mandatory: false,
+        is_pinned: true,
+        sent_at: nowPlus(-5, 11),
+      },
+      {
+        org_id: org.id,
+        dept_id: di("HR"),
+        created_by: byKey(userMap, "olga_saskova").id,
+        channel_id: hrChannel?.id ?? null,
+        team_id: null,
+        title: "Leave, TOIL, and Bradford factor refresher",
+        body: "Reminder on reporting lines for leave approval, TOIL requests, and sickness recording for Bradford visibility.",
+        status: "sent",
+        is_org_wide: false,
+        is_mandatory: false,
+        is_pinned: false,
+        sent_at: nowPlus(-7, 15),
+      },
+      {
+        org_id: org.id,
+        dept_id: di("HR"),
         created_by: byKey(userMap, "olga_saskova").id,
         channel_id: hrChannel?.id ?? null,
         team_id: null,
@@ -863,8 +923,37 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
       },
       {
         org_id: org.id,
-        created_by: byKey(userMap, "timothy_bartlett").id,
+        dept_id: di("Finance"),
+        created_by: byKey(userMap, "aarun_palmer").id,
+        channel_id: financeChannel?.id ?? null,
+        team_id: null,
+        title: "Month-end payroll cut-off",
+        body: "Finance broadcast for deadlines, approvals, and wagesheet QA.",
+        status: "sent",
+        is_org_wide: false,
+        is_mandatory: false,
+        is_pinned: false,
+        sent_at: nowPlus(-2, 10),
+      },
+      {
+        org_id: org.id,
+        dept_id: di("Commercial"),
+        created_by: byKey(userMap, "sophie_morland").id,
         channel_id: commercialChannel?.id ?? null,
+        team_id: lateBarTeamId,
+        title: "Late bar promo — staff discount weekend",
+        body: "Pinned commercial team broadcast for tills and discount checks.",
+        status: "sent",
+        is_org_wide: false,
+        is_mandatory: false,
+        is_pinned: true,
+        sent_at: nowPlus(-1, 18),
+      },
+      {
+        org_id: org.id,
+        dept_id: di("Communications & Digital Support"),
+        created_by: byKey(userMap, "timothy_bartlett").id,
+        channel_id: commsChannel?.id ?? null,
         team_id: null,
         title: "Pending approval broadcast",
         body: "Requires approval and tests the pending approval queue.",
@@ -875,6 +964,7 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
       },
       {
         org_id: org.id,
+        dept_id: di("Commercial"),
         created_by: byKey(userMap, "sophie_morland").id,
         channel_id: commercialChannel?.id ?? null,
         team_id: null,
@@ -888,8 +978,23 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
       },
       {
         org_id: org.id,
+        dept_id: di("Student Voice"),
+        created_by: byKey(userMap, "marcela_gomez_valdes").id,
+        channel_id: studentVoiceChannel?.id ?? null,
+        team_id: null,
+        title: "Student voice survey — spring pulse",
+        body: "Cross-audience comms seed for student voice channel and read states.",
+        status: "sent",
+        is_org_wide: false,
+        is_mandatory: false,
+        is_pinned: false,
+        sent_at: nowPlus(-8, 14),
+      },
+      {
+        org_id: org.id,
+        dept_id: di("Senior Leadership"),
         created_by: byKey(userMap, "james_hann").id,
-        channel_id: leadershipChannel?.id ?? null,
+        channel_id: null,
         team_id: null,
         title: "Cancelled leadership update",
         body: "Cancelled post for historical/cancelled UI state.",
@@ -898,7 +1003,7 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
         is_mandatory: false,
         is_pinned: false,
       },
-    ],
+    ].filter((row) => row.dept_id && (row.is_org_wide || row.channel_id)),
     "*",
   );
   const broadcastMap = new Map(broadcasts.map((broadcast) => [broadcast.title, broadcast]));
@@ -906,29 +1011,22 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
   const mandatory = broadcastMap.get("Mandatory org update - read receipt required");
   const unread = broadcastMap.get("Unread activities handover");
   const teamTargeted = broadcastMap.get("Team targeted event cover note");
+  const perfHr = broadcastMap.get("Mid-year performance review window");
+  const financePayroll = broadcastMap.get("Month-end payroll cut-off");
+  const wellbeing = broadcastMap.get("Wellbeing week — org-wide kickoff");
+
   await maybeInsert(
     "broadcast_reads",
     [
-      {
-        broadcast_id: mandatory?.id,
-        user_id: byKey(userMap, "james_hann").id,
-        read_at: nowPlus(-4, 12),
-      },
-      {
-        broadcast_id: mandatory?.id,
-        user_id: byKey(userMap, "olga_saskova").id,
-        read_at: nowPlus(-3, 9),
-      },
-      {
-        broadcast_id: unread?.id,
-        user_id: byKey(userMap, "jane_trueman").id,
-        read_at: nowPlus(-2, 15),
-      },
-      {
-        broadcast_id: teamTargeted?.id,
-        user_id: byKey(userMap, "ruby_gislingham").id,
-        read_at: nowPlus(-1, 10),
-      },
+      { broadcast_id: mandatory?.id, user_id: byKey(userMap, "james_hann").id, read_at: nowPlus(-4, 12) },
+      { broadcast_id: mandatory?.id, user_id: byKey(userMap, "olga_saskova").id, read_at: nowPlus(-3, 9) },
+      { broadcast_id: mandatory?.id, user_id: byKey(userMap, "tarek_khalil").id, read_at: nowPlus(-4, 11) },
+      { broadcast_id: wellbeing?.id, user_id: byKey(userMap, "jane_trueman").id, read_at: nowPlus(-5, 10) },
+      { broadcast_id: unread?.id, user_id: byKey(userMap, "jane_trueman").id, read_at: nowPlus(-2, 15) },
+      { broadcast_id: teamTargeted?.id, user_id: byKey(userMap, "ruby_gislingham").id, read_at: nowPlus(-1, 10) },
+      { broadcast_id: teamTargeted?.id, user_id: byKey(userMap, "isla_thorpe").id, read_at: nowPlus(-1, 11) },
+      { broadcast_id: perfHr?.id, user_id: byKey(userMap, "sarthak_peshin").id, read_at: nowPlus(-4, 14) },
+      { broadcast_id: financePayroll?.id, user_id: byKey(userMap, "aarun_palmer").id, read_at: nowPlus(-2, 11) },
     ].filter((row) => row.broadcast_id),
     "*",
   );
@@ -949,6 +1047,20 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
         author_id: byKey(userMap, "darcey_james").id,
         body: "Private follow-up reply seeded for private visibility checks.",
         visibility: "private_to_author",
+      },
+      {
+        org_id: org.id,
+        broadcast_id: perfHr?.id,
+        author_id: byKey(userMap, "jane_trueman").id,
+        body: "Activities will cascade this to team leads in our next stand-up.",
+        visibility: "org_thread",
+      },
+      {
+        org_id: org.id,
+        broadcast_id: financePayroll?.id,
+        author_id: byKey(userMap, "olga_saskova").id,
+        body: "HR will remind managers to approve timesheets by Thursday COB.",
+        visibility: "org_thread",
       },
     ].filter((row) => row.broadcast_id),
     "*",
@@ -978,6 +1090,17 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
         read_at: nowPlus(-3, 10),
         entity_type: "broadcast",
         entity_id: mandatory?.id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "isla_thorpe").id,
+        actor_id: byKey(userMap, "olga_saskova").id,
+        type: "broadcast",
+        title: "Performance review window",
+        body: "Seeded performance-related broadcast notification.",
+        read_at: null,
+        entity_type: "broadcast",
+        entity_id: perfHr?.id,
       },
     ].filter((row) => row.entity_id),
     "*",
@@ -1518,7 +1641,35 @@ async function seedHr(org, deptMap, userMap) {
   void deptMap;
   await maybeUpsert("org_hr_metric_settings", { org_id: org.id }, "org_id", "*");
 
+  await maybeUpsert(
+    "org_leave_settings",
+    {
+      org_id: org.id,
+      encashment_enabled: true,
+      encashment_requires_approval: true,
+      encashment_max_days: 5,
+      carry_over_enabled: true,
+      carry_over_requires_approval: true,
+      carry_over_max_days: 5,
+    },
+    "org_id",
+    "*",
+  );
+
+  const rtwPalette = [
+    "verified",
+    "verified",
+    "in_progress",
+    "required",
+    "unknown",
+    "expired",
+    "not_required",
+    "verified",
+    "verified",
+  ];
+
   const hrRecords = [];
+  let hrIdx = 0;
   for (const persona of personas.filter((item) => item.status !== "pending")) {
     const user = byKey(userMap, persona.key);
     const contractType =
@@ -1535,6 +1686,11 @@ async function seedHr(org, deptMap, userMap) {
           : persona.role === "manager" || persona.role === "org_admin"
             ? "GBP 42,000"
             : "GBP 24,000 - 28,000";
+    const rtwStatus = rtwPalette[hrIdx % rtwPalette.length];
+    hrIdx += 1;
+    const empStart = datePlus(persona.status === "inactive" ? -700 : -220);
+    const contractStart = datePlus(persona.status === "inactive" ? -695 : -215);
+    const contractSigned = datePlus(persona.status === "inactive" ? -690 : -210);
     hrRecords.push({
       org_id: org.id,
       user_id: user.id,
@@ -1544,13 +1700,73 @@ async function seedHr(org, deptMap, userMap) {
       salary_band: salaryBand,
       fte: persona.role === "duty_manager" ? 0.8 : 1.0,
       work_location: persona.department === "Communications & Digital Support" ? "remote" : "hybrid",
-      employment_start_date: datePlus(persona.status === "inactive" ? -700 : -220),
+      employment_start_date: empStart,
       probation_end_date: datePlus(persona.status === "inactive" ? -500 : 60),
+      notice_period_weeks: persona.role === "org_admin" ? 12 : 8,
+      position_type: persona.role === "csa" ? "Casual" : "Permanent",
+      pay_grade: persona.role === "org_admin" ? "Exec" : "Spine 5",
+      employment_basis: "permanent",
+      weekly_hours: persona.role === "duty_manager" ? 21.0 : 37.5,
+      positions_count: 1,
+      budget_amount: persona.role === "org_admin" ? null : 32000,
+      budget_currency: "GBP",
+      department_start_date: empStart,
+      continuous_employment_start_date: empStart,
+      custom_fields: { qa_seed: true, persona_key: persona.key },
+      contract_start_date: contractStart,
+      contract_end_date: persona.role === "csa" ? datePlus(400) : null,
+      contract_signed_on: contractSigned,
+      contract_document_url: `https://example.invalid/qa-seed/contracts/${persona.key}.pdf`,
+      contract_review_date: datePlus(365),
+      home_address_line1: `${hrIdx} Seeded Terrace`,
+      home_address_line2: "QA Row",
+      home_city: "Brighton",
+      home_county: "East Sussex",
+      home_postcode: "BN1 1SE",
+      home_country: "United Kingdom",
+      emergency_contact_name: "QA Emergency Contact",
+      emergency_contact_relationship: "Partner",
+      emergency_contact_phone: "07700900001",
+      emergency_contact_email: `qa.emergency.${persona.key}@camp-site.co.uk`,
+      rtw_status: rtwStatus,
+      rtw_checked_on: rtwStatus === "verified" || rtwStatus === "expired" ? datePlus(-120) : null,
+      rtw_expiry_date: rtwStatus === "expired" ? datePlus(-10) : rtwStatus === "verified" ? datePlus(500) : null,
+      rtw_check_method: rtwStatus === "unknown" ? "" : "online_service",
+      rtw_document_url:
+        rtwStatus === "not_required" ? "" : `https://example.invalid/qa-seed/rtw/${persona.key}.pdf`,
+      visa_type: rtwStatus === "in_progress" ? "Student visa (seed)" : "",
+      notes:
+        persona.status === "inactive"
+          ? "Seeded inactive employee — contract ended (QA)."
+          : "Seeded HR core record for System QA Lab.",
       created_by: byKey(userMap, "olga_saskova").id,
     });
   }
   const insertedHrRecords = await maybeInsert("employee_hr_records", hrRecords, "*");
   const hrByUser = new Map(insertedHrRecords.map((record) => [record.user_id, record]));
+
+  const docPath = (suffix) => `${org.id}/qa-hr/${randomBytes(8).toString("hex")}/${suffix}`;
+
+  const docCategories = await maybeInsert(
+    "employee_document_categories",
+    [
+      {
+        org_id: org.id,
+        name: "Staff handbook acknowledgements",
+        document_kind_scope: "supporting_document",
+        created_by: byKey(userMap, "olga_saskova").id,
+      },
+      {
+        org_id: org.id,
+        name: "Professional registration",
+        document_kind_scope: "id_document",
+        created_by: byKey(userMap, "olga_saskova").id,
+      },
+    ],
+    "*",
+  );
+  const handbookCategoryId = docCategories.find((row) => row.name === "Staff handbook acknowledgements")?.id;
+  const proRegCategoryId = docCategories.find((row) => row.name === "Professional registration")?.id;
 
   await maybeInsert(
     "employee_hr_documents",
@@ -1560,7 +1776,7 @@ async function seedHr(org, deptMap, userMap) {
         user_id: byKey(userMap, "darcey_james").id,
         category: "right_to_work",
         label: "Right to work evidence",
-        storage_path: `${org.id}/qa-seed/darcey/right-to-work.pdf`,
+        storage_path: docPath("darcey-rtw.pdf"),
         file_name: "right-to-work.pdf",
         mime_type: "application/pdf",
         byte_size: 102400,
@@ -1571,7 +1787,7 @@ async function seedHr(org, deptMap, userMap) {
         user_id: byKey(userMap, "olga_saskova").id,
         category: "contract",
         label: "Signed contract",
-        storage_path: `${org.id}/qa-seed/olga/contract.pdf`,
+        storage_path: docPath("olga-contract.pdf"),
         file_name: "contract.pdf",
         mime_type: "application/pdf",
         byte_size: 204800,
@@ -1582,10 +1798,45 @@ async function seedHr(org, deptMap, userMap) {
         user_id: byKey(userMap, "timothy_bartlett").id,
         category: "other",
         label: "Training certificate (seed)",
-        storage_path: `${org.id}/qa-seed/timothy/training.pdf`,
+        storage_path: docPath("timothy-training.pdf"),
         file_name: "training.pdf",
         mime_type: "application/pdf",
         byte_size: 51200,
+        uploaded_by: byKey(userMap, "olga_saskova").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "sophie_morland").id,
+        category: "passport",
+        label: "Passport (identity)",
+        storage_path: docPath("sophie-passport.pdf"),
+        file_name: "passport.pdf",
+        mime_type: "application/pdf",
+        byte_size: 88000,
+        uploaded_by: byKey(userMap, "olga_saskova").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "jane_trueman").id,
+        category: "signed_other",
+        label: "Signed handbook v3",
+        storage_path: docPath("jane-handbook.pdf"),
+        file_name: "handbook.pdf",
+        mime_type: "application/pdf",
+        byte_size: 64000,
+        ...(handbookCategoryId ? { custom_category_id: handbookCategoryId } : {}),
+        uploaded_by: byKey(userMap, "olga_saskova").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "ruby_gislingham").id,
+        category: "other",
+        label: "First aid certificate",
+        storage_path: docPath("ruby-first-aid.pdf"),
+        file_name: "first-aid.pdf",
+        mime_type: "application/pdf",
+        byte_size: 72000,
+        ...(proRegCategoryId ? { custom_category_id: proRegCategoryId } : {}),
         uploaded_by: byKey(userMap, "olga_saskova").id,
       },
     ],
@@ -1627,6 +1878,27 @@ async function seedHr(org, deptMap, userMap) {
         expires_on: datePlus(-55),
         created_by: byKey(userMap, "olga_saskova").id,
       },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "jane_trueman").id,
+        title: "People manager essentials",
+        provider: "CampSite QA",
+        status: "completed",
+        started_on: datePlus(-200),
+        completed_on: datePlus(-150),
+        expires_on: datePlus(550),
+        created_by: byKey(userMap, "olga_saskova").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "olga_saskova").id,
+        title: "GDPR refresher",
+        provider: "CampSite QA",
+        status: "in_progress",
+        started_on: datePlus(-14),
+        expires_on: datePlus(350),
+        created_by: byKey(userMap, "james_hann").id,
+      },
     ],
     "*",
   );
@@ -1638,6 +1910,7 @@ async function seedHr(org, deptMap, userMap) {
         org_id: org.id,
         user_id: byKey(userMap, "darcey_james").id,
         status: "pending",
+        is_active: false,
         encrypted_payload: QA_SEED_ENCRYPTED_PLACEHOLDER,
         account_holder_display: "Darcey James",
         account_number_last4: "3344",
@@ -1661,6 +1934,7 @@ async function seedHr(org, deptMap, userMap) {
         org_id: org.id,
         user_id: byKey(userMap, "timothy_bartlett").id,
         status: "rejected",
+        is_active: false,
         encrypted_payload: QA_SEED_ENCRYPTED_PLACEHOLDER,
         account_holder_display: "Timothy Bartlett",
         account_number_last4: "0000",
@@ -1681,10 +1955,24 @@ async function seedHr(org, deptMap, userMap) {
         org_id: org.id,
         user_id: byKey(userMap, "darcey_james").id,
         status: "pending",
+        is_active: false,
         encrypted_payload: QA_SEED_ENCRYPTED_PLACEHOLDER,
         tax_code_masked: "1257L",
         tax_code_last2: "7L",
         submitted_by: byKey(userMap, "darcey_james").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "timothy_bartlett").id,
+        status: "rejected",
+        is_active: false,
+        encrypted_payload: QA_SEED_ENCRYPTED_PLACEHOLDER,
+        tax_code_masked: "0T",
+        tax_code_last2: "0T",
+        submitted_by: byKey(userMap, "timothy_bartlett").id,
+        reviewed_by: byKey(userMap, "aarun_palmer").id,
+        reviewed_at: nowPlus(-8, 10),
+        review_note: "Seeded NI mismatch — resubmit (QA).",
       },
       {
         org_id: org.id,
@@ -1739,7 +2027,20 @@ async function seedHr(org, deptMap, userMap) {
         date_of_birth: "2016-04-12",
         phone: "07000000001",
         is_emergency_contact: true,
+        is_beneficiary: false,
         created_by: byKey(userMap, "jane_trueman").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "aarun_palmer").id,
+        full_name: "QA Pension Beneficiary",
+        relationship: "Spouse",
+        date_of_birth: "1988-03-01",
+        is_beneficiary: true,
+        is_emergency_contact: false,
+        beneficiary_percentage: 100,
+        email: "qa.beneficiary@camp-site.co.uk",
+        created_by: byKey(userMap, "olga_saskova").id,
       },
     ],
     "*",
@@ -1767,6 +2068,17 @@ async function seedHr(org, deptMap, userMap) {
         start_date: datePlus(-400),
         end_date: null,
         change_reason: "Promotion (seed).",
+        source: "manual",
+        created_by: byKey(userMap, "olga_saskova").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "sarthak_peshin").id,
+        role_title: "HR assistant",
+        department_name: "HR",
+        start_date: datePlus(-800),
+        end_date: datePlus(-200),
+        change_reason: "Internal move to HR coordinator (seed).",
         source: "manual",
         created_by: byKey(userMap, "olga_saskova").id,
       },
@@ -1820,6 +2132,217 @@ async function seedHr(org, deptMap, userMap) {
         created_by: byKey(userMap, "olga_saskova").id,
       },
     ].filter((row) => row.definition_id),
+    "*",
+  );
+
+  const leaveYearLabel = String(new Date().getUTCFullYear());
+
+  await maybeInsert(
+    "employee_tax_documents",
+    [
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "sophie_morland").id,
+        document_type: "p60",
+        tax_year: String(new Date().getUTCFullYear() - 1),
+        issue_date: datePlus(-90),
+        status: "issued",
+        storage_path: docPath("sophie-p60.pdf"),
+        file_name: "P60-seed.pdf",
+        mime_type: "application/pdf",
+        byte_size: 96000,
+        uploaded_by: byKey(userMap, "aarun_palmer").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "timothy_bartlett").id,
+        document_type: "p45",
+        tax_year: String(new Date().getUTCFullYear() - 2),
+        issue_date: datePlus(-400),
+        status: "issued",
+        storage_path: docPath("timothy-p45.pdf"),
+        file_name: "P45-seed.pdf",
+        mime_type: "application/pdf",
+        byte_size: 48000,
+        uploaded_by: byKey(userMap, "olga_saskova").id,
+      },
+    ],
+    "*",
+  );
+
+  await maybeInsert(
+    "employee_case_records",
+    [
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "qa_inactive").id,
+        case_type: "disciplinary",
+        case_ref: `QA-DISC-${randomBytes(4).toString("hex")}`,
+        category: "Attendance",
+        severity: "low",
+        status: "closed",
+        incident_date: datePlus(-200),
+        reported_date: datePlus(-198),
+        summary: "Seeded closed low-level attendance case (inactive employee).",
+        outcome_action: "Informal warning on file.",
+        owner_user_id: byKey(userMap, "olga_saskova").id,
+        created_by: byKey(userMap, "olga_saskova").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "imogen_greene").id,
+        case_type: "disciplinary",
+        case_ref: `QA-DISC-${randomBytes(4).toString("hex")}`,
+        category: "Conduct",
+        severity: "medium",
+        status: "investigating",
+        incident_date: datePlus(-14),
+        reported_date: datePlus(-13),
+        summary: "Seeded open investigation for interim cover QA.",
+        allegations_details: "Alleged breach of confidentiality during handover (seed).",
+        owner_user_id: byKey(userMap, "olga_saskova").id,
+        investigator_user_id: byKey(userMap, "james_hann").id,
+        created_by: byKey(userMap, "olga_saskova").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "damien_pearson").id,
+        case_type: "grievance",
+        case_ref: `QA-GRV-${randomBytes(4).toString("hex")}`,
+        category: "Working conditions",
+        status: "hearing",
+        incident_date: datePlus(-40),
+        reported_date: datePlus(-38),
+        hearing_date: datePlus(10),
+        summary: "Seeded grievance at hearing stage.",
+        owner_user_id: byKey(userMap, "olga_saskova").id,
+        created_by: byKey(userMap, "olga_saskova").id,
+      },
+    ],
+    "*",
+  );
+
+  await maybeInsert(
+    "payroll_role_hourly_rates",
+    [
+      {
+        org_id: org.id,
+        role_code: "csa",
+        effective_from: datePlus(-730),
+        effective_to: datePlus(-1),
+        hourly_rate_gbp: 12.21,
+        notes: "Historical CSA rate (seed).",
+        created_by: byKey(userMap, "aarun_palmer").id,
+      },
+      {
+        org_id: org.id,
+        role_code: "csa",
+        effective_from: datePlus(0),
+        hourly_rate_gbp: 12.6,
+        notes: "Current CSA rate (seed).",
+        created_by: byKey(userMap, "aarun_palmer").id,
+      },
+      {
+        org_id: org.id,
+        role_code: "dm",
+        effective_from: datePlus(-400),
+        hourly_rate_gbp: 14.25,
+        notes: "Duty manager hourly (seed).",
+        created_by: byKey(userMap, "aarun_palmer").id,
+      },
+    ],
+    "*",
+  );
+
+  await maybeInsert(
+    "payroll_employee_pay_profiles",
+    [
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "sophie_morland").id,
+        pay_role: "dm",
+        notes: "Seeded duty manager pay profile.",
+        updated_by: byKey(userMap, "aarun_palmer").id,
+      },
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "timothy_bartlett").id,
+        pay_role: "csa",
+        notes: "Seeded CSA hourly pay profile.",
+        updated_by: byKey(userMap, "aarun_palmer").id,
+      },
+    ],
+    "*",
+  );
+
+  await maybeInsert(
+    "payroll_manual_adjustments",
+    [
+      {
+        org_id: org.id,
+        user_id: byKey(userMap, "darcey_james").id,
+        week_start_date: datePlus(-21),
+        adjustment_code: "manual_override",
+        amount_gbp: 42.5,
+        note: "Seeded weekend event uplift (QA).",
+        created_by: byKey(userMap, "aarun_palmer").id,
+      },
+    ],
+    "*",
+  );
+
+  await maybeInsert(
+    "leave_encashment_requests",
+    [
+      {
+        org_id: org.id,
+        requester_id: byKey(userMap, "jane_trueman").id,
+        leave_year: leaveYearLabel,
+        days_requested: 2,
+        days_approved: 2,
+        note: "Seeded approved encashment (QA).",
+        status: "approved",
+        decided_by: byKey(userMap, "olga_saskova").id,
+        decided_at: nowPlus(-20, 11),
+        decision_note: "Approved within cap.",
+      },
+      {
+        org_id: org.id,
+        requester_id: byKey(userMap, "isla_thorpe").id,
+        leave_year: leaveYearLabel,
+        days_requested: 1.5,
+        note: "Awaiting manager decision (seed).",
+        status: "pending",
+      },
+    ],
+    "*",
+  );
+
+  await maybeInsert(
+    "leave_carryover_requests",
+    [
+      {
+        org_id: org.id,
+        requester_id: byKey(userMap, "darcey_james").id,
+        from_leave_year: String(Number(leaveYearLabel) - 1),
+        to_leave_year: leaveYearLabel,
+        days_requested: 3,
+        days_approved: 3,
+        status: "approved",
+        decided_by: byKey(userMap, "jane_trueman").id,
+        decided_at: nowPlus(-60, 9),
+        decision_note: "Seeded carry-over within policy cap.",
+      },
+      {
+        org_id: org.id,
+        requester_id: byKey(userMap, "ruby_gislingham").id,
+        from_leave_year: leaveYearLabel,
+        to_leave_year: String(Number(leaveYearLabel) + 1),
+        days_requested: 2,
+        status: "pending",
+        note: "Seeded pending carry-over into next leave year.",
+      },
+    ],
     "*",
   );
 
@@ -1889,6 +2412,37 @@ async function seedHiring(org, deptMap, userMap) {
         specific_requirements: "Data protection awareness.",
         status: "rejected",
         urgency: "normal",
+      },
+      {
+        org_id: org.id,
+        department_id: byKey(deptMap, "Finance").id,
+        created_by: byKey(userMap, "aarun_palmer").id,
+        job_title: "Payroll Assistant (fixed term)",
+        grade_level: "Grade 4",
+        salary_band: "GBP 26,000 - 29,000",
+        reason_for_hire: "new_role",
+        start_date_needed: datePlus(45),
+        contract_type: "full_time",
+        ideal_candidate_profile: "Payroll admin and pensions exposure.",
+        specific_requirements: "SAGE or similar payroll tooling.",
+        status: "pending_review",
+        urgency: "normal",
+      },
+      {
+        org_id: org.id,
+        department_id: byKey(deptMap, "Student Engagement").id,
+        created_by: byKey(userMap, "marcela_gomez_valdes").id,
+        job_title: "Welcome Week Coordinator (filled)",
+        grade_level: "Grade 3",
+        salary_band: "GBP 24,500",
+        reason_for_hire: "backfill",
+        start_date_needed: datePlus(-60),
+        contract_type: "full_time",
+        ideal_candidate_profile: "Campaign delivery during peak arrivals.",
+        specific_requirements: "Evening and weekend availability.",
+        status: "filled",
+        urgency: "high",
+        archived_at: nowPlus(-45, 15),
       },
     ],
     "*",
@@ -1962,6 +2516,95 @@ async function seedHiring(org, deptMap, userMap) {
   );
   const listingMap = new Map(listings.map((listing) => [listing.title, listing]));
 
+  const liveListing = listingMap.get("Bar Shift Supervisor");
+  const screeningQuestions = await maybeInsert(
+    "job_listing_screening_questions",
+    liveListing
+      ? [
+          {
+            job_listing_id: liveListing.id,
+            sort_order: 0,
+            question_type: "yes_no",
+            prompt: "Do you hold a valid personal licence for alcohol retail (UK)?",
+            required: true,
+          },
+          {
+            job_listing_id: liveListing.id,
+            sort_order: 1,
+            question_type: "single_choice",
+            prompt: "Which earliest shift start can you usually commit to?",
+            required: true,
+            options: ["17:00", "18:00", "19:00"],
+          },
+          {
+            job_listing_id: liveListing.id,
+            sort_order: 2,
+            question_type: "short_text",
+            prompt: "Briefly describe supervisory experience in hospitality.",
+            required: false,
+            max_length: 500,
+          },
+        ]
+      : [],
+    "*",
+  );
+
+  const appQuestionSets = await maybeInsert(
+    "org_application_question_sets",
+    [
+      {
+        org_id: org.id,
+        name: "Default bar hiring pack",
+        created_by: byKey(userMap, "olga_saskova").id,
+      },
+    ],
+    "*",
+  );
+  const defaultQuestionSet = appQuestionSets[0];
+  await maybeInsert(
+    "org_application_question_set_items",
+    defaultQuestionSet
+      ? [
+          {
+            set_id: defaultQuestionSet.id,
+            sort_order: 0,
+            question_type: "yes_no",
+            prompt: "Are you legally able to work in the UK for the full contract?",
+            required: true,
+          },
+          {
+            set_id: defaultQuestionSet.id,
+            sort_order: 1,
+            question_type: "paragraph",
+            prompt: "Describe a time you resolved a conflict in a busy team.",
+            required: true,
+          },
+        ]
+      : [],
+    "*",
+  );
+
+  await maybeInsert(
+    "job_listing_panelists",
+    liveListing
+      ? [
+          {
+            org_id: org.id,
+            job_listing_id: liveListing.id,
+            profile_id: byKey(userMap, "james_hann").id,
+            assigned_by: byKey(userMap, "sophie_morland").id,
+          },
+          {
+            org_id: org.id,
+            job_listing_id: liveListing.id,
+            profile_id: byKey(userMap, "aarun_palmer").id,
+            assigned_by: byKey(userMap, "sophie_morland").id,
+          },
+        ]
+      : [],
+    "*",
+  );
+
   const candidateStages = [
     "applied",
     "screened",
@@ -1974,7 +2617,6 @@ async function seedHiring(org, deptMap, userMap) {
     "hired",
     "rejected",
   ];
-  const liveListing = listingMap.get("Bar Shift Supervisor");
   const applications = await maybeInsert(
     "job_applications",
     liveListing
@@ -1995,6 +2637,50 @@ async function seedHiring(org, deptMap, userMap) {
     "*",
   );
   const appMap = new Map(applications.map((app) => [app.stage, app]));
+
+  const screenedApp = appMap.get("screened");
+  const qLicence = screeningQuestions.find((row) => row.sort_order === 0);
+  const qShift = screeningQuestions.find((row) => row.sort_order === 1);
+  const screenAnswers = await maybeInsert(
+    "job_application_screening_answers",
+    screenedApp && qLicence && qShift
+      ? [
+          {
+            org_id: org.id,
+            job_application_id: screenedApp.id,
+            source_question_id: qLicence.id,
+            prompt_snapshot: qLicence.prompt,
+            type_snapshot: "yes_no",
+            answer_yes_no: true,
+          },
+          {
+            org_id: org.id,
+            job_application_id: screenedApp.id,
+            source_question_id: qShift.id,
+            prompt_snapshot: qShift.prompt,
+            type_snapshot: "single_choice",
+            options_snapshot: qShift.options,
+            answer_choice_id: "18:00",
+          },
+        ]
+      : [],
+    "*",
+  );
+  const firstScreenAnswer = screenAnswers[0];
+  await maybeInsert(
+    "job_application_screening_scores",
+    firstScreenAnswer
+      ? [
+          {
+            org_id: org.id,
+            screening_answer_id: firstScreenAnswer.id,
+            reviewer_profile_id: byKey(userMap, "sophie_morland").id,
+            score: 4,
+          },
+        ]
+      : [],
+    "*",
+  );
 
   await maybeInsert(
     "job_application_notes",
@@ -2099,7 +2785,7 @@ async function seedHiring(org, deptMap, userMap) {
     "*",
   );
   const offerTemplate = templates[0];
-  await maybeInsert(
+  const offers = await maybeInsert(
     "application_offers",
     [
       {
@@ -2135,9 +2821,120 @@ async function seedHiring(org, deptMap, userMap) {
     ].filter((row) => row.job_application_id && row.template_id),
     "*",
   );
-
-  const appliedApp = appMap.get("applied");
+  const signedOffer = offers.find((offer) => offer.status === "signed");
+  const sentOffer = offers.find((offer) => offer.status === "sent");
+  const hiredApp = appMap.get("hired");
   const offerSentApp = appMap.get("offer_sent");
+  const appliedApp = appMap.get("applied");
+
+  await maybeInsert(
+    "recruitment_contract_assignments",
+    hiredApp && signedOffer
+      ? [
+          {
+            org_id: org.id,
+            job_application_id: hiredApp.id,
+            application_offer_id: signedOffer.id,
+            assigned_to_user_id: byKey(userMap, "olga_saskova").id,
+            contract_signed_on: nowPlus(-6, 16),
+            contract_document_url: "https://example.invalid/qa-seed/signed-offer-contract.pdf",
+            assigned_by: byKey(userMap, "james_hann").id,
+          },
+        ]
+      : [],
+    "*",
+  );
+
+  await maybeInsert(
+    "hiring_start_readiness",
+    [
+      hiredApp && signedOffer
+        ? {
+            org_id: org.id,
+            job_application_id: hiredApp.id,
+            offer_id: signedOffer.id,
+            contract_assigned: true,
+            rtw_required: true,
+            rtw_complete: true,
+            payroll_bank_complete: true,
+            payroll_tax_complete: true,
+            policy_ack_complete: true,
+            it_access_complete: true,
+            start_confirmed_at: nowPlus(-5, 10),
+            start_confirmed_by: byKey(userMap, "olga_saskova").id,
+          }
+        : null,
+      offerSentApp && sentOffer
+        ? {
+            org_id: org.id,
+            job_application_id: offerSentApp.id,
+            offer_id: sentOffer.id,
+            contract_assigned: false,
+            rtw_required: true,
+            rtw_complete: false,
+            payroll_bank_complete: false,
+            payroll_tax_complete: false,
+            policy_ack_complete: true,
+            it_access_complete: false,
+          }
+        : null,
+    ].filter(Boolean),
+    "*",
+  );
+
+  await maybeInsert(
+    "onboarding_probation_checkpoints",
+    hiredApp
+      ? [
+          {
+            org_id: org.id,
+            user_id: byKey(userMap, "darcey_james").id,
+            job_application_id: hiredApp.id,
+            checkpoint_day: 30,
+            due_on: datePlus(20),
+            completed_at: nowPlus(-2, 12),
+            completed_by: byKey(userMap, "jane_trueman").id,
+            note: "30-day probation check-in complete (seed).",
+          },
+          {
+            org_id: org.id,
+            user_id: byKey(userMap, "darcey_james").id,
+            job_application_id: hiredApp.id,
+            checkpoint_day: 60,
+            due_on: datePlus(50),
+            note: "60-day checkpoint pending (seed).",
+          },
+        ]
+      : [],
+    "*",
+  );
+
+  const barSupervisorReq = requestMap.get("Bar Shift Supervisor");
+  await maybeInsert(
+    "recruitment_request_status_events",
+    barSupervisorReq
+      ? [
+          {
+            request_id: barSupervisorReq.id,
+            org_id: org.id,
+            from_status: "pending_review",
+            to_status: "approved",
+            changed_by: byKey(userMap, "olga_saskova").id,
+            note: "Seeded approval audit event (QA).",
+          },
+        ]
+      : [],
+    "*",
+  );
+
+  if (hiredApp?.id) {
+    await maybeUpdate(
+      "employee_hr_records",
+      { hired_from_application_id: hiredApp.id },
+      "user_id",
+      byKey(userMap, "darcey_james").id,
+    );
+  }
 
   await maybeInsert(
     "recruitment_notifications",
@@ -2163,6 +2960,17 @@ async function seedHiring(org, deptMap, userMap) {
         job_title: "HR Systems Analyst",
         actor_name: "James Hann",
         read_at: nowPlus(-2, 9),
+      },
+      {
+        org_id: org.id,
+        recipient_id: byKey(userMap, "olga_saskova").id,
+        request_id: requestMap.get("Payroll Assistant (fixed term)")?.id,
+        kind: "new_request",
+        old_status: null,
+        new_status: "pending_review",
+        job_title: "Payroll Assistant (fixed term)",
+        actor_name: "Aarun Palmer",
+        read_at: null,
       },
     ].filter((row) => row.request_id),
     "*",
@@ -2205,6 +3013,7 @@ async function seedHiring(org, deptMap, userMap) {
 }
 
 async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
+  void deptMap;
   const templates = await maybeInsert(
     "onboarding_templates",
     [
@@ -2212,17 +3021,17 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
         org_id: org.id,
         name: "New starter core onboarding",
         description: "Core tasks for all seeded new starters.",
-        department_id: null,
+        is_default: true,
+        is_archived: false,
         created_by: byKey(userMap, "olga_saskova").id,
-        active: true,
       },
       {
         org_id: org.id,
         name: "Commercial supervisor onboarding",
         description: "Department-specific commercial onboarding.",
-        department_id: byKey(deptMap, "Commercial").id,
+        is_default: false,
+        is_archived: false,
         created_by: byKey(userMap, "sophie_morland").id,
-        active: true,
       },
     ],
     "*",
@@ -2239,7 +3048,8 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
             title: "Complete payroll details",
             description: "Submit bank and tax forms.",
             due_offset_days: 1,
-            assignee_role: "employee",
+            assignee_type: "employee",
+            category: "documents",
             sort_order: 10,
           },
           {
@@ -2248,7 +3058,8 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
             title: "Right-to-work check",
             description: "HR completes compliance check.",
             due_offset_days: 2,
-            assignee_role: "hr",
+            assignee_type: "hr",
+            category: "compliance",
             sort_order: 20,
           },
           {
@@ -2257,7 +3068,8 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
             title: "Manager welcome chat",
             description: "Line manager books first check-in.",
             due_offset_days: 7,
-            assignee_role: "manager",
+            assignee_type: "manager",
+            category: "introductions",
             sort_order: 30,
           },
         ]
@@ -2273,71 +3085,121 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
             org_id: org.id,
             template_id: onboardingTemplate.id,
             user_id: byKey(userMap, "qa_pending").id,
-            manager_id: byKey(userMap, "jane_trueman").id,
+            employment_start_date: datePlus(7),
             status: "active",
-            start_date: datePlus(0),
-            created_by: byKey(userMap, "olga_saskova").id,
+            started_by: byKey(userMap, "olga_saskova").id,
+          },
+          {
+            org_id: org.id,
+            template_id: onboardingTemplate.id,
+            user_id: byKey(userMap, "darcey_james").id,
+            employment_start_date: datePlus(-10),
+            status: "active",
+            started_by: byKey(userMap, "olga_saskova").id,
           },
           {
             org_id: org.id,
             template_id: onboardingTemplate.id,
             user_id: byKey(userMap, "timothy_bartlett").id,
-            manager_id: byKey(userMap, "olga_saskova").id,
+            employment_start_date: datePlus(-120),
             status: "completed",
-            start_date: datePlus(-120),
             completed_at: nowPlus(-90, 12),
-            created_by: byKey(userMap, "olga_saskova").id,
+            started_by: byKey(userMap, "olga_saskova").id,
           },
           {
             org_id: org.id,
             template_id: onboardingTemplate.id,
             user_id: byKey(userMap, "qa_inactive").id,
-            manager_id: byKey(userMap, "sophie_morland").id,
+            employment_start_date: datePlus(-300),
             status: "cancelled",
-            start_date: datePlus(-300),
             cancelled_at: nowPlus(-260, 9),
-            created_by: byKey(userMap, "olga_saskova").id,
+            started_by: byKey(userMap, "olga_saskova").id,
           },
         ]
       : [],
     "*",
   );
-  const runMap = new Map(runs.map((run) => [run.status, run]));
+  const runForUser = (key) => runs.find((run) => run.user_id === byKey(userMap, key).id) ?? null;
+  const qaPendingRun = runForUser("qa_pending");
+  const darceyRun = runForUser("darcey_james");
+  const timothyRun = runForUser("timothy_bartlett");
+  const inactiveRun = runForUser("qa_inactive");
 
-  await maybeInsert(
-    "onboarding_run_tasks",
-    templateTasks.flatMap((task, index) => [
-      {
+  const onboardingRunTaskRows = [];
+  for (let index = 0; index < templateTasks.length; index += 1) {
+    const task = templateTasks[index];
+    if (qaPendingRun) {
+      onboardingRunTaskRows.push({
         org_id: org.id,
-        run_id: runMap.get("active")?.id,
+        run_id: qaPendingRun.id,
         template_task_id: task.id,
         title: task.title,
         description: task.description,
+        assignee_type: task.assignee_type,
+        category: task.category,
+        due_date: datePlus(1 + index),
+        sort_order: task.sort_order,
         status: index === 0 ? "completed" : "pending",
-        due_at: nowPlus(index + 1, 9),
         completed_at: index === 0 ? nowPlus(0, 11) : null,
-        assigned_to:
-          task.assignee_role === "employee"
-            ? byKey(userMap, "qa_pending").id
-            : byKey(userMap, "olga_saskova").id,
-      },
-      {
+        completed_by: index === 0 ? byKey(userMap, "qa_pending").id : null,
+      });
+    }
+    if (darceyRun) {
+      onboardingRunTaskRows.push({
         org_id: org.id,
-        run_id: runMap.get("completed")?.id,
+        run_id: darceyRun.id,
         template_task_id: task.id,
         title: task.title,
         description: task.description,
+        assignee_type: task.assignee_type,
+        category: task.category,
+        due_date: datePlus(-5 + index),
+        sort_order: task.sort_order,
+        status: index === 0 ? "completed" : "pending",
+        completed_at: index === 0 ? nowPlus(-4, 14) : null,
+        completed_by: index === 0 ? byKey(userMap, "darcey_james").id : null,
+      });
+    }
+    if (timothyRun) {
+      onboardingRunTaskRows.push({
+        org_id: org.id,
+        run_id: timothyRun.id,
+        template_task_id: task.id,
+        title: task.title,
+        description: task.description,
+        assignee_type: task.assignee_type,
+        category: task.category,
+        due_date: datePlus(-100 + index),
+        sort_order: task.sort_order,
         status: index === 2 ? "skipped" : "completed",
-        due_at: nowPlus(-100 + index, 9),
         completed_at: index === 2 ? null : nowPlus(-99 + index, 12),
-        assigned_to:
-          task.assignee_role === "employee"
-            ? byKey(userMap, "timothy_bartlett").id
-            : byKey(userMap, "olga_saskova").id,
-      },
-    ]).filter((row) => row.run_id),
-    "*",
-  );
+        completed_by:
+          index === 2
+            ? null
+            : task.assignee_type === "employee"
+              ? byKey(userMap, "timothy_bartlett").id
+              : byKey(userMap, "olga_saskova").id,
+      });
+    }
+    if (inactiveRun) {
+      onboardingRunTaskRows.push({
+        org_id: org.id,
+        run_id: inactiveRun.id,
+        template_task_id: task.id,
+        title: task.title,
+        description: task.description,
+        assignee_type: task.assignee_type,
+        category: task.category,
+        due_date: datePlus(-280 + index),
+        sort_order: task.sort_order,
+        status: "pending",
+        completed_at: null,
+        completed_by: null,
+      });
+    }
+  }
+
+  await maybeInsert("onboarding_run_tasks", onboardingRunTaskRows.filter((row) => row.run_id), "*");
 
   const cycles = await maybeInsert(
     "review_cycles",
@@ -2345,28 +3207,30 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
       {
         org_id: org.id,
         name: "2026 Annual Reviews",
-        cycle_type: "annual",
+        type: "annual",
         status: "active",
-        starts_at: datePlus(-10),
-        ends_at: datePlus(50),
+        period_start: datePlus(-30),
+        period_end: datePlus(120),
+        self_assessment_due: datePlus(45),
+        manager_assessment_due: datePlus(75),
         created_by: byKey(userMap, "olga_saskova").id,
       },
       {
         org_id: org.id,
         name: "Probation Reviews",
-        cycle_type: "probation",
+        type: "probation",
         status: "draft",
-        starts_at: datePlus(20),
-        ends_at: datePlus(80),
+        period_start: datePlus(20),
+        period_end: datePlus(80),
         created_by: byKey(userMap, "olga_saskova").id,
       },
       {
         org_id: org.id,
         name: "2025 Closed Reviews",
-        cycle_type: "annual",
+        type: "annual",
         status: "closed",
-        starts_at: datePlus(-400),
-        ends_at: datePlus(-340),
+        period_start: datePlus(-400),
+        period_end: datePlus(-340),
         created_by: byKey(userMap, "olga_saskova").id,
       },
     ],
@@ -2374,98 +3238,184 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
   );
   const cycleMap = new Map(cycles.map((cycle) => [cycle.name, cycle]));
   const activeCycle = cycleMap.get("2026 Annual Reviews");
+  const closedCycle = cycleMap.get("2025 Closed Reviews");
 
-  const reviews = await maybeInsert(
-    "performance_reviews",
-    activeCycle
+  const activeReviews = activeCycle
+    ? [
+        {
+          org_id: org.id,
+          cycle_id: activeCycle.id,
+          reviewee_id: byKey(userMap, "darcey_james").id,
+          reviewer_id: byKey(userMap, "jane_trueman").id,
+          status: "pending",
+        },
+        {
+          org_id: org.id,
+          cycle_id: activeCycle.id,
+          reviewee_id: byKey(userMap, "isla_thorpe").id,
+          reviewer_id: byKey(userMap, "ruby_gislingham").id,
+          status: "self_submitted",
+          self_assessment: "Seeded self assessment: strong event season, need clearer escalation paths.",
+          self_submitted_at: nowPlus(-1, 15),
+        },
+        {
+          org_id: org.id,
+          cycle_id: activeCycle.id,
+          reviewee_id: byKey(userMap, "sophie_morland").id,
+          reviewer_id: byKey(userMap, "ruby_gislingham").id,
+          status: "completed",
+          self_assessment: "Delivered late bar training refresh.",
+          self_submitted_at: nowPlus(-5, 10),
+          manager_assessment: "Consistent duty leadership; continue coaching new supervisors.",
+          overall_rating: "strong",
+          manager_submitted_at: nowPlus(-4, 10),
+          completed_at: nowPlus(-3, 16),
+        },
+        {
+          org_id: org.id,
+          cycle_id: activeCycle.id,
+          reviewee_id: byKey(userMap, "sarthak_peshin").id,
+          reviewer_id: byKey(userMap, "olga_saskova").id,
+          status: "pending",
+        },
+        {
+          org_id: org.id,
+          cycle_id: activeCycle.id,
+          reviewee_id: byKey(userMap, "imogen_greene").id,
+          reviewer_id: byKey(userMap, "jane_trueman").id,
+          status: "self_submitted",
+          self_assessment: "Interim cover going well; want clarity on permanent role timeline.",
+          self_submitted_at: nowPlus(-2, 16),
+        },
+        {
+          org_id: org.id,
+          cycle_id: activeCycle.id,
+          reviewee_id: byKey(userMap, "damien_pearson").id,
+          reviewer_id: byKey(userMap, "jane_trueman").id,
+          status: "manager_submitted",
+          self_assessment: "Society admin workload peaks in welcome week.",
+          self_submitted_at: nowPlus(-6, 9),
+          manager_assessment: "Strong stakeholder comms; delegate more during peaks.",
+          overall_rating: "meets_expectations",
+          manager_submitted_at: nowPlus(-5, 11),
+        },
+        {
+          org_id: org.id,
+          cycle_id: activeCycle.id,
+          reviewee_id: byKey(userMap, "marcela_gomez_valdes").id,
+          reviewer_id: byKey(userMap, "olga_saskova").id,
+          status: "cancelled",
+        },
+        {
+          org_id: org.id,
+          cycle_id: activeCycle.id,
+          reviewee_id: byKey(userMap, "olga_saskova").id,
+          reviewer_id: byKey(userMap, "james_hann").id,
+          status: "pending",
+        },
+      ]
+    : [];
+
+  const closedReviews =
+    closedCycle
       ? [
           {
             org_id: org.id,
-            review_cycle_id: activeCycle.id,
-            employee_id: byKey(userMap, "darcey_james").id,
-            manager_id: byKey(userMap, "jane_trueman").id,
-            status: "pending",
-            due_at: datePlus(21),
-          },
-          {
-            org_id: org.id,
-            review_cycle_id: activeCycle.id,
-            employee_id: byKey(userMap, "isla_thorpe").id,
-            manager_id: byKey(userMap, "ruby_gislingham").id,
-            status: "self_submitted",
-            due_at: datePlus(15),
-            self_submitted_at: nowPlus(-1, 15),
-            self_summary: "Seeded self review summary.",
-          },
-          {
-            org_id: org.id,
-            review_cycle_id: activeCycle.id,
-            employee_id: byKey(userMap, "sophie_morland").id,
-            manager_id: byKey(userMap, "ruby_gislingham").id,
+            cycle_id: closedCycle.id,
+            reviewee_id: byKey(userMap, "timothy_bartlett").id,
+            reviewer_id: byKey(userMap, "olga_saskova").id,
             status: "completed",
-            due_at: datePlus(-3),
-            self_submitted_at: nowPlus(-5, 10),
-            manager_submitted_at: nowPlus(-4, 10),
-            completed_at: nowPlus(-3, 16),
-            manager_summary: "Seeded completed review summary.",
+            self_assessment: "Prior year: supported intranet rollout.",
+            self_submitted_at: nowPlus(-380, 10),
+            manager_assessment: "Reliable execution under tight deadlines.",
+            overall_rating: "meets_expectations",
+            manager_submitted_at: nowPlus(-378, 11),
+            completed_at: nowPlus(-375, 15),
+          },
+          {
+            org_id: org.id,
+            cycle_id: closedCycle.id,
+            reviewee_id: byKey(userMap, "aarun_palmer").id,
+            reviewer_id: byKey(userMap, "james_hann").id,
+            status: "completed",
+            self_assessment: "Closed cycle finance leadership summary.",
+            self_submitted_at: nowPlus(-390, 9),
+            manager_assessment: "Solid financial controls narrative for trustees.",
+            overall_rating: "strong",
+            manager_submitted_at: nowPlus(-388, 10),
+            completed_at: nowPlus(-385, 14),
           },
         ]
-      : [],
-    "*",
-  );
-  const reviewByEmployee = new Map(reviews.map((review) => [review.employee_id, review]));
+      : [];
+
+  const reviews = await maybeInsert("performance_reviews", [...activeReviews, ...closedReviews], "*");
+  const reviewByReviewee = new Map(reviews.map((review) => [review.reviewee_id, review]));
 
   await maybeInsert(
     "review_goals",
     [
       {
         org_id: org.id,
-        review_id: reviewByEmployee.get(byKey(userMap, "darcey_james").id)?.id,
+        review_id: reviewByReviewee.get(byKey(userMap, "darcey_james").id)?.id,
         title: "Improve society escalation response time",
         description: "Seeded in-progress goal.",
         status: "in_progress",
-        due_at: datePlus(60),
+        set_by: "employee",
+        sort_order: 10,
       },
       {
         org_id: org.id,
-        review_id: reviewByEmployee.get(byKey(userMap, "isla_thorpe").id)?.id,
+        review_id: reviewByReviewee.get(byKey(userMap, "isla_thorpe").id)?.id,
         title: "Complete event incident training",
         description: "Seeded not-started goal.",
         status: "not_started",
-        due_at: datePlus(45),
+        set_by: "manager",
+        sort_order: 10,
       },
       {
         org_id: org.id,
-        review_id: reviewByEmployee.get(byKey(userMap, "sophie_morland").id)?.id,
+        review_id: reviewByReviewee.get(byKey(userMap, "sophie_morland").id)?.id,
         title: "Launch late bar checklist",
         description: "Seeded completed goal.",
         status: "completed",
-        due_at: datePlus(-5),
-        completed_at: nowPlus(-7, 12),
-      },
-    ].filter((row) => row.review_id),
-    "*",
-  );
-
-  await maybeInsert(
-    "performance_development_actions",
-    [
-      {
-        org_id: org.id,
-        review_id: reviewByEmployee.get(byKey(userMap, "darcey_james").id)?.id,
-        owner_id: byKey(userMap, "darcey_james").id,
-        title: "Shadow HR on complex society case",
-        status: "open",
-        due_at: datePlus(30),
+        rating: "strong",
+        set_by: "employee",
+        sort_order: 10,
       },
       {
         org_id: org.id,
-        review_id: reviewByEmployee.get(byKey(userMap, "sophie_morland").id)?.id,
-        owner_id: byKey(userMap, "sophie_morland").id,
-        title: "Complete supervisor coaching",
-        status: "done",
-        due_at: datePlus(-10),
-        completed_at: nowPlus(-12, 13),
+        review_id: reviewByReviewee.get(byKey(userMap, "sarthak_peshin").id)?.id,
+        title: "Build HR metrics dashboard prototype",
+        description: "Stretch goal for analytics QA.",
+        status: "in_progress",
+        set_by: "manager",
+        sort_order: 10,
+      },
+      {
+        org_id: org.id,
+        review_id: reviewByReviewee.get(byKey(userMap, "imogen_greene").id)?.id,
+        title: "Document interim handover pack",
+        status: "in_progress",
+        set_by: "employee",
+        sort_order: 20,
+      },
+      {
+        org_id: org.id,
+        review_id: reviewByReviewee.get(byKey(userMap, "timothy_bartlett").id)?.id,
+        title: "Maintain digital support SLAs",
+        status: "completed",
+        rating: "meets_expectations",
+        set_by: "manager",
+        sort_order: 10,
+      },
+      {
+        org_id: org.id,
+        review_id: reviewByReviewee.get(byKey(userMap, "olga_saskova").id)?.id,
+        title: "Embed people analytics in hiring decisions",
+        description: "Seeded goal for HR lead review row.",
+        status: "not_started",
+        set_by: "manager",
+        sort_order: 10,
       },
     ].filter((row) => row.review_id),
     "*",
@@ -2475,9 +3425,9 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
     "org_one_on_one_settings",
     {
       org_id: org.id,
-      default_frequency: "monthly",
-      reminder_days_before: 2,
-      allow_employee_private_notes: true,
+      default_cadence_days: 14,
+      due_soon_days: 3,
+      reminder_offsets_minutes: [1440, 120],
     },
     "org_id",
     "*",
@@ -2489,34 +3439,32 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
       {
         org_id: org.id,
         name: "Monthly manager check-in",
-        description: "Seeded template with prompts.",
+        description: "Seeded template with agenda items mapped to structured notes.",
+        agenda_items: ["Wins since last time", "Blockers", "Career direction"],
+        default_duration_minutes: 45,
         created_by: byKey(userMap, "olga_saskova").id,
-        active: true,
       },
     ],
     "*",
   );
   const oneOnOneTemplate = oneOnOneTemplates[0];
-  await maybeInsert(
-    "one_on_one_template_prompts",
-    oneOnOneTemplate
-      ? [
-          {
-            org_id: org.id,
-            template_id: oneOnOneTemplate.id,
-            prompt: "What is going well?",
-            sort_order: 10,
-          },
-          {
-            org_id: org.id,
-            template_id: oneOnOneTemplate.id,
-            prompt: "Where do you need support?",
-            sort_order: 20,
-          },
-        ]
-      : [],
-    "*",
-  );
+
+  const oooDoc = (managerShared, privateManager) => ({
+    version: 1,
+    questions: [
+      {
+        id: "a0000001-0000-4000-8000-000000000099",
+        prompt: "QA seed: biggest win since last time?",
+        owner: "employee",
+        answer: "Shipped the welcome week checklist.",
+      },
+    ],
+    manager_notes_shared: managerShared,
+    private_manager_notes: privateManager,
+    action_items: [
+      { id: "b0000001-0000-4000-8000-000000000001", title: "Share rota draft", owner: "manager", done: false },
+    ],
+  });
 
   const meetings = await maybeInsert(
     "one_on_one_meetings",
@@ -2525,41 +3473,55 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
           {
             org_id: org.id,
             template_id: oneOnOneTemplate.id,
-            employee_id: byKey(userMap, "darcey_james").id,
-            manager_id: byKey(userMap, "jane_trueman").id,
+            manager_user_id: byKey(userMap, "jane_trueman").id,
+            report_user_id: byKey(userMap, "darcey_james").id,
             status: "scheduled",
-            scheduled_at: nowPlus(3, 10),
+            starts_at: nowPlus(3, 10),
+            ends_at: nowPlus(3, 10, 45),
+            session_title: "Welcome week debrief",
+            shared_notes: "",
+            doc: oooDoc("", ""),
             created_by: byKey(userMap, "jane_trueman").id,
           },
           {
             org_id: org.id,
             template_id: oneOnOneTemplate.id,
-            employee_id: byKey(userMap, "isla_thorpe").id,
-            manager_id: byKey(userMap, "ruby_gislingham").id,
+            manager_user_id: byKey(userMap, "ruby_gislingham").id,
+            report_user_id: byKey(userMap, "isla_thorpe").id,
             status: "in_progress",
-            scheduled_at: nowPlus(0, 14),
-            started_at: nowPlus(0, 14),
+            starts_at: nowPlus(0, 14),
+            ends_at: null,
+            session_title: "Event season check-in",
+            shared_notes: "Discussing cover for Saturday society night.",
+            doc: oooDoc("Agreed to trial float steward.", "Watch burnout signals on back-to-back gigs."),
             created_by: byKey(userMap, "ruby_gislingham").id,
           },
           {
             org_id: org.id,
             template_id: oneOnOneTemplate.id,
-            employee_id: byKey(userMap, "sophie_morland").id,
-            manager_id: byKey(userMap, "ruby_gislingham").id,
+            manager_user_id: byKey(userMap, "ruby_gislingham").id,
+            report_user_id: byKey(userMap, "sophie_morland").id,
             status: "completed",
-            scheduled_at: nowPlus(-14, 11),
-            started_at: nowPlus(-14, 11),
+            starts_at: nowPlus(-14, 11),
+            ends_at: nowPlus(-14, 11, 50),
+            session_title: "Commercial duty sign-off",
+            shared_notes: "Signed off late bar checklist and next quarter priorities.",
+            doc: oooDoc("Signed off late bar checklist.", ""),
+            notes_locked_at: nowPlus(-14, 12),
             completed_at: nowPlus(-14, 12),
             created_by: byKey(userMap, "ruby_gislingham").id,
           },
           {
             org_id: org.id,
             template_id: oneOnOneTemplate.id,
-            employee_id: byKey(userMap, "timothy_bartlett").id,
-            manager_id: byKey(userMap, "olga_saskova").id,
+            manager_user_id: byKey(userMap, "olga_saskova").id,
+            report_user_id: byKey(userMap, "timothy_bartlett").id,
             status: "cancelled",
-            scheduled_at: nowPlus(-5, 10),
-            cancelled_at: nowPlus(-6, 9),
+            starts_at: nowPlus(-5, 10),
+            ends_at: nowPlus(-5, 10, 30),
+            session_title: "Cancelled HR check-in",
+            shared_notes: "",
+            doc: oooDoc("", ""),
             created_by: byKey(userMap, "olga_saskova").id,
           },
         ]
@@ -2569,77 +3531,32 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
   const meetingMap = new Map(meetings.map((meeting) => [meeting.status, meeting]));
 
   await maybeInsert(
-    "one_on_one_notes",
-    [
-      {
-        org_id: org.id,
-        meeting_id: meetingMap.get("in_progress")?.id,
-        author_id: byKey(userMap, "isla_thorpe").id,
-        body: "Private seeded employee note.",
-        visibility: "private",
-      },
-      {
-        org_id: org.id,
-        meeting_id: meetingMap.get("completed")?.id,
-        author_id: byKey(userMap, "ruby_gislingham").id,
-        body: "Shared seeded manager note.",
-        visibility: "shared",
-      },
-    ].filter((row) => row.meeting_id),
-    "*",
-  );
-
-  await maybeInsert(
-    "one_on_one_actions",
-    [
-      {
-        org_id: org.id,
-        meeting_id: meetingMap.get("scheduled")?.id,
-        owner_id: byKey(userMap, "darcey_james").id,
-        title: "Bring welcome week cover plan",
-        status: "open",
-        due_at: datePlus(3),
-      },
-      {
-        org_id: org.id,
-        meeting_id: meetingMap.get("completed")?.id,
-        owner_id: byKey(userMap, "sophie_morland").id,
-        title: "Share late-bar checklist",
-        status: "done",
-        due_at: datePlus(-8),
-        completed_at: nowPlus(-9, 12),
-      },
-    ].filter((row) => row.meeting_id),
-    "*",
-  );
-
-  await maybeInsert(
     "one_on_one_note_edit_requests",
     [
       {
         org_id: org.id,
         meeting_id: meetingMap.get("completed")?.id,
-        requested_by: byKey(userMap, "sophie_morland").id,
+        requester_id: byKey(userMap, "sophie_morland").id,
         status: "pending",
-        requested_body: "Please update the action wording.",
+        proposed_notes: "Please update the late bar action wording for clarity.",
       },
       {
         org_id: org.id,
         meeting_id: meetingMap.get("completed")?.id,
-        requested_by: byKey(userMap, "ruby_gislingham").id,
+        requester_id: byKey(userMap, "ruby_gislingham").id,
         status: "approved",
-        requested_body: "Approved seeded note edit.",
-        decided_by: byKey(userMap, "olga_saskova").id,
-        decided_at: nowPlus(-2, 12),
+        proposed_notes: "Approved seeded note edit — tighten checklist language.",
+        resolved_by: byKey(userMap, "olga_saskova").id,
+        resolved_at: nowPlus(-2, 12),
       },
       {
         org_id: org.id,
         meeting_id: meetingMap.get("completed")?.id,
-        requested_by: byKey(userMap, "darcey_james").id,
+        requester_id: byKey(userMap, "sophie_morland").id,
         status: "rejected",
-        requested_body: "Rejected seeded note edit.",
-        decided_by: byKey(userMap, "olga_saskova").id,
-        decided_at: nowPlus(-1, 12),
+        proposed_notes: "Rejected seeded note edit — keep original sign-off wording.",
+        resolved_by: byKey(userMap, "olga_saskova").id,
+        resolved_at: nowPlus(-1, 12),
       },
     ].filter((row) => row.meeting_id),
     "*",

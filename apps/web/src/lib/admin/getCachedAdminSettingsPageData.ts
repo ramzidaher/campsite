@@ -16,6 +16,8 @@ export type AdminSettingsPageData = {
     brand_preset_key: string | null;
     brand_tokens: Record<string, string> | null;
     brand_policy: string | null;
+    celebration_holiday_country: string;
+    celebration_holidays_last_synced_at: string | null;
   } | null;
   orgCelebrationModes: Array<{
     id: string;
@@ -46,7 +48,24 @@ registerSharedCacheStore(
 );
 
 function getAdminSettingsPageCacheKey(orgId: string): string {
-  return `org:${orgId}`;
+  // Bump when org select shape changes so we do not serve stale `org: null` from failed selects.
+  return `org:${orgId}:admin_settings_v2`;
+}
+
+const ORG_SELECT_BASE =
+  'id, name, slug, logo_url, default_notifications_enabled, deactivation_requested_at, timezone, brand_preset_key, brand_tokens, brand_policy';
+
+const ORG_SELECT_WITH_CALENDARIFIC = `${ORG_SELECT_BASE}, celebration_holiday_country, celebration_holidays_last_synced_at`;
+
+async function loadOrganisationRowForAdminSettings(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string
+): Promise<Record<string, unknown> | null> {
+  let resp = await supabase.from('organisations').select(ORG_SELECT_WITH_CALENDARIFIC).eq('id', orgId).maybeSingle();
+  if (resp.error || !resp.data) {
+    resp = await supabase.from('organisations').select(ORG_SELECT_BASE).eq('id', orgId).maybeSingle();
+  }
+  return (resp.data as Record<string, unknown> | null) ?? null;
 }
 
 export const getCachedAdminSettingsPageData = cache(async (orgId: string): Promise<AdminSettingsPageData> => {
@@ -58,14 +77,8 @@ export const getCachedAdminSettingsPageData = cache(async (orgId: string): Promi
     ttlMs: ADMIN_SETTINGS_PAGE_RESPONSE_CACHE_TTL_MS,
     load: async () => {
       const supabase = await createClient();
-      const [{ data: org }, { data: orgCelebrationModes }] = await Promise.all([
-        supabase
-          .from('organisations')
-          .select(
-            'id, name, slug, logo_url, default_notifications_enabled, deactivation_requested_at, timezone, brand_preset_key, brand_tokens, brand_policy'
-          )
-          .eq('id', orgId)
-          .single(),
+      const [org, { data: orgCelebrationModes }] = await Promise.all([
+        loadOrganisationRowForAdminSettings(supabase, orgId),
         supabase
           .from('org_celebration_modes')
           .select(
@@ -89,6 +102,13 @@ export const getCachedAdminSettingsPageData = cache(async (orgId: string): Promi
               brand_preset_key: (org.brand_preset_key as string | null) ?? null,
               brand_tokens: (org.brand_tokens as Record<string, string> | null) ?? null,
               brand_policy: (org.brand_policy as string | null) ?? null,
+              celebration_holiday_country:
+                typeof org.celebration_holiday_country === 'string' &&
+                /^[A-Za-z]{2}$/.test(String(org.celebration_holiday_country).trim())
+                  ? String(org.celebration_holiday_country).trim().toUpperCase()
+                  : 'GB',
+              celebration_holidays_last_synced_at:
+                (org.celebration_holidays_last_synced_at as string | null) ?? null,
             }
           : null,
         orgCelebrationModes: (orgCelebrationModes ?? []) as AdminSettingsPageData['orgCelebrationModes'],

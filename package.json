@@ -45,6 +45,8 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "supabase": "npx supabase@latest",
     "supabase:db:push": "cd supabase && npx supabase@latest db push --include-all --yes",
+    "supabase:db:push:local": "cd supabase && npx supabase@latest db push --local --include-all --yes",
+    "supabase:db:apply:calendarific": "npx supabase@latest db query --linked -f supabase/migrations/20260804120000_calendarific_celebration_cache.sql",
     "supabase:functions:deploy:broadcast-notify": "npx supabase@latest functions deploy process-broadcast-notifications --no-verify-jwt",
     "supabase:functions:deploy:rota-notify": "npx supabase@latest functions deploy process-rota-notifications --no-verify-jwt",
     "loadtest:k6:shell": "k6 run load-tests/k6-shell-rpc.js",

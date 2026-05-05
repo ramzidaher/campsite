@@ -8,6 +8,7 @@ import { LoginOrgChoiceModal } from '@/components/auth/LoginOrgChoiceModal';
 import { AppLoaderOverlay } from '@/components/AppLoaderOverlay';
 import { createClient } from '@/lib/supabase/client';
 import { tenantHostMatchesOrg, tenantSubdomainOriginForHost } from '@/lib/tenant/adminUrl';
+import { getTenantRootDomain } from '@/lib/tenant/hostConfig';
 
 type Props = {
   /** From server `searchParams` - avoids `useSearchParams` + Suspense on the login page. */
@@ -22,6 +23,20 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
   function safeNextPath(path: string): string {
     if (!path || !path.startsWith('/') || path.startsWith('//')) return '/';
     return path;
+  }
+
+  function getPresetOrgSlugFromHost(): string | null {
+    if (typeof window === 'undefined') return null;
+    const hostname = window.location.hostname.toLowerCase();
+    const root = getTenantRootDomain().toLowerCase();
+
+    if (hostname.endsWith(`.${root}`)) {
+      return hostname.replace(`.${root}`, '') || null;
+    }
+    if (hostname.endsWith('.localhost')) {
+      return hostname.replace('.localhost', '') || null;
+    }
+    return null;
   }
 
   async function redirectToMemberApp(orgSlug?: string) {
@@ -137,6 +152,26 @@ export function LoginForm({ nextPath = '/', errorParam }: Props) {
       setLoading(false);
       setSigningIn(true);
       void redirectToMemberApp(orgs[0]!.slug || undefined);
+      return;
+    }
+
+    const presetOrgSlug = getPresetOrgSlugFromHost();
+    if (presetOrgSlug) {
+      const matchedOrg = orgs.find((org) => org.slug.toLowerCase() === presetOrgSlug);
+      if (matchedOrg) {
+        if (!prof?.org_id || prof.org_id !== matchedOrg.org_id) {
+          await supabase.rpc('set_my_active_org', { p_org_id: matchedOrg.org_id });
+        }
+        setLoading(false);
+        setSigningIn(true);
+        void redirectToMemberApp(matchedOrg.slug || undefined);
+        return;
+      }
+
+      // Tenant host is explicit, so avoid the chooser even when there is no membership match.
+      setLoading(false);
+      setSigningIn(true);
+      void redirectToMemberApp(presetOrgSlug);
       return;
     }
 

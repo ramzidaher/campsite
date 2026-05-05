@@ -1,0 +1,34 @@
+---
+description: UI iconography consistency for action links/buttons and directional affordances
+globs:
+  - apps/web/src/**/*.tsx
+alwaysApply: false
+---
+
+# UI iconography and arrows
+
+Use these rules when adding or editing UI actions (links, buttons, CTA rows) in web app surfaces.
+
+## Directional affordances
+
+1. **Never use unicode/text arrow glyphs** for navigation/action affordance in product UI copy:
+   - Avoid: `→`, `←`, `›`, `‹` in labels like “View all →”.
+2. Use a proper icon component for direction cues (for example from `lucide-react`) when a directional cue is needed.
+3. Keep icon + label alignment consistent:
+   - `inline-flex items-center gap-1` or `gap-1.5`
+   - icon size typically `h-3.5 w-3.5` to `h-4 w-4` for inline action text
+   - icon should be `aria-hidden` when decorative
+
+## Hover/interaction style for “View all” style links
+
+1. Prefer **no underline by default**.
+2. Add underline only on interaction states:
+   - `hover:underline hover:underline-offset-2`
+   - `focus-visible:underline focus-visible:underline-offset-2`
+3. Keep hover text darkening (`hover:text-[#121212]`) for clear affordance.
+
+## Icon consistency across related surfaces
+
+1. When a CTA exists in multiple places (for example Dashboard + Broadcasts), match the established icon treatment for that feature.
+2. Do not introduce a different icon style in one surface unless product/design explicitly asks for a refresh.
+3. If a legacy symbol is intentionally used by the canonical surface, mirror that style until the canonical surface is migrated.

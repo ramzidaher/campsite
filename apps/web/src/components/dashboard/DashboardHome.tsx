@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Pin } from 'lucide-react';
+import { ArrowRight, Pencil, Pin } from 'lucide-react';
 
 import { DashboardCampfireAmbient } from '@/components/dashboard/DashboardCampfireAmbient';
 import { DashboardCalendarWidget } from '@/components/dashboard/DashboardCalendarWidget';
@@ -122,7 +122,8 @@ export function DashboardHome({
               prefetch={false}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 campsite-body font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
             >
-              ✏ New broadcast
+              <Pencil className="h-4 w-4" aria-hidden />
+              New broadcast
             </Link>
           ) : null}
           {canCompose && !showPrimaryComposeCta ? (
@@ -131,7 +132,8 @@ export function DashboardHome({
               prefetch={false}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 campsite-body font-medium text-[#faf9f6] shadow-sm transition-opacity hover:opacity-90"
             >
-              ✏ Submit draft for approval
+              <Pencil className="h-4 w-4" aria-hidden />
+              Submit draft for approval
             </Link>
           ) : null}
         </div>
@@ -260,9 +262,9 @@ export function DashboardHome({
             <Link
               href={isAdmin ? '/admin/broadcasts' : '/broadcasts'}
               prefetch={false}
-              className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] hover:text-[#121212] hover:underline hover:underline-offset-2 focus-visible:underline focus-visible:underline-offset-2"
             >
-              View all →
+              View all <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </div>
           <div className="flex flex-col gap-2.5">

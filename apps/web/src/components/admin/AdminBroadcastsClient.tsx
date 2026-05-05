@@ -3,6 +3,7 @@
 import { FormSelect } from '@campsite/ui/web';
 import { adminBroadcastsFilterChannelAria, channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { createClient } from '@/lib/supabase/client';
+import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -210,7 +211,8 @@ export function AdminBroadcastsClient({
           href="/broadcasts?tab=feed&compose=1"
           className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
         >
-          ✏ New broadcast
+          <Pencil className="h-4 w-4" aria-hidden />
+          New broadcast
         </Link>
       </div>
 

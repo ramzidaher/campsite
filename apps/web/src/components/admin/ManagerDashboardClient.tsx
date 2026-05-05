@@ -2,7 +2,7 @@
 
 import { ExperienceLensBar } from '@/components/experience/ExperienceLensBar';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
 const statTileClass =
   'block rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]';
@@ -79,6 +79,18 @@ function categoryColor(category: StaffTimelineItem['category']) {
       return 'border-[#8b5cf6] bg-violet-50 text-violet-900';
     default:
       return 'border-[#d8d8d8] bg-[#faf9f6] text-[#44403c]';
+  }
+}
+
+function categoryBorderLeft(category: StaffTimelineItem['category']) {
+  switch (category) {
+    case 'probation':      return 'border-l-amber-400 bg-amber-50/60';
+    case 'right_to_work':  return 'border-l-rose-400 bg-rose-50/60';
+    case 'new_starter':
+    case 'induction':      return 'border-l-sky-400 bg-sky-50/60';
+    case 'check_in':       return 'border-l-indigo-400 bg-indigo-50/60';
+    case 'offer':          return 'border-l-violet-400 bg-violet-50/60';
+    default:               return 'border-l-[#d8d8d8] bg-[#faf9f6]';
   }
 }
 
@@ -433,21 +445,28 @@ export function ManagerDashboardClient({
 
   const timelineGrid = useMemo(() => {
     const horizonDays = viewConfig[timelineView].days;
-    // Keep the visual board size stable across 1W/1M/3M/6M.
-    // We only change the day-step granularity per column.
-    const columns = 14;
-    const dayStep = Math.max(1, Math.ceil(horizonDays / columns));
+    // Pick a dayStep that divides the horizon cleanly so ticks cover exactly horizonDays.
+    const dayStep  = horizonDays <= 7 ? 1 : horizonDays <= 30 ? 2 : horizonDays <= 90 ? 7 : 14;
+    const columns  = Math.round(horizonDays / dayStep);
     const axisStart = startOfDay(timelineModel.now);
-    const axisEnd = addDays(axisStart, horizonDays);
-    const msPerCol = dayStep * 24 * 60 * 60 * 1000;
+    const axisEnd  = addDays(axisStart, columns * dayStep);
+
+    const tickFormat: Intl.DateTimeFormatOptions = dayStep === 1
+      ? { weekday: 'short', month: 'short', day: 'numeric' }
+      : { month: 'short', day: 'numeric' };
 
     const ticks = Array.from({ length: columns + 1 }, (_, idx) => {
       const at = addDays(axisStart, idx * dayStep);
       return {
         key: `tick-${idx}`,
-        label: at.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        label: at.toLocaleDateString(undefined, tickFormat),
       };
     });
+
+    // Layout constants for the new separated dot/label model.
+    const LANE_H  = 36;  // px per label lane
+    const DOT_D   = 10;  // dot diameter
+    const PAD_BOT = 20;  // space below baseline
 
     const rows = timelineModel.rows.map((row) => {
       const basePoints = row.scopedItems.map((item) => {
@@ -459,7 +478,7 @@ export function ManagerDashboardClient({
         };
       });
 
-      // Auto-assign lanes so nearby items don't overlap labels.
+      // Auto-assign lanes so nearby label blocks don't overlap.
       const laneLastLeft: number[] = [];
       const minGapPercent = 14;
       const points = [...basePoints]
@@ -475,11 +494,13 @@ export function ManagerDashboardClient({
           return { ...point, lane };
         });
 
-      const laneCount = Math.max(1, laneLastLeft.length);
-      return { ...row, points, laneCount };
+      const laneCount  = Math.max(1, laneLastLeft.length);
+      const rowHeight  = Math.max(70, LANE_H * laneCount + DOT_D + PAD_BOT);
+      const baseline   = rowHeight - PAD_BOT - DOT_D / 2;
+      return { ...row, points, laneCount, rowHeight, baseline };
     });
 
-    return { ticks, rows, columns, msPerCol };
+    return { ticks, rows, columns, LANE_H, DOT_D };
   }, [timelineModel.now, timelineModel.rows, timelineView]);
 
   return (
@@ -543,7 +564,7 @@ export function ManagerDashboardClient({
         ) : null}
 
         <div className="border-b border-[#ececec] bg-[#faf9f6] px-5 py-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b8b8b]">
+          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b8b8b]">
             Top priorities for {viewConfig[timelineView].label}
           </p>
           {timelineModel.topItems.length === 0 ? (
@@ -553,14 +574,12 @@ export function ManagerDashboardClient({
               {timelineModel.topItems.map((item) => (
                 <div
                   key={`${item.person}-${item.id}`}
-                  className={`rounded-md border px-2.5 py-1.5 text-[11.5px] ${categoryColor(item.category)}`}
+                  className={`min-w-[160px] max-w-[220px] rounded-lg border-l-[3px] py-2 pl-2.5 pr-3 shadow-[0_1px_3px_rgba(0,0,0,0.05)] ${categoryBorderLeft(item.category)}`}
                 >
-                  <p className="font-medium">
-                    {item.person}: {item.title}
-                  </p>
-                  <p className="mt-0.5 opacity-80">
-                    {new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ·{' '}
-                    {item.source}
+                  <p className="truncate text-[11.5px] font-semibold text-[#121212]">{item.person}</p>
+                  <p className="truncate text-[11.5px] text-[#44403c]">{item.title}</p>
+                  <p className="mt-1 text-[10.5px] text-[#8b8b8b]">
+                    {new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {item.source}
                   </p>
                 </div>
               ))}
@@ -573,75 +592,114 @@ export function ManagerDashboardClient({
             <p className="text-sm text-[#9b9b9b]">No staff timeline items inside the selected range yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[980px] rounded-lg border border-[#e7e5e4] bg-white">
+              <div className="min-w-[780px] rounded-lg border border-[#e7e5e4] bg-white">
+                {/* Header row */}
                 <div
                   className="grid border-b border-[#ececec] bg-[#faf9f6]"
-                  style={{ gridTemplateColumns: `220px repeat(${timelineGrid.ticks.length}, minmax(56px, 1fr))` }}
+                  style={{ gridTemplateColumns: `220px repeat(${timelineGrid.columns}, minmax(52px, 1fr))` }}
                 >
                   <div className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8b8b8b]">
                     You
                   </div>
-                  {timelineGrid.ticks.map((tick) => (
+                  {timelineGrid.ticks.slice(0, timelineGrid.columns).map((tick) => (
                     <div key={tick.key} className="border-l border-[#efefef] px-2 py-2.5 text-[11px] text-[#8b8b8b]">
                       {tick.label}
                     </div>
                   ))}
                 </div>
 
-                {timelineGrid.rows.map((row) => (
-                  <div
-                    key={row.userId}
-                    className="grid border-b border-[#f1f1f1] last:border-b-0"
-                    style={{ gridTemplateColumns: `220px repeat(${timelineGrid.ticks.length}, minmax(56px, 1fr))` }}
-                  >
-                    <div className="px-3 py-3">
-                      <p className="text-[13px] font-medium text-[#121212]">{row.fullName}</p>
-                      <p className="text-[11px] text-[#8b8b8b]">{row.departmentName ?? 'Department not set'}</p>
-                    </div>
-
-                    <div
-                      className="relative col-span-full ml-[220px] border-l border-[#f0f0f0]"
-                      style={{ height: `${Math.max(96, row.laneCount * 34 + 42)}px` }}
-                    >
-                      <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${timelineGrid.ticks.length}, minmax(56px, 1fr))` }}>
-                        {timelineGrid.ticks.map((tick) => (
-                          <div key={`${row.userId}-${tick.key}`} className="border-r border-[#f8f8f8]" />
-                        ))}
+                {/* Data rows — flex layout (Bug 3 fix) */}
+                {timelineGrid.rows.map((row) => {
+                  const dueSoonDays = Math.max(2, Math.ceil(viewConfig[timelineView].days / 5));
+                  return (
+                    <div key={row.userId} className="flex border-b border-[#f1f1f1] last:border-b-0">
+                      {/* Name column */}
+                      <div className="w-[220px] shrink-0 self-start px-3 py-3">
+                        <p className="text-[13px] font-medium text-[#121212]">{row.fullName}</p>
+                        <p className="text-[11px] text-[#8b8b8b]">{row.departmentName ?? 'Department not set'}</p>
                       </div>
 
-                      <div className="absolute left-0 right-0 top-[58%] h-[2px] -translate-y-1/2 bg-[#d8d8d8]" />
+                      {/* Timeline area */}
+                      <div
+                        className="relative flex-1 border-l border-[#f0f0f0]"
+                        style={{ height: `${row.rowHeight}px` }}
+                      >
+                        {/* Column separator lines */}
+                        <div
+                          className="pointer-events-none absolute inset-0 grid"
+                          style={{ gridTemplateColumns: `repeat(${timelineGrid.columns}, 1fr)` }}
+                        >
+                          {Array.from({ length: timelineGrid.columns }, (_, i) => (
+                            <div key={i} className="border-r border-[#f8f8f8]" />
+                          ))}
+                        </div>
 
-                      {row.points.map((point) => {
-                        const tone = timelineTone(point, timelineModel.now, Math.max(2, Math.ceil(viewConfig[timelineView].days / 5)));
-                        const top = 8 + point.lane * 34;
-                        return (
-                          <button
-                            key={point.id}
-                            type="button"
-                            className={`absolute z-10 w-[190px] -translate-x-1/2 text-left ${tone.text}`}
-                            style={{ left: `${point.leftPercent}%`, top: `${top}px` }}
-                            onClick={() =>
-                              setSelectedTimelineItem({
-                                ...point,
-                                personName: row.fullName,
-                                toneLabel: tone.label,
-                              })
-                            }
-                            title={`${point.title} · ${point.source}`}
-                          >
-                            <span className={`absolute left-1/2 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-2 border-white shadow ${tone.dot}`} style={{ top: `${Math.max(24, row.laneCount * 34 + 6 - top)}px` }} />
-                            <span className="block truncate text-[11px] font-medium underline-offset-2 hover:underline">
-                              {point.title}
-                            </span>
-                            <span className="mt-0.5 block text-[10px] opacity-80">
-                              {new Date(point.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                            </span>
-                          </button>
-                        );
-                      })}
+                        {/* Baseline rule — all dots sit exactly on this line (Bug 2 fix) */}
+                        <div
+                          className="pointer-events-none absolute left-0 right-0 h-px bg-[#d0d0d0]"
+                          style={{ top: `${row.baseline}px` }}
+                        />
+
+                        {row.points.map((point) => {
+                          const tone     = timelineTone(point, timelineModel.now, dueSoonDays);
+                          const labelTop = (row.laneCount - 1 - point.lane) * timelineGrid.LANE_H;
+                          const dotTop   = row.baseline - timelineGrid.DOT_D / 2;
+                          const connectorTop    = labelTop + 28;
+                          const connectorHeight = dotTop - connectorTop;
+                          return (
+                            <Fragment key={point.id}>
+                              {/* Connector line from label to dot */}
+                              {connectorHeight > 2 ? (
+                                <div
+                                  className="pointer-events-none absolute w-px bg-[#e2e8f0]"
+                                  style={{
+                                    left:   `${point.leftPercent}%`,
+                                    top:    `${connectorTop}px`,
+                                    height: `${connectorHeight}px`,
+                                  }}
+                                />
+                              ) : null}
+
+                              {/* Dot — positioned directly on the baseline */}
+                              <span
+                                className={`absolute z-20 rounded-full border-2 border-white shadow-sm ${tone.dot}`}
+                                style={{
+                                  width:     `${timelineGrid.DOT_D}px`,
+                                  height:    `${timelineGrid.DOT_D}px`,
+                                  left:      `${point.leftPercent}%`,
+                                  top:       `${dotTop}px`,
+                                  transform: 'translateX(-50%)',
+                                }}
+                              />
+
+                              {/* Clickable label above the dot */}
+                              <button
+                                type="button"
+                                className={`absolute z-10 w-[130px] -translate-x-1/2 text-center leading-tight ${tone.text}`}
+                                style={{ left: `${point.leftPercent}%`, top: `${labelTop}px` }}
+                                onClick={() =>
+                                  setSelectedTimelineItem({
+                                    ...point,
+                                    personName: row.fullName,
+                                    toneLabel:  tone.label,
+                                  })
+                                }
+                                title={`${point.title} · ${point.source}`}
+                              >
+                                <span className="block truncate text-[11px] font-medium underline-offset-2 hover:underline">
+                                  {point.title}
+                                </span>
+                                <span className="mt-0.5 block text-[10px] opacity-70">
+                                  {new Date(point.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                </span>
+                              </button>
+                            </Fragment>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

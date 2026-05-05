@@ -8,6 +8,7 @@ import {
 } from '@campsite/types';
 import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
+import { Pencil } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -344,60 +345,89 @@ export function BroadcastsClient({
   const feedSelectChrome =
     'rounded-xl border-[#e8e8e8] focus:border-[#121212] focus:shadow-none focus:ring-[3px] focus:ring-[#121212]/10';
 
-  const workspaceToolbar =
-    composeAllowed ? (
-      <div className="border-b border-[#e8e8e8] py-3">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <FormSelect
-            wrapperClassName="!w-auto min-w-[200px] shrink-0"
-            className={feedSelectChrome}
-            value={workspaceView}
-            onChange={(e) => goWorkspace(e.target.value as WorkspaceView)}
-            aria-label="Broadcast view"
-          >
-            <option value="feed">
-              Feed{unread > 0 ? ` (${unread} unread)` : ''}
-            </option>
-            <option value="drafts">My drafts</option>
-            <option value="submitted">
-              Sent for approval{submittedInboxBadge > 0 ? ` (${submittedInboxBadge})` : ''}
-            </option>
-            {showScheduledTab ? <option value="scheduled">Scheduled</option> : null}
-          </FormSelect>
-          {primaryComposeCta ? (
-            <button
-              type="button"
-              onClick={() => openCompose()}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:bg-[#2a2a2a]"
-            >
-              ✏ New broadcast
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => openCompose()}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:bg-[#2a2a2a]"
-            >
-              ✏ Submit draft for approval
-            </button>
-          )}
-        </div>
-      </div>
-    ) : null;
-
   return (
     <div className={composeOpen && composeAllowed ? 'w-full' : 'w-full px-5 py-8 sm:px-7'}>
       {/* Page header — hidden in compose so the journal-style composer owns the canvas */}
       {!(composeOpen && composeAllowed) ? (
-        <div className="mb-7">
-          <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
-            Broadcasts
-          </h1>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-[#6b6b6b]">
-            {draftOnlyRole
-              ? 'Feed, drafts, and submit messages for approval.'
-              : 'Org-wide messages, your drafts, and approval queue.'}
-          </p>
+        <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
+              Broadcasts
+            </h1>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-[#6b6b6b]">
+              {draftOnlyRole
+                ? 'Feed, drafts, and submit messages for approval.'
+                : 'Org-wide messages, your drafts, and approval queue.'}
+            </p>
+          </div>
+          {!composeOpen && workspaceView === 'feed' ? (
+            <div className="flex shrink-0 items-center gap-3 pt-1">
+              <button
+                type="button"
+                className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+                onClick={() => void feedRef.current?.markAllRead()}
+              >
+                Mark all as read
+              </button>
+              {primaryComposeCta ? (
+                <button
+                  type="button"
+                  onClick={() => openCompose()}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
+                >
+                  <Pencil className="h-4 w-4" aria-hidden />
+                  New broadcast
+                </button>
+              ) : composeAllowed ? (
+                <button
+                  type="button"
+                  onClick={() => openCompose()}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] shadow-sm transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
+                >
+                  <Pencil className="h-4 w-4" aria-hidden />
+                  Submit draft for approval
+                </button>
+              ) : null}
+            </div>
+          ) : composeAllowed ? (
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 pt-1">
+              <FormSelect
+                wrapperClassName="!w-auto min-w-[200px] shrink-0"
+                className={feedSelectChrome}
+                value={workspaceView}
+                onChange={(e) => goWorkspace(e.target.value as WorkspaceView)}
+                aria-label="Broadcast view"
+              >
+                <option value="feed">
+                  Feed{unread > 0 ? ` (${unread} unread)` : ''}
+                </option>
+                <option value="drafts">My drafts</option>
+                <option value="submitted">
+                  Sent for approval{submittedInboxBadge > 0 ? ` (${submittedInboxBadge})` : ''}
+                </option>
+                {showScheduledTab ? <option value="scheduled">Scheduled</option> : null}
+              </FormSelect>
+              {primaryComposeCta ? (
+                <button
+                  type="button"
+                  onClick={() => openCompose()}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
+                >
+                  <Pencil className="h-4 w-4" aria-hidden />
+                  New broadcast
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openCompose()}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
+                >
+                  <Pencil className="h-4 w-4" aria-hidden />
+                  Submit draft for approval
+                </button>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -409,33 +439,6 @@ export function BroadcastsClient({
 
       {!composeOpen && workspaceView === 'feed' ? (
         <>
-          <div className="flex flex-wrap items-center justify-end gap-3 py-3">
-            <button
-              type="button"
-              className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
-              onClick={() => void feedRef.current?.markAllRead()}
-            >
-              Mark all as read
-            </button>
-            {primaryComposeCta ? (
-              <button
-                type="button"
-                onClick={() => openCompose()}
-                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
-              >
-                ✏ New broadcast
-              </button>
-            ) : composeAllowed ? (
-              <button
-                type="button"
-                onClick={() => openCompose()}
-                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] shadow-sm transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
-              >
-                ✏ Submit draft for approval
-              </button>
-            ) : null}
-          </div>
-
           <div className="border-b border-[#e8e8e8] py-3">
             <div className="flex flex-wrap items-center gap-2.5">
               {composeAllowed ? (
@@ -582,7 +585,6 @@ export function BroadcastsClient({
 
       {!composeOpen && workspaceView === 'drafts' && composeAllowed ? (
         <>
-          {workspaceToolbar}
           <div className="space-y-4 py-6">
             <DraftsScheduledList supabase={supabase} userId={profile.id} mode="draft" />
           </div>
@@ -591,7 +593,6 @@ export function BroadcastsClient({
 
       {!composeOpen && workspaceView === 'submitted' && composeAllowed ? (
         <>
-          {workspaceToolbar}
           <div className="space-y-10 py-6">
             {approverRole ? (
               <section className="space-y-3">
@@ -631,7 +632,6 @@ export function BroadcastsClient({
 
       {!composeOpen && workspaceView === 'scheduled' && showScheduledTab ? (
         <>
-          {workspaceToolbar}
           <div className="space-y-4 py-6">
             <DraftsScheduledList supabase={supabase} userId={profile.id} mode="scheduled" />
           </div>

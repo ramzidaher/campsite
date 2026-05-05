@@ -84,9 +84,24 @@ export async function GET(req: Request) {
     googleEmail = u.email ?? null;
   }
 
+  if (!isGoogleTokenCryptoConfigured()) {
+    return NextResponse.redirect(
+      appendGoogleAuthParam(
+        returnTo,
+        'google_error',
+        'missing_GOOGLE_TOKEN_ENCRYPTION_KEY'
+      )
+    );
+  }
+
   const encryptedAccess = encryptGoogleTokenIfConfigured(tokens.access_token);
   const encryptedRefresh = encryptGoogleTokenIfConfigured(refreshToken);
-  const encryptedMode = isGoogleTokenCryptoConfigured();
+  if (!encryptedAccess.ciphertext || !encryptedRefresh.ciphertext) {
+    return NextResponse.redirect(
+      appendGoogleAuthParam(returnTo, 'google_error', 'google_token_encrypt_failed')
+    );
+  }
+
   let admin;
   try {
     admin = createServiceRoleClient();
@@ -100,13 +115,12 @@ export async function GET(req: Request) {
     {
       user_id: oauthState.uid,
       type: oauthState.type,
-      access_token: encryptedMode ? null : tokens.access_token,
-      refresh_token: encryptedMode ? null : refreshToken,
+      access_token: null,
+      refresh_token: null,
       access_token_encrypted: encryptedAccess.ciphertext,
       refresh_token_encrypted: encryptedRefresh.ciphertext,
       token_encryption_kid: encryptedAccess.kid ?? encryptedRefresh.kid,
-      token_encrypted_at:
-        encryptedAccess.ciphertext && encryptedRefresh.ciphertext ? new Date().toISOString() : null,
+      token_encrypted_at: new Date().toISOString(),
       expires_at: expiresAt,
       google_email: googleEmail,
       updated_at: new Date().toISOString(),

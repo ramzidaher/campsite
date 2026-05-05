@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 import { buildGoogleOAuthRedirectUri, createGoogleOAuthState } from '@/lib/google/googleOAuth';
+import { isGoogleTokenCryptoConfigured } from '@/lib/google/googleTokenCrypto';
 
 const SCOPES: Record<string, string> = {
   sheets: 'https://www.googleapis.com/auth/spreadsheets.readonly',
@@ -14,6 +15,16 @@ export async function GET(req: Request) {
   if (!clientId || !clientSecret) {
     return NextResponse.json(
       { error: 'Google OAuth is not configured (missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).' },
+      { status: 501 }
+    );
+  }
+
+  if (!isGoogleTokenCryptoConfigured()) {
+    return NextResponse.json(
+      {
+        error:
+          'Google token storage requires GOOGLE_TOKEN_ENCRYPTION_KEY (server env). Required by database policy; see .env.example.',
+      },
       { status: 501 }
     );
   }

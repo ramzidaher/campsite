@@ -27,7 +27,6 @@ import {
   getCachedProfilePageSectionsData,
   updateProfileUiMode,
 } from '@/lib/profile/profilePageRouteData';
-import { campusSurface } from '@campsite/ui/web';
 
 function labelContract(value: string | null) {
   if (value === 'full_time') return 'Full-time';
@@ -490,6 +489,11 @@ export default async function MyProfilePage({
   }
 
   const initials = getProfileInitials(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
+  const profileAvatarUrl =
+    typeof (profile as { avatar_url?: string | null }).avatar_url === 'string' &&
+    (profile as { avatar_url?: string | null }).avatar_url.trim().length > 0
+      ? (profile as { avatar_url: string }).avatar_url
+      : null;
   const leaveDaysLeft = Math.max(0, Number(annualEntitlementDays ?? 0) - annualUsed);
   const tenureLabel =
     typeof (fileRow as { length_of_service_years?: number } | undefined)?.length_of_service_years === 'number' &&
@@ -543,8 +547,16 @@ export default async function MyProfilePage({
         <header className="mb-7 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white">
           <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_28%,#e8e8e8)] bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,white)] text-[14px] font-semibold text-[var(--org-brand-primary,#0f6e56)]">
-                {initials || '—'}
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_28%,#e8e8e8)] bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,white)] text-[14px] font-semibold text-[var(--org-brand-primary,#0f6e56)]">
+                {profileAvatarUrl ? (
+                  <img
+                    src={profileAvatarUrl}
+                    alt={`${profileDisplayName} profile photo`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  initials || '—'
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">{profileDisplayName}</h1>
@@ -725,31 +737,39 @@ export default async function MyProfilePage({
                   <div className="grid gap-3 p-4 sm:grid-cols-2">
                     <Link
                       href="/leave"
-                      className={`flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] ${campusSurface.interactiveSheetRow}`}
+                      className="group flex items-center justify-between rounded-2xl border border-[#e3e3e3] bg-[#fcfcfb] px-4 py-3 text-[13px] font-medium text-[#121212] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-[transform,box-shadow,border-color,background-color] hover:-translate-y-px hover:border-[#d2d2d2] hover:bg-white hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_6px_14px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-brand-primary,#0f6e56)] focus-visible:ring-offset-2 active:translate-y-0"
                     >
                       <span>Book annual leave</span>
-                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a8a8a] group-hover:text-[#121212]">
+                        Open
+                      </span>
                     </Link>
                     <Link
                       href="/rota"
-                      className={`flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] ${campusSurface.interactiveSheetRow}`}
+                      className="group flex items-center justify-between rounded-2xl border border-[#e3e3e3] bg-[#fcfcfb] px-4 py-3 text-[13px] font-medium text-[#121212] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-[transform,box-shadow,border-color,background-color] hover:-translate-y-px hover:border-[#d2d2d2] hover:bg-white hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_6px_14px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-brand-primary,#0f6e56)] focus-visible:ring-offset-2 active:translate-y-0"
                     >
                       <span>View rota</span>
-                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a8a8a] group-hover:text-[#121212]">
+                        Open
+                      </span>
                     </Link>
                     <Link
                       href="/performance"
-                      className={`flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] ${campusSurface.interactiveSheetRow}`}
+                      className="group flex items-center justify-between rounded-2xl border border-[#e3e3e3] bg-[#fcfcfb] px-4 py-3 text-[13px] font-medium text-[#121212] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-[transform,box-shadow,border-color,background-color] hover:-translate-y-px hover:border-[#d2d2d2] hover:bg-white hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_6px_14px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-brand-primary,#0f6e56)] focus-visible:ring-offset-2 active:translate-y-0"
                     >
                       <span>Start performance review</span>
-                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a8a8a] group-hover:text-[#121212]">
+                        Open
+                      </span>
                     </Link>
                     <Link
                       href="?tab=other"
-                      className={`flex items-center justify-between rounded-2xl border border-[#e8e8e8] bg-white px-4 py-3 text-[12.5px] text-[#121212] ${campusSurface.interactiveSheetRow}`}
+                      className="group flex items-center justify-between rounded-2xl border border-[#e3e3e3] bg-[#fcfcfb] px-4 py-3 text-[13px] font-medium text-[#121212] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-[transform,box-shadow,border-color,background-color] hover:-translate-y-px hover:border-[#d2d2d2] hover:bg-white hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_6px_14px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-brand-primary,#0f6e56)] focus-visible:ring-offset-2 active:translate-y-0"
                     >
                       <span>View payslips</span>
-                      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9b9b9b]">Open</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a8a8a] group-hover:text-[#121212]">
+                        Open
+                      </span>
                     </Link>
                   </div>
                 </div>

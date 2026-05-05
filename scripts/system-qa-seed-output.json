@@ -1,0 +1,304 @@
+{
+  "org": {
+    "id": "70f65927-a525-408a-94f3-92434246d70c",
+    "name": "CampSite System QA Lab",
+    "slug": "campsite-system-qa-perf-onb-1",
+    "logo_url": null,
+    "created_at": "2026-05-03T19:12:16.52812+00:00",
+    "is_active": true,
+    "default_notifications_enabled": true,
+    "deactivation_requested_at": null,
+    "timezone": null,
+    "plan_tier": "starter",
+    "subscription_status": "trial",
+    "is_locked": false,
+    "maintenance_mode": false,
+    "force_logout_after": null,
+    "subscription_trial_started_at": "2026-05-03T19:12:16.52812+00:00",
+    "subscription_trial_ends_at": "2026-05-17T19:12:16.52812+00:00",
+    "brand_preset_key": null,
+    "brand_tokens": {},
+    "brand_policy": "brand_base_with_celebration_accents",
+    "brand_updated_at": null,
+    "brand_updated_by": null
+  },
+  "users": [
+    {
+      "key": "james_hann",
+      "id": "91f0e15e-4606-4ea4-85f5-9f2ed9272740",
+      "email": "james.hann@camp-site.co.uk",
+      "role": "org_admin",
+      "status": "active",
+      "department": "Senior Leadership",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "tarek_khalil",
+      "id": "31074b40-86e8-4517-9a48-331bbf1a59f3",
+      "email": "tarek.khalil@camp-site.co.uk",
+      "role": "org_admin",
+      "status": "active",
+      "department": "Senior Leadership",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "olga_saskova",
+      "id": "78f1c28b-bbbf-410f-b296-fd21e8f3d3b3",
+      "email": "olga.saskova@camp-site.co.uk",
+      "role": "chro_hr_director",
+      "status": "active",
+      "department": "HR",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "sarthak_peshin",
+      "id": "5b64f9cb-c1d2-4231-b249-5d7d5eacabd8",
+      "email": "sarthak.peshin@camp-site.co.uk",
+      "role": "hr_officer",
+      "status": "active",
+      "department": "HR",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "aarun_palmer",
+      "id": "f901bff1-385f-47b9-a348-810626f3537c",
+      "email": "aarun.palmer@camp-site.co.uk",
+      "role": "manager",
+      "status": "active",
+      "department": "Finance",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "jane_trueman",
+      "id": "7f19774d-b1a4-484a-ae95-6f6f92e78439",
+      "email": "jane.trueman@camp-site.co.uk",
+      "role": "manager",
+      "status": "active",
+      "department": "Activities",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "darcey_james",
+      "id": "b5121acd-c8fc-436c-957c-975fa750ca75",
+      "email": "darcey.james@camp-site.co.uk",
+      "role": "coordinator",
+      "status": "active",
+      "department": "Activities",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "imogen_greene",
+      "id": "7770f276-16fd-4e6e-8f37-dc880d4a75f4",
+      "email": "imogen.greene@camp-site.co.uk",
+      "role": "coordinator",
+      "status": "active",
+      "department": "Activities",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "damien_pearson",
+      "id": "dadac595-feb9-4626-81de-d70578302814",
+      "email": "damien.pearson@camp-site.co.uk",
+      "role": "administrator",
+      "status": "active",
+      "department": "Activities",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "ruby_gislingham",
+      "id": "c1d39f91-f762-4f59-9248-f153ce7a41d5",
+      "email": "ruby.gislingham@camp-site.co.uk",
+      "role": "manager",
+      "status": "active",
+      "department": "Events",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "isla_thorpe",
+      "id": "6cd4f7cd-9eb1-4f8b-9f77-f078c7f974f6",
+      "email": "isla.thorpe@camp-site.co.uk",
+      "role": "coordinator",
+      "status": "active",
+      "department": "Events",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "sophie_morland",
+      "id": "95fa746e-bdb2-4957-88cd-d160aa640a45",
+      "email": "sophie.morland@camp-site.co.uk",
+      "role": "duty_manager",
+      "status": "active",
+      "department": "Commercial",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "timothy_bartlett",
+      "id": "a32ce90b-6077-40dd-a359-4e0f156954ab",
+      "email": "timothy.bartlett@camp-site.co.uk",
+      "role": "csa",
+      "status": "active",
+      "department": "Communications & Digital Support",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "marcela_gomez_valdes",
+      "id": "304099f7-d69b-4c7a-8aaa-23fd37031844",
+      "email": "marcela.gomez.valdes@camp-site.co.uk",
+      "role": "administrator",
+      "status": "active",
+      "department": "Student Engagement",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "qa_society_lead",
+      "id": "821a2704-98ce-49c4-83e1-eb0651da7bb2",
+      "email": "qa.society.lead@camp-site.co.uk",
+      "role": "society_leader",
+      "status": "active",
+      "department": "Demo Society",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "qa_pending",
+      "id": "b49a54a1-d25d-461f-9045-4e4fd5b7464a",
+      "email": "qa.pending@camp-site.co.uk",
+      "role": "unassigned",
+      "status": "pending",
+      "department": "Activities",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    },
+    {
+      "key": "qa_inactive",
+      "id": "84c5c106-d03a-4aac-8173-a86ae9425be8",
+      "email": "qa.inactive@camp-site.co.uk",
+      "role": "csa",
+      "status": "inactive",
+      "department": "Commercial",
+      "created": false,
+      "existingPasswordPreserved": true,
+      "passwordReset": false
+    }
+  ],
+  "departments": [
+    {
+      "id": "514e9d98-c0a4-40f7-9280-0813c574c83f",
+      "name": "Senior Leadership",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "85898a6c-3824-4057-a8a2-6fb5aee218b7",
+      "name": "HR",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "ce295146-d53c-4032-967a-b92b453b5d88",
+      "name": "Finance",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "e85bd88a-4364-4e2a-a0de-635d0d7d596e",
+      "name": "Activities",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "e066c89a-c9f0-48a9-877c-eaee4c31bded",
+      "name": "Events",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "e883773f-ab4e-4ffb-b362-55c128075c1b",
+      "name": "Commercial",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "b43dea66-4137-4676-be55-cba43d340c13",
+      "name": "Student Engagement",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "95b23863-8e10-4400-9f16-3c945b8f0c69",
+      "name": "Communications & Digital Support",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "6f00ce59-cdcc-4b5f-8714-955d47d602e9",
+      "name": "Student Voice",
+      "type": "department",
+      "is_archived": false
+    },
+    {
+      "id": "f5afa6e4-d830-4097-8787-27a7983c5b00",
+      "name": "Demo Society",
+      "type": "society",
+      "is_archived": false
+    },
+    {
+      "id": "2a3bed4c-9184-48f1-aca0-990e5c392933",
+      "name": "Archived Lab",
+      "type": "department",
+      "is_archived": true
+    }
+  ],
+  "warnings": [
+    "notifications skipped: Could not find the table 'public.notifications' in the schema cache",
+    "onboarding_probation_checkpoints skipped: duplicate key value violates unique constraint \"onboarding_probation_checkpoi_user_id_checkpoint_day_due_on_key\"",
+    "google_connections skipped: new row for relation \"google_connections\" violates check constraint \"google_connections_encrypted_only_chk\"",
+    "notifications skipped: Could not find the table 'public.notifications' in the schema cache"
+  ],
+  "skipped": [],
+  "featurePlan": [
+    "Org shell: multi-org membership, active org switching target, roles, departments, teams, manager assignments, profile states, and shell preferences.",
+    "Broadcasts: org-wide, department, team targeted, mandatory, pinned, draft, pending approval, scheduled, cancelled, sent, read, unread, replies, subscriptions, finance/comms/student-voice channels, and performance-adjacent HR posts.",
+    "Notifications: read and unread notification rows across broadcast, leave, hiring, and application workflows where schemas are present.",
+    "Calendar and rota-adjacent states: manual, rota, and broadcast events with attendee response states.",
+    "Attendance and payroll: work sites, clock-in/out events, submitted/approved/rejected/draft timesheets, wagesheet lines, adjustments, and review rows where available.",
+    "Leave and absence: allowances, pending, approved, rejected, cancelled leave, sickness episodes, TOIL credit requests, in-app leave notifications, and org leave-year settings.",
+    "HR records: employee records (contract, RTW, address, emergency contacts), payroll pay profiles and role rates, bank/tax/P60 documents, custom document categories, training, medical notes, dependants, employment history, disciplinary/grievance cases, leave encashment/carry-over requests, and custom fields.",
+    "Hiring: recruitment requests (incl. filled/archived + status audit), job listings, panelists, application question sets, screening Q&A and scores, applications across the pipeline, interviews, notes, messages, offers, contract assignments, start readiness, and portal tokens.",
+    "Onboarding: templates, template tasks, runs for pending + active staff + completed + cancelled paths, and per-run tasks (HR logins use CHRO / HR officer roles so admin onboarding RLS is satisfied).",
+    "Performance: review cycles, reviews, goals, and multiple completion states (incl. closed-cycle history); primary HR persona can manage cycles and view org reports.",
+    "One-on-ones: org cadence settings, templates (agenda → structured doc), scheduled/in-progress/completed/cancelled meetings with doc payloads, and note edit requests.",
+    "Resources and reports: folders, active/archived resources, report definitions, runs, schedules, exports, and pinned reports.",
+    "Privacy and admin ops: retention policies, erasure requests, audit entries, discount tiers, QR tokens, scan logs, and integration placeholders where available."
+  ]
+}

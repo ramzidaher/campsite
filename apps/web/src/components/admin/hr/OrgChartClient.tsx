@@ -39,14 +39,16 @@ type NodeConfig = {
 };
 
 const COLORS: Record<string, string> = {
-  't-board': '#a78bfa',
-  't-csuite': '#38bdf8',
-  't-slt': '#34d399',
-  't-mid': '#fbbf24',
-  't-senior': '#6ee7b7',
-  't-core': '#f472b6',
-  't-junior': '#94a3b8',
+  't-board': '#7c3aed',
+  't-csuite': '#0284c7',
+  't-slt': '#059669',
+  't-mid': '#d97706',
+  't-senior': '#0d9488',
+  't-core': '#be185d',
+  't-junior': '#64748b',
 };
+
+const EDGE_STROKE = '#94a3b8';
 
 /** Live directory: HR job title drives band + card subtitle; tenant `profiles.role` only when no HR row. */
 function tenantRoleTier(role: string): { tier: string; tc: string } | null {
@@ -156,105 +158,159 @@ function rowNameOrBlank(row: OrgChartRow | undefined): string {
   return row ? rowName(row) : '';
 }
 
-const SLT_PRIMARY_DEPT = 'Senior Leadership';
-
-/** Lane order on each level: exec / SLT first, then A→Z, then Unassigned (matches QA seed dept name "Senior Leadership"). */
-function compareDepartmentLanes(a: string, b: string): number {
-  const rank = (n: string) => {
-    if (n === 'Senior Leadership') return 0;
-    if (n === 'Unassigned') return 2;
-    return 1;
-  };
-  const ra = rank(a);
-  const rb = rank(b);
-  if (ra !== rb) return ra - rb;
-  return a.localeCompare(b);
-}
-
-/** One horizontal exec band for SLT: CEO, Deputy CEO, then other SLT, then name. */
-function compareSltPeers(a: OrgChartRow, b: OrgChartRow): number {
-  const rank = (r: OrgChartRow): number => {
-    const jt = (r.job_title ?? '').toLowerCase();
-    if (/\bceo\b|chief executive/i.test(r.job_title ?? '')) return 0;
-    if (/deputy\s+ceo/i.test(jt)) return 1;
-    if (r.role === 'org_admin') return 2;
-    return 3;
-  };
-  const d = rank(a) - rank(b);
-  if (d !== 0) return d;
-  return rowName(a).localeCompare(rowName(b));
-}
-
-/**
- * Tree depth alone puts deputies one row below the CEO. Pull every SLT primary-dept
- * member up to the shallowest tier any SLT occupies so the exec team shares one row.
- */
-function computeDisplayLevels(
-  rows: OrgChartRow[],
-  treeLevelById: Map<string, number>,
-): Map<string, number> {
-  const out = new Map<string, number>();
-  const sltIds = rows
-    .filter((r) => primaryDepartment(r) === SLT_PRIMARY_DEPT)
-    .map((r) => r.user_id);
-  if (sltIds.length === 0) {
-    rows.forEach((r) => out.set(r.user_id, treeLevelById.get(r.user_id) ?? 0));
-    return out;
-  }
-  const minSlt = Math.min(...sltIds.map((id) => treeLevelById.get(id) ?? 0));
-  for (const id of sltIds) out.set(id, minSlt);
-  rows.forEach((r) => {
-    if (!out.has(r.user_id)) out.set(r.user_id, treeLevelById.get(r.user_id) ?? 0);
-  });
-  return out;
-}
-
-const BEZIER_CIRCLE = 0.5522847498;
 const CARD_W = 150;
 const CARD_H = 74;
 
-/**
- * Same topology as an org-chart tree (drop → bus → drop) but fully curved — no polyline elbows.
- */
-function smoothTreeConnectorPath(fx: number, fy: number, tx: number, ty: number, yBus: number): string {
-  const dx = tx - fx;
-  const dy1 = yBus - fy;
-  const dy2 = ty - yBus;
-  const sx = dx === 0 ? 1 : Math.sign(dx);
+/** Tight overlap / same-row fallback (rare after tree-by-depth layout). */
+function fallbackVerticalConnector(fx: number, fy: number, tx: number, ty: number): string {
+  const my = ty <= fy + 6 ? (fy + ty) / 2 : Math.max(fy + 18, Math.min(ty - 18, fy + (ty - fy) * 0.45));
+  return `M${fx},${fy} C${fx},${my} ${tx},${my} ${tx},${ty}`;
+}
 
-  if (Math.abs(dx) < 10) {
-    const my = (fy + ty) / 2;
-    return `M${fx},${fy} C${fx},${my} ${tx},${my} ${tx},${ty}`;
+/** Classic org-chart orthogonal routing (vertical → horizontal bus → vertical). */
+function orthoConnector(fx: number, fy: number, tx: number, ty: number, yBus: number): string {
+  if (ty <= fy + 2) return fallbackVerticalConnector(fx, fy, tx, ty);
+  const mid = Math.min(Math.max(yBus, fy + 6), ty - 6);
+  if (Math.abs(fx - tx) < 2) return `M${fx},${fy} L${fx},${ty}`;
+  return `M${fx},${fy} L${fx},${mid} L${tx},${mid} L${tx},${ty}`;
+}
+
+const TREE_MARGIN_TOP = 52;
+const TREE_LEVEL_GAP = 148;
+const SIBLING_SUBTREE_GAP = 28;
+const ROOT_FOREST_GAP = 72;
+/** Max direct leaf reports in one row before wrapping into a compact grid (reduces horizontal sprawl). */
+const MAX_INLINE_LEAF_SIBLINGS = 6;
+const LEAF_WRAP_MAX_COLS = 8;
+const LEAF_WRAP_MAX_ROWS = 4;
+const LEAF_WRAP_H_GAP = 22;
+/** Horizontal anchor for pre–viewport centering; auto fit-to-view scales the real bounds. */
+const TREE_LAYOUT_CENTER_X = 900;
+
+type TreeXY = { x: number; y: number };
+
+function computeCenteredTreeLayout(rows: OrgChartRow[]): Record<string, Position> {
+  const byId = new Map(rows.map((r) => [r.user_id, r]));
+  const childrenMap = new Map<string, string[]>();
+  rows.forEach((r) => childrenMap.set(r.user_id, []));
+  rows.forEach((r) => {
+    if (r.reports_to_user_id && byId.has(r.reports_to_user_id)) {
+      childrenMap.get(r.reports_to_user_id)?.push(r.user_id);
+    }
+  });
+  childrenMap.forEach((list) => list.sort((a, b) => rowNameOrBlank(byId.get(a)).localeCompare(rowNameOrBlank(byId.get(b)))));
+
+  const roots = rows
+    .filter((r) => !r.reports_to_user_id || !byId.has(r.reports_to_user_id))
+    .sort((a, b) => rowName(a).localeCompare(rowName(b)));
+
+  function layoutSubtree(id: string, depth: number): { minX: number; maxX: number; positions: Record<string, TreeXY> } {
+    const y = TREE_MARGIN_TOP + depth * TREE_LEVEL_GAP;
+    const kids = [...(childrenMap.get(id) ?? [])].filter((k) => byId.has(k));
+
+    if (!kids.length) {
+      return { minX: 0, maxX: CARD_W, positions: { [id]: { x: 0, y } } };
+    }
+
+    const allDirectLeaves = kids.every((k) => (childrenMap.get(k) ?? []).length === 0);
+    if (allDirectLeaves && kids.length > MAX_INLINE_LEAF_SIBLINGS) {
+      const cols = Math.min(
+        LEAF_WRAP_MAX_COLS,
+        Math.max(1, Math.ceil(kids.length / LEAF_WRAP_MAX_ROWS)),
+      );
+      const cellW = CARD_W + LEAF_WRAP_H_GAP;
+      const rowVertStep = Math.min(58, Math.floor(TREE_LEVEL_GAP * 0.42));
+      const childDepthY = TREE_MARGIN_TOP + (depth + 1) * TREE_LEVEL_GAP;
+      const merged: Record<string, TreeXY> = {};
+      for (let i = 0; i < kids.length; i++) {
+        const kid = kids[i]!;
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        merged[kid] = { x: col * cellW, y: childDepthY + row * rowVertStep };
+      }
+      let spanMin = Infinity;
+      let spanMax = -Infinity;
+      for (const p of Object.values(merged)) {
+        spanMin = Math.min(spanMin, p.x);
+        spanMax = Math.max(spanMax, p.x + CARD_W);
+      }
+      const mid = (spanMin + spanMax) / 2;
+      const parentX = mid - CARD_W / 2;
+      merged[id] = { x: parentX, y };
+      return {
+        minX: Math.min(spanMin, parentX),
+        maxX: Math.max(spanMax, parentX + CARD_W),
+        positions: merged,
+      };
+    }
+
+    const childLayouts = kids.map((k) => layoutSubtree(k, depth + 1));
+    let cursor = 0;
+    const merged: Record<string, TreeXY> = {};
+    for (let i = 0; i < kids.length; i++) {
+      const cl = childLayouts[i]!;
+      const shift = cursor - cl.minX;
+      for (const [nid, pos] of Object.entries(cl.positions)) {
+        merged[nid] = { x: pos.x + shift, y: pos.y };
+      }
+      cursor = shift + cl.maxX + SIBLING_SUBTREE_GAP;
+    }
+    cursor -= SIBLING_SUBTREE_GAP;
+
+    let spanMin = Infinity;
+    let spanMax = -Infinity;
+    for (const p of Object.values(merged)) {
+      spanMin = Math.min(spanMin, p.x);
+      spanMax = Math.max(spanMax, p.x + CARD_W);
+    }
+    const mid = (spanMin + spanMax) / 2;
+    const parentX = mid - CARD_W / 2;
+    merged[id] = { x: parentX, y };
+
+    const finalMin = Math.min(spanMin, parentX);
+    const finalMax = Math.max(spanMax, parentX + CARD_W);
+    return { minX: finalMin, maxX: finalMax, positions: merged };
   }
 
-  const r = Math.min(
-    20,
-    Math.max(
-      8,
-      Math.min(Math.abs(dx) * 0.15, Math.abs(dy1) * 0.36, Math.abs(dy2) * 0.36, (ty - yBus) * 0.42),
-    ),
-  );
-  const k = BEZIER_CIRCLE * r;
+  const all: Record<string, TreeXY> = {};
+  let forestCursor = 0;
+  let globalMinX = Infinity;
+  let globalMaxX = -Infinity;
 
-  const xStem = fx;
-  const yStem = yBus - r;
-  const xOnBusL = fx + sx * r;
-  const xOnBusR = tx - sx * r;
-  const yBelowBus = yBus + r;
+  for (const root of roots) {
+    const sub = layoutSubtree(root.user_id, 0);
+    const shift = forestCursor - sub.minX;
+    for (const [nid, pos] of Object.entries(sub.positions)) {
+      const x = pos.x + shift;
+      all[nid] = { x, y: pos.y };
+      globalMinX = Math.min(globalMinX, x);
+      globalMaxX = Math.max(globalMaxX, x + CARD_W);
+    }
+    forestCursor = shift + sub.maxX + ROOT_FOREST_GAP;
+  }
+  forestCursor -= roots.length ? ROOT_FOREST_GAP : 0;
 
-  const stemEase = fy + Math.min(Math.max(dy1 * 0.58, 14), dy1 - r * 0.4);
+  const dx = Number.isFinite(globalMinX) && Number.isFinite(globalMaxX)
+    ? TREE_LAYOUT_CENTER_X - (globalMinX + globalMaxX) / 2
+    : 0;
 
-  const hSpan = Math.abs(xOnBusR - xOnBusL);
-  const hPull = Math.min(hSpan * 0.38, 48);
+  const next: Record<string, Position> = {};
+  for (const [id, pos] of Object.entries(all)) {
+    const x = pos.x + dx;
+    const y = pos.y;
+    next[id] = { x, y, tx: x, ty: y };
+  }
 
-  return [
-    `M${fx},${fy}`,
-    `C${fx},${stemEase} ${fx},${yBus - r * 0.35} ${xStem},${yStem}`,
-    `C${xStem},${yStem + k} ${xOnBusL - sx * k},${yBus} ${xOnBusL},${yBus}`,
-    `C${xOnBusL + sx * hPull},${yBus} ${xOnBusR - sx * hPull},${yBus} ${xOnBusR},${yBus}`,
-    `C${xOnBusR + sx * k},${yBus} ${tx},${yBelowBus - k} ${tx},${yBelowBus}`,
-    `C${tx},${yBelowBus + Math.max(dy2 * 0.55, 10)} ${tx},${ty - Math.max(dy2 * 0.32, 6)} ${tx},${ty}`,
-  ].join(' ');
+  let orphanIdx = 0;
+  for (const r of rows) {
+    if (next[r.user_id]) continue;
+    const x = TREE_LAYOUT_CENTER_X - CARD_W / 2 + orphanIdx * (CARD_W + SIBLING_SUBTREE_GAP);
+    orphanIdx += 1;
+    const y = TREE_MARGIN_TOP;
+    next[r.user_id] = { x, y, tx: x, ty: y };
+  }
+
+  return next;
 }
 
 /** Stable accent per department name for card stripe (flat name ordering; no DB parent chain). */
@@ -297,53 +353,13 @@ function csvCell(value: string | null | undefined): string {
 
 function buildGraph(rows: OrgChartRow[]) {
   const byId = new Map(rows.map((r) => [r.user_id, r]));
-  const children = new Map<string, string[]>();
-  rows.forEach((r) => children.set(r.user_id, []));
   const edges: Array<[string, string]> = [];
-
   rows.forEach((r) => {
     if (r.reports_to_user_id && byId.has(r.reports_to_user_id)) {
-      children.get(r.reports_to_user_id)?.push(r.user_id);
       edges.push([r.reports_to_user_id, r.user_id]);
     }
   });
-
-  const roots = rows
-    .filter((r) => !r.reports_to_user_id || !byId.has(r.reports_to_user_id))
-    .sort((a, b) => rowName(a).localeCompare(rowName(b)));
-
-  const treeLevelById = new Map<string, number>();
-  const q: string[] = roots.map((r) => r.user_id);
-  roots.forEach((r) => treeLevelById.set(r.user_id, 0));
-  while (q.length) {
-    const id = q.shift();
-    if (!id) continue;
-    const lvl = treeLevelById.get(id) ?? 0;
-    const kids = children.get(id) ?? [];
-    kids.sort((a, b) => rowNameOrBlank(byId.get(a)).localeCompare(rowNameOrBlank(byId.get(b))));
-    kids.forEach((k) => {
-      if (!treeLevelById.has(k)) {
-        treeLevelById.set(k, lvl + 1);
-        q.push(k);
-      }
-    });
-  }
-  rows.forEach((r) => {
-    if (!treeLevelById.has(r.user_id)) treeLevelById.set(r.user_id, 0);
-  });
-
-  const displayLevelById = computeDisplayLevels(rows, treeLevelById);
-
-  const levels = new Map<number, OrgChartRow[]>();
-  rows.forEach((r) => {
-    const l = displayLevelById.get(r.user_id) ?? 0;
-    const list = levels.get(l) ?? [];
-    list.push(r);
-    levels.set(l, list);
-  });
-  levels.forEach((list) => list.sort((a, b) => rowName(a).localeCompare(rowName(b))));
-
-  return { edges, levels };
+  return { edges };
 }
 
 export function OrgChartClient({
@@ -353,12 +369,20 @@ export function OrgChartClient({
   rows: OrgChartRow[];
   chartTitle?: string;
 }) {
-  const [useDemoData, setUseDemoData] = useState(() => rows.length === 0);
-  const activeRows = useMemo(() => (useDemoData ? DEMO_ROWS : rows), [rows, useDemoData]);
+  /**
+   * When the server returns no directory rows, default to the built-in sample so the canvas is usable
+   * (same as pre–empty-default behaviour). Turn off automatically when live rows arrive.
+   */
+  const [showFictionalSample, setShowFictionalSample] = useState(() => rows.length === 0);
+  const activeRows = useMemo(
+    () => (rows.length > 0 ? rows : showFictionalSample ? DEMO_ROWS : []),
+    [rows, showFictionalSample],
+  );
+  const viewingFictionalSample = rows.length === 0 && showFictionalSample && activeRows.length > 0;
 
   useEffect(() => {
-    if (rows.length > 0 && useDemoData) setUseDemoData(false);
-  }, [rows.length, useDemoData]);
+    if (rows.length > 0) setShowFictionalSample(false);
+  }, [rows.length]);
   const graph = useMemo(() => buildGraph(activeRows), [activeRows]);
   const nodes = useMemo<NodeConfig[]>(() =>
     activeRows.map((r) => {
@@ -366,9 +390,7 @@ export function OrgChartClient({
       return { id: r.user_id, label: rowName(r), tier: t.tier, tc: t.tc, row: r };
     }),
   [activeRows]);
-  const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
   const sceneRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const nodeRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const positionsRef = useRef<Record<string, Position>>({});
   const initialLayoutRef = useRef<Record<string, Position>>({});
@@ -386,125 +408,62 @@ export function OrgChartClient({
 
   const bump = useCallback(() => setRenderTick((n) => n + 1), []);
 
-  const drawBg = useCallback(() => {
+  const fitToView = useCallback(() => {
     const scene = sceneRef.current;
-    const canvas = canvasRef.current;
-    if (!scene || !canvas) return;
-    canvas.width = scene.offsetWidth;
-    canvas.height = scene.offsetHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const gs = 24;
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x < canvas.width; x += gs) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
+    if (!scene) return;
+    const ids = Object.keys(positionsRef.current);
+    if (!ids.length) return;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const id of ids) {
+      const p = positionsRef.current[id];
+      if (!p) continue;
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x + CARD_W);
+      maxY = Math.max(maxY, p.y + CARD_H);
     }
-    for (let y = 0; y < canvas.height; y += gs) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
+    if (!Number.isFinite(minX) || !Number.isFinite(minY)) return;
+    const pad = 36;
+    const contentW = Math.max(1, maxX - minX + pad * 2);
+    const contentH = Math.max(1, maxY - minY + pad * 2);
+    const sRaw = Math.min(scene.clientWidth / contentW, scene.clientHeight / contentH);
+    const s = Math.max(0.06, Math.min(2.75, sRaw));
+    setVpScale(s);
+    setVpX(minX - pad);
+    setVpY(minY - pad);
   }, []);
 
   useEffect(() => {
-    const baseX = 100;
-    const gapX = 210;
-    const laneGap = 44;
-    const baseY = 52;
-    const gapY = 180;
-    const next: Record<string, Position> = {};
-    Array.from(graph.levels.entries())
-      .sort((a, b) => a[0] - b[0])
-      .forEach(([level, levelNodes]) => {
-        const byDept = new Map<string, OrgChartRow[]>();
-        for (const row of levelNodes) {
-          const d = primaryDepartment(row);
-          if (!byDept.has(d)) byDept.set(d, []);
-          byDept.get(d)!.push(row);
-        }
-        const depts = [...byDept.keys()].sort(compareDepartmentLanes);
-        let x = baseX;
-        const levelY = baseY + level * gapY;
-        for (const d of depts) {
-          const group = byDept.get(d)!;
-          if (d === SLT_PRIMARY_DEPT) group.sort(compareSltPeers);
-          else group.sort((a, b) => rowName(a).localeCompare(rowName(b)));
-          for (const row of group) {
-            next[row.user_id] = { x, y: levelY, tx: x, ty: levelY };
-            x += gapX;
-          }
-          x += laneGap;
-        }
-      });
+    const next = computeCenteredTreeLayout(activeRows);
     positionsRef.current = next;
     initialLayoutRef.current = Object.fromEntries(
       Object.entries(next).map(([k, v]) => [k, { ...v }]),
     );
-    setVpX(0);
-    setVpY(0);
-    setVpScale(1);
-    drawBg();
     bump();
-  }, [bump, drawBg, graph.levels]);
-
-  /** Dept lane titles track the top-left of each (level × primary dept) cluster as cards move. */
-  const laneHeaders = useMemo(() => {
-    const headers: Array<{ key: string; label: string; x: number; y: number }> = [];
-    Array.from(graph.levels.entries())
-      .sort((a, b) => a[0] - b[0])
-      .forEach(([level, levelNodes]) => {
-        const byDept = new Map<string, OrgChartRow[]>();
-        for (const row of levelNodes) {
-          const d = primaryDepartment(row);
-          if (!byDept.has(d)) byDept.set(d, []);
-          byDept.get(d)!.push(row);
-        }
-        const depts = [...byDept.keys()].sort(compareDepartmentLanes);
-        for (const d of depts) {
-          const group = byDept.get(d)!;
-          let minX = Infinity;
-          let minY = Infinity;
-          for (const row of group) {
-            const pos = positionsRef.current[row.user_id];
-            if (pos) {
-              minX = Math.min(minX, pos.x);
-              minY = Math.min(minY, pos.y);
-            }
-          }
-          if (minX === Infinity) continue;
-          headers.push({
-            key: `lh-${level}-${d}`,
-            label: d,
-            x: minX,
-            y: minY - 22,
-          });
-        }
-      });
-    return headers;
-  }, [graph.levels, renderTick]);
+    const t = window.setTimeout(() => {
+      fitToView();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [bump, activeRows, fitToView]);
 
   useEffect(() => {
     const onResize = () => {
-      drawBg();
       bump();
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [bump, drawBg]);
+  }, [bump]);
 
   /** Top / bottom centre anchors so edges attach like graph tools (e.g. Obsidian). Reads live ref positions. */
   const nodeAnchors = useCallback((id: string) => {
     const el = nodeRefs.current[id];
     const p = positionsRef.current[id];
     if (!p) return null;
-    const w = el?.offsetWidth ?? 140;
-    const h = el?.offsetHeight ?? 56;
+    const w = el?.offsetWidth ?? CARD_W;
+    const h = Math.max(CARD_H, el?.offsetHeight ?? CARD_H);
     const cx = p.x + w / 2;
     return {
       top: { x: cx, y: p.y },
@@ -518,8 +477,8 @@ export function OrgChartClient({
       const el = nodeRefs.current[id];
       const p = positionsRef.current[id];
       if (!p) return null;
-      const w = el?.offsetWidth ?? 140;
-      const h = el?.offsetHeight ?? 56;
+      const w = el?.offsetWidth ?? CARD_W;
+      const h = Math.max(CARD_H, el?.offsetHeight ?? CARD_H);
       return { x: p.x, y: p.y, w, h };
     };
 
@@ -553,88 +512,32 @@ export function OrgChartClient({
     for (const [parentId, kids] of childrenByParent.entries()) {
       const pr = rect(parentId);
       if (!pr) continue;
-      const stroke = COLORS[nodeMap.get(parentId)?.tc ?? ''] ?? '#ffffff';
-      const pCenterX = pr.x + pr.w / 2;
-      const pCenterY = pr.y + pr.h / 2;
-
-      const sameRowKids: string[] = [];
+      const stroke = EDGE_STROKE;
       const lowerKids: string[] = [];
       for (const kid of kids) {
         const kr = rect(kid);
         if (!kr) continue;
-        if (Math.abs(kr.y - pr.y) < 12) sameRowKids.push(kid);
-        else lowerKids.push(kid);
+        lowerKids.push(kid);
       }
 
-      // Same-row reports: siblings meet at a shared side hub, then one trunk back to parent.
-      if (sameRowKids.length) {
-        const leftKids: string[] = [];
-        const rightKids: string[] = [];
-        for (const kid of sameRowKids) {
-          const kr = rect(kid);
-          if (!kr) continue;
-          const kCenterX = kr.x + kr.w / 2;
-          if (kCenterX < pCenterX) leftKids.push(kid);
-          else rightKids.push(kid);
-        }
-
-        const buildSameRowSide = (side: 'left' | 'right', sideKids: string[]) => {
-          if (!sideKids.length) return;
-          const parentX = side === 'right' ? pr.x + pr.w : pr.x;
-          const targetXs = sideKids
-            .map((kid) => {
-              const kr = rect(kid);
-              if (!kr) return null;
-              return side === 'right' ? kr.x : kr.x + kr.w;
-            })
-            .filter((x): x is number => x != null);
-          if (!targetXs.length) return;
-
-          const edgeMost = side === 'right' ? Math.min(...targetXs) : Math.max(...targetXs);
-          const hubX = side === 'right'
-            ? parentX + (edgeMost - parentX) * 0.5
-            : parentX - (parentX - edgeMost) * 0.5;
-          const hubY = pCenterY;
-
-          paths.push({
-            key: `${parentId}-same-${side}-trunk`,
-            d: `M${parentX},${pCenterY} C${parentX + (side === 'right' ? 22 : -22)},${pCenterY} ${hubX - (side === 'right' ? 12 : -12)},${hubY} ${hubX},${hubY}`,
-            stroke,
-          });
-
-          for (const kid of sideKids) {
-            const kr = rect(kid);
-            if (!kr) continue;
-            const tx = side === 'right' ? kr.x : kr.x + kr.w;
-            const ty = kr.y + kr.h / 2;
-            const mx = (hubX + tx) / 2;
-            paths.push({
-              key: `${parentId}-${kid}-same-${side}`,
-              d: `M${hubX},${hubY} C${mx},${hubY} ${mx},${ty} ${tx},${ty}`,
-              stroke,
-            });
-          }
-        };
-
-        buildSameRowSide('left', leftKids);
-        buildSameRowSide('right', rightKids);
-      }
-
-      // Standard tree links for lower levels.
       if (lowerKids.length) {
         const yBus = busYForParent(parentId, lowerKids);
-        if (yBus != null) {
-          const aa = nodeAnchors(parentId);
-          if (aa) {
-            for (const kid of lowerKids) {
-              const ab = nodeAnchors(kid);
-              if (!ab) continue;
-              paths.push({
-                key: `${parentId}-${kid}`,
-                d: smoothTreeConnectorPath(aa.bottom.x, aa.bottom.y, ab.top.x, ab.top.y, yBus),
-                stroke,
-              });
-            }
+        const aa = nodeAnchors(parentId);
+        if (aa && yBus != null) {
+          for (const kid of lowerKids) {
+            const ab = nodeAnchors(kid);
+            if (!ab) continue;
+            const fy = aa.bottom.y;
+            const ty = ab.top.y;
+            const d =
+              ty <= fy + 4 || yBus <= fy + 2 || yBus >= ty - 2
+                ? fallbackVerticalConnector(aa.bottom.x, fy, ab.top.x, ty)
+                : orthoConnector(aa.bottom.x, fy, ab.top.x, ty, yBus);
+            paths.push({
+              key: `${parentId}-${kid}`,
+              d,
+              stroke,
+            });
           }
         }
       }
@@ -642,7 +545,7 @@ export function OrgChartClient({
 
     return paths;
     // renderTick: paths must refresh every drag frame (refs alone don't invalidate memo).
-  }, [graph.edges, nodeAnchors, nodeMap, showEdges, renderTick, vpX, vpY, vpScale]);
+  }, [graph.edges, nodeAnchors, showEdges, renderTick, vpX, vpY, vpScale]);
 
   const startSettle = useCallback(() => {
     if (settleFrameRef.current) window.cancelAnimationFrame(settleFrameRef.current);
@@ -771,10 +674,8 @@ export function OrgChartClient({
         p.ty = s.ty;
       }
     }
-    setVpX(0);
-    setVpY(0);
-    setVpScale(1);
     bump();
+    requestAnimationFrame(() => requestAnimationFrame(() => fitToView()));
   };
 
   const startPan = (e: ReactMouseEvent<HTMLDivElement>) => {
@@ -787,41 +688,15 @@ export function OrgChartClient({
   const onWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setVpScale((s) => Math.max(0.3, Math.min(2, s * delta)));
+    setVpScale((s) => Math.max(0.06, Math.min(2.75, s * delta)));
   };
 
-  const zoomIn = () => setVpScale((s) => Math.min(2, s * 1.12));
-  const zoomOut = () => setVpScale((s) => Math.max(0.3, s * 0.9));
+  const zoomIn = () => setVpScale((s) => Math.min(2.75, s * 1.12));
+  const zoomOut = () => setVpScale((s) => Math.max(0.06, s * 0.9));
   const resetView = () => {
     setVpX(0);
     setVpY(0);
     setVpScale(1);
-  };
-  const fitToView = () => {
-    const scene = sceneRef.current;
-    if (!scene) return;
-    const ids = Object.keys(positionsRef.current);
-    if (!ids.length) return;
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const id of ids) {
-      const p = positionsRef.current[id];
-      if (!p) continue;
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x + CARD_W);
-      maxY = Math.max(maxY, p.y + CARD_H);
-    }
-    if (!Number.isFinite(minX) || !Number.isFinite(minY)) return;
-    const pad = 40;
-    const contentW = Math.max(1, maxX - minX + pad * 2);
-    const contentH = Math.max(1, maxY - minY + pad * 2);
-    const s = Math.max(0.3, Math.min(2, Math.min(scene.clientWidth / contentW, scene.clientHeight / contentH)));
-    setVpScale(s);
-    setVpX(minX - pad);
-    setVpY(minY - pad);
   };
   const buildFullChartSvg = useCallback((): { svg: string; vbW: number; vbH: number } | null => {
     const ids = Object.keys(positionsRef.current);
@@ -846,49 +721,42 @@ export function OrgChartClient({
     const vbW = Math.ceil(maxX - minX + pad * 2);
     const vbH = Math.ceil(maxY - minY + pad * 2 + titleBand);
     const titleSvg = chartTitle.trim()
-      ? `<text x="${vbX + 14}" y="${vbY + 28}" fill="rgba(255,255,255,0.92)" font-size="15" font-weight="600">${escXml(chartTitle.trim())}</text>`
+      ? `<text x="${vbX + 14}" y="${vbY + 28}" fill="#121212" font-size="15" font-weight="600">${escXml(chartTitle.trim())}</text>`
       : '';
     const edgesSvg = edgePaths
       .map(
         (e) =>
-          `<path d="${escXml(e.d)}" fill="none" stroke="${escXml(e.stroke)}" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round" opacity="0.28" />`,
-      )
-      .join('');
-    const headersSvg = laneHeaders
-      .map(
-        (h) =>
-          `<text x="${h.x}" y="${h.y}" fill="rgba(255,255,255,0.38)" font-size="9" font-weight="600" letter-spacing="0.06em">${escXml(h.label.toUpperCase())}</text>`,
+          `<path d="${escXml(e.d)}" fill="none" stroke="${escXml(e.stroke)}" stroke-width="1.1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="8" opacity="0.72" />`,
       )
       .join('');
     const nodeRects = nodes
       .map((n) => {
         const p = positionsRef.current[n.id];
         if (!p) return '';
-        const fill = n.tc === 't-board' ? 'rgba(167,139,250,0.1)' :
-          n.tc === 't-csuite' ? 'rgba(56,189,248,0.09)' :
-          n.tc === 't-slt' ? 'rgba(52,211,153,0.09)' :
-          n.tc === 't-mid' ? 'rgba(251,191,36,0.09)' :
-          n.tc === 't-senior' ? 'rgba(110,231,183,0.09)' :
-          n.tc === 't-junior' ? 'rgba(148,163,184,0.08)' : 'rgba(244,114,182,0.09)';
+        const fill = n.tc === 't-board' ? 'rgba(124,58,237,0.1)' :
+          n.tc === 't-csuite' ? 'rgba(2,132,199,0.1)' :
+          n.tc === 't-slt' ? 'rgba(5,150,105,0.1)' :
+          n.tc === 't-mid' ? 'rgba(217,119,6,0.12)' :
+          n.tc === 't-senior' ? 'rgba(13,148,136,0.1)' :
+          n.tc === 't-junior' ? 'rgba(100,116,139,0.12)' : 'rgba(190,24,93,0.08)';
         const depts = n.row.department_names?.length ? n.row.department_names.join(', ') : '';
         return `<g>
-  <rect x="${p.x}" y="${p.y}" width="${CARD_W}" height="${CARD_H}" rx="10" fill="${fill}" stroke="rgba(255,255,255,0.1)" />
-  <text x="${p.x + 10}" y="${p.y + 22}" fill="rgba(255,255,255,0.92)" font-size="10.5">${escXml(n.label)}</text>
-  <text x="${p.x + 10}" y="${p.y + 38}" fill="rgba(255,255,255,0.62)" font-size="9">${escXml(n.row.job_title?.trim() || tenantRoleLabel(n.row.role) || n.tier)}</text>
-  ${depts ? `<text x="${p.x + 10}" y="${p.y + 56}" fill="rgba(255,255,255,0.42)" font-size="8">${escXml(depts.slice(0, 80))}${depts.length > 80 ? '…' : ''}</text>` : ''}
+  <rect x="${p.x}" y="${p.y}" width="${CARD_W}" height="${CARD_H}" rx="12" fill="${fill}" stroke="#e8e8e8" />
+  <text x="${p.x + 10}" y="${p.y + 22}" fill="#121212" font-size="10.5" font-weight="600">${escXml(n.label)}</text>
+  <text x="${p.x + 10}" y="${p.y + 38}" fill="#6b6b6b" font-size="9">${escXml(n.row.job_title?.trim() || tenantRoleLabel(n.row.role) || n.tier)}</text>
+  ${depts ? `<text x="${p.x + 10}" y="${p.y + 56}" fill="#9b9b9b" font-size="8">${escXml(depts.slice(0, 80))}${depts.length > 80 ? '…' : ''}</text>` : ''}
 </g>`;
       })
       .join('');
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" width="${vbW}" height="${vbH}">
-  <rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="#0a0a0c" />
+  <rect x="${vbX}" y="${vbY}" width="${vbW}" height="${vbH}" fill="#faf9f6" />
   ${titleSvg}
   ${edgesSvg}
-  ${headersSvg}
   ${nodeRects}
 </svg>`;
     return { svg, vbW, vbH };
-  }, [chartTitle, edgePaths, laneHeaders, nodes]);
+  }, [chartTitle, edgePaths, nodes]);
 
   const exportSvg = useCallback(() => {
     const built = buildFullChartSvg();
@@ -913,7 +781,7 @@ export function OrgChartClient({
         URL.revokeObjectURL(url);
         return;
       }
-      ctx.fillStyle = '#0a0a0c';
+      ctx.fillStyle = '#faf9f6';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       canvas.toBlob((blob) => {
@@ -995,10 +863,30 @@ export function OrgChartClient({
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
+        <span className={styles.dataSourceBadge} aria-live="polite">
+          {rows.length > 0 ? (
+            <>
+              <strong>Live directory</strong>
+              <span className={styles.dataSourceMeta}>{rows.length} active {rows.length === 1 ? 'member' : 'members'}</span>
+            </>
+          ) : viewingFictionalSample ? (
+            <>
+              <strong>Fictional sample</strong>
+              <span className={styles.dataSourceMeta}>
+                Directory returned 0 rows — preview only; set managers on All members and refresh for your org
+              </span>
+            </>
+          ) : (
+            <>
+              <strong>Empty canvas</strong>
+              <span className={styles.dataSourceMeta}>Preview sample is off — turn it on or load members above</span>
+            </>
+          )}
+        </span>
         <button type="button" onClick={resetLayout}>Reset layout</button>
         {rows.length === 0 ? (
-          <button type="button" onClick={() => setUseDemoData((v) => !v)}>
-            {useDemoData ? 'Use empty canvas' : 'Load sample layout'}
+          <button type="button" onClick={() => setShowFictionalSample((v) => !v)}>
+            {showFictionalSample ? 'Hide sample org' : 'Show sample org'}
           </button>
         ) : null}
         <button type="button" onClick={() => setShowEdges((v) => !v)}>
@@ -1024,9 +912,11 @@ export function OrgChartClient({
           </button>
         </span>
         <span>
-          {rows.length === 0 && useDemoData
-            ? 'Sample hierarchy (no org data — set managers on All members to build your tree)'
-            : 'Reporting lines by manager; Senior Leadership members share one top row (CEO → deputies); other departments on lower tiers. Drag cards to rearrange the layout (not saved); pan/zoom on the background.'}
+          {rows.length > 0
+            ? 'Names and roles come from your live directory (same source as All members). Drag cards to rearrange locally (not saved); pan and zoom on the background.'
+            : viewingFictionalSample
+              ? 'Hardcoded demo hierarchy — not your staff. If you expect real names here, the directory query returned no rows (check All members and refresh).'
+              : 'Sample preview is hidden. Choose Show sample org for a demo layout, or add active members with managers and refresh.'}
         </span>
       </div>
       <div className={styles.legend}>
@@ -1038,7 +928,6 @@ export function OrgChartClient({
         ))}
       </div>
       <div className={`${styles.scene} ${grabbing ? styles.grabbing : ''}`} ref={sceneRef} onMouseDown={startPan} onWheel={onWheel}>
-        <canvas className={styles.bg} ref={canvasRef} />
         <svg className={styles.edges} style={{ transform }}>
           {edgePaths.map((edge) => (
             <path
@@ -1046,19 +935,15 @@ export function OrgChartClient({
               d={edge.d}
               fill="none"
               stroke={edge.stroke}
-              strokeWidth="0.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.28"
+              strokeWidth="1.15"
+              strokeLinecap="square"
+              strokeLinejoin="miter"
+              strokeMiterlimit="8"
+              opacity="0.72"
             />
           ))}
         </svg>
         <div className={styles.nodesLayer} style={{ transform }}>
-          {laneHeaders.map((h) => (
-            <div key={h.key} className={styles.laneHdr} style={{ left: h.x, top: h.y }}>
-              {h.label}
-            </div>
-          ))}
           {nodes.map((n) => {
             const p = positionsRef.current[n.id];
             if (!p) return null;

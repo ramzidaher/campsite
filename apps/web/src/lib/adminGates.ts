@@ -253,7 +253,9 @@ export function getMainShellAdminNavItemsByPermissions(
   }
   if (p.includes('rota.view') || p.includes('rota.manage'))
     items.push({ href: '/admin/rota', label: 'Rota management', icon: 'rota', section: 'Operations' });
-  items.push({ href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' });
+  if (p.includes('org.settings.manage') || p.includes('roles.manage')) {
+    items.push({ href: '/admin/settings', label: 'Org settings', icon: 'orgSettings', section: 'Configuration' });
+  }
   if (
     p.includes('privacy.retention_policy.view') ||
     p.includes('privacy.erasure_request.review') ||

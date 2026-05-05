@@ -2,10 +2,14 @@
 
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
+import { isMissingOrganisationsCelebrationColumnError } from '@/lib/calendarific/orgCelebrationDb';
+import { monthDayWindowFromIso } from '@/lib/calendarific/holidayWindow';
+import type { PreviewHolidayRow } from '@/lib/calendarific/syncCelebrationHolidays';
 import {
   CELEBRATION_MODE_OPTIONS,
   getCelebrationModeAdminDefaults,
   getCelebrationModeDef,
+  type BuiltInCelebrationMode,
 } from '@/lib/holidayThemes';
 import {
   enforceAccessibleBrandTokens,
@@ -59,6 +63,38 @@ const MONTH_OPTIONS = [
 ] as const;
 
 const DAY_OPTIONS = Array.from({ length: 31 }, (_, idx) => idx + 1);
+
+const CELEBRATION_HOLIDAY_COUNTRY_OPTIONS = [
+  { code: 'GB', label: 'United Kingdom (GB)' },
+  { code: 'US', label: 'United States (US)' },
+  { code: 'IE', label: 'Ireland (IE)' },
+  { code: 'DE', label: 'Germany (DE)' },
+  { code: 'FR', label: 'France (FR)' },
+  { code: 'ES', label: 'Spain (ES)' },
+  { code: 'IT', label: 'Italy (IT)' },
+  { code: 'NL', label: 'Netherlands (NL)' },
+  { code: 'BE', label: 'Belgium (BE)' },
+  { code: 'CA', label: 'Canada (CA)' },
+  { code: 'AU', label: 'Australia (AU)' },
+  { code: 'NZ', label: 'New Zealand (NZ)' },
+  { code: 'IN', label: 'India (IN)' },
+  { code: 'AE', label: 'United Arab Emirates (AE)' },
+  { code: 'SG', label: 'Singapore (SG)' },
+  { code: 'ZA', label: 'South Africa (ZA)' },
+] as const;
+
+type CalendarificHolidaysApiResponse = {
+  country: string;
+  years: number[];
+  holidays: PreviewHolidayRow[];
+  cacheRows: number;
+  lastFetchedAt: string | null;
+  orgLastSyncedAt: string | null;
+  needsSync: boolean;
+  migrationPending?: boolean;
+  migrationFile?: string;
+  commands?: string[];
+};
 
 const DEFAULT_CUSTOM_CELEBRATION_GRADIENT =
   'linear-gradient(180deg,#f97316 0%,#ec4899 50%,#8b5cf6 100%)';
@@ -339,6 +375,8 @@ export function OrgSettingsClient({
     brand_preset_key: string | null;
     brand_tokens: Record<string, string> | null;
     brand_policy: string | null;
+    celebration_holiday_country: string;
+    celebration_holidays_last_synced_at: string | null;
   };
   initialCelebrationModes: OrgCelebrationMode[];
 }) {
@@ -369,6 +407,18 @@ export function OrgSettingsClient({
   const [logoPreviewFailed, setLogoPreviewFailed] = useState(false);
   const [celebrationModes, setCelebrationModes] =
     useState<OrgCelebrationMode[]>(initialCelebrationModes);
+  const [celebrationHolidayCountry, setCelebrationHolidayCountry] = useState(
+    initial.celebration_holiday_country?.trim().toUpperCase() || 'GB'
+  );
+  const [calendarificPreview, setCalendarificPreview] = useState<CalendarificHolidaysApiResponse | null>(
+    null
+  );
+  const [calendarificLoading, setCalendarificLoading] = useState(false);
+  /** Background or manual refresh of official holiday dates (not shown as a vendor name). */
+  const [publicHolidayDatesRefreshing, setPublicHolidayDatesRefreshing] = useState(false);
+  const [holidaySearchQuery, setHolidaySearchQuery] = useState('');
+  const [holidaySearchDebounced, setHolidaySearchDebounced] = useState('');
+  const [holidayDateRefreshNote, setHolidayDateRefreshNote] = useState<string | null>(null);
   const [newModeKey, setNewModeKey] = useState('');
   const [newModeLabel, setNewModeLabel] = useState('');
   const [selectedCelebrationModeKey, setSelectedCelebrationModeKey] = useState<string>(
@@ -433,6 +483,211 @@ export function OrgSettingsClient({
   useEffect(() => {
     setCelebrationModes(initialCelebrationModes);
   }, [initialCelebrationModes]);
+
+  useEffect(() => {
+    setCelebrationHolidayCountry(initial.celebration_holiday_country?.trim().toUpperCase() || 'GB');
+  }, [initial.celebration_holiday_country]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setHolidaySearchDebounced(holidaySearchQuery.trim()), 280);
+    return () => window.clearTimeout(t);
+  }, [holidaySearchQuery]);
+
+  async function refreshPublicHolidayPreview() {
+    setCalendarificLoading(true);
+    try {
+      const res = await fetch('/api/org/celebrations/calendarific-holidays');
+      const body = (await res.json().catch(() => null)) as CalendarificHolidaysApiResponse | null;
+      if (res.ok && body && Array.isArray(body.holidays)) {
+        setCalendarificPreview(body);
+      }
+    } finally {
+      setCalendarificLoading(false);
+    }
+  }
+
+  /** Pulls official holiday calendars and updates built-in celebration date windows (server-side). */
+  async function syncOfficialHolidayDates(opts: {
+    forceRefreshCache: boolean;
+    silent: boolean;
+  }): Promise<boolean> {
+    if (!opts.silent) setMsg(null);
+    setPublicHolidayDatesRefreshing(true);
+    try {
+      const res = await fetch('/api/org/celebrations/calendarific-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forceRefreshCache: opts.forceRefreshCache }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        matchedModes?: string[];
+        migrationFile?: string;
+        commands?: string[];
+      };
+      if (!res.ok) {
+        const isMigration =
+          res.status === 503 &&
+          typeof body.error === 'string' &&
+          body.error.toLowerCase().includes('migration');
+        if (!opts.silent) {
+          flash(
+            isMigration
+              ? `${body.error} See the notice on this page for next steps.`
+              : `${body.error || 'Could not refresh official holiday dates.'}${
+                  Array.isArray(body.commands) && body.commands.length > 0 ? ` ${body.commands[0]}` : ''
+                }`,
+            'err'
+          );
+        } else if (
+          res.status === 503 &&
+          /CALENDARIFIC_API_KEY|not configured/i.test(String(body.error ?? ''))
+        ) {
+          setHolidayDateRefreshNote(
+            'Automatic holiday date updates are not available on this server yet.'
+          );
+        }
+        return false;
+      }
+      if (!opts.silent) {
+        const n = body.matchedModes?.length ?? 0;
+        flash(
+          n > 0
+            ? `Updated date windows for ${n} built-in celebration${n === 1 ? '' : 's'}. Save celebrations if you changed anything else.`
+            : 'Official holiday dates refreshed. Save celebrations if you changed anything else.',
+          'ok'
+        );
+        await router.refresh();
+      }
+      await refreshPublicHolidayPreview();
+      return true;
+    } catch {
+      if (!opts.silent) flash('Network error while refreshing holiday dates.', 'err');
+      return false;
+    } finally {
+      setPublicHolidayDatesRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab !== 'celebrations') return;
+    let cancelled = false;
+    void (async () => {
+      setCalendarificLoading(true);
+      setHolidayDateRefreshNote(null);
+      try {
+        const res = await fetch('/api/org/celebrations/calendarific-holidays');
+        const body = (await res.json().catch(() => null)) as CalendarificHolidaysApiResponse | null;
+        if (cancelled) return;
+        if (res.ok && body && Array.isArray(body.holidays)) {
+          setCalendarificPreview(body);
+        }
+        if (body?.migrationPending) return;
+
+        const throttleKey = `campsite_public_holiday_autosync:${initial.id}:${initial.celebration_holiday_country ?? 'GB'}`;
+        const last = sessionStorage.getItem(throttleKey);
+        const now = Date.now();
+        const twelveHours = 12 * 60 * 60 * 1000;
+        const shouldRun = !last || now - Number(last) > twelveHours;
+        if (!shouldRun) return;
+
+        const ok = await syncOfficialHolidayDates({ forceRefreshCache: false, silent: true });
+        if (!cancelled && ok) sessionStorage.setItem(throttleKey, String(now));
+      } finally {
+        if (!cancelled) setCalendarificLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- syncOfficialHolidayDates is stable enough; avoid re-running auto-sync every render
+  }, [tab, initial.id, initial.celebration_holiday_country]);
+
+  function slugifyCalendarificCustomKey(name: string): string {
+    const raw = name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    const base = raw.length > 0 ? raw.slice(0, 48) : 'holiday';
+    return `cal_${base}`;
+  }
+
+  function customModeKeyFromHolidayName(name: string): string {
+    return `org_custom:${slugifyCalendarificCustomKey(name)}`;
+  }
+
+  function addPublicHolidayAsCustom(row: PreviewHolidayRow) {
+    if (row.matchedBuiltin || !row.iso) {
+      flash('Only unmapped holidays with a date can be added as custom.', 'err');
+      return;
+    }
+    const modeKey = customModeKeyFromHolidayName(row.name);
+    if (celebrationModes.some((m) => m.mode_key === modeKey)) {
+      flash('That holiday is already on the list.', 'err');
+      return;
+    }
+    const win = monthDayWindowFromIso(row.iso, 1, 1);
+    if (!win) {
+      flash('Could not read that holiday date.', 'err');
+      return;
+    }
+    setCelebrationModes((prev) => [
+      ...prev,
+      {
+        id: `draft-${modeKey}`,
+        mode_key: modeKey,
+        label: row.name.trim() || 'Custom celebration',
+        is_enabled: true,
+        display_order: 850,
+        auto_start_month: win.auto_start_month,
+        auto_start_day: win.auto_start_day,
+        auto_end_month: win.auto_end_month,
+        auto_end_day: win.auto_end_day,
+        gradient_override: DEFAULT_CUSTOM_CELEBRATION_GRADIENT,
+        emoji_primary: '✨',
+        emoji_secondary: '🎉',
+      },
+    ]);
+    setSelectedCelebrationModeKey(modeKey);
+    flash('Added as a custom celebration. Click Save celebrations to persist.', 'ok');
+  }
+
+  function enableBuiltinFromHolidaySearch(builtin: BuiltInCelebrationMode) {
+    const label = CELEBRATION_MODE_OPTIONS.find((o) => o.id === builtin)?.label ?? builtin;
+    const order = CELEBRATION_MODE_OPTIONS.findIndex((o) => o.id === builtin) + 1;
+    const row = getCelebrationEditorRow(builtin, label, order);
+    if (row.is_enabled) {
+      flash(`${label} is already on. Click Save celebrations if you have other changes.`, 'ok');
+      return;
+    }
+    setModeField(builtin, 'is_enabled', true, label, order);
+    setHolidaySearchQuery('');
+    flash(`Turned on ${label}. Click Save celebrations to keep this change.`, 'ok');
+  }
+
+  const publicHolidaySearchResults = useMemo(() => {
+    const rows = calendarificPreview?.holidays ?? [];
+    const q = holidaySearchDebounced.toLowerCase();
+    if (!q) return [];
+    const scored: { h: PreviewHolidayRow; score: number }[] = [];
+    for (const h of rows) {
+      const name = (h.name ?? '').toLowerCase();
+      const iso = (h.iso ?? '').toLowerCase();
+      let score: number | null = null;
+      if (name === q) score = 0;
+      else if (name.startsWith(q)) score = 1;
+      else if (name.includes(q)) score = 2;
+      else if (iso.includes(q)) score = 3;
+      if (score !== null) scored.push({ h, score });
+    }
+    scored.sort((a, b) => a.score - b.score || a.h.name.localeCompare(b.h.name));
+    return scored.slice(0, 16).map((x) => x.h);
+  }, [calendarificPreview?.holidays, holidaySearchDebounced]);
+  const customCelebrationModes = useMemo(
+    () => celebrationModes.filter((mode) => mode.mode_key.startsWith('org_custom:')),
+    [celebrationModes]
+  );
 
   const builtInModes = useMemo(() => CELEBRATION_MODE_OPTIONS.filter((m) => m.id !== 'off'), []);
   const celebrationModeEntries = useMemo(
@@ -883,6 +1138,21 @@ export function OrgSettingsClient({
   async function saveCelebrations() {
     setLoading(true);
     setMsg(null);
+    const countryNorm = celebrationHolidayCountry.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(countryNorm)) {
+      setLoading(false);
+      flash('Public holiday country must be a 2-letter ISO code (e.g. GB).', 'err');
+      return;
+    }
+    const { error: orgCountryErr } = await supabase
+      .from('organisations')
+      .update({ celebration_holiday_country: countryNorm })
+      .eq('id', initial.id);
+    if (orgCountryErr && !isMissingOrganisationsCelebrationColumnError(orgCountryErr)) {
+      setLoading(false);
+      flash(orgCountryErr.message, 'err');
+      return;
+    }
     const payload = celebrationModes.map((row) => ({
       org_id: initial.id,
       mode_key: row.mode_key,
@@ -1455,7 +1725,246 @@ export function OrgSettingsClient({
           ) : null}
 
           {tab === 'celebrations' ? (
-            <div className="grid items-start gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
+            <div className="space-y-5">
+              <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 sm:p-6">
+                <div className="font-authSerif text-[17px] text-[#121212]">Public holidays</div>
+                <p className="mt-1 text-[13px] text-[#6b6b6b]">
+                  Choose your country, then search official holidays to turn on built-in celebrations or add
+                  custom ones. Official dates refresh in the background when you open this tab. Use{' '}
+                  <span className="font-medium text-[#121212]">Save celebrations</span> at the bottom to keep
+                  changes.
+                </p>
+                {calendarificPreview?.migrationPending ? (
+                  <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] leading-relaxed text-amber-950">
+                    <strong>Database migration required</strong> before public holidays can load. From the
+                    repo root run one of:
+                    {calendarificPreview.commands?.length ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 font-mono text-[11px] text-amber-900/95">
+                        {calendarificPreview.commands.map((c) => (
+                          <li key={c}>{c}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 font-mono text-[11px]">npm run supabase:db:push</p>
+                    )}
+                    <p className="mt-2 text-[11px] text-amber-900/85">
+                      File:{' '}
+                      <code className="rounded bg-white/70 px-1">
+                        {calendarificPreview.migrationFile ??
+                          'supabase/migrations/20260804120000_calendarific_celebration_cache.sql'}
+                      </code>{' '}
+                      — then reload this page.
+                    </p>
+                  </div>
+                ) : null}
+                <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                  <label className="min-w-0 flex-1 max-w-md">
+                    <span className="text-[12px] font-medium text-[#121212]">Country for public holidays</span>
+                    <FormSelect
+                      wrapperClassName="mt-1"
+                      controlSize="sm"
+                      value={celebrationHolidayCountry}
+                      onChange={(e) => setCelebrationHolidayCountry(e.target.value.toUpperCase())}
+                    >
+                      {!CELEBRATION_HOLIDAY_COUNTRY_OPTIONS.some((c) => c.code === celebrationHolidayCountry) ? (
+                        <option value={celebrationHolidayCountry}>
+                          {celebrationHolidayCountry} (current)
+                        </option>
+                      ) : null}
+                      {CELEBRATION_HOLIDAY_COUNTRY_OPTIONS.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </FormSelect>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={
+                      publicHolidayDatesRefreshing || loading || calendarificPreview?.migrationPending
+                    }
+                    onClick={() => void syncOfficialHolidayDates({ forceRefreshCache: false, silent: false })}
+                    className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6] disabled:opacity-50"
+                  >
+                    {publicHolidayDatesRefreshing ? 'Refreshing…' : 'Refresh official dates'}
+                  </button>
+                </div>
+                <div className="mt-3 space-y-1 text-[11.5px] text-[#9b9b9b]">
+                  {holidayDateRefreshNote ? (
+                    <p className="text-[#b45309]">{holidayDateRefreshNote}</p>
+                  ) : null}
+                  <p>
+                    {publicHolidayDatesRefreshing ||
+                    (calendarificLoading && !(calendarificPreview?.holidays?.length ?? 0)) ? (
+                      <>Checking official public-holiday dates…</>
+                    ) : calendarificPreview?.orgLastSyncedAt ? (
+                      <>
+                        Official dates last checked:{' '}
+                        {new Date(calendarificPreview.orgLastSyncedAt).toLocaleString()}.
+                      </>
+                    ) : initial.celebration_holidays_last_synced_at ? (
+                      <>
+                        Official dates last checked:{' '}
+                        {new Date(initial.celebration_holidays_last_synced_at).toLocaleString()}.
+                      </>
+                    ) : calendarificPreview?.needsSync ? (
+                      <>Loading holiday names for your country…</>
+                    ) : (
+                      <>Official dates update in the background when you open this tab.</>
+                    )}
+                  </p>
+                </div>
+
+                <div className="mt-5">
+                  <label className="block">
+                    <span className="text-[12px] font-medium text-[#121212]">Find a holiday</span>
+                    <input
+                      className="mt-1 w-full max-w-lg rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
+                      placeholder="e.g. Christmas, bank holiday, 2026-01-01"
+                      value={holidaySearchQuery}
+                      onChange={(e) => setHolidaySearchQuery(e.target.value)}
+                      autoComplete="off"
+                    />
+                  </label>
+                  {!holidaySearchDebounced ? (
+                    <p className="mt-2 text-[12px] leading-relaxed text-[#9b9b9b]">
+                      Type a name or date (YYYY-MM-DD). Built-in celebrations can be turned on in one tap.
+                      Everything else can be added as custom, edited, or removed from here.
+                    </p>
+                  ) : publicHolidaySearchResults.length === 0 ? (
+                    <p className="mt-2 text-[12px] text-[#9b9b9b]">
+                      No matches. Try different words or another date format.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {publicHolidaySearchResults.map((h) => {
+                        const builtin = h.matchedBuiltin;
+                        const customModeKey = customModeKeyFromHolidayName(h.name);
+                        const existingCustomRow = celebrationModes.find(
+                          (mode) => mode.mode_key === customModeKey
+                        );
+                        const builtinLabel = builtin
+                          ? CELEBRATION_MODE_OPTIONS.find((o) => o.id === builtin)?.label ?? String(builtin)
+                          : null;
+                        const row =
+                          builtin &&
+                          getCelebrationEditorRow(
+                            builtin,
+                            builtinLabel ?? String(builtin),
+                            CELEBRATION_MODE_OPTIONS.findIndex((o) => o.id === builtin) + 1
+                          );
+                        const dateLabel =
+                          h.iso &&
+                          (() => {
+                            try {
+                              return new Date(`${h.iso}T12:00:00`).toLocaleDateString(undefined, {
+                                weekday: 'short',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              });
+                            } catch {
+                              return h.iso;
+                            }
+                          })();
+                        return (
+                          <li
+                            key={`${h.iso ?? 'nodate'}-${h.name}`}
+                            className="flex flex-col gap-2 rounded-lg border border-[#eceae6] bg-[#faf9f7] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div className="min-w-0">
+                              <div className="text-[13px] font-medium text-[#121212]">{h.name}</div>
+                              <div className="text-[11.5px] text-[#6b6b6b]">
+                                {dateLabel ?? 'Date not available'}
+                                {builtinLabel ? ` · Matches “${builtinLabel}”` : null}
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap gap-2">
+                              {builtin && row ? (
+                                row.is_enabled ? (
+                                  <span className="self-center text-[11.5px] text-[#6b6b6b]">Already on</span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="rounded-md bg-[#121212] px-3 py-1.5 text-[12px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+                                    onClick={() => enableBuiltinFromHolidaySearch(builtin)}
+                                  >
+                                    Turn on {builtinLabel}
+                                  </button>
+                                )
+                              ) : null}
+                              {!builtin && h.iso ? (
+                                existingCustomRow ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="rounded-md border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#faf9f6]"
+                                      onClick={() =>
+                                        setSelectedCelebrationModeKey(existingCustomRow.mode_key)
+                                      }
+                                    >
+                                      Open custom celebration
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="rounded-md border border-[#fecaca] bg-[#fef2f2] px-3 py-1.5 text-[12px] font-medium text-[#b91c1c] hover:bg-[#fee2e2]"
+                                      onClick={() => void removeMode(existingCustomRow.mode_key)}
+                                    >
+                                      Remove
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="rounded-md border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#faf9f6]"
+                                    onClick={() => addPublicHolidayAsCustom(h)}
+                                  >
+                                    Add as custom celebration
+                                  </button>
+                                )
+                              ) : !builtin && !h.iso ? (
+                                <span className="self-center text-[11px] text-[#9b9b9b]">
+                                  No fixed date — create a custom mode below with your own dates
+                                </span>
+                              ) : null}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                <details className="mt-4 rounded-lg border border-[#eceae6] bg-[#fafaf9] px-3 py-2 text-[12px] text-[#6b6b6b]">
+                  <summary className="cursor-pointer font-medium text-[#121212]">Dates look wrong?</summary>
+                  <p className="mt-2 text-[11.5px] leading-relaxed">
+                    Use <span className="font-medium">Refresh official dates</span> first. If the list still
+                    looks stale, you can force a full reload (slower).
+                  </p>
+                  <button
+                    type="button"
+                    disabled={
+                      publicHolidayDatesRefreshing || loading || calendarificPreview?.migrationPending
+                    }
+                    className="mt-2 rounded-md border border-[#d8d8d8] bg-white px-2.5 py-1 text-[11px] font-medium text-[#121212] hover:bg-[#faf9f6] disabled:opacity-50"
+                    onClick={() => {
+                      if (
+                        typeof window !== 'undefined' &&
+                        !window.confirm(
+                          'Fetch the latest public-holiday list? This may take a few seconds.'
+                        )
+                      ) {
+                        return;
+                      }
+                      void syncOfficialHolidayDates({ forceRefreshCache: true, silent: false });
+                    }}
+                  >
+                    Force full reload
+                  </button>
+                </details>
+              </div>
+
+              <div className="grid items-start gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
               <div className="space-y-5">
                 <div className="rounded-xl border border-[#d8d8d8] bg-white p-5">
                   <div className="font-authSerif text-[17px] text-[#121212]">Celebration modes</div>
@@ -1492,6 +2001,40 @@ export function OrgSettingsClient({
                     >
                       Add custom mode
                     </button>
+                    <div className="mt-4 rounded-lg border border-[#eceae6] bg-white p-3">
+                      <div className="text-[12px] font-medium text-[#121212]">
+                        Your custom celebrations ({customCelebrationModes.length})
+                      </div>
+                      {customCelebrationModes.length === 0 ? (
+                        <p className="mt-1 text-[11.5px] text-[#9b9b9b]">
+                          No custom celebrations yet.
+                        </p>
+                      ) : (
+                        <ul className="mt-2 space-y-2">
+                          {customCelebrationModes.map((mode) => (
+                            <li
+                              key={mode.mode_key}
+                              className="flex items-center justify-between gap-2 rounded-md border border-[#eceae6] bg-[#faf9f7] px-2.5 py-2"
+                            >
+                              <button
+                                type="button"
+                                className="min-w-0 flex-1 truncate text-left text-[12px] font-medium text-[#121212] underline-offset-2 hover:underline"
+                                onClick={() => setSelectedCelebrationModeKey(mode.mode_key)}
+                              >
+                                {mode.label}
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-md border border-[#fecaca] bg-[#fef2f2] px-2 py-1 text-[11px] font-medium text-[#b91c1c] hover:bg-[#fee2e2]"
+                                onClick={() => void removeMode(mode.mode_key)}
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1688,7 +2231,7 @@ export function OrgSettingsClient({
                         <p className="mt-1 text-[11.5px] text-[#6b6b6b]">
                           {selectedCelebrationRow.mode_key.startsWith('org_custom:')
                             ? 'Custom celebrations need a start and end date before they can appear.'
-                            : 'Leave these blank to use the standard holiday timing. Set your own dates only when you want a custom window.'}
+                            : 'Leave these blank to use built-in timing (or dates from Calendarific sync). Set your own dates only when you want a custom window.'}
                         </p>
                         {!selectedCelebrationRow.mode_key.startsWith('org_custom:') ? (
                           <button
@@ -2052,6 +2595,7 @@ export function OrgSettingsClient({
                   </div>
                 )}
               </div>
+            </div>
             </div>
           ) : null}
 

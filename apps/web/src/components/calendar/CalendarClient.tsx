@@ -19,6 +19,7 @@ import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ManualEventForm } from '@/components/calendar/ManualEventForm';
 import { TimeGridCalendar, type TimeGridItem } from '@/components/calendar/TimeGridCalendar';
+import { CalendarPlus, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
 type Profile = {
@@ -509,8 +510,9 @@ export function CalendarClient({
         <div className="flex flex-wrap gap-2">
           <a
             href="/api/google/oauth/start?type=calendar"
-            className="rounded-lg border border-[#d8d8d8] bg-white px-3.5 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3.5 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
           >
+            <RefreshCw className="h-4 w-4" aria-hidden />
             Sync Google Calendar
           </a>
           {canManage ? (
@@ -519,7 +521,8 @@ export function CalendarClient({
               className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
               onClick={openAddEvent}
             >
-              + Add event
+              <CalendarPlus className="h-4 w-4" aria-hidden />
+              Add event
             </button>
           ) : null}
         </div>

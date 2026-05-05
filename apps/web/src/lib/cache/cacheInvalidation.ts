@@ -2,6 +2,7 @@ import {
   invalidateSharedCache,
   invalidateSharedCacheByPrefix,
 } from '@/lib/cache/sharedCache';
+import { orgChartDirectoryCacheKey } from '@/lib/hr/getCachedOrgChartPageData';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   invalidateAllCachedMainShellLayoutBundles,
@@ -49,7 +50,7 @@ export async function invalidateHrOverviewForOrg(orgId: string): Promise<void> {
 }
 
 export async function invalidateOrgChartForOrg(orgId: string): Promise<void> {
-  await invalidateSharedCache('campsite:hr:org-chart', getOrgExactKey(orgId));
+  await invalidateSharedCache('campsite:hr:org-chart', orgChartDirectoryCacheKey(orgId));
 }
 
 export async function invalidatePerformanceCyclesForOrg(orgId: string): Promise<void> {

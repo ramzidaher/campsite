@@ -11,7 +11,9 @@ export default async function OrgAdminSettingsPage() {
   if (!orgId) redirect('/login');
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
-  if (!hasPermission(permissionKeys, 'roles.manage')) redirect('/forbidden');
+  const canManageOrgSettings =
+    hasPermission(permissionKeys, 'org.settings.manage') || hasPermission(permissionKeys, 'roles.manage');
+  if (!canManageOrgSettings) redirect('/forbidden');
 
   const pageData = await getCachedAdminSettingsPageData(orgId);
   const org = pageData.org;
@@ -32,6 +34,8 @@ export default async function OrgAdminSettingsPage() {
         brand_preset_key: (org.brand_preset_key as string | null) ?? null,
         brand_tokens: (org.brand_tokens as Record<string, string> | null) ?? null,
         brand_policy: (org.brand_policy as string | null) ?? null,
+        celebration_holiday_country: org.celebration_holiday_country,
+        celebration_holidays_last_synced_at: org.celebration_holidays_last_synced_at,
       }}
       initialCelebrationModes={
         (orgCelebrationModes ?? []) as Array<{

@@ -3,6 +3,7 @@
 import { FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -279,8 +280,11 @@ export function AdminPendingApprovalsClient({
               </span>
             ) : null}
           </div>
-          <Link href="/admin/users" className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-            View all members →
+          <Link
+            href="/admin/users"
+            className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] hover:text-[#121212] hover:underline hover:underline-offset-2 focus-visible:underline focus-visible:underline-offset-2"
+          >
+            View all members <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </Link>
         </div>
 
