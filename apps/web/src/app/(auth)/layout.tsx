@@ -4,6 +4,7 @@ import { AuthOrgCard, type AuthOrgDisplay } from '@/components/auth/AuthOrgCard'
 import { CampsiteLogoMark } from '@/components/CampsiteLogoMark';
 import { createClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
+import { GlobalActionFeedbackBridge } from '@/components/providers/GlobalActionFeedbackBridge';
 
 function titleCaseSlug(s: string) {
   return s
@@ -120,6 +121,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             </Link>
           ) : null}
           <AuthOrgCard org={org} />
+          <GlobalActionFeedbackBridge />
           {children}
         </div>
       </main>

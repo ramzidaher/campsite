@@ -87,23 +87,27 @@ export default async function EditApplicationFormPage({
           .map((o) => ({ id: String(o.id ?? '').trim(), label: String(o.label ?? '').trim() }))
           .filter((o) => o.id && o.label)
       : null;
+    const qt = String(q.question_type ?? 'short_text');
+    const isSectionTitle = qt === 'section_title';
     return {
       id: randomUUID(),
       sortOrder: i,
-      questionType: String(q.question_type ?? 'short_text'),
+      questionType: qt,
       prompt: String(q.prompt ?? ''),
       helpText: String(q.help_text ?? ''),
-      required: Boolean(q.required),
+      required: isSectionTitle ? false : Boolean(q.required),
       isPageBreak: Boolean(q.is_page_break),
-      scoringEnabled: q.scoring_enabled !== false,
+      scoringEnabled: isSectionTitle ? false : q.scoring_enabled !== false,
       scoringScaleMax:
-        Number.isInteger(scoringScaleRaw) && Number(scoringScaleRaw) >= 0 && Number(scoringScaleRaw) <= 5
-          ? Number(scoringScaleRaw)
-          : 5,
+        isSectionTitle
+          ? 0
+          : Number.isInteger(scoringScaleRaw) && Number(scoringScaleRaw) >= 0 && Number(scoringScaleRaw) <= 5
+            ? Number(scoringScaleRaw)
+            : 5,
       initiallyHidden: Boolean(q.initially_hidden),
       locked: Boolean(q.locked),
       maxLength: q.max_length == null ? null : Number(q.max_length),
-      options: String(q.question_type ?? '') === 'single_choice' ? options : null,
+      options: qt === 'single_choice' ? options : null,
     };
   });
 

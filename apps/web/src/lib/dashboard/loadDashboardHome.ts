@@ -8,7 +8,7 @@ import {
   isApproverRole,
 } from '@campsite/types';
 
-import { calendarYmdInTimeZone } from '@/lib/datetime';
+import { calendarYmdInTimeZone, mergeOrgTimeZoneIntoFormatOptions } from '@/lib/datetime';
 import { loadPendingApprovalRows } from '@/lib/admin/loadPendingApprovals';
 import { enrichBroadcastRows } from '@/lib/broadcasts/enrichBroadcastRows';
 import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
@@ -37,6 +37,8 @@ export type UpcomingEventRow = {
 
 export type DashboardHomeModel = {
   orgName: string;
+  /** IANA timezone for org-scoped date/time labels (null = viewer-local). */
+  orgTimeZone: string | null;
   userName: string;
   profileRole: string;
   /** Sent broadcasts count; omitted when the viewer must not see KPI tiles. */
@@ -324,11 +326,15 @@ export async function loadDashboardHome(
   if (ns) {
     const st = new Date(ns.start_time);
     const label = ns.role_label?.trim() || 'Shift';
-    nextShiftSummary = `${label} · ${st.toLocaleString('en-GB', { timeZone: 'UTC',  weekday: 'short', hour: 'numeric', minute: '2-digit' })}`;
+    nextShiftSummary = `${label} · ${st.toLocaleString(
+      'en-GB',
+      mergeOrgTimeZoneIntoFormatOptions(orgTz, { weekday: 'short', hour: 'numeric', minute: '2-digit' }),
+    )}`;
   }
 
   return {
     orgName,
+    orgTimeZone: orgTz,
     userName: profile.full_name?.trim() || 'there',
     profileRole: profile.role,
     ...(statCounts

@@ -13,6 +13,15 @@ function normalizeMessage(message: string): string {
   return message.replace(/\s+/g, ' ').trim();
 }
 
+function scrollWorkspaceToTop() {
+  const main = document.getElementById('main-content');
+  if (main) {
+    main.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 export function GlobalActionFeedbackBridge() {
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -26,6 +35,7 @@ export function GlobalActionFeedbackBridge() {
       const message = normalizeMessage(String(rawMessage ?? ''));
       if (!message || (tone !== 'ok' && tone !== 'err')) return;
       setFeedback({ tone, message });
+      scrollWorkspaceToTop();
       if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
       clearTimerRef.current = setTimeout(() => setFeedback(null), 5000);
     };
@@ -41,7 +51,8 @@ export function GlobalActionFeedbackBridge() {
     };
 
     const main = document.getElementById('main-content');
-    const observer = main
+    const observeTarget = main ?? document.body;
+    const observer = observeTarget
       ? new MutationObserver((mutations) => {
           const interactionFresh = Date.now() - lastInteractionAtRef.current < 10_000;
           if (!interactionFresh) return;
@@ -77,7 +88,7 @@ export function GlobalActionFeedbackBridge() {
     window.addEventListener(GLOBAL_ACTION_FEEDBACK_EVENT, onFeedback as EventListener);
     window.addEventListener('click', markInteraction, true);
     window.addEventListener('keydown', markInteraction, true);
-    if (observer && main) observer.observe(main, { childList: true, subtree: true });
+    if (observer && observeTarget) observer.observe(observeTarget, { childList: true, subtree: true });
 
     return () => {
       window.alert = originalAlert;

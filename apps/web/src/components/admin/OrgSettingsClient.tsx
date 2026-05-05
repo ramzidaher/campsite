@@ -1409,9 +1409,10 @@ export function OrgSettingsClient({
                     Default timezone (rota &amp; calendar)
                   </span>
                   <p className="mt-0.5 text-[12px] leading-relaxed text-[#9b9b9b]">
-                    IANA name (e.g. <span className="font-mono">Europe/London</span>). Leave empty
-                    to use each viewer&apos;s device time. Used when displaying shift times on web
-                    and mobile.
+                    IANA name (e.g. <span className="font-mono">Europe/London</span>). When set, dates
+                    and times across the product (dashboard, broadcasts, recruitment, rota, and
+                    careers pages) are shown in this zone. Leave empty to use each viewer&apos;s
+                    device timezone instead.
                   </p>
                   <input
                     className="mt-2 w-full max-w-md rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"

@@ -9,7 +9,7 @@ import {
 import { JobEditorTabNav } from '@/components/admin/JobEditorTabNav';
 import { useTopPageFeedback } from '@/lib/ui/useTopPageFeedback';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
-import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
+import { tenantJobListingRelativePathClient, tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
 import { RECRUITMENT_CONTRACT_TYPES } from '@campsite/types';
 import Link from 'next/link';
@@ -145,6 +145,7 @@ export function AdminJobEditClient({
 
   const showPublic = job.status === 'live' && job.slug && !job.slug.startsWith('draft-');
   const publicUrl = showPublic ? tenantJobPublicUrl(orgSlug, job.slug) : '';
+  const applicantPreviewHref = tenantJobListingRelativePathClient(job.slug, orgSlug);
   const isArchived = job.status === 'archived';
   function save() {
     setMsg(null);
@@ -712,7 +713,7 @@ export function AdminJobEditClient({
         ) : (
           <>
             <Link
-              href={`/hr/jobs/${job.id}/preview`}
+              href={applicantPreviewHref}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-10 min-w-[9rem] items-center justify-center rounded-full border border-[#d8d8d8] bg-white px-5 text-[12px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6]"

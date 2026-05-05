@@ -16,6 +16,10 @@ import {
 } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import {
+  advertClosingDateToApplicationsCloseAtIso,
+  advertReleaseDateToScheduledPublishAtIso,
+} from '@/lib/datetime/advertClosingDateToApplicationsCloseAtIso';
 
 export type JobActionState = { ok: true } | { ok: false; error: string };
 
@@ -133,6 +137,13 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
 
   const orgId = profile.org_id as string;
 
+  const { data: orgRow } = await supabase
+    .from('organisations')
+    .select('timezone')
+    .eq('id', orgId)
+    .maybeSingle();
+  const orgTimeZone = String((orgRow as { timezone?: string | null } | null)?.timezone ?? '').trim() || null;
+
   const { data: req, error: reqErr } = await supabase
     .from('recruitment_requests')
     .select(
@@ -171,8 +182,14 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
     const nextInterviewDates = parseInterviewDateList(req.interview_schedule);
     const nextStartDateNeeded = String(req.start_date_needed ?? '').trim() || null;
     const nextRoleProfileLink = String(req.role_profile_link ?? '').trim() || null;
-    const nextScheduledPublishAt = req.advert_release_date ? `${String(req.advert_release_date)}T09:00:00.000Z` : null;
-    const nextApplicationsCloseAt = req.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null;
+    const nextScheduledPublishAt = advertReleaseDateToScheduledPublishAtIso(
+      req.advert_release_date as string | null,
+      orgTimeZone
+    );
+    const nextApplicationsCloseAt = advertClosingDateToApplicationsCloseAtIso(
+      req.advert_closing_date as string | null,
+      orgTimeZone
+    );
 
     const hasExistingShortlisting = parseDateList((existingDraft as { shortlisting_dates?: unknown }).shortlisting_dates).length > 0;
     const hasExistingInterview = parseDateList((existingDraft as { interview_dates?: unknown }).interview_dates).length > 0;
@@ -243,12 +260,18 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
       allow_loom: false,
       allow_staffsavvy: false,
       hide_posted_date: false,
-      scheduled_publish_at: req.advert_release_date ? `${String(req.advert_release_date)}T09:00:00.000Z` : null,
+      scheduled_publish_at: advertReleaseDateToScheduledPublishAtIso(
+        req.advert_release_date as string | null,
+        orgTimeZone
+      ),
       shortlisting_dates: parseDateList(req.shortlisting_dates),
       interview_dates: parseInterviewDateList(req.interview_schedule),
       start_date_needed: String(req.start_date_needed ?? '').trim() || null,
       role_profile_link: String(req.role_profile_link ?? '').trim() || null,
-      applications_close_at: req.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null,
+      applications_close_at: advertClosingDateToApplicationsCloseAtIso(
+        req.advert_closing_date as string | null,
+        orgTimeZone
+      ),
       status: 'draft',
     })
     .select('id')
@@ -273,7 +296,10 @@ export async function createJobListingFromRequest(recruitmentRequestId: string):
         allow_cv: true,
         allow_loom: false,
         allow_staffsavvy: false,
-        applications_close_at: req.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null,
+        applications_close_at: advertClosingDateToApplicationsCloseAtIso(
+          req.advert_closing_date as string | null,
+          orgTimeZone
+        ),
         status: 'draft',
       })
       .select('id')
@@ -794,6 +820,12 @@ function validateJobScreeningQuestionsPersist(questions: JobScreeningQuestionPer
     }
     if (q.maxLength != null && (q.maxLength < 1 || q.maxLength > 20000)) {
       return 'Max length must be between 1 and 20000.';
+    }
+    if (q.questionType === 'section_title') {
+      if (q.required) return 'Section titles cannot be required.';
+      if (q.scoringEnabled) return 'Section titles cannot use scoring.';
+      if (q.scoringScaleMax !== 0) return 'Section titles must use scoring scale 0.';
+      if (q.isPageBreak) return 'Section title cannot be combined with a page break.';
     }
     if (!Number.isInteger(q.scoringScaleMax) || q.scoringScaleMax < 0 || q.scoringScaleMax > 5) {
       return 'Scoring scale must be an integer between 0 and 5.';

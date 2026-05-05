@@ -1,5 +1,6 @@
 'use client';
 
+import { OrgTimeZoneProvider } from '@/components/providers/OrgTimeZoneContext';
 import { NetworkStatusBanner } from '@/components/providers/NetworkStatusBanner';
 import { OfflineReadQueueSync } from '@/components/providers/OfflineReadQueueSync';
 import { ShellBadgeRealtime } from '@/components/providers/ShellBadgeRealtime';
@@ -20,6 +21,7 @@ export function MainProviders({
   skipTenantReauth = false,
   shellRealtimeUserId = null,
   shellRealtimeOrgId = null,
+  orgTimeZone = null,
 }: {
   children: React.ReactNode;
   /** ISO timestamp from main_shell_layout_bundle.profile_reauth_required_at */
@@ -30,6 +32,8 @@ export function MainProviders({
   shellRealtimeUserId?: string | null;
   /** Pre-resolved org from shell bundle to avoid client profile lookup calls. */
   shellRealtimeOrgId?: string | null;
+  /** IANA zone from main_shell_layout_bundle.org_timezone */
+  orgTimeZone?: string | null;
 }) {
   const [queryClient] = useState(
     () =>
@@ -66,11 +70,13 @@ export function MainProviders({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TenantReauthEnforcer reauthRequiredAt={reauthRequiredAt} skip={skipTenantReauth} />
-      <NetworkStatusBanner />
-      <OfflineReadQueueSync />
-      <ShellBadgeRealtime userId={shellRealtimeUserId} orgId={shellRealtimeOrgId} />
-      {children}
+      <OrgTimeZoneProvider value={orgTimeZone ?? null}>
+        <TenantReauthEnforcer reauthRequiredAt={reauthRequiredAt} skip={skipTenantReauth} />
+        <NetworkStatusBanner />
+        <OfflineReadQueueSync />
+        <ShellBadgeRealtime userId={shellRealtimeUserId} orgId={shellRealtimeOrgId} />
+        {children}
+      </OrgTimeZoneProvider>
     </QueryClientProvider>
   );
 }

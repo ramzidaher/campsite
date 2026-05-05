@@ -2,6 +2,7 @@ import { cache } from 'react';
 
 import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
+import { advertClosingDateToApplicationsCloseAtIso } from '@/lib/datetime/advertClosingDateToApplicationsCloseAtIso';
 import { createClient } from '@/lib/supabase/server';
 
 type PublicJobListRow = {
@@ -116,7 +117,7 @@ export const getCachedPublicJobsPageData = cache(
           }),
           supabase
             .from('organisations')
-            .select('name, logo_url, brand_preset_key, brand_tokens, brand_policy')
+            .select('name, logo_url, brand_preset_key, brand_tokens, brand_policy, timezone')
             .eq('slug', orgSlug)
             .maybeSingle(),
         ]);
@@ -138,6 +139,8 @@ export const getCachedPublicJobsPageData = cache(
         const rows = fullRows.slice(0, limit);
         const hasNext = fullRows.length > limit;
         const listingIds = rows.map((row) => row.job_listing_id);
+        const orgTimeZone =
+          String((orgLookup as { timezone?: string | null } | null)?.timezone ?? '').trim() || null;
 
         const timelineMap = new Map<string, PublicJobTimelineRow>();
         if (listingIds.length > 0) {
@@ -182,7 +185,7 @@ export const getCachedPublicJobsPageData = cache(
               recruitment_request_id: reqId || null,
               applications_close_at:
                 String(row.applications_close_at ?? '').trim() ||
-                (req?.advert_closing_date ? `${String(req.advert_closing_date)}T23:59:00.000Z` : null),
+                advertClosingDateToApplicationsCloseAtIso(req?.advert_closing_date ?? null, orgTimeZone),
               start_date_needed:
                 String(row.start_date_needed ?? '').trim() || String(req?.start_date_needed ?? '').trim() || null,
               shortlisting_dates: jobShortlisting.length > 0 ? jobShortlisting : (req?.shortlisting_dates ?? []),

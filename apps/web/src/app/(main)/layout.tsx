@@ -295,6 +295,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const profileReauthRequiredAt = str('profile_reauth_required_at');
   const shellRealtimeUserId = str('user_id');
+  const orgTimeZone = str('org_timezone')?.trim() || null;
 
   const view = (
     <ThemeRoot>
@@ -303,6 +304,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         skipTenantReauth={isPlatformOperator}
         shellRealtimeUserId={shellRealtimeUserId}
         shellRealtimeOrgId={currentOrgId}
+        orgTimeZone={orgTimeZone}
       >
         <AppShell
           orgName={orgName}

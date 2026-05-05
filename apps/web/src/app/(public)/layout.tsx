@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
+import { GlobalActionFeedbackBridge } from '@/components/providers/GlobalActionFeedbackBridge';
 
 function getPublicBackLink(pathname: string): { href: string; label: string } | null {
   const clean = pathname.split('?')[0] ?? pathname;
@@ -27,6 +28,7 @@ export default async function PublicLayout({ children }: { children: React.React
           </Link>
         </div>
       ) : null}
+      <GlobalActionFeedbackBridge />
       {children}
     </main>
   );

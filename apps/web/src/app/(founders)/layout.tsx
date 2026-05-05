@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Instrument_Serif, Inter } from 'next/font/google';
+import { GlobalActionFeedbackBridge } from '@/components/providers/GlobalActionFeedbackBridge';
 
 import '@/components/founders/founders-hq.css';
 
@@ -21,6 +22,9 @@ export const metadata: Metadata = {
 
 export default function FoundersLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`founder-hq-root ${fhInter.variable} ${fhSerif.variable}`}>{children}</div>
+    <div className={`founder-hq-root ${fhInter.variable} ${fhSerif.variable}`}>
+      <GlobalActionFeedbackBridge />
+      {children}
+    </div>
   );
 }

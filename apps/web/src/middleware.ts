@@ -6,6 +6,7 @@ import type { NextRequest } from 'next/server';
 import { isAuthPath, isPublicPath } from './lib/middleware/authPaths';
 import { resolveHostRequestContext } from './lib/middleware/resolveHostRequestContext';
 import { getSupabasePublicKey, getSupabaseUrl } from './lib/supabase/env';
+import { fetchWithTimeout, getSupabaseFetchTimeoutMs } from './lib/supabase/fetchWithTimeout';
 import { getPlatformAdminHost } from './lib/tenant/hostConfig';
 
 const MIDDLEWARE_AUTH_TIMEOUT_MS = 1500;
@@ -48,6 +49,9 @@ export async function middleware(request: NextRequest) {
   let authCheckTimedOut = false;
   if (supabaseUrl && supabasePublicKey) {
     const supabase = createServerClient(supabaseUrl, supabasePublicKey, {
+      global: {
+        fetch: (input, init) => fetchWithTimeout(input, init, getSupabaseFetchTimeoutMs()),
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll();

@@ -74,7 +74,14 @@ export function combinationModeHasChannel(flags: JobApplicationBooleans): boolea
   );
 }
 
-export const SCREENING_QUESTION_TYPES = ['short_text', 'paragraph', 'single_choice', 'yes_no'] as const;
+export const SCREENING_QUESTION_TYPES = [
+  'short_text',
+  'paragraph',
+  'single_choice',
+  'yes_no',
+  /** Display-only heading on apply forms; no answer field. */
+  'section_title',
+] as const;
 export type ScreeningQuestionType = (typeof SCREENING_QUESTION_TYPES)[number];
 
 export function isScreeningQuestionType(s: string | null | undefined): s is ScreeningQuestionType {

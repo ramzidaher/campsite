@@ -787,6 +787,33 @@ async function main() {
   }
   console.log('  Draft broadcast in Activities / Announcements');
 
+  const fixturesPath = join(root, 'apps/web/src/lib/reports/fixtures/report-seed-fixtures.json');
+  if (!existsSync(fixturesPath)) {
+    console.error('Missing report seed fixtures:', fixturesPath);
+    process.exit(1);
+  }
+  const { reports: reportSeedTemplates } = JSON.parse(readFileSync(fixturesPath, 'utf8'));
+  for (const r of reportSeedTemplates) {
+    const { error: repErr } = await supabase.from('reports').insert({
+      id: r.id,
+      org_id: orgId,
+      created_by: orgAdminId,
+      updated_by: orgAdminId,
+      name: r.name,
+      description: r.description,
+      domains: r.domains,
+      config: r.config,
+      tags: r.tags,
+      visibility: r.visibility,
+      shared_role_keys: [],
+    });
+    if (repErr) {
+      console.error('reports seed:', r.name, repErr.message);
+      process.exit(1);
+    }
+  }
+  console.log(`  Saved sample reports (${reportSeedTemplates.length}) for /reports — Run / export`);
+
   const manifest = {
     generatedAt: new Date().toISOString(),
     org: { id: orgId, slug: orgSlug, name: orgName },

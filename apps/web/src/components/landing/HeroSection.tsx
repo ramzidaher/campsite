@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { animate, stagger } from 'animejs';
 import { useAnimeReveal } from '@/hooks/useAnimeReveal';
 
 export function HeroSection() {
@@ -45,11 +44,13 @@ export function HeroSection() {
     if (!media.matches) {
       const cardEls = Array.from(cards.querySelectorAll<HTMLElement>('.v5-ui-card'));
       if (cardEls.length) {
-        animate(cardEls, {
-          opacity: [0, 1],
-          duration: 900,
-          delay: stagger(180, { start: 280 }),
-          ease: 'outExpo',
+        cardEls.forEach((cardEl, index) => {
+          cardEl.animate([{ opacity: 0 }, { opacity: 1 }], {
+            duration: 900,
+            delay: 280 + index * 180,
+            easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+            fill: 'forwards',
+          });
         });
       }
     }

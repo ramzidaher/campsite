@@ -150,8 +150,11 @@ export function startOfDayLocal(d: Date): Date {
   return x;
 }
 
-export function formatDayLabel(d: Date): string {
-  return d.toLocaleDateString('en-GB', { timeZone: 'UTC',  weekday: 'short', day: 'numeric', month: 'short' });
+export function formatDayLabel(d: Date, orgTimeZoneIana?: string | null): string {
+  return d.toLocaleDateString(
+    'en-GB',
+    mergeOrgTimeZoneIntoFormatOptions(orgTimeZoneIana, { weekday: 'short', day: 'numeric', month: 'short' }),
+  );
 }
 
 export function startOfMonth(d: Date): Date {
@@ -203,14 +206,25 @@ export function safeTimeZoneOptions(iana: string | null | undefined): { timeZone
   }
 }
 
+/**
+ * Merge org IANA timezone into `Intl` options. When org zone is unset, omits `timeZone` so formatting
+ * uses the runtime default (viewer-local in the browser; server default on SSR).
+ */
+export function mergeOrgTimeZoneIntoFormatOptions(
+  orgTimeZoneIana: string | null | undefined,
+  options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormatOptions {
+  return { ...options, ...safeTimeZoneOptions(orgTimeZoneIana) };
+}
+
 export function formatShiftTimeRange(startIso: string, endIso: string, iana?: string | null): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
   const o = safeTimeZoneOptions(iana);
-  return `${start.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit', ...o })}-${end.toLocaleTimeString('en-GB', { timeZone: 'UTC',  hour: '2-digit', minute: '2-digit', ...o })}`;
+  return `${start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', ...o })}-${end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', ...o })}`;
 }
 
 export function formatDateTimeRangeLocal(start: Date, end: Date, iana?: string | null): string {
   const o = safeTimeZoneOptions(iana);
-  return `${start.toLocaleString('en-GB', { timeZone: 'UTC',  ...o })} - ${end.toLocaleString('en-GB', { timeZone: 'UTC',  ...o })}`;
+  return `${start.toLocaleString('en-GB', { ...o })} - ${end.toLocaleString('en-GB', { ...o })}`;
 }

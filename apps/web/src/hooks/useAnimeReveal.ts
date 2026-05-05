@@ -1,7 +1,6 @@
 'use client';
 
 import { RefObject, useEffect, useRef } from 'react';
-import { animate, stagger } from 'animejs';
 
 interface RevealOptions {
   /** Stagger interval in ms between each element */
@@ -38,14 +37,22 @@ export function useAnimeReveal<T extends HTMLElement>(
     const targets = Array.from(el.querySelectorAll<HTMLElement>(selector));
     if (!targets.length) return;
 
-    const run = () =>
-      animate(targets, {
-        opacity: [0, 1],
-        ...(translateY ? { translateY: [translateY, 0] } : {}),
-        duration: 750,
-        delay: stagger(staggerMs, { start: delay }),
-        ease: 'outExpo',
+    const run = () => {
+      targets.forEach((target, index) => {
+        target.animate(
+          [
+            { opacity: 0, transform: `translateY(${translateY}px)` },
+            { opacity: 1, transform: 'translateY(0px)' },
+          ],
+          {
+            duration: 750,
+            delay: delay + index * staggerMs,
+            easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+            fill: 'forwards',
+          }
+        );
       });
+    };
 
     if (immediate) {
       run();

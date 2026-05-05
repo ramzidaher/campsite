@@ -3,19 +3,18 @@ http://localhost:3000/,PASS,,,PASS,No change needed
 http://localhost:3000/admin,PASS,,,PASS,No change needed
 http://localhost:3000/admin/applications,PASS,spacing is wrong the info is too close to the sides,,OPEN,Spacing issue not fixed yet
 http://localhost:3000/admin/broadcasts,PASS,,,PASS,No change needed
-http://localhost:3000/admin/categories,PASS,but its empty idk why it shoudl show broadcast and we shoudl have some mamanagmen thingy,,OPEN,Data and UX issue pending investigation
+http://localhost:3000/admin/categories,PASS,but its empty idk why it should show broadcast and we should have some management thingy,,OPEN,Data and UX issue pending investigation
 http://localhost:3000/admin/departments,PASS,Might need to make it easier for the user ,,OPEN,UX improvement pending
-http://localhost:3000/admin/discount,PASS,Needs a redesing and layout is shitty and logic is bad,,OPEN,Redesign and logic cleanup pending
-http://localhost:3000/admin/hr,FAIL ,Redircts to http://localhost:3000/hr/records idk why,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Middleware now redirects /admin/hr to /hr
+http://localhost:3000/admin/discount,PASS,Needs a redesign and layout is shitty and logic is bad,,OPEN,Redesign and logic cleanup pending
+http://localhost:3000/admin/hr,FAIL,Redirects to http://localhost:3000/hr/records idk why,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Middleware now redirects /admin/hr to /hr
 http://localhost:3000/admin/hr/absence-reporting,PASS,Might need to add limits to how many page/users to show ,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/absence-reporting via middleware
-http://localhost:3000/admin/hr/custom-fields,PASS ,"idk why we have this need to look it up, also the dropwond needs some work ",Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/custom-fields via middleware
+http://localhost:3000/admin/hr/custom-fields,PASS,"idk why we have this need to look it up, also the dropdown needs some work",Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/custom-fields via middleware
 http://localhost:3000/admin/hr/example,FAIL,idk why we have this also redirects to http://localhost:3000/hr/records,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/example via middleware
 http://localhost:3000/admin/hr/hr-metric-alerts,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/hr-metric-alerts via middleware
 http://localhost:3000/admin/hr/onboarding,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/onboarding via middleware
 http://localhost:3000/admin/hr/onboarding/example,FAIL,idk why we have this also redirects to http://localhost:3000/hr/onboarding,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/onboarding/example via middleware
-http://localhost:3000/admin/hr/one-on-ones,PASS/FAIL,"Error ""Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:"" need to fix this for all pages
-",,,FIXED,Hydration mismatch reduced by stabilizing initial date render
-http://localhost:3000/admin/hr/org-chart,PASS/FAIL,Needs redesing not a fan of the black and a bit buggy,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/org-chart via middleware
+http://localhost:3000/admin/hr/one-on-ones,PASS/FAIL,"Error ""Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:"" need to fix this for all pages",,FIXED,Hydration mismatch reduced by stabilizing initial date render
+http://localhost:3000/admin/hr/org-chart,PASS/FAIL,Needs redesign not a fan of the black and a bit buggy,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/org-chart via middleware
 http://localhost:3000/admin/hr/performance,PASS,,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/performance via middleware
 http://localhost:3000/admin/hr/performance/example,FAIL,same idk why we have this its an exmaple,Canonical redirect enforced in middleware from /admin/hr/* to /hr/*,FIXED,Route now canonicalized to /hr/performance/example via middleware
 http://localhost:3000/admin/integrations,PASS,but idk why we need this,,PASS,No change needed

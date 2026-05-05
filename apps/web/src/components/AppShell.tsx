@@ -84,6 +84,21 @@ function titleFromPathSegment(segment: string): string {
 function getGlobalBackLink(pathname: string): { href: string; label: string } | null {
   if (!pathname || pathname === '/') return null;
   const cleanPath = pathname.split('?')[0] ?? pathname;
+  const applicationFormPreviewMatch = cleanPath.match(/^\/hr\/hiring\/application-forms\/([^/]+)\/preview$/);
+  if (applicationFormPreviewMatch?.[1]) {
+    return {
+      href: `/hr/hiring/application-forms/${applicationFormPreviewMatch[1]}/edit`,
+      label: 'Application form',
+    };
+  }
+  const jobPreviewMatch = cleanPath.match(/^\/hr\/jobs\/([^/]+)\/preview$/);
+  if (jobPreviewMatch?.[1]) {
+    return {
+      href: `/hr/jobs/${jobPreviewMatch[1]}/edit`,
+      label: 'Job listing',
+    };
+  }
+
   const mainPages = new Set([
     '/dashboard',
     '/broadcasts',
@@ -119,7 +134,9 @@ function getGlobalBackLink(pathname: string): { href: string; label: string } | 
     { test: /^\/hr\/hiring\/jobs\/[^/]+/, href: '/hr/hiring/jobs', label: 'Job listings' },
     { test: /^\/hr\/jobs\/[^/]+/, href: '/hr/hiring/jobs', label: 'Job listings' },
     { test: /^\/hr\/hiring\/application-forms\/[^/]+/, href: '/hr/hiring/application-forms', label: 'Application forms' },
+    { test: /^\/hr\/offer-templates\/[^/]+\/edit$/, href: '/hr/offer-templates', label: 'Offer templates' },
     { test: /^\/admin\/jobs\/[^/]+/, href: '/admin/jobs', label: 'Jobs' },
+    { test: /^\/admin\/offer-templates\/[^/]+\/edit$/, href: '/admin/offer-templates', label: 'Offer templates' },
   ];
   const override = routeOverrides.find((item) => item.test.test(cleanPath));
   if (override) return { href: override.href, label: override.label };

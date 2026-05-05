@@ -10,6 +10,7 @@ import {
   endOfWeekExclusive,
   formatDateTimeRangeLocal,
   formatDayLabel,
+  mergeOrgTimeZoneIntoFormatOptions,
   monthCalendarWeeks,
   startOfDayLocal,
   startOfMonth,
@@ -19,6 +20,7 @@ import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ManualEventForm } from '@/components/calendar/ManualEventForm';
 import { TimeGridCalendar, type TimeGridItem } from '@/components/calendar/TimeGridCalendar';
+import { useOrgTimeZone } from '@/components/providers/OrgTimeZoneContext';
 import Link from 'next/link';
 
 type Profile = {
@@ -164,6 +166,8 @@ export function CalendarClient({
   profile: Profile;
   canViewAllOneOnOneCheckins: boolean;
 }) {
+  const shellOrgTz = useOrgTimeZone();
+  const orgTzForDisplay = profile.org_timezone?.trim() || shellOrgTz;
   const supabase = useMemo(() => createClient(), []);
   const formSectionRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<ViewMode>('month');
@@ -433,30 +437,42 @@ export function CalendarClient({
     }, 0);
   }
 
-  const subtitleMonthYear = anchor.toLocaleString('en-GB', { timeZone: 'UTC',  month: 'long', year: 'numeric' });
+  const subtitleMonthYear = anchor.toLocaleString(
+    'en-GB',
+    mergeOrgTimeZoneIntoFormatOptions(orgTzForDisplay, { month: 'long', year: 'numeric' }),
+  );
 
   const cardTitleLabel = useMemo(() => {
     if (view === 'month') {
-      return anchor.toLocaleString('en-GB', { timeZone: 'UTC',  month: 'long', year: 'numeric' });
+      return anchor.toLocaleString(
+        'en-GB',
+        mergeOrgTimeZoneIntoFormatOptions(orgTzForDisplay, { month: 'long', year: 'numeric' }),
+      );
     }
     if (view === 'time7') {
-      return `Week of ${formatDayLabel(startOfWeekMonday(gridStart))}`;
+      return `Week of ${formatDayLabel(startOfWeekMonday(gridStart), orgTzForDisplay)}`;
     }
     if (view === 'time1') {
-      return gridStart.toLocaleDateString('en-GB', { timeZone: 'UTC', 
+      return gridStart.toLocaleDateString(
+        'en-GB',
+        mergeOrgTimeZoneIntoFormatOptions(orgTzForDisplay, {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+      );
+    }
+    return selectedDay.toLocaleDateString(
+      'en-GB',
+      mergeOrgTimeZoneIntoFormatOptions(orgTzForDisplay, {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
         year: 'numeric',
-      });
-    }
-    return selectedDay.toLocaleDateString('en-GB', { timeZone: 'UTC', 
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  }, [view, anchor, gridStart, selectedDay]);
+      }),
+    );
+  }, [view, anchor, gridStart, selectedDay, orgTzForDisplay]);
 
   function goPrev() {
     if (view === 'month') setAnchor((a) => addMonths(a, -1));
