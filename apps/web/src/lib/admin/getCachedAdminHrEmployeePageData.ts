@@ -1,6 +1,6 @@
 import { cache } from 'react';
 
-import { currentLeaveYearKeyForOrgCalendar, currentLeaveYearKeyUtc } from '@/lib/datetime';
+import { currentLeaveYearKeyForOrgCalendar, currentLeaveYearKeyUtc, leaveYearUiKeyFromDbKey } from '@/lib/datetime';
 import { getOrLoadSharedCachedValue, registerSharedCacheStore } from '@/lib/cache/sharedCache';
 import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { resolveWithTimeout } from '@/lib/perf/resolveWithTimeout';
@@ -16,6 +16,8 @@ const ADMIN_HR_EMPLOYEE_PAGE_RESPONSE_CACHE_TTL_MS = Number.parseInt(
 
 type AdminHrEmployeePageData = {
   hrFileLeaveYearKey: string;
+  /** Calendar year label shown in UI (period end year); `hrFileLeaveYearKey` remains the DB row key. */
+  hrFileLeaveYearUiLabel: string;
   fileRow: Record<string, unknown> | null;
   sickScore: unknown;
   hrDocRows: Record<string, unknown>[];
@@ -232,6 +234,7 @@ export const getCachedAdminHrEmployeePageData = cache(
         const hrFileLeaveYearKey = orgTz
           ? currentLeaveYearKeyForOrgCalendar(new Date(), orgTz, sm, sd)
           : currentLeaveYearKeyUtc(new Date(), sm, sd);
+        const hrFileLeaveYearUiLabel = leaveYearUiKeyFromDbKey(hrFileLeaveYearKey, sm, sd);
 
         const fileRow = ((fileRows ?? [])[0] ?? null) as Record<string, unknown> | null;
         const hrRecordId = (fileRow?.hr_record_id as string | null) ?? null;
@@ -325,6 +328,7 @@ export const getCachedAdminHrEmployeePageData = cache(
 
         return {
           hrFileLeaveYearKey,
+          hrFileLeaveYearUiLabel,
           fileRow,
           sickScore,
           hrDocRows: (hrDocRows ?? []) as Record<string, unknown>[],

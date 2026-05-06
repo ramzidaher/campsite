@@ -1,6 +1,6 @@
 'use client';
 
-import { currentLeaveYearKey } from '@/lib/datetime';
+import { currentLeaveYearKey, dbLeaveYearKeyFromUiKey, leaveYearUiKeyFromDbKey } from '@/lib/datetime';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { createClient } from '@/lib/supabase/client';
@@ -121,16 +121,16 @@ export function OrgLeaveAdminClient({
   const [holidayStart, setHolidayStart] = useState('');
   const [holidayEnd, setHolidayEnd] = useState('');
 
-  const yearOptions = useMemo(() => {
+  const lyMonthNum = Number(lyM) || 1;
+  const lyDayNum = Number(lyD) || 1;
+
+  const leaveYearUiYearOptions = useMemo(() => {
     const cy = new Date().getFullYear();
-    const base = [cy - 1, cy, cy + 1];
-    const yNum = Number(year);
-    if (Number.isFinite(yNum) && !base.includes(yNum)) {
-      base.push(yNum);
-      base.sort((a, b) => a - b);
-    }
-    return base.map(String);
-  }, [year]);
+    const uiSet = new Set([cy - 1, cy, cy + 1]);
+    const uiSelected = Number(leaveYearUiKeyFromDbKey(year, lyMonthNum, lyDayNum));
+    if (Number.isFinite(uiSelected)) uiSet.add(uiSelected);
+    return [...uiSet].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+  }, [year, lyMonthNum, lyDayNum]);
 
   const loadRow = useCallback(async () => {
     if (!targetId) return;
@@ -405,16 +405,22 @@ export function OrgLeaveAdminClient({
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
               >
-                {yearOptions.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
+                {leaveYearUiYearOptions.map((uiY) => {
+                  const dbY = dbLeaveYearKeyFromUiKey(uiY, lyMonthNum, lyDayNum);
+                  return (
+                    <option key={dbY} value={dbY}>
+                      {uiY}
+                    </option>
+                  );
+                })}
               </select>
             </label>
           </div>
 
           {selectedMember ? (
             <p className="text-[12px] text-[#6b6b6b]">
-              Setting allowance for <strong>{selectedMember.full_name}</strong> in <strong>{year}</strong>.
+              Setting allowance for <strong>{selectedMember.full_name}</strong> in{' '}
+              <strong>{leaveYearUiKeyFromDbKey(year, lyMonthNum, lyDayNum)}</strong>.
             </p>
           ) : null}
 
@@ -921,9 +927,14 @@ export function OrgLeaveAdminClient({
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
                 >
-                  {yearOptions.map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
+                  {leaveYearUiYearOptions.map((uiY) => {
+                    const dbY = dbLeaveYearKeyFromUiKey(uiY, lyMonthNum, lyDayNum);
+                    return (
+                      <option key={dbY} value={dbY}>
+                        {uiY}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-[#6b6b6b] sm:pb-2">

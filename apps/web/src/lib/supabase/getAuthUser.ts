@@ -20,12 +20,22 @@ export const getAuthUser = cache(async () => {
     return user;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
     const isRetryableFetchFailure =
-      message.toLowerCase().includes('fetch failed') ||
-      message.includes('AuthRetryableFetchError');
+      lower.includes('fetch failed') ||
+      lower.includes('authretryablefetcherror') ||
+      lower.includes('supabase_fetch_timeout_after_');
     if (isRetryableFetchFailure) {
-      // Fail open on transient auth network issues so SSR routes can still render.
-      return null;
+      // Fail open on transient auth/provider stalls: prefer cookie-backed session user to avoid
+      // forcing a login redirect during temporary network timeouts.
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        return session?.user ?? null;
+      } catch {
+        return null;
+      }
     }
     throw error;
   }

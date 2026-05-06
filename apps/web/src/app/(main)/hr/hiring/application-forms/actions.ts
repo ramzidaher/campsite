@@ -247,27 +247,31 @@ export async function duplicateApplicationForm(formId: string): Promise<ActionRe
 }
 
 function validateFormQuestions(questions: FormQuestionPersist[]): string | null {
-  for (const q of questions) {
+  for (let i = 0; i < questions.length; i += 1) {
+    const q = questions[i]!;
+    const row = i + 1;
     if (!isScreeningQuestionType(q.questionType)) return 'Invalid question type.';
-    if (!q.prompt?.trim()) return 'Each question needs a prompt.';
+    const prompt = q.prompt?.trim() ?? '';
+    // Page breaks are display-only dividers; allow empty labels to avoid false validation failures.
+    if (!prompt && !q.isPageBreak) return `Question ${row} needs a prompt.`;
     if (q.questionType === 'single_choice') {
       const opts = q.options ?? [];
-      if (opts.length < 1) return 'Multiple-choice questions need at least one option.';
+      if (opts.length < 1) return `Question ${row}: multiple-choice questions need at least one option.`;
       for (const o of opts) {
-        if (!o.id?.trim() || !o.label?.trim()) return 'Each choice needs an id and label.';
+        if (!o.id?.trim() || !o.label?.trim()) return `Question ${row}: each choice needs an id and label.`;
       }
     }
     if (q.maxLength != null && (q.maxLength < 1 || q.maxLength > 20000)) {
-      return 'Max length must be between 1 and 20000.';
+      return `Question ${row}: max length must be between 1 and 20000.`;
     }
     if (q.questionType === 'section_title') {
-      if (q.required) return 'Section titles cannot be required.';
-      if (q.scoringEnabled) return 'Section titles cannot use scoring.';
-      if (q.scoringScaleMax !== 0) return 'Section titles must use scoring scale 0.';
-      if (q.isPageBreak) return 'Section title cannot be combined with a page break.';
+      if (q.required) return `Question ${row}: section titles cannot be required.`;
+      if (q.scoringEnabled) return `Question ${row}: section titles cannot use scoring.`;
+      if (q.scoringScaleMax !== 0) return `Question ${row}: section titles must use scoring scale 0.`;
+      if (q.isPageBreak) return `Question ${row}: section title cannot be combined with a page break.`;
     }
     if (!Number.isInteger(q.scoringScaleMax) || q.scoringScaleMax < 0 || q.scoringScaleMax > 5) {
-      return 'Scoring scale must be an integer between 0 and 5.';
+      return `Question ${row}: scoring scale must be an integer between 0 and 5.`;
     }
   }
   return null;

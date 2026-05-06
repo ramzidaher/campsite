@@ -1,13 +1,14 @@
 'use client';
 
 import { useInHiringHub } from '@/app/(main)/hr/hiring/HiringHubContext';
-import { archiveJobListing } from '@/app/(main)/admin/jobs/actions';
+import { archiveJobListing, unarchiveJobListing } from '@/app/(main)/admin/jobs/actions';
 import { campusFormControl, campusText } from '@campsite/ui/web';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
-import { Archive, ExternalLink, Share2 } from 'lucide-react';
+import { Archive, ArchiveRestore, ExternalLink, Share2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 export type AdminJobListRow = {
@@ -49,6 +50,7 @@ export function AdminJobsListClient({
   departments: DeptFilterOption[];
   orgSlug: string;
 }) {
+  const router = useRouter();
   const inHiringHub = useInHiringHub();
   const [listScope, setListScope] = useState<ListScope>('active');
   const [status, setStatus] = useState<string>('');
@@ -91,11 +93,31 @@ export function AdminJobsListClient({
         const res = await archiveJobListing(jobId);
         if (!res?.ok) {
           setArchiveError(res?.error ?? 'Could not archive this listing.');
+        } else {
+          router.refresh();
         }
         setArchivingJobId(null);
       });
     },
-    [startArchiving],
+    [router, startArchiving],
+  );
+
+  const unarchiveListing = useCallback(
+    (jobId: string) => {
+      startArchiving(async () => {
+        setArchiveError(null);
+        setArchivingJobId(jobId);
+        const res = await unarchiveJobListing(jobId);
+        if (!res?.ok) {
+          setArchiveError(res?.error ?? 'Could not restore this listing.');
+        } else {
+          setScope('active');
+          router.refresh();
+        }
+        setArchivingJobId(null);
+      });
+    },
+    [router, startArchiving],
   );
 
   const gradeOptions = useMemo(() => [...new Set(rows.map((r) => r.grade_level))].sort(), [rows]);
@@ -320,7 +342,18 @@ export function AdminJobsListClient({
                           >
                             <Archive className="h-4 w-4" strokeWidth={2} aria-hidden />
                           </button>
-                        ) : null}
+                        ) : (
+                          <button
+                            type="button"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-[#2563eb] shadow-sm transition-colors hover:border-[#2563eb]/35 hover:bg-[#eff6ff] disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label={`Restore ${r.title} to draft`}
+                            title="Restore to draft"
+                            onClick={() => unarchiveListing(r.id)}
+                            disabled={isArchiving && archivingJobId === r.id}
+                          >
+                            <ArchiveRestore className="h-4 w-4" strokeWidth={2} aria-hidden />
+                          </button>
+                        )}
                         {copiedJobId === r.id ? (
                           <span className="text-[11px] font-medium text-[#008B60]" role="status">
                             Copied

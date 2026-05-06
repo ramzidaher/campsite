@@ -6,7 +6,9 @@ import {
   calendarYmdInTimeZone,
   currentLeaveYearKeyForOrgCalendar,
   currentLeaveYearKeyUtc,
+  dbLeaveYearKeyFromUiKey,
   formatLeaveYearPeriodRange,
+  leaveYearUiKeyFromDbKey,
 } from '@/lib/datetime';
 import { leaveRangeOverlapsExisting } from '@/lib/leaveDateOverlap';
 import { formatToilMinutes, toilInputToMinutes } from '@/lib/toilDuration';
@@ -411,17 +413,15 @@ export function LeaveHubClient({
     [year, leaveYearStartMonth, leaveYearStartDay],
   );
 
-  const yearOptions = useMemo(() => {
+  /** Calendar years shown in leave-year dropdowns (period end year); values posted to API stay DB keys in `year`. */
+  const leaveYearUiYearOptions = useMemo(() => {
     const now = new Date();
     const cy = orgTimezone ? calendarYmdInTimeZone(now, orgTimezone).y : now.getUTCFullYear();
-    const base = [cy - 1, cy, cy + 1];
-    const yNum = Number(year);
-    if (Number.isFinite(yNum) && !base.includes(yNum)) {
-      base.push(yNum);
-      base.sort((a, b) => a - b);
-    }
-    return base.map(String);
-  }, [year, orgTimezone]);
+    const uiSet = new Set([cy - 1, cy, cy + 1]);
+    const uiSelected = Number(leaveYearUiKeyFromDbKey(year, leaveYearStartMonth, leaveYearStartDay));
+    if (Number.isFinite(uiSelected)) uiSet.add(uiSelected);
+    return [...uiSet].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+  }, [year, orgTimezone, leaveYearStartMonth, leaveYearStartDay]);
 
   const requestableKinds = useMemo(
     () =>
@@ -1340,7 +1340,14 @@ export function LeaveHubClient({
             <label className="flex flex-wrap items-center justify-end gap-2 text-[12px] text-[#6b6b6b]">
               Leave year
               <select value={year} onChange={(e) => setYear(e.target.value)} className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[12px] text-[#121212] focus:border-[#121212] focus:outline-none">
-                {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+                {leaveYearUiYearOptions.map((uiY) => {
+                  const dbY = dbLeaveYearKeyFromUiKey(uiY, leaveYearStartMonth, leaveYearStartDay);
+                  return (
+                    <option key={dbY} value={dbY}>
+                      {uiY}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             {canManage ? (
@@ -1741,7 +1748,14 @@ export function LeaveHubClient({
                   className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
                 >
                   <option value="">Select year</option>
-                  {yearOptions.map((y) => <option key={`carry-${y}`} value={y}>{y}</option>)}
+                  {leaveYearUiYearOptions.map((uiY) => {
+                    const dbY = dbLeaveYearKeyFromUiKey(uiY, leaveYearStartMonth, leaveYearStartDay);
+                    return (
+                      <option key={`carry-${dbY}`} value={dbY}>
+                        {uiY}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
               <label className="block">
@@ -1798,7 +1812,14 @@ export function LeaveHubClient({
                   className="w-full rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
                 >
                   <option value="">Select year</option>
-                  {yearOptions.map((y) => <option key={`encash-${y}`} value={y}>{y}</option>)}
+                  {leaveYearUiYearOptions.map((uiY) => {
+                    const dbY = dbLeaveYearKeyFromUiKey(uiY, leaveYearStartMonth, leaveYearStartDay);
+                    return (
+                      <option key={`encash-${dbY}`} value={dbY}>
+                        {uiY}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
               <label className="block">
@@ -2476,7 +2497,9 @@ export function LeaveHubClient({
                     </label>
                     <p className="font-semibold text-[#121212]">{displayName(row.carryover)}</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                      Carry-over request &middot; {row.carryover.days_requested} day{row.carryover.days_requested === 1 ? '' : 's'} from {row.carryover.from_leave_year} to {row.carryover.to_leave_year}
+                      Carry-over request &middot; {row.carryover.days_requested} day{row.carryover.days_requested === 1 ? '' : 's'} from{' '}
+                      {leaveYearUiKeyFromDbKey(row.carryover.from_leave_year, leaveYearStartMonth, leaveYearStartDay)} to{' '}
+                      {leaveYearUiKeyFromDbKey(row.carryover.to_leave_year, leaveYearStartMonth, leaveYearStartDay)}
                     </p>
                     {row.carryover.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.carryover.note}&rdquo;</p> : null}
                   </div>
@@ -2506,7 +2529,8 @@ export function LeaveHubClient({
                     </label>
                     <p className="font-semibold text-[#121212]">{displayName(row.encashment)}</p>
                     <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                      Encashment request &middot; {row.encashment.days_requested} day{row.encashment.days_requested === 1 ? '' : 's'} from leave year {row.encashment.leave_year}
+                      Encashment request &middot; {row.encashment.days_requested} day{row.encashment.days_requested === 1 ? '' : 's'} from leave year{' '}
+                      {leaveYearUiKeyFromDbKey(row.encashment.leave_year, leaveYearStartMonth, leaveYearStartDay)}
                     </p>
                     {row.encashment.note ? <p className="mt-1 text-[12px] italic text-[#9b9b9b]">&ldquo;{row.encashment.note}&rdquo;</p> : null}
                   </div>
@@ -2709,7 +2733,9 @@ export function LeaveHubClient({
                     <StatusPill status={c.status} />
                   </div>
                   <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                    {c.days_requested} day{c.days_requested === 1 ? '' : 's'} from {c.from_leave_year} to {c.to_leave_year}
+                    {c.days_requested} day{c.days_requested === 1 ? '' : 's'} from{' '}
+                    {leaveYearUiKeyFromDbKey(c.from_leave_year, leaveYearStartMonth, leaveYearStartDay)} to{' '}
+                    {leaveYearUiKeyFromDbKey(c.to_leave_year, leaveYearStartMonth, leaveYearStartDay)}
                     {c.status === 'approved' && c.days_approved != null ? ` · ${c.days_approved} approved` : ''}
                   </p>
                   {c.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{c.note}&rdquo;</p> : null}
@@ -2748,7 +2774,8 @@ export function LeaveHubClient({
                     <StatusPill status={e.status} />
                   </div>
                   <p className="mt-0.5 text-[12.5px] text-[#6b6b6b]">
-                    {e.days_requested} day{e.days_requested === 1 ? '' : 's'} from leave year {e.leave_year}
+                    {e.days_requested} day{e.days_requested === 1 ? '' : 's'} from leave year{' '}
+                    {leaveYearUiKeyFromDbKey(e.leave_year, leaveYearStartMonth, leaveYearStartDay)}
                     {e.status === 'approved' && e.days_approved != null ? ` · ${e.days_approved} approved` : ''}
                   </p>
                   {e.note ? <p className="mt-0.5 text-[12px] italic text-[#9b9b9b]">&ldquo;{e.note}&rdquo;</p> : null}

@@ -139,6 +139,7 @@ export default async function EmployeeHRFilePage({
   );
 
   const hrFileLeaveYearKey = pageData.hrFileLeaveYearKey;
+  const hrFileLeaveYearUiLabel = pageData.hrFileLeaveYearUiLabel;
   const fileRow = pageData.fileRow;
   if (!fileRow) redirect('/admin/hr');
 
@@ -647,7 +648,7 @@ export default async function EmployeeHRFilePage({
               label: 'Leave & Absence',
               description: 'Allowance context and Bradford absence score.',
               facts: [
-                { label: 'Leave year', value: hrFileLeaveYearKey },
+                { label: 'Leave year', value: hrFileLeaveYearUiLabel },
                 {
                   label: 'Annual entitlement',
                   value: `${Number(leaveData?.annual_entitlement_days ?? 0)} days`,
@@ -864,7 +865,7 @@ export default async function EmployeeHRFilePage({
                 }
               : null
           }
-          leaveEntitlementYearLabel={hrFileLeaveYearKey}
+          leaveEntitlementYearLabel={hrFileLeaveYearUiLabel}
           absenceScore={absenceScore}
           showAbsenceReportingLink={!!canViewAll || !!canViewTeam || !!canManageLeaveOrg}
           applications={

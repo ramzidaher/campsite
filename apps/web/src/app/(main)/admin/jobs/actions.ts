@@ -16,6 +16,7 @@ import {
 } from '@campsite/types';
 import { revalidatePath } from 'next/cache';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
+import { invalidateJobsForOrg } from '@/lib/cache/cacheInvalidation';
 import {
   advertClosingDateToApplicationsCloseAtIso,
   advertReleaseDateToScheduledPublishAtIso,
@@ -55,6 +56,11 @@ function isMissingNewJobListingColumnError(message: string | null | undefined): 
     msg.includes('offer_template_id') ||
     msg.includes('contract_template_id')
   );
+}
+
+function isMissingJobListingsArchivedAtColumnError(message: string | null | undefined): boolean {
+  const msg = String(message ?? '').toLowerCase();
+  return msg.includes('job_listings') && msg.includes('archived_at');
 }
 
 async function autoMoveRecruitmentRequestToInProgress(opts: {
@@ -622,13 +628,22 @@ export async function archiveJobListing(jobId: string): Promise<JobActionState> 
     return { ok: false, error: 'Not allowed.' };
   }
 
-  const { error } = await supabase
+  let archiveResult = await supabase
     .from('job_listings')
-    .update({ status: 'archived' })
+    .update({ status: 'archived', archived_at: new Date().toISOString() })
     .eq('id', id)
     .eq('org_id', profile.org_id as string);
 
-  if (error) return { ok: false, error: error.message };
+  if (archiveResult.error && isMissingJobListingsArchivedAtColumnError(archiveResult.error.message)) {
+    archiveResult = await supabase
+      .from('job_listings')
+      .update({ status: 'archived' })
+      .eq('id', id)
+      .eq('org_id', profile.org_id as string);
+  }
+
+  if (archiveResult.error) return { ok: false, error: archiveResult.error.message };
+  await invalidateJobsForOrg(profile.org_id as string).catch(() => null);
   revalidateJobs(id);
   return { ok: true };
 }
@@ -693,14 +708,24 @@ export async function unarchiveJobListing(jobId: string): Promise<JobActionState
     return { ok: false, error: 'Another live job already exists for this recruitment request.' };
   }
 
-  const { error } = await supabase
+  let unarchiveResult = await supabase
     .from('job_listings')
-    .update({ status: 'draft' })
+    .update({ status: 'draft', archived_at: null })
     .eq('id', id)
     .eq('org_id', orgId)
     .eq('status', 'archived');
 
-  if (error) return { ok: false, error: error.message };
+  if (unarchiveResult.error && isMissingJobListingsArchivedAtColumnError(unarchiveResult.error.message)) {
+    unarchiveResult = await supabase
+      .from('job_listings')
+      .update({ status: 'draft' })
+      .eq('id', id)
+      .eq('org_id', orgId)
+      .eq('status', 'archived');
+  }
+
+  if (unarchiveResult.error) return { ok: false, error: unarchiveResult.error.message };
+  await invalidateJobsForOrg(orgId).catch(() => null);
   revalidateJobs(id);
   return { ok: true };
 }
@@ -800,35 +825,39 @@ export type JobScreeningQuestionPersist = {
 };
 
 function validateJobScreeningQuestionsPersist(questions: JobScreeningQuestionPersist[]): string | null {
-  for (const q of questions) {
+  for (let i = 0; i < questions.length; i += 1) {
+    const q = questions[i]!;
+    const row = i + 1;
     if (!isScreeningQuestionType(q.questionType)) {
       return 'Invalid application question type.';
     }
-    if (!q.prompt?.trim()) {
-      return 'Each application question needs a prompt.';
+    const prompt = q.prompt?.trim() ?? '';
+    // Page breaks are display-only dividers; allow empty labels to avoid false prompt errors.
+    if (!prompt && !q.isPageBreak) {
+      return `Question ${row} needs a prompt.`;
     }
     if (q.questionType === 'single_choice') {
       const opts = q.options ?? [];
       if (opts.length < 1) {
-        return 'Multiple-choice questions need at least one option.';
+        return `Question ${row}: multiple-choice questions need at least one option.`;
       }
       for (const o of opts) {
         if (!o.id?.trim() || !o.label?.trim()) {
-          return 'Each choice needs an id and label.';
+          return `Question ${row}: each choice needs an id and label.`;
         }
       }
     }
     if (q.maxLength != null && (q.maxLength < 1 || q.maxLength > 20000)) {
-      return 'Max length must be between 1 and 20000.';
+      return `Question ${row}: max length must be between 1 and 20000.`;
     }
     if (q.questionType === 'section_title') {
-      if (q.required) return 'Section titles cannot be required.';
-      if (q.scoringEnabled) return 'Section titles cannot use scoring.';
-      if (q.scoringScaleMax !== 0) return 'Section titles must use scoring scale 0.';
-      if (q.isPageBreak) return 'Section title cannot be combined with a page break.';
+      if (q.required) return `Question ${row}: section titles cannot be required.`;
+      if (q.scoringEnabled) return `Question ${row}: section titles cannot use scoring.`;
+      if (q.scoringScaleMax !== 0) return `Question ${row}: section titles must use scoring scale 0.`;
+      if (q.isPageBreak) return `Question ${row}: section title cannot be combined with a page break.`;
     }
     if (!Number.isInteger(q.scoringScaleMax) || q.scoringScaleMax < 0 || q.scoringScaleMax > 5) {
-      return 'Scoring scale must be an integer between 0 and 5.';
+      return `Question ${row}: scoring scale must be an integer between 0 and 5.`;
     }
   }
   return null;

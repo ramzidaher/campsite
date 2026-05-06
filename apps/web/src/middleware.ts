@@ -82,7 +82,12 @@ export async function middleware(request: NextRequest) {
         typeof error === 'object' && error !== null && 'code' in error
           ? String((error as { code?: unknown }).code ?? '')
           : '';
-      authCheckTimedOut = message.includes('middleware auth timeout');
+      const lower = message.toLowerCase();
+      authCheckTimedOut =
+        message.includes('middleware auth timeout') ||
+        lower.includes('supabase_fetch_timeout_after_') ||
+        lower.includes('authretryablefetcherror') ||
+        lower.includes('fetch failed');
       if (message.includes('Invalid Refresh Token') || code === 'refresh_token_not_found') {
         clearStaleSupabaseAuthCookies(request, response);
       }
