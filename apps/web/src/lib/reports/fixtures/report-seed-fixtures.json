@@ -4,7 +4,7 @@
     {
       "id": "f1000000-0000-4000-8000-000000000001",
       "name": "Sample: Active employees",
-      "description": "Dev seed  active staff only (quick filter). Use Run to preview rows.",
+      "description": "Dev seed — active staff only (quick filter). Use Run to preview rows.",
       "domains": ["hr"],
       "config": {
         "domains": ["hr"],
@@ -22,7 +22,7 @@
     {
       "id": "f1000000-0000-4000-8000-000000000002",
       "name": "Sample: Staff directory",
-      "description": "Dev seed  directory-style columns including tenure and onboarding.",
+      "description": "Dev seed — directory-style columns including tenure and onboarding.",
       "domains": ["hr"],
       "config": {
         "domains": ["hr"],
@@ -48,7 +48,7 @@
     {
       "id": "f1000000-0000-4000-8000-000000000003",
       "name": "Sample: Time & pay snapshot",
-      "description": "Dev seed  HR + finance fields (timesheets, wagesheets, bank changes).",
+      "description": "Dev seed — HR + finance fields (timesheets, wagesheets, bank changes).",
       "domains": ["hr", "finance"],
       "config": {
         "domains": ["hr", "finance"],

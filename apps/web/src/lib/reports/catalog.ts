@@ -7,7 +7,7 @@ export type ReportFieldDef = {
   category: string;
   type: 'text' | 'number' | 'date' | 'boolean';
   queryKey: string;
-  /** Origin table(s) for engineers / tooltips  optional */
+  /** Origin table(s) for engineers / tooltips — optional */
   sourceTable?: string;
 };
 
@@ -28,13 +28,13 @@ export const REPORT_CATEGORY_ORDER: string[] = [
 ];
 
 export const REPORT_FIELDS: ReportFieldDef[] = [
-  // HR  core employee (profiles)
+  // HR — core employee (profiles)
   { key: 'employee_name', label: 'Employee name', domain: 'hr', category: 'Employee', type: 'text', queryKey: 'employee_name', sourceTable: 'profiles' },
   { key: 'employee_department', label: 'Department', domain: 'hr', category: 'Employee', type: 'text', queryKey: 'employee_department', sourceTable: 'profiles / departments' },
   { key: 'employee_role', label: 'Role', domain: 'hr', category: 'Employee', type: 'text', queryKey: 'employee_role', sourceTable: 'profiles.role' },
   { key: 'employee_start_date', label: 'Profile created at', domain: 'hr', category: 'Employee', type: 'date', queryKey: 'employee_start_date', sourceTable: 'profiles.created_at' },
   { key: 'employee_status', label: 'Status', domain: 'hr', category: 'Employee', type: 'text', queryKey: 'employee_status', sourceTable: 'profiles.status' },
-  // HR  employee_hr_records (contract & employment)
+  // HR — employee_hr_records (contract & employment)
   { key: 'hr_job_title', label: 'Job title', domain: 'hr', category: 'Contract & HR record', type: 'text', queryKey: 'hr_job_title', sourceTable: 'employee_hr_records.job_title' },
   { key: 'hr_grade_level', label: 'Grade level', domain: 'hr', category: 'Contract & HR record', type: 'text', queryKey: 'hr_grade_level', sourceTable: 'employee_hr_records.grade_level' },
   { key: 'hr_contract_type', label: 'Contract type', domain: 'hr', category: 'Contract & HR record', type: 'text', queryKey: 'hr_contract_type', sourceTable: 'employee_hr_records.contract_type' },
@@ -54,7 +54,7 @@ export const REPORT_FIELDS: ReportFieldDef[] = [
   { key: 'hr_continuous_employment_start_date', label: 'Continuous employment start', domain: 'hr', category: 'Contract & HR record', type: 'date', queryKey: 'hr_continuous_employment_start_date', sourceTable: 'employee_hr_records.continuous_employment_start_date' },
   { key: 'hr_annual_leave_exempt', label: 'Annual leave entitlement exempt', domain: 'hr', category: 'Contract & HR record', type: 'boolean', queryKey: 'hr_annual_leave_exempt', sourceTable: 'employee_hr_records.annual_leave_entitlement_exempt' },
   { key: 'hr_salary_band', label: 'Salary band', domain: 'hr', category: 'Contract & HR record', type: 'text', queryKey: 'hr_salary_band', sourceTable: 'employee_hr_records.salary_band' },
-  // Leave  leave_allowances (multi-year summary + latest year snapshot)
+  // Leave — leave_allowances (multi-year summary + latest year snapshot)
   {
     key: 'leave_entitlements_summary',
     label: 'Holiday entitlements (all years)',
@@ -82,7 +82,7 @@ export const REPORT_FIELDS: ReportFieldDef[] = [
     queryKey: 'leave_toil_days_latest_year',
     sourceTable: 'leave_allowances.toil_balance_days',
   },
-  // Rota  rota_shifts (rolling 365 days)
+  // Rota — rota_shifts (rolling 365 days)
   {
     key: 'rota_shifts_worked_count',
     label: 'Shifts worked (last 365 days, count)',

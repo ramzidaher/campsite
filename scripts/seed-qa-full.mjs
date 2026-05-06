@@ -486,7 +486,7 @@ const FIXTURE_USERS = [
   {
     key: 'orgadmin',
     fullName: 'QA Org Admin',
-    jobTitle: 'Platform QA  org admin',
+    jobTitle: 'Platform QA — org admin',
     role: 'org_admin',
     status: 'active',
     dept: 'senior_leadership',
@@ -775,7 +775,7 @@ async function main() {
     org_id: orgId,
     dept_id: deptIds.activities,
     channel_id: chan.id,
-    title: '[QA] Draft broadcast  approvals',
+    title: '[QA] Draft broadcast — approvals',
     body: 'Seed content for testing draft → pending approval → send workflow.',
     status: 'draft',
     created_by: janeId,
@@ -812,7 +812,7 @@ async function main() {
       process.exit(1);
     }
   }
-  console.log(`  Saved sample reports (${reportSeedTemplates.length}) for /reports  Run / export`);
+  console.log(`  Saved sample reports (${reportSeedTemplates.length}) for /reports — Run / export`);
 
   const manifest = {
     generatedAt: new Date().toISOString(),

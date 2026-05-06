@@ -41,7 +41,7 @@ export const HR_REPORT_PRESETS: HrReportPreset[] = [
     group: 'Shift & coverage',
     label: 'Daily Shift Review',
     description:
-      'Compare roster coverage with people on the groundnames, departments, and statuses side by side. Pair with live rota when you need to reconcile gaps.',
+      'Compare roster coverage with people on the ground—names, departments, and statuses side by side. Pair with live rota when you need to reconcile gaps.',
     suggestedReportName: 'Daily shift review',
     domains: ['hr'],
     fields: ['employee_name', 'employee_department', 'employee_role', 'employee_status'],
@@ -83,7 +83,7 @@ export const HR_REPORT_PRESETS: HrReportPreset[] = [
     group: 'Time & pay',
     label: 'Time Entries & Pay',
     description:
-      'Timesheet weeks, hours, wagesheet status, and bank-change audit fieldseverything Finance needs in one configurable grid.',
+      'Timesheet weeks, hours, wagesheet status, and bank-change audit fields—everything Finance needs in one configurable grid.',
     suggestedReportName: 'Time entries & pay',
     domains: ['hr', 'finance'],
     fields: [
@@ -103,7 +103,7 @@ export const HR_REPORT_PRESETS: HrReportPreset[] = [
     group: 'People',
     label: 'Welfare & Performance',
     description:
-      'Absences, reviews, and 1:1 rhythm in one reportpick only the wellbeing and performance columns you want to review.',
+      'Absences, reviews, and 1:1 rhythm in one report—pick only the wellbeing and performance columns you want to review.',
     suggestedReportName: 'Welfare & performance',
     domains: ['hr'],
     fields: [
