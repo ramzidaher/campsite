@@ -1,6 +1,6 @@
-# Page Layer Stage C Report — Profile Normalization Slice 2
+# Page Layer Stage C Report  Profile Normalization Slice 2
 **Date:** 2026-04-30
-**Status:** COMPLETE (targeted) — removed profile page-local cache island for employee-file RPC
+**Status:** COMPLETE (targeted)  removed profile page-local cache island for employee-file RPC
 **Follow-up to:** `reports/page-layer-stage-c-admin-users-normalization-20260430.md`
 
 ---

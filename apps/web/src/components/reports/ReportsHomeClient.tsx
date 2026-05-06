@@ -32,7 +32,7 @@ function noDataHint(reason: string | null): string {
     return 'Saved filters excluded every row. Edit the saved report configuration or relax filters.';
   }
   if (reason === 'projection_or_scope_empty') {
-    return 'Nothing to show—try adding columns or widening which departments are included.';
+    return 'Nothing to showtry adding columns or widening which departments are included.';
   }
   return 'No rows returned for this configuration.';
 }
@@ -134,7 +134,7 @@ export function ReportsHomeClient({
         nextDomains = ['hr'];
         nextFields = preset.fields.filter((k) => REPORT_FIELDS.some((f) => f.key === k && f.domain === 'hr'));
         setFinanceNotice(
-          'Finance columns require the reports.manage permission. Showing HR-only fields—you can still customize below.'
+          'Finance columns require the reports.manage permission. Showing HR-only fieldsyou can still customize below.'
         );
       }
 
@@ -918,7 +918,7 @@ function SavedReportsPanel({
             </button>
           </div>
         ))}
-        {!reports.length ? <p className="text-[13px] text-[#6b6b6b]">No saved reports yet—configure fields above and Save to library.</p> : null}
+        {!reports.length ? <p className="text-[13px] text-[#6b6b6b]">No saved reports yetconfigure fields above and Save to library.</p> : null}
       </div>
     </section>
   );

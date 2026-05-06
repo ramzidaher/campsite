@@ -3,6 +3,7 @@
 import { FormSelect } from '@campsite/ui/web';
 import type { PermissionPickerItem } from '@/lib/authz/customRolePickerContract';
 import { validateCustomRolePermissionKeys } from '@/lib/authz/validateCustomRolePermissions';
+import { ArrowRight, Copy, Pencil, Plus, RotateCcw, Save } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -364,8 +365,10 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
   return (
     <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7" data-no-checkbox-sound>
       <div className="mb-6">
-        <h1 className="text-[22px] font-medium tracking-[-0.02em] text-[#1A1917]">Roles & permissions</h1>
-        <p className="mt-1 text-[14px] text-[#6B6963]">
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
+          Roles & permissions
+        </h1>
+        <p className="mt-1 text-[13px] text-[#6b6b6b]">
           Define what each role can do, then assign roles from{' '}
           <Link href="/admin/users" className="text-[#1A5FA8] underline underline-offset-2">
             All members
@@ -456,8 +459,9 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                     <button
                       type="button"
                       onClick={() => setSelectedRoleId(role.id)}
-                      className="rounded-md border border-black/10 px-2.5 py-1 text-[12px] text-[#6B6963] hover:bg-[#F2F1ED]"
+                      className="inline-flex items-center gap-1 rounded-md border border-black/10 px-2.5 py-1 text-[12px] text-[#6B6963] hover:bg-[#F2F1ED]"
                     >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
                       {selectedRoleId === role.id ? 'Editing' : 'Edit'}
                     </button>
                   </div>
@@ -472,7 +476,9 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
               onClick={() => setActiveTab('create')}
               className="flex w-full items-center gap-3 rounded-[14px] border-[1.5px] border-dashed border-black/20 px-4 py-4 text-left text-[14px] text-[#6B6963] hover:bg-white hover:text-[#1A1917]"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-current text-[18px]">+</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-current">
+                <Plus className="h-4 w-4" aria-hidden />
+              </span>
               Create a custom role
             </button>
           ) : null}
@@ -486,7 +492,7 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                 </div>
                 <button
                   type="button"
-                  className="text-[12px] text-[#6B6963] underline underline-offset-2"
+                  className="inline-flex items-center gap-1 text-[12px] text-[#6B6963] underline underline-offset-2"
                   onClick={() => {
                     setRoleDraftPerms((curr) => ({
                       ...curr,
@@ -498,6 +504,7 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                     }));
                   }}
                 >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                   Reset changes
                 </button>
               </div>
@@ -625,8 +632,9 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                     <button
                       type="button"
                       onClick={() => duplicateRoleToDraft(selectedRole)}
-                      className="rounded-[10px] border border-black/15 px-3 py-2 text-[13px] text-[#1A1917] hover:bg-[#F2F1ED]"
+                      className="inline-flex items-center gap-1.5 rounded-[10px] border border-black/15 px-3 py-2 text-[13px] text-[#1A1917] hover:bg-[#F2F1ED]"
                     >
+                      <Copy className="h-3.5 w-3.5" aria-hidden />
                       Duplicate as custom
                     </button>
                   ) : null}
@@ -641,8 +649,9 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
                         [...selectedChecked].sort()
                       )
                     }
-                    className="rounded-[10px] bg-[#1A1917] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#1A1917] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
                   >
+                    <Save className="h-3.5 w-3.5" aria-hidden />
                     Save changes
                   </button>
                 </div>
@@ -1063,7 +1072,7 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
           <div className="mb-4 border-b border-black/10 pb-3">
             <p className="text-[13px] font-medium text-[#1A1917]">Custom role (permission ceiling: your access)</p>
             <p className="mt-1 text-[12px] text-[#6B6963]">
-              Only permissions you already have can be included. Predefined (system) roles are created by the platform seed — use this form for tenant-specific roles.
+              Only permissions you already have can be included. Predefined (system) roles are created by the platform seed  use this form for tenant-specific roles.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1225,17 +1234,19 @@ export function AdminRolesAndPermissionsView({ canManageRoles }: { canManageRole
             <div className="flex gap-2">
               <button
                 type="button"
-                className="rounded-[10px] border border-black/15 px-4 py-2 text-[14px] text-[#1A1917]"
+                className="inline-flex items-center gap-1.5 rounded-[10px] border border-black/15 px-4 py-2 text-[14px] text-[#1A1917]"
                 onClick={() => setActiveTab('roles')}
               >
+                <ArrowRight className="h-3.5 w-3.5 rotate-180" aria-hidden />
                 Cancel
               </button>
               <button
                 type="button"
                 disabled={busy || !newLabel.trim()}
                 onClick={() => void createRole()}
-                className="rounded-[10px] bg-[#1A1917] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#1A1917] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-50"
               >
+                <Plus className="h-3.5 w-3.5" aria-hidden />
                 Create role
               </button>
             </div>

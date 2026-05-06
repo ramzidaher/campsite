@@ -4,6 +4,7 @@ import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } 
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { isOrgAdminRole } from '@campsite/types';
 
 export default async function ManagerTeamsPage() {
   const pathStartedAtMs = Date.now();
@@ -20,6 +21,7 @@ export default async function ManagerTeamsPage() {
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
   if (!permissionKeys.includes('teams.view')) redirect('/forbidden');
+  if (isOrgAdminRole(role)) redirect('/admin/teams');
 
   const pageData = await withServerPerf(
     '/manager/teams',

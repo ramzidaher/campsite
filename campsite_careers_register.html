@@ -105,14 +105,14 @@ input.fi.invalid{border-color:var(--error);}
     </div>
     <div class="card">
       <h2>Let's get you set up</h2>
-      <p class="hint">One account, all your applications in one place. Sign up free — we don't spam.</p>
+      <p class="hint">One account, all your applications in one place. Sign up free  we don't spam.</p>
       <button class="social-btn" onclick="googleSignup()">
         <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Sign up with Google — skip all the typing
+        Sign up with Google  skip all the typing
       </button>
       <button class="social-btn" onclick="googleSignup()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="#0077B5"/><path d="M6.5 9h2V17h-2V9zm1-3a1.25 1.25 0 110 2.5A1.25 1.25 0 017.5 6zm4 3h1.9v1.1h.03C13.7 9.5 14.6 9 15.8 9c2.1 0 2.7 1.4 2.7 3.2V17h-2v-4.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2V9z" fill="white"/></svg>
-        Import from LinkedIn — even faster
+        Import from LinkedIn  even faster
       </button>
       <div class="divider">or sign up with email</div>
       <div class="field">
@@ -162,7 +162,7 @@ input.fi.invalid{border-color:var(--error);}
   <div class="view" id="v2">
     <div class="banter">
       <span class="banter-icon">📬</span>
-      <span>We sent a 6-digit code to <strong id="email-shown" style="color:#FAF9F6;"></strong>. Check your inbox — and yes, check spam if it's not there in 30 seconds.</span>
+      <span>We sent a 6-digit code to <strong id="email-shown" style="color:#FAF9F6;"></strong>. Check your inbox  and yes, check spam if it's not there in 30 seconds.</span>
     </div>
     <div class="card">
       <h2>Verify your email</h2>
@@ -186,7 +186,7 @@ input.fi.invalid{border-color:var(--error);}
   <div class="view" id="v3">
     <div class="banter">
       <span class="banter-icon">🎯</span>
-      <span>Almost done — one quick preferences screen so we show you roles that actually make sense for you. Takes 20 seconds.</span>
+      <span>Almost done  one quick preferences screen so we show you roles that actually make sense for you. Takes 20 seconds.</span>
     </div>
     <div class="card">
       <h2>Job preferences</h2>
@@ -212,9 +212,9 @@ input.fi.invalid{border-color:var(--error);}
       <div class="field">
         <label class="fl">Notify me about new roles</label>
         <select class="fi" id="pref-notif">
-          <option>Immediately — yes please, I'm keen</option>
-          <option>Weekly digest — chill but interested</option>
-          <option>Never — I'll check manually like it's 2005</option>
+          <option>Immediately  yes please, I'm keen</option>
+          <option>Weekly digest  chill but interested</option>
+          <option>Never  I'll check manually like it's 2005</option>
         </select>
       </div>
       <button class="btn-primary" onclick="finish()">Create my account →</button>
@@ -232,7 +232,7 @@ input.fi.invalid{border-color:var(--error);}
         <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">What's next</div>
         <div class="ns-item"><div class="ns-num">1</div><span>Browse open roles and find something that excites you</span></div>
         <div class="ns-item"><div class="ns-num">2</div><span>Apply in under 6 minutes (yes, we timed it again)</span></div>
-        <div class="ns-item"><div class="ns-num">3</div><span>Track your application status right here — no chasing emails</span></div>
+        <div class="ns-item"><div class="ns-num">3</div><span>Track your application status right here  no chasing emails</span></div>
       </div>
       <button class="btn-primary" style="margin-top:1.25rem;width:auto;padding:11px 28px;" onclick="sendPrompt('Browse open roles on Campsite Careers')">Browse open roles →</button>
     </div>
@@ -286,7 +286,7 @@ function checkPw(){
   if(pw.length>=6)s++;if(pw.length>=10)s++;
   if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^a-zA-Z0-9]/.test(pw))s++;
   if(!pw){msg='Start typing…';col='var(--border)';}
-  else if(s<=1){msg='Weak — a hacker would crack this in seconds';col='#B91C1C';}
+  else if(s<=1){msg='Weak  a hacker would crack this in seconds';col='#B91C1C';}
   else if(s<=2){msg='Okay-ish. You can do better.';col='#D97706';}
   else if(s<=3){msg='Not bad. Getting there.';col='#CA8A04';}
   else if(s<=4){msg='Strong. Your future employer approves.';col='var(--success)';}

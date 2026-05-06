@@ -117,7 +117,7 @@ begin
 end;
 $$;
 
--- Workers (Edge, cron) — same audience as the feed for sent posts.
+-- Workers (Edge, cron)  same audience as the feed for sent posts.
 create or replace function public.broadcast_notification_recipient_user_ids(p_broadcast_id uuid)
 returns table(user_id uuid)
 language sql

@@ -1,4 +1,4 @@
-# Page Layer Stage G — Admin Teams Normalization
+# Page Layer Stage G  Admin Teams Normalization
 **Date:** 2026-05-01  
 **Owner:** Engineering  
 **Scope:** `apps/web/src/app/(main)/admin/teams/page.tsx`

@@ -425,7 +425,7 @@ export async function createInterviewSlot(fields: {
   const startsIso = start.toISOString();
   const endsIso = end.toISOString();
   const summary = `[${orgName}] Interview slot (available): ${jobTitle}`;
-  const description = `CampSite interview panel slot — available for booking.\nJob: ${jobTitle}\n\nPanel members will see updates when a candidate is scheduled.`;
+  const description = `CampSite interview panel slot  available for booking.\nJob: ${jobTitle}\n\nPanel members will see updates when a candidate is scheduled.`;
 
   let admin;
   try {
@@ -485,7 +485,7 @@ export async function createInterviewSlot(fields: {
   const warnings: string[] = [];
   if (createdEvents.length < panelists.length) {
     warnings.push(
-      `${panelists.length - createdEvents.length} panelist(s) have no Google Calendar connected — add events manually or ask them to connect Calendar in Settings.`
+      `${panelists.length - createdEvents.length} panelist(s) have no Google Calendar connected  add events manually or ask them to connect Calendar in Settings.`
     );
   }
 
@@ -568,7 +568,7 @@ export async function bulkCreateInterviewSlots(fields: {
       const slotData = fields.slots[inserted.indexOf(slot)];
       if (!slotData) continue;
       const summary = `[${orgName}] Interview slot (available): ${jobTitle}`;
-      const description = `CampSite interview panel slot — available for booking.\nJob: ${jobTitle}`;
+      const description = `CampSite interview panel slot  available for booking.\nJob: ${jobTitle}`;
       try {
         const events = await createInterviewSlotEventsForPanelists({
           admin,
@@ -606,9 +606,9 @@ export async function bulkCreateInterviewSlots(fields: {
     }
     const expectedEvents = inserted.length * panelists.length;
     if (syncedCount < expectedEvents) {
-      warnings.push(`${expectedEvents - syncedCount} calendar event(s) could not sync — panelists can add manually.`);
+      warnings.push(`${expectedEvents - syncedCount} calendar event(s) could not sync  panelists can add manually.`);
     }
-  } catch { /* Google Calendar not configured — fine */ }
+  } catch { /* Google Calendar not configured  fine */ }
 
   revalidatePath('/admin/interviews');
   revalidatePath('/hr/interviews');
@@ -892,9 +892,9 @@ export async function bookInterviewForApplication(opts: {
   const endsAt = new Date(slot.ends_at as string);
   const candName = (app.candidate_name as string)?.trim() || 'Candidate';
   const candEmail = (app.candidate_email as string)?.trim() || '';
-  const summary = `Interview: ${candName} — ${String(jlTitle).trim()}`;
+  const summary = `Interview: ${candName}  ${String(jlTitle).trim()}`;
   const desc =
-    `CampSite — Booked interview.\nCandidate: ${candName} (${candEmail})\nJob: ${String(jlTitle).trim()}\n\n` +
+    `CampSite  Booked interview.\nCandidate: ${candName} (${candEmail})\nJob: ${String(jlTitle).trim()}\n\n` +
     (joining ? `Joining details:\n${joining}` : '');
 
   if (evs?.length) {

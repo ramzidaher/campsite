@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Full-screen loading overlay — used during post-login navigation
+ * Full-screen loading overlay  used during post-login navigation
  * while the server renders the first authenticated page.
  */
 export function AppLoaderOverlay() {

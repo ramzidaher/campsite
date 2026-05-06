@@ -16,7 +16,7 @@ as $$
 declare
   v_skills text[];
 begin
-  -- Staff / org registration path (RegisterWizard) — profiles row is created elsewhere.
+  -- Staff / org registration path (RegisterWizard)  profiles row is created elsewhere.
   if nullif(trim(coalesce(new.raw_user_meta_data->>'register_org_id', '')), '') is not null then
     return new;
   end if;

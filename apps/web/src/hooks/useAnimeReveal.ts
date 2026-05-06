@@ -7,7 +7,7 @@ interface RevealOptions {
   staggerMs?: number;
   /** Initial delay in ms before the stagger begins */
   delay?: number;
-  /** Starting Y offset in px — pass 0 to animate opacity only */
+  /** Starting Y offset in px  pass 0 to animate opacity only */
   translateY?: number;
   /** IntersectionObserver threshold (0–1) */
   threshold?: number;
@@ -71,7 +71,7 @@ export function useAnimeReveal<T extends HTMLElement>(
 
     observer.observe(el);
     return () => observer.disconnect();
-    // options are constants at call sites — safe to omit from deps
+    // options are constants at call sites  safe to omit from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

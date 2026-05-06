@@ -99,6 +99,14 @@ export function AuthCallbackClient() {
 
       await syncRegistrationAvatarToProfileIfEmpty(supabase, user);
 
+      // For candidate accounts, claim any prior guest applications submitted
+      // with this email. Best-effort; RPC returns { error } (does not throw).
+      const accountType = (user.user_metadata as Record<string, unknown> | undefined)?.account_type;
+      if (accountType === 'candidate') {
+        const { error: claimErr } = await supabase.rpc('claim_my_applications');
+        void claimErr;
+      }
+
       if (joinRequestId) {
         await fetch('/api/auth/complete-org-join', {
           method: 'POST',

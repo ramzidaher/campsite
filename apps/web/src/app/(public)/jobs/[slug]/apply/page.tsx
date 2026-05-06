@@ -1,9 +1,11 @@
 import { ApplyJobFormClient } from '@/app/(public)/jobs/[slug]/apply/ApplyJobFormClient';
 import { CareersHeader } from '@/app/(public)/jobs/CareersBranding';
+import { buildCandidateJobsLoginRedirectUrl } from '@/lib/jobs/candidateAuthRedirect';
 import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { createClient } from '@/lib/supabase/server';
+import { tenantJobApplyRelativePath } from '@/lib/tenant/adminUrl';
 import { headers } from 'next/headers';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 type PublicJobRow = {
   job_listing_id: string;
@@ -30,6 +32,16 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
     data: { user },
   } = await supabase.auth.getUser();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? '';
+
+  if (!user) {
+    redirect(
+      buildCandidateJobsLoginRedirectUrl({
+        hostHeader: host,
+        orgSlug,
+        nextPath: tenantJobApplyRelativePath(jobSlug, orgSlug, host),
+      })
+    );
+  }
 
   const { data, error } = await supabase.rpc('public_job_listing_by_slug', {
     p_org_slug: orgSlug,
@@ -60,7 +72,11 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
   const orgName = (orgBrand?.name as string | undefined)?.trim() || job.org_name;
   const orgLogoUrl = (orgBrand as { logo_url?: string | null } | null)?.logo_url ?? null;
 
-  const [{ data: eqJson }, { data: screeningRows, error: screeningErr }] = await Promise.all([
+  const [
+    { data: eqJson },
+    { data: screeningRows, error: screeningErr },
+    { data: candidateProfile },
+  ] = await Promise.all([
     supabase.rpc('public_org_eq_monitoring_codes', {
       p_org_slug: orgSlug,
     }),
@@ -68,6 +84,11 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
       p_org_slug: orgSlug,
       p_job_slug: jobSlug,
     }),
+    supabase
+      .from('candidate_profiles')
+      .select('full_name, phone, location, current_title, linkedin_url, portfolio_url, persona, skills')
+      .eq('id', user.id)
+      .maybeSingle(),
   ]);
   let eqCategories: { code: string; label: string }[] = [];
   if (Array.isArray(eqJson)) {
@@ -118,8 +139,16 @@ export default async function ApplyJobPage({ params }: { params: Promise<{ slug:
           listing={job}
           orgSlug={orgSlug}
           hostHeader={host}
-          defaultEmail={user?.email ?? null}
-          isAuthenticated={Boolean(user)}
+          defaultEmail={user.email ?? null}
+          isAuthenticated={true}
+          defaultName={(candidateProfile?.full_name as string | null) ?? null}
+          defaultPhone={(candidateProfile?.phone as string | null) ?? null}
+          defaultLocation={(candidateProfile?.location as string | null) ?? null}
+          defaultCurrentTitle={(candidateProfile?.current_title as string | null) ?? null}
+          defaultLinkedin={(candidateProfile?.linkedin_url as string | null) ?? null}
+          defaultPortfolio={(candidateProfile?.portfolio_url as string | null) ?? null}
+          defaultPersona={(candidateProfile?.persona as string | null) ?? null}
+          defaultSkills={Array.isArray(candidateProfile?.skills) ? (candidateProfile.skills as string[]) : []}
           eqCategories={eqCategories}
           screeningQuestions={
             screeningErr || !Array.isArray(screeningRows)

@@ -354,7 +354,7 @@ export async function createRecruitmentRequest(form: {
       p_actor_name: submitterName,
     });
   } catch {
-    // Non-fatal — notifications are best-effort
+    // Non-fatal  notifications are best-effort
   }
 
   void sendRecruitmentRequestHrEmail({

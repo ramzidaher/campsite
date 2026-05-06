@@ -3,7 +3,7 @@
 import { FormSelect } from '@campsite/ui/web';
 import { adminBroadcastsFilterChannelAria, channelPillAccessibleName } from '@/lib/broadcasts/channelCopy';
 import { createClient } from '@/lib/supabase/client';
-import { Pencil } from 'lucide-react';
+import { Pencil, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -199,7 +199,7 @@ export function AdminBroadcastsClient({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+    <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
       <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
@@ -209,7 +209,7 @@ export function AdminBroadcastsClient({
         </div>
         <Link
           href="/broadcasts?tab=feed&compose=1"
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
         >
           <Pencil className="h-4 w-4" aria-hidden />
           New broadcast
@@ -218,7 +218,7 @@ export function AdminBroadcastsClient({
 
       {msg ? <p className="mb-4 text-sm text-[#b91c1c]">{msg}</p> : null}
 
-      <div className="mb-5 flex gap-0.5 border-b border-[#d8d8d8]">
+      <div className="mb-5 flex flex-wrap gap-1 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] p-1">
         {(
           [
             ['all', 'All', tabCounts.all, false],
@@ -232,10 +232,10 @@ export function AdminBroadcastsClient({
             type="button"
             onClick={() => setMainTab(key)}
             className={[
-              '-mb-px border-b-2 px-4 py-2.5 text-[13px] transition-colors',
+              'rounded-md px-3 py-1.5 text-[12.5px] transition-colors',
               mainTab === key
-                ? 'border-[#121212] font-medium text-[#121212]'
-                : 'border-transparent font-normal text-[#6b6b6b] hover:text-[#121212]',
+                ? 'bg-white font-medium text-[#121212] shadow-sm'
+                : 'font-normal text-[#6b6b6b] hover:text-[#121212]',
             ].join(' ')}
           >
             {label}{' '}
@@ -246,11 +246,9 @@ export function AdminBroadcastsClient({
         ))}
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
-        <div className="flex h-9 w-full max-w-[240px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3">
-          <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
-            🔍
-          </span>
+      <div className="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-[#d8d8d8] bg-white p-4 md:grid-cols-[minmax(220px,1fr)_auto_auto] md:items-center">
+        <div className="flex h-10 w-full items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3">
+          <Search className="h-3.5 w-3.5 text-[#9b9b9b]" aria-hidden />
           <input
             type="search"
             value={q}
@@ -261,7 +259,7 @@ export function AdminBroadcastsClient({
           />
         </div>
         <FormSelect
-          className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
+          className="h-10 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none"
           value={filterDept}
           onChange={(e) => {
             setFilterDept(e.target.value);
@@ -277,7 +275,7 @@ export function AdminBroadcastsClient({
           ))}
         </FormSelect>
         <FormSelect
-          className="h-9 min-w-[140px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
+          className="h-10 min-w-[180px] rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none"
           value={filterCat}
           onChange={(e) => setFilterCat(e.target.value)}
           aria-label={adminBroadcastsFilterChannelAria}
@@ -292,7 +290,7 @@ export function AdminBroadcastsClient({
         </FormSelect>
       </div>
 
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-3">
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-[#d8d8d8] bg-white px-6 py-14 text-center">
             <p className="text-[15px] font-medium text-[#6b6b6b]">No broadcasts match</p>
@@ -307,7 +305,7 @@ export function AdminBroadcastsClient({
             return (
               <div
                 key={id}
-                className="flex flex-col gap-3 rounded-xl border border-[#d8d8d8] bg-white p-4 sm:flex-row sm:items-center sm:gap-3.5"
+                className="flex flex-col gap-3 rounded-xl border border-[#d8d8d8] bg-white p-4 transition-colors hover:bg-[#faf9f6] sm:flex-row sm:items-center sm:gap-3.5"
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-[13.5px] font-medium text-[#121212]">{r.title}</div>

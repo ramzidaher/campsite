@@ -185,14 +185,14 @@ export default function HomeScreen() {
               onPress={() => router.push('/broadcast-compose')}
               style={({ pressed }) => [styles.composeBtn, { opacity: pressed ? 0.88 : 1 }]}
             >
-              <Text style={styles.composeBtnText}>✏ New broadcast</Text>
+              <Text style={styles.composeBtnText}>New broadcast</Text>
             </Pressable>
           ) : canCompose ? (
             <Pressable
               onPress={() => router.push('/broadcast-compose')}
               style={({ pressed }) => [styles.composeBtn, { opacity: pressed ? 0.88 : 1 }]}
             >
-              <Text style={styles.composeBtnText}>✏ Submit draft</Text>
+              <Text style={styles.composeBtnText}>Submit draft</Text>
             </Pressable>
           ) : null}
         </View>
@@ -233,8 +233,8 @@ export default function HomeScreen() {
                     ? critical
                       ? 'Your probation review is more than one week overdue.'
                       : overdue
-                        ? 'Your probation end date has passed — speak with your manager.'
-                        : 'Your probation period is ending soon — speak with your manager.'
+                        ? 'Your probation end date has passed  speak with your manager.'
+                        : 'Your probation period is ending soon  speak with your manager.'
                     : critical
                       ? `Probation review overdue: ${p.display_name}`
                       : overdue
@@ -277,9 +277,7 @@ export default function HomeScreen() {
                       },
                     ]}
                   >
-                    <Text style={[styles.statKicker, { color: statLabelColor }]}>
-                      📡 BROADCASTS SENT
-                    </Text>
+                    <Text style={[styles.statKicker, { color: statLabelColor }]}>BROADCASTS SENT</Text>
                     <Text style={[styles.statValue, { color: tokens.textPrimary }]}>
                       {stats.broadcastTotal}
                     </Text>
@@ -297,7 +295,7 @@ export default function HomeScreen() {
                     },
                   ]}
                 >
-                  <Text style={[styles.statKicker, { color: statLabelColor }]}>👥 ACTIVE MEMBERS</Text>
+                  <Text style={[styles.statKicker, { color: statLabelColor }]}>ACTIVE MEMBERS</Text>
                   <Text style={[styles.statValue, { color: tokens.textPrimary }]}>
                     {stats.memberActiveTotal}
                   </Text>
@@ -309,7 +307,7 @@ export default function HomeScreen() {
             <View style={styles.sectionHead}>
               <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>Recent broadcasts</Text>
               <Pressable onPress={() => router.push('/(tabs)/broadcasts')}>
-                <Text style={[styles.sectionLink, { color: tokens.textSecondary }]}>View all →</Text>
+                <Text style={[styles.sectionLink, { color: tokens.textSecondary }]}>View all</Text>
               </Pressable>
             </View>
 
@@ -352,7 +350,7 @@ export default function HomeScreen() {
             <View style={styles.sectionHead}>
               <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>Calendar</Text>
               <Pressable onPress={() => router.push('/(tabs)/calendar')}>
-                <Text style={[styles.sectionLink, { color: tokens.textSecondary }]}>Open calendar →</Text>
+                <Text style={[styles.sectionLink, { color: tokens.textSecondary }]}>Open calendar</Text>
               </Pressable>
             </View>
 

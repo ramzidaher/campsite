@@ -127,7 +127,7 @@ function permissionRecoveryRpc(
 }
 
 function nextShellExpiry(value: ShellBundle, now: number): number {
-  // Degraded bundles (permission timeout, RPC timeout) must not be cached — the user
+  // Degraded bundles (permission timeout, RPC timeout) must not be cached  the user
   // navigating away caused Vercel to keep running a slow/cancelled request, and caching
   // that degraded result for 10s would lock them in member-mode on every subsequent page.
   if (value.shell_degraded) return now;
@@ -362,7 +362,7 @@ export async function getMainShellLayoutBundleForViewer(
   const shellRedisKey = `${SHELL_REDIS_KEY_PREFIX}:${viewerKey}`;
 
   const fetchPromise = (async () => {
-    // L2: Redis — check before firing the RPC, eliminates thundering herd on cold instances.
+    // L2: Redis  check before firing the RPC, eliminates thundering herd on cold instances.
     const redisBundle = await redisGet<ShellBundle>(shellRedisKey);
     if (redisBundle !== null && !redisBundle.shell_degraded) {
       const cachedAt = Date.now();

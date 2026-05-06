@@ -44,7 +44,7 @@ export function AppLoader() {
         {/* Warm ambient glow */}
         <ellipse cx="40" cy="76" rx="34" ry="18" fill="url(#cs-glow)" />
 
-        {/* Crossed logs — warm brown */}
+        {/* Crossed logs  warm brown */}
         <rect
           x="10" y="72" width="60" height="7" rx="3.5"
           transform="rotate(-18 40 75.5)"
@@ -91,7 +91,7 @@ export function AppLoader() {
         <circle className="campsite-ember-3" cx="40" cy="22" r="1.2" fill="#FF7A1A" />
       </svg>
 
-      {/* Staggered bouncing dots — warm amber */}
+      {/* Staggered bouncing dots  warm amber */}
       <span className="flex items-center gap-2" aria-hidden>
         <span className="campsite-loader-dot h-2 w-2 rounded-full bg-[#FFAA40]" style={{ opacity: 0.6 }} />
         <span className="campsite-loader-dot h-2 w-2 rounded-full bg-[#FF8C28]" style={{ opacity: 0.7 }} />

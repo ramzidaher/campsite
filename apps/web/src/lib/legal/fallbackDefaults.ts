@@ -33,7 +33,7 @@ We process account data (for example name and email), workspace and organisation
 
 ## Purposes and lawful bases
 
-We use data to provide the service, authenticate users, improve reliability and security, and meet legal obligations. Your organisation’s use of Campsite may rely on separate lawful bases for employee data — document those in your workplace privacy notices.
+We use data to provide the service, authenticate users, improve reliability and security, and meet legal obligations. Your organisation’s use of Campsite may rely on separate lawful bases for employee data  document those in your workplace privacy notices.
 
 ## Your rights
 

@@ -43,7 +43,7 @@ Emails follow **`campsite-qa-{key-with-hyphens}@example.com`** (e.g. `jane_truem
 **Pre-seeded org structure (illustrative SU-style):**
 
 - **Departments:** Activities, Student Voice, Student Participation, Events, Student Engagement, Communications & Digital Support, Commercial, Finance, HR, Senior Leadership, plus **Demo Society** (society type).
-- **Staff:** full-time list seeded from the QA script (names/titles mirror a typical students’ union directory — see `scripts/seed-qa-full.mjs`).
+- **Staff:** full-time list seeded from the QA script (names/titles mirror a typical students’ union directory  see `scripts/seed-qa-full.mjs`).
 - **Reporting lines:** CEO (**James Hann**) at top; SLT and department heads report to CEO; others report to their department head where applicable.
 - **Team:** “Staff Team” under **Activities** (Jane lead; Darcey + Imogen members).
 - **HR records (sample):** Jane, Darcey, Isla.
@@ -61,7 +61,7 @@ Emails follow **`campsite-qa-{key-with-hyphens}@example.com`** (e.g. `jane_truem
 
 **Platform founder / HQ:** not created by this seed. To test founder-only flows: `npm run add-platform-founder` (see script header) with a dedicated email, then sign in as that user.
 
-**Larger role matrix (18 users):** `npm run seed-demo-org` — random email tags per run; good for scale/abac edge cases. This QA seed is **deterministic** but includes a **large** staff roster.
+**Larger role matrix (18 users):** `npm run seed-demo-org`  random email tags per run; good for scale/abac edge cases. This QA seed is **deterministic** but includes a **large** staff roster.
 
 ---
 
@@ -77,7 +77,7 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 | Wrong password | any | Rejected |
 | Nav visible by role | orgadmin vs manager vs csa | Admin sees `/admin/*`; non–org-admin does not see full admin (permission-based shell items) |
 
-### Admin — core
+### Admin  core
 
 | Scenario | User | Expect |
 |----------|------|--------|
@@ -90,7 +90,7 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 | Teams (department teams) | orgadmin, Jane | Teams UI; **Staff Team** under Activities |
 | Categories / channels | orgadmin | Broadcast channels per dept |
 
-### Admin — content & ops
+### Admin  content & ops
 
 | Scenario | User | Expect |
 |----------|------|--------|
@@ -113,7 +113,7 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 | Employee records | orgadmin | Full directory + records |
 | Employee records (scoped) | Jane | Records for visible members (dept + hierarchy rules) |
 | HR dashboard / directory | orgadmin | Metrics and rows |
-| Org chart | orgadmin, users with `hr.view_records` | `/hr/org-chart` — live `reports_to` tree |
+| Org chart | orgadmin, users with `hr.view_records` | `/hr/org-chart`  live `reports_to` tree |
 | Leave | Darcey, Jane | Submit leave; manager approves direct reports |
 | Performance | Jane, Darcey | Cycles/reviews per seeded org (create cycle in UI if empty) |
 | Onboarding | orgadmin | Templates / runs; staff completes assigned tasks |
@@ -123,7 +123,7 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 | Scenario | User | Expect |
 |----------|------|--------|
 | Saved sample reports | org admin or anyone with `reports.view` | After **`npm run seed-qa-full`**, `/reports` lists three org-visible **Sample:** reports (active employees, staff directory, time & pay). Use **Run** for preview rows and CSV / Excel / PDF export. |
-| Minimal local org (`demo` slug) | user in that org | After **`supabase db reset`** (applies `supabase/seed.sql`), the same fixtures load when at least one **profile** exists for the demo org. Fixture JSON lives at `apps/web/src/lib/reports/fixtures/report-seed-fixtures.json` — keep it in sync with `seed.sql` if you edit columns. |
+| Minimal local org (`demo` slug) | user in that org | After **`supabase db reset`** (applies `supabase/seed.sql`), the same fixtures load when at least one **profile** exists for the demo org. Fixture JSON lives at `apps/web/src/lib/reports/fixtures/report-seed-fixtures.json`  keep it in sync with `seed.sql` if you edit columns. |
 
 ### Recruitment pipeline
 
@@ -136,7 +136,7 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 
 *Listing seed is not automated* (requires `recruitment_requests`). Use org admin to create the minimum chain once, then regression-test listing and portal.
 
-### Staff — day-to-day
+### Staff  day-to-day
 
 | Scenario | User | Expect |
 |----------|------|--------|
@@ -163,7 +163,7 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 
 1. **Pending user:** Sign in as **Jane** → approve **campsite-qa-pending@example.com** with a role allowed by `list_assignable_org_roles` / RPC.
 2. **Subordinate-only overrides:** As manager, confirm you **cannot** open overrides for **Isla** (peer in another dept / not a report).
-3. **Invite (known gap):** See [RBAC_SECURITY_REVIEW.md](RBAC_SECURITY_REVIEW.md) — invite path uses service RPC; validate inviter intent separately if `members.invite` is broad.
+3. **Invite (known gap):** See [RBAC_SECURITY_REVIEW.md](RBAC_SECURITY_REVIEW.md)  invite path uses service RPC; validate inviter intent separately if `members.invite` is broad.
 
 ---
 
@@ -183,8 +183,8 @@ For each block: sign in as the suggested user(s), confirm navigation and core ac
 
 | Command | Purpose |
 |---------|---------|
-| `npm run seed-qa-full` | **This doc** — deterministic QA org, SU-style departments + ~45 staff, HR sample + draft broadcast + team + **three sample saved reports** for `/reports` |
-| `node scripts/generate-qa-login-csv.mjs` | Writes gitignored `scripts/qa-login-import.csv` — logins for local and production `/login` (uses `CAMPSITE_QA_PASSWORD` or seed default). |
+| `npm run seed-qa-full` | **This doc**  deterministic QA org, SU-style departments + ~45 staff, HR sample + draft broadcast + team + **three sample saved reports** for `/reports` |
+| `node scripts/generate-qa-login-csv.mjs` | Writes gitignored `scripts/qa-login-import.csv`  logins for local and production `/login` (uses `CAMPSITE_QA_PASSWORD` or seed default). |
 | `npm run seed-demo-org` | 18 users, random emails, department overlap lab |
 | `npm run create-super-admin` | Initial org admin / bootstrap |
 | `npm run add-platform-founder` | Platform founder for HQ / founder-only catalog |

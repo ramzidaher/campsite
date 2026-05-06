@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { clientEmailRedirectBaseUrl } from '@/lib/auth/inviteCallbackBaseUrl';
 import { createClient } from '@/lib/supabase/client';
+import { Mailbox } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ export default function ForgotPasswordPage() {
     return (
       <div className="py-2 text-center">
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#f5f4f1] text-[28px]">
-          📬
+          <Mailbox className="h-8 w-8 text-[#6b6b6b]" aria-hidden />
         </div>
         <h2 className="auth-title">Check your email</h2>
         <p className="auth-sub mb-2">

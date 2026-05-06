@@ -140,10 +140,10 @@ function keyDateItems(row: AdminRecruitmentListRow): string[] {
 }
 
 function deptName(d: AdminRecruitmentListRow['departments']): string {
-  return (Array.isArray(d) ? d[0]?.name : d?.name) ?? '—';
+  return (Array.isArray(d) ? d[0]?.name : d?.name) ?? '';
 }
 function submitterName(p: AdminRecruitmentListRow['submitter']): string {
-  return ((Array.isArray(p) ? p[0]?.full_name : p?.full_name) ?? '').trim() || '—';
+  return ((Array.isArray(p) ? p[0]?.full_name : p?.full_name) ?? '').trim() || '';
 }
 
 const STATUS_OPTIONS = ['all', 'pending_review', 'approved', 'in_progress', 'filled', 'rejected'] as const;
@@ -520,7 +520,7 @@ export function AdminRecruitmentListClient({ rows }: { rows: AdminRecruitmentLis
                 </div>
                 <p className="mt-1 text-[12px] text-[#9b9b9b]">
                   {deptName(r.departments)}
-                  {submitterName(r.submitter) !== '—' ? ` · ${submitterName(r.submitter)}` : ''}
+                  {submitterName(r.submitter) !== '' ? ` · ${submitterName(r.submitter)}` : ''}
                   {' · '}
                   {fmtDate(r.created_at)}
                 </p>

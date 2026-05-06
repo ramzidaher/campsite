@@ -71,7 +71,7 @@ export function ManagerRecruitmentClient({
   initialRequests: ManagerRecruitmentRow[];
   canRaise: boolean;
   showHrAdminLink: boolean;
-  /** When true, omit the default “Requests” hero — used under `/hr/hiring` chrome. */
+  /** When true, omit the default “Requests” hero  used under `/hr/hiring` chrome. */
   hiringHubRaise?: boolean;
 }) {
   const router = useRouter();
@@ -680,7 +680,7 @@ export function ManagerRecruitmentClient({
                   return (
                     <tr key={r.id} className="text-[#242424]">
                       <td className="px-4 py-3 font-medium">{r.job_title}</td>
-                      <td className="px-4 py-3 text-[#505050]">{deptName ?? '—'}</td>
+                      <td className="px-4 py-3 text-[#505050]">{deptName ?? ''}</td>
                       <td className="px-4 py-3">
                         <span className="inline-flex rounded-full border border-[#d8d8d8] px-2.5 py-1 text-[11px]">
                           {recruitmentStatusLabel(r.status)}

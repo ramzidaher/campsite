@@ -24,7 +24,7 @@ function sortFeedOrder(rows: FeedRow[]): FeedRow[] {
 
 /**
  * Derive prev/next from whatever rows are already in the broadcast-feed React Query cache
- * (no RPC). Total reflects loaded items only — enough to flip between visible feed posts.
+ * (no RPC). Total reflects loaded items only  enough to flip between visible feed posts.
  */
 export function broadcastNavigationFromFeedCache(
   queryClient: QueryClient,

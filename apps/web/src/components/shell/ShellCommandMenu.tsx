@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Search } from 'lucide-react';
+import { FileText, Megaphone, Search } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCommandPaletteShortcutHint } from '@/lib/platform/commandPaletteShortcut';
 import type { ShellCommandPaletteItem, ShellCommandPaletteSection } from '@/lib/shell/shellCommandPaletteSections';
@@ -231,7 +231,7 @@ export function ShellCommandMenu({
           type: 'item',
           key: 'search-empty',
           href: '#',
-          label: 'No people, files, or broadcasts match — try another word',
+          label: 'No people, files, or broadcasts match  try another word',
           highlight: false,
           row: null,
         });
@@ -434,12 +434,12 @@ export function ShellCommandMenu({
                       </span>
                     )
                   ) : row.row?.kind === 'resource' ? (
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#e8f4f8] text-[12px]">
-                      📄
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#e8f4f8] text-[#4b5563]">
+                      <FileText className="h-4 w-4" aria-hidden />
                     </span>
                   ) : row.row?.kind === 'broadcast' ? (
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f3e8ff] text-[12px]">
-                      📣
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f3e8ff] text-[#6b21a8]">
+                      <Megaphone className="h-4 w-4" aria-hidden />
                     </span>
                   ) : (
                     <span className="w-8 shrink-0" aria-hidden />
@@ -486,7 +486,7 @@ export function ShellCommandMenu({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Open command palette (Ctrl+K — ⌘K on Mac)"
+        title="Open command palette (Ctrl+K  ⌘K on Mac)"
         aria-keyshortcuts="Meta+K Control+K"
         className="group flex h-9 w-full min-w-0 max-w-[min(100%,420px)] items-center gap-2.5 rounded-full border border-campsite-border bg-campsite-elevated px-3.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] hover:border-[#c5c5c5] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
         aria-haspopup="dialog"

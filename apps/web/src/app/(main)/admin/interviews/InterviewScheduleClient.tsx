@@ -8,6 +8,7 @@ import {
   completeInterviewSlot,
 } from '@/app/(main)/admin/interviews/actions';
 import { isInterviewSlotStatus } from '@campsite/types';
+import { ArrowRight, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
@@ -62,7 +63,7 @@ function nextWeekday(dayNum: number): Date {
 
 /** Parse times from a string like "2, 4 and 1 pm" or "9am, 10am, 11am" or "14:00" */
 function parseTimes(raw: string): number[] {
-  // Normalise: "two pm" etc. not handled — numeric only
+  // Normalise: "two pm" etc. not handled  numeric only
   const times: number[] = [];
 
   // Match patterns like "2:30pm", "14:30", "2pm", "14", "2 pm"
@@ -400,7 +401,7 @@ export function InterviewScheduleClient({
             <div className="rounded-xl border border-[#e8e8e8] bg-[#fafaf9]">
               <div className="border-b border-[#ececec] px-4 py-2.5">
                 <p className="text-[12px] font-semibold text-[#121212]">
-                  {parsedSlots.length} slot{parsedSlots.length === 1 ? '' : 's'} to create — review before confirming
+                  {parsedSlots.length} slot{parsedSlots.length === 1 ? '' : 's'} to create  review before confirming
                 </p>
               </div>
               <ul className="divide-y divide-[#f0f0f0]">
@@ -420,10 +421,10 @@ export function InterviewScheduleClient({
                     <button
                       type="button"
                       onClick={() => removeSlot(i)}
-                      className="ml-4 text-[12px] text-[#9b9b9b] hover:text-[#b91c1c]"
+                      className="ml-4 inline-flex items-center text-[12px] text-[#9b9b9b] hover:text-[#b91c1c]"
                       aria-label="Remove slot"
                     >
-                      ✕
+                      <X className="h-3.5 w-3.5" aria-hidden />
                     </button>
                   </li>
                 ))}
@@ -480,7 +481,7 @@ export function InterviewScheduleClient({
                         className="h-4 w-4 rounded border-[#d8d8d8] accent-[#121212]"
                       />
                       <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-[#121212]">{p.full_name?.trim() || '—'}</p>
+                        <p className="text-[13px] font-medium text-[#121212]">{p.full_name?.trim() || ''}</p>
                         {p.email ? <p className="text-[11.5px] text-[#9b9b9b]">{p.email}</p> : null}
                       </div>
                     </label>
@@ -565,7 +566,7 @@ export function InterviewScheduleClient({
                     const jl = relOne(s.job_listings);
                     const pan = s.interview_slot_panelists ?? [];
                     const panNames = pan
-                      .map((p) => relOne(p.profiles)?.full_name?.trim() || '—')
+                      .map((p) => relOne(p.profiles)?.full_name?.trim() || '')
                       .join(', ');
                     const when = new Date(s.starts_at).toLocaleString('en-GB', { timeZone: 'UTC', 
                       weekday: 'short', month: 'short', day: 'numeric',
@@ -576,14 +577,17 @@ export function InterviewScheduleClient({
                       <tr key={s.id} className="border-b border-[#f5f5f5] last:border-0">
                         <td className="py-3 pr-4 align-top text-[#121212]">{when} – {endTime}</td>
                         <td className="py-3 pr-4 align-top">
-                          <span className="text-[#242424]">{jl?.title?.trim() || '—'}</span>
+                          <span className="text-[#242424]">{jl?.title?.trim() || ''}</span>
                           <div>
                             <Link href={`/hr/jobs/${s.job_listing_id}/applications`} className="text-[11.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
-                              Pipeline →
+                              <span className="inline-flex items-center gap-1">
+                                Pipeline
+                                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                              </span>
                             </Link>
                           </div>
                         </td>
-                        <td className="py-3 pr-4 align-top text-[#505050]">{panNames || '—'}</td>
+                        <td className="py-3 pr-4 align-top text-[#505050]">{panNames || ''}</td>
                         <td className="py-3 pr-4 align-top">{slotStatusPill(s.status)}</td>
                         <td className="py-3 align-top">
                           <div className="flex flex-wrap gap-2">
@@ -652,7 +656,7 @@ export function InterviewScheduleClient({
                             </p>
                             {slotStatusPill(s.status)}
                           </div>
-                          <p className="mt-1 text-[11.5px] text-[#6b6b6b]">{jl?.title?.trim() || '—'}</p>
+                          <p className="mt-1 text-[11.5px] text-[#6b6b6b]">{jl?.title?.trim() || ''}</p>
                           {panNames ? <p className="mt-0.5 text-[11px] text-[#9b9b9b]">Panel: {panNames}</p> : null}
                         </div>
                       );

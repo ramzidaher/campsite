@@ -8,7 +8,7 @@ const STAT_CARDS = 3;
 const REVIEW_ROWS = 4;
 
 /**
- * Route-level skeleton for `/performance` — mirrors {@link EmployeePerformanceIndexClient} stats + two columns.
+ * Route-level skeleton for `/performance`  mirrors {@link EmployeePerformanceIndexClient} stats + two columns.
  */
 export default function PerformanceLoading() {
   return (

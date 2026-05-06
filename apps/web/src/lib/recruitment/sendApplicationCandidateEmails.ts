@@ -44,7 +44,7 @@ export async function sendApplicationSubmittedEmail(payload: ApplicationSubmitte
   const portalPath = `/jobs/status/${encodeURIComponent(payload.portalToken)}`;
   const portalUrl = base ? `${base.replace(/\/+$/, '')}${portalPath}` : portalPath;
 
-  const subject = `${payload.orgName}: Application received — ${payload.jobTitle}`;
+  const subject = `${payload.orgName}: Application received  ${payload.jobTitle}`;
   const html = `
 <p>Hi ${escapeHtml(payload.candidateName)},</p>
 <p>Thanks for applying for <strong>${escapeHtml(payload.jobTitle)}</strong> at ${escapeHtml(payload.orgName)}.</p>
@@ -101,7 +101,7 @@ export async function sendApplicationStageEmail(payload: ApplicationStageEmailPa
   const portalUrl = base ? `${base.replace(/\/+$/, '')}${portalPath}` : portalPath;
 
   const stageLabel = jobApplicationStageLabel(payload.stage);
-  const subject = `${payload.orgName}: Update on your application — ${payload.jobTitle}`;
+  const subject = `${payload.orgName}: Update on your application  ${payload.jobTitle}`;
   const safeMsg = escapeHtml(payload.messageBody.trim()).replace(/\n/g, '<br/>');
   const html = `
 <p>Hi ${escapeHtml(payload.candidateName)},</p>

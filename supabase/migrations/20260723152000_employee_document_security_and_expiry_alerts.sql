@@ -139,8 +139,8 @@ begin
       'ID document expiry alert',
       case
         when rec.expires_on < current_date
-          then format('%s — current ID document "%s" expired on %s.', rec.full_name, rec.file_name, rec.expires_on::text)
-        else format('%s — current ID document "%s" expires on %s.', rec.full_name, rec.file_name, rec.expires_on::text)
+          then format('%s  current ID document "%s" expired on %s.', rec.full_name, rec.file_name, rec.expires_on::text)
+        else format('%s  current ID document "%s" expires on %s.', rec.full_name, rec.file_name, rec.expires_on::text)
       end,
       jsonb_build_object(
         'file_name', rec.file_name,

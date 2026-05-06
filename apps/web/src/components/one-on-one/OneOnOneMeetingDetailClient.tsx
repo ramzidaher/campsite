@@ -1,6 +1,7 @@
 'use client';
 
 import { FormSelect } from '@campsite/ui/web';
+import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -409,7 +410,7 @@ export function OneOnOneMeetingDetailClient({
     year: 'numeric',
   });
 
-  /* Full-width page body; avoid `mx-auto` + `max-w-*` on this root — `.workspace-fluid` strips that pair anyway. */
+  /* Full-width page body; avoid `mx-auto` + `max-w-*` on this root  `.workspace-fluid` strips that pair anyway. */
   return (
     <div className="w-full bg-[#F9F8F6] pb-20">
       <article className="w-full min-w-0 px-5 py-10 selection:bg-[#e8e4df] sm:px-7 sm:py-12 lg:px-10">
@@ -489,7 +490,7 @@ export function OneOnOneMeetingDetailClient({
               <div className="min-w-0">
                 <div className="truncate text-[14px] font-medium text-[#2d2d2d]">{meeting.manager_name}</div>
                 <div className="truncate text-[13px] text-[#6b6b6b]">
-                  1:1 with {meeting.report_name ?? '—'}
+                  1:1 with {meeting.report_name ?? ''}
                 </div>
                 {canEditNotes ? <span className="mt-0.5 text-[12px] text-[#8f8f8f]">Can edit</span> : null}
               </div>
@@ -501,7 +502,7 @@ export function OneOnOneMeetingDetailClient({
               <div className="min-w-0">
                 <div className="truncate text-[14px] font-medium text-[#2d2d2d]">{meeting.report_name}</div>
                 <div className="truncate text-[13px] text-[#6b6b6b]">
-                  1:1 with {meeting.manager_name ?? '—'}
+                  1:1 with {meeting.manager_name ?? ''}
                 </div>
                 {canEditNotes ? <span className="mt-0.5 text-[12px] text-[#8f8f8f]">Can edit</span> : null}
               </div>
@@ -538,7 +539,7 @@ export function OneOnOneMeetingDetailClient({
                       onChange={(e) => patchQuestion(q.id, { prompt: e.target.value })}
                     />
                   ) : (
-                    <p className="text-[17px] font-semibold leading-snug text-[#2d2d2d]">{q.prompt || '—'}</p>
+                    <p className="text-[17px] font-semibold leading-snug text-[#2d2d2d]">{q.prompt || ''}</p>
                   )}
                 </div>
 
@@ -564,7 +565,7 @@ export function OneOnOneMeetingDetailClient({
                       <option value="employee">{meeting.report_name ?? 'Participant'}</option>
                       <option value="manager">{meeting.manager_name ?? 'Participant'}</option>
                       <option value="both">
-                        {meeting.report_name ?? '—'} & {meeting.manager_name ?? '—'}
+                        {meeting.report_name ?? ''} & {meeting.manager_name ?? ''}
                       </option>
                     </FormSelect>
                   ) : (
@@ -599,7 +600,7 @@ export function OneOnOneMeetingDetailClient({
                       onChange={(e) => patchAnswer(q.id, e.target.value)}
                     />
                   ) : (
-                    <p className="whitespace-pre-wrap text-[16px] leading-[1.65] text-[#37352f]">{q.answer || '—'}</p>
+                    <p className="whitespace-pre-wrap text-[16px] leading-[1.65] text-[#37352f]">{q.answer || ''}</p>
                   )}
                 </div>
               </div>
@@ -624,7 +625,7 @@ export function OneOnOneMeetingDetailClient({
               />
             ) : (
               <p className="whitespace-pre-wrap text-[16px] leading-[1.65] text-[#454545]">
-                {doc.manager_notes_shared || '—'}
+                {doc.manager_notes_shared || ''}
               </p>
             )}
           </div>
@@ -646,7 +647,7 @@ export function OneOnOneMeetingDetailClient({
                 />
               ) : (
                 <p className="whitespace-pre-wrap text-[16px] leading-[1.65] text-[#454545]">
-                  {doc.private_manager_notes || '—'}
+                  {doc.private_manager_notes || ''}
                 </p>
               )}
             </div>
@@ -696,7 +697,7 @@ export function OneOnOneMeetingDetailClient({
                   />
                 ) : (
                   <p className={`min-w-0 text-[16px] leading-snug ${a.done ? 'text-[#a3a3a3] line-through' : 'text-[#2d2d2d]'}`}>
-                    {a.text || '—'}
+                    {a.text || ''}
                   </p>
                 )}
                 {canEditNotes ? (
@@ -719,7 +720,7 @@ export function OneOnOneMeetingDetailClient({
                       ? (meeting.manager_name ?? managerInitials)
                       : a.assignee_user_id === meeting.report_user_id
                         ? (meeting.report_name ?? reportInitials)
-                        : '—'}
+                        : ''}
                   </span>
                 )}
               </div>
@@ -744,7 +745,7 @@ export function OneOnOneMeetingDetailClient({
             <div className="flex flex-wrap items-center gap-2">
               {meeting.manager_signed_at ? (
                 <span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-[#e3e2df] bg-[#E8F1FA] px-3 py-1 text-[12px] font-medium text-[#1e4d7a]">
-                  ✓ {meeting.manager_name ?? '—'} signed
+                  <Check className="h-3.5 w-3.5" aria-hidden /> {meeting.manager_name ?? ''} signed
                 </span>
               ) : isManager && canEditNotes ? (
                 <button
@@ -757,7 +758,7 @@ export function OneOnOneMeetingDetailClient({
               ) : null}
               {meeting.report_signed_at ? (
                 <span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-[#e3e2df] bg-[#E4F0E4] px-3 py-1 text-[12px] font-medium text-[#2d5a2d]">
-                  ✓ {meeting.report_name ?? '—'} signed
+                  <Check className="h-3.5 w-3.5" aria-hidden /> {meeting.report_name ?? ''} signed
                 </span>
               ) : isReport && canEditNotes ? (
                 <button
@@ -791,7 +792,7 @@ export function OneOnOneMeetingDetailClient({
                   })}
                 </span>
               ) : (
-                <span className="text-[#c9c7c4]">—</span>
+                <span className="text-[#c9c7c4]"></span>
               )}
             </div>
           </div>

@@ -1,6 +1,6 @@
-# Page Layer Stage E Report — Dashboard Fallback Signaling Patch
+# Page Layer Stage E Report  Dashboard Fallback Signaling Patch
 **Date:** 2026-04-30  
-**Status:** COMPLETE — explicit partial-data signaling added for dashboard timeout fallback paths  
+**Status:** COMPLETE  explicit partial-data signaling added for dashboard timeout fallback paths  
 **Related workstream:** WS2.2 remediation backlog (`WS2.2-A`)
 
 ---

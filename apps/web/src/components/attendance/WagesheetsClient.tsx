@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { Download, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Line = {
@@ -72,15 +73,17 @@ export function WagesheetsClient({ orgId }: { orgId: string }) {
         <button
           type="button"
           onClick={() => void load()}
-          className="rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-[12.5px]"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-[12.5px]"
         >
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden />
           Refresh
         </button>
         <button
           type="button"
           onClick={exportCsv}
-          className="rounded-lg bg-[#121212] px-3 py-1.5 text-[12.5px] text-white"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-3 py-1.5 text-[12.5px] text-white"
         >
+          <Download className="h-3.5 w-3.5" aria-hidden />
           Export CSV
         </button>
       </div>
@@ -112,8 +115,8 @@ export function WagesheetsClient({ orgId }: { orgId: string }) {
                   <td className="px-3 py-2 font-mono text-[12px]">{l.user_id.slice(0, 8)}…</td>
                   <td className="px-3 py-2">{l.week_start_date}</td>
                   <td className="px-3 py-2 capitalize">{l.line_type.replace('_', ' ')}</td>
-                  <td className="px-3 py-2">{l.hours != null ? l.hours : '—'}</td>
-                  <td className="px-3 py-2">{l.hourly_rate_gbp != null ? `£${l.hourly_rate_gbp}` : '—'}</td>
+                  <td className="px-3 py-2">{l.hours != null ? l.hours : ''}</td>
+                  <td className="px-3 py-2">{l.hourly_rate_gbp != null ? `£${l.hourly_rate_gbp}` : ''}</td>
                   <td className="px-3 py-2 font-medium">£{Number(l.amount_gbp).toFixed(2)}</td>
                 </tr>
               ))

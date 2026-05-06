@@ -3,6 +3,7 @@
 import { FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
+import { Check, ClockArrowUp, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Row = {
@@ -250,16 +251,18 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
                     type="button"
                     disabled={busyId === r.id}
                     onClick={() => void decide(r, 'approve')}
-                    className="rounded-lg bg-[#121212] px-3 py-1.5 text-[12.5px] font-medium text-white"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-3 py-1.5 text-[12.5px] font-medium text-white"
                   >
+                    <Check className="h-3.5 w-3.5" aria-hidden />
                     Approve
                   </button>
                   <button
                     type="button"
                     disabled={busyId === r.id}
                     onClick={() => void decide(r, 'reject')}
-                    className="rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-[12.5px] text-[#121212]"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] px-3 py-1.5 text-[12.5px] text-[#121212]"
                   >
+                    <XCircle className="h-3.5 w-3.5" aria-hidden />
                     Reject
                   </button>
                 </div>
@@ -282,7 +285,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
               onChange={(e) => setSickUser(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
             >
-              <option value="">—</option>
+              <option value=""></option>
               {reports.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.full_name ?? p.id}
@@ -327,8 +330,9 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
                   type="button"
                   disabled={busyId === `void-${s.id}`}
                   onClick={() => void voidSickness(s.id)}
-                  className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[12px] text-red-900"
+                  className="inline-flex items-center gap-1 rounded border border-red-200 bg-red-50 px-2 py-1 text-[12px] text-red-900"
                 >
+                  <XCircle className="h-3 w-3" aria-hidden />
                   Void
                 </button>
               </li>
@@ -350,7 +354,7 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
               onChange={(e) => setProxyUserId(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
             >
-              <option value="">—</option>
+              <option value=""></option>
               {reports.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.full_name ?? p.id}
@@ -382,8 +386,9 @@ export function TimesheetReviewClient({ orgId, viewerId }: { orgId: string; view
             type="button"
             disabled={busyId === 'proxy'}
             onClick={() => void proxyClock()}
-            className="rounded-lg bg-[#121212] px-4 py-2 text-[12.5px] font-medium text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-4 py-2 text-[12.5px] font-medium text-white"
           >
+            <ClockArrowUp className="h-3.5 w-3.5" aria-hidden />
             Record punch
           </button>
         </div>

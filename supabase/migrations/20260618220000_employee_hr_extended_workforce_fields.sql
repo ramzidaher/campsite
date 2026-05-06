@@ -21,7 +21,7 @@ alter table public.employee_hr_records
   add column if not exists custom_fields jsonb not null default '{}'::jsonb;
 
 comment on column public.employee_hr_records.position_type is
-  'e.g. permanent, secondment, casual — free text for local HR vocabulary.';
+  'e.g. permanent, secondment, casual  free text for local HR vocabulary.';
 comment on column public.employee_hr_records.pay_grade is
   'Pay / spinal point grade (e.g. after pay junction), distinct from grade_level if needed.';
 comment on column public.employee_hr_records.employment_basis is

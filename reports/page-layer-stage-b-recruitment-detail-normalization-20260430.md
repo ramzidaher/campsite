@@ -1,6 +1,6 @@
-# Page Layer Stage B Report — Recruitment Detail Normalization Slice 3
+# Page Layer Stage B Report  Recruitment Detail Normalization Slice 3
 **Date:** 2026-04-30
-**Status:** COMPLETE — recruitment detail route moved to shared cached loader
+**Status:** COMPLETE  recruitment detail route moved to shared cached loader
 **Follow-up to:** `reports/page-layer-stage-b-recruitment-normalization-20260430.md`
 
 ---

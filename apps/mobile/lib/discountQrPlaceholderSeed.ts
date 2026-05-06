@@ -1,4 +1,4 @@
-/** Static fake QR pattern (matches web `DiscountCardClient` `QR_SEED`) — visual fallback only. */
+/** Static fake QR pattern (matches web `DiscountCardClient` `QR_SEED`)  visual fallback only. */
 export const QR_SEED: number[][] = [
   [1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1],
   [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],

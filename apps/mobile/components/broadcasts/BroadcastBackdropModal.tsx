@@ -345,7 +345,7 @@ export function BroadcastBackdropModal({
               ) : null}
               {source === 'picsum' && photos.length > 0 ? (
                 <Text style={[styles.attribution, { color: muted }]}>
-                  Photos from Lorem Picsum (picsum.photos)—same fallback as the web API without Unsplash.
+                  Photos from Lorem Picsum (picsum.photos)same fallback as the web API without Unsplash.
                 </Text>
               ) : null}
 

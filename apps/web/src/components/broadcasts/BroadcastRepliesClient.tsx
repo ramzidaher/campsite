@@ -82,7 +82,7 @@ export function BroadcastRepliesClient({
         Reply only to the original author, or start a thread everyone who can see this broadcast can read.
       </p>
 
-      <ul className="mt-4 flex flex-col gap-3">
+      <ul className="mt-4 divide-y divide-[#eceae6] rounded-lg border border-[#eceae6] bg-white">
         {rows.map((r) => {
           const mine = r.author_id === currentUserId;
           if (r.visibility === 'private_to_author' && !mine && broadcastAuthorId !== currentUserId) {
@@ -91,27 +91,22 @@ export function BroadcastRepliesClient({
           return (
             <li
               key={r.id}
-              className="rounded-xl border border-[#e4e4e4] bg-[#fafaf9] px-4 py-3 text-sm text-[#121212]"
+              className="px-4 py-3 text-sm text-[#121212]"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#6b6b6b]">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#6b6b6b]">
                 <span className="font-medium text-[#121212]">{r.author_name?.trim() || 'Unknown'}</span>
-                <span>
-                  {r.visibility === 'org_thread' ? (
-                    <span className="rounded-full border border-[#d8d8d8] bg-white px-2 py-0.5">Org thread</span>
-                  ) : (
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-950">
-                      Personal (author only)
-                    </span>
-                  )}
-                </span>
+                <span className="text-[#b4b1aa]">•</span>
+                <span>{r.visibility === 'org_thread' ? 'Org thread' : 'Personal (author only)'}</span>
+                <span className="text-[#b4b1aa]">•</span>
+                <time className="text-[11px] text-[#9b9b9b]" dateTime={r.created_at}>
+                  {new Date(r.created_at).toLocaleString('en-GB', {
+                    timeZone: 'UTC',
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </time>
               </div>
-              <p className="mt-2 whitespace-pre-wrap leading-relaxed">{r.body}</p>
-              <time className="mt-2 block text-[11px] text-[#9b9b9b]" dateTime={r.created_at}>
-                {new Date(r.created_at).toLocaleString('en-GB', { timeZone: 'UTC', 
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
-              </time>
+              <p className="mt-1.5 whitespace-pre-wrap leading-relaxed">{r.body}</p>
             </li>
           );
         })}

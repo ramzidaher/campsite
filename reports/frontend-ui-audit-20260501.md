@@ -1,4 +1,4 @@
-# Frontend UI Audit — CampSite Web App
+# Frontend UI Audit  CampSite Web App
 **Date:** 2026-05-01  
 **Scope:** All pages under `apps/web/src/app/(main)/`, `(auth)/`, and key shared components  
 **Pages surveyed:** ~120 page files, ~90 component files  
@@ -8,11 +8,11 @@
 
 ## Executive Summary
 
-The app has a well-designed brand token system defined in `globals.css`, but it is almost entirely bypassed in practice — components hardcode the same hex values the tokens represent, creating a brittle, unmaintainable styling layer. There are also significant inconsistencies in page layout widths, heading scales, vertical padding, error state colours, and duplicated utility logic across multiple files. The issues range from minor visual jank to accessibility-level problems (`text-red-300` on white).
+The app has a well-designed brand token system defined in `globals.css`, but it is almost entirely bypassed in practice  components hardcode the same hex values the tokens represent, creating a brittle, unmaintainable styling layer. There are also significant inconsistencies in page layout widths, heading scales, vertical padding, error state colours, and duplicated utility logic across multiple files. The issues range from minor visual jank to accessibility-level problems (`text-red-300` on white).
 
 ---
 
-## 1. Brand Colour System — Defined but Not Used
+## 1. Brand Colour System  Defined but Not Used
 
 ### What exists (correct)
 
@@ -64,18 +64,18 @@ Everything else skips the token layer entirely. This means:
 
 This is the most inconsistent area in the codebase. At least **five different red/error patterns** coexist:
 
-### 2a. `text-red-300` — Accessibility Failure
+### 2a. `text-red-300`  Accessibility Failure
 **File:** [admin/users/page.tsx:39](apps/web/src/app/(main)/admin/users/page.tsx#L39)
 
 ```tsx
 return <p className="text-sm text-red-300">{err instanceof Error ? err.message : 'Failed to load members'}</p>;
 ```
 
-`text-red-300` is a very light pink-red on a white/cream background. It fails WCAG AA contrast (approximately 2.4:1 against white, needs 4.5:1). This is the page-level error fallback for the entire Users admin page — it would be nearly invisible to most users and completely invisible to users with colour vision deficiency.
+`text-red-300` is a very light pink-red on a white/cream background. It fails WCAG AA contrast (approximately 2.4:1 against white, needs 4.5:1). This is the page-level error fallback for the entire Users admin page  it would be nearly invisible to most users and completely invisible to users with colour vision deficiency.
 
 **Fix:** `text-[#b91c1c]` (brand warning) or the red-800/900 pattern used elsewhere.
 
-### 2b. `border-red-200 bg-red-50 text-red-9xx` — Consistent but Off-Brand
+### 2b. `border-red-200 bg-red-50 text-red-9xx`  Consistent but Off-Brand
 The majority of inline error banners use this Tailwind semantic pattern:
 
 ```tsx
@@ -86,14 +86,14 @@ Found in: [BroadcastComposer.tsx:718](apps/web/src/components/broadcasts/Broadca
 
 These are internally consistent but use Tailwind's semantic red palette rather than the brand `--campsite-warning` token. The visual result is slightly warmer red than the brand red.
 
-### 2c. `text-[#b91c1c]` — Correct Brand Usage
+### 2c. `text-[#b91c1c]`  Correct Brand Usage
 Used correctly in some places:
 
-- [AdminOverviewView.tsx:123](apps/web/src/components/admin/AdminOverviewView.tsx#L123) — pending count display
-- [admin/hr/absence-reporting/page.tsx:93](apps/web/src/app/(main)/admin/hr/absence-reporting/page.tsx#L93) — error message
+- [AdminOverviewView.tsx:123](apps/web/src/components/admin/AdminOverviewView.tsx#L123)  pending count display
+- [admin/hr/absence-reporting/page.tsx:93](apps/web/src/app/(main)/admin/hr/absence-reporting/page.tsx#L93)  error message
 
 ### 2d. Mixed shades in the same file
-[ProfileSettings.tsx](apps/web/src/components/ProfileSettings.tsx) uses `text-red-500`, `text-red-800`, `text-red-950`, `border-red-200`, and `bg-red-50` — five different red shade variants in a single component.
+[ProfileSettings.tsx](apps/web/src/components/ProfileSettings.tsx) uses `text-red-500`, `text-red-800`, `text-red-950`, `border-red-200`, and `bg-red-50`  five different red shade variants in a single component.
 
 ### 2e. Stale/warning state uses Amber instead of brand colour
 Dashboard stale data banners ([DashboardHome.tsx:97-106](apps/web/src/components/dashboard/DashboardHome.tsx#L97)):
@@ -163,7 +163,7 @@ function rolePillClass(role: string): string {
 ```
 
 **Issues:**
-1. The `unassigned` role in `AdminUsersClient` maps to `bg-[#fef3c7] text-[#92400e]` — the exact same colour as `society_leader`. If both appear together in a user list they are visually indistinguishable.
+1. The `unassigned` role in `AdminUsersClient` maps to `bg-[#fef3c7] text-[#92400e]`  the exact same colour as `society_leader`. If both appear together in a user list they are visually indistinguishable.
 2. `AdminOverviewView` has `super_admin` but `AdminUsersClient` does not.
 3. Any new role requires editing two files. This has already drifted once.
 
@@ -199,7 +199,7 @@ There is no agreed max-width for pages. Seven distinct values are in use:
 
 | Max-width | Approx px | Pages |
 |---|---|---|
-| `max-w-6xl` | 1152px | Admin Overview, Admin Users, Offer Templates, Application Forms, Pending Approvals — **main standard** |
+| `max-w-6xl` | 1152px | Admin Overview, Admin Users, Offer Templates, Application Forms, Pending Approvals  **main standard** |
 | `max-w-[90rem]` | 1440px | Finance, Reports, Wagesheets, Timesheets, Attendance Settings |
 | `max-w-[96rem]` | 1536px | Manager Org Chart (full view) |
 | `max-w-7xl` | 1280px | Profile page |
@@ -209,7 +209,7 @@ There is no agreed max-width for pages. Seven distinct values are in use:
 | `max-w-2xl` | 672px | Pending (error states), HR Org-chart placeholder |
 | `max-w-lg` | 512px | Pending approval/waiting states |
 
-The Finance section (`max-w-[90rem]`) sits next to Admin pages (`max-w-6xl`) in the same navigation — switching between them produces a noticeable content-width jump on large screens.
+The Finance section (`max-w-[90rem]`) sits next to Admin pages (`max-w-6xl`) in the same navigation  switching between them produces a noticeable content-width jump on large screens.
 
 The Profile page (`max-w-7xl`) is significantly wider than the surrounding admin pages.
 
@@ -221,12 +221,12 @@ Pages use at least four different top/bottom padding patterns:
 
 | Pattern | Pages |
 |---|---|
-| `py-7` (28px) | Admin Overview, Offer Templates, Application Forms, Pending Approvals — main standard |
+| `py-7` (28px) | Admin Overview, Offer Templates, Application Forms, Pending Approvals  main standard |
 | `py-8` (32px) | Finance, Reports, HR pages, Attendance, Manager pages, Admin HR |
 | `py-10` (40px) | Pending error states, HR Org-chart placeholder |
 | `pt-6 pb-10` | Settings page (asymmetric) |
 
-Within the `Finance` sub-section all pages consistently use `py-8` — but this means switching from an Admin page to a Finance page shifts the content down by 4px instantly.
+Within the `Finance` sub-section all pages consistently use `py-8`  but this means switching from an Admin page to a Finance page shifts the content down by 4px instantly.
 
 ---
 
@@ -242,7 +242,7 @@ Three different heading sizes are used for primary page titles with no clear sem
 
 The `text-[22px]` pages also use `tracking-tight` instead of `tracking-[-0.03em]` (the pattern used everywhere else), making these headings visually looser.
 
-Additionally, [admin/hr/[userId]/page.tsx:62](apps/web/src/app/(main)/admin/hr/%5BuserId%5D/page.tsx#L62) uses `text-[26px] leading-tight text-[#121212]` with **no `tracking` at all** — the only h1 heading missing the tracking class.
+Additionally, [admin/hr/[userId]/page.tsx:62](apps/web/src/app/(main)/admin/hr/%5BuserId%5D/page.tsx#L62) uses `text-[26px] leading-tight text-[#121212]` with **no `tracking` at all**  the only h1 heading missing the tracking class.
 
 ---
 
@@ -250,7 +250,7 @@ Additionally, [admin/hr/[userId]/page.tsx:62](apps/web/src/app/(main)/admin/hr/%
 
 Several pages render their client components directly without a page-level layout div. This is intentional for some (full-screen graphs) but inconsistent for others:
 
-### `/hr/page.tsx` — Missing max-width constraint
+### `/hr/page.tsx`  Missing max-width constraint
 ```tsx
 return (
   <div className="font-sans text-[#121212]">
@@ -263,12 +263,12 @@ return (
 );
 ```
 
-No `mx-auto max-w-*` wrapper. Content width is entirely determined by the `workspace-fluid` class on the parent. The `font-sans` is also redundant — it is already the body default.
+No `mx-auto max-w-*` wrapper. Content width is entirely determined by the `workspace-fluid` class on the parent. The `font-sans` is also redundant  it is already the body default.
 
-### `/admin/system-overview/page.tsx` — Intentional full-screen
-Renders `SystemOverviewGraphClient` with no wrapper. This is appropriate for a graph canvas, but there is no visual transition or header that matches surrounding pages — arriving from any other Admin page gives a jarring layout shift.
+### `/admin/system-overview/page.tsx`  Intentional full-screen
+Renders `SystemOverviewGraphClient` with no wrapper. This is appropriate for a graph canvas, but there is no visual transition or header that matches surrounding pages  arriving from any other Admin page gives a jarring layout shift.
 
-### `/admin/broadcasts/page.tsx`, `/admin/recruitment/page.tsx` — No wrapper
+### `/admin/broadcasts/page.tsx`, `/admin/recruitment/page.tsx`  No wrapper
 These render their client components bare. The client components own their layout, which can lead to drift if the client component's header ever gets removed or changed.
 
 ---
@@ -286,28 +286,28 @@ Standard border across the app: `#d8d8d8` (matches `--campsite-border`).
 
 ---
 
-## 10. `bg-white` vs `bg-[#faf9f6]` — Card Background Tension
+## 10. `bg-white` vs `bg-[#faf9f6]`  Card Background Tension
 
 Stat tiles and content cards use `bg-white` (pure `#ffffff`):
 - [AdminOverviewView.tsx:32](apps/web/src/components/admin/AdminOverviewView.tsx#L32): `bg-white`
 - [DashboardHome.tsx:29](apps/web/src/components/dashboard/DashboardHome.tsx#L29): `bg-white`
 
-The page background is `--campsite-bg: #faf9f6` (warm cream). On most screens the difference between pure white and `#faf9f6` is subtle but noticeable — cards pop slightly against the cream background. This is likely intentional, but some components use `bg-[#faf9f6]` as card backgrounds (e.g. the dashed preview box in [application-forms/[id]/preview/page.tsx:50](apps/web/src/app/(main)/hr/hiring/application-forms/%5Bid%5D/preview/page.tsx#L50)), making the surface treatment inconsistent.
+The page background is `--campsite-bg: #faf9f6` (warm cream). On most screens the difference between pure white and `#faf9f6` is subtle but noticeable  cards pop slightly against the cream background. This is likely intentional, but some components use `bg-[#faf9f6]` as card backgrounds (e.g. the dashed preview box in [application-forms/[id]/preview/page.tsx:50](apps/web/src/app/(main)/hr/hiring/application-forms/%5Bid%5D/preview/page.tsx#L50)), making the surface treatment inconsistent.
 
 ---
 
-## 11. Subscription-Suspended Page — Orphan Styling
+## 11. Subscription-Suspended Page  Orphan Styling
 
 [subscription-suspended/page.tsx](apps/web/src/app/(main)/subscription-suspended/page.tsx):
 ```tsx
 <Link href="/login" className="text-amber-400/90 underline-offset-4 hover:underline">
 ```
 
-This uses `text-amber-400/90` — bright yellow-amber text, presumably on a dark background. It is a state page with unique styling, but `amber-400` is not in the brand palette at all. The page likely renders on a dark background (implied by the route name) but this is the only place in the whole app using `amber-400`.
+This uses `text-amber-400/90`  bright yellow-amber text, presumably on a dark background. It is a state page with unique styling, but `amber-400` is not in the brand palette at all. The page likely renders on a dark background (implied by the route name) but this is the only place in the whole app using `amber-400`.
 
 ---
 
-## 12. Register Done Page — Amber for "Pending" State
+## 12. Register Done Page  Amber for "Pending" State
 
 [register/done/page.tsx:66-78](apps/web/src/app/(auth)/register/done/page.tsx#L66):
 ```tsx
@@ -317,13 +317,13 @@ This uses `text-amber-400/90` — bright yellow-amber text, presumably on a dark
 </span>
 ```
 
-The post-registration "pending" screen uses amber to communicate waiting state. The Admin Overview uses `text-[#b91c1c]` (brand red) for pending counts. These two views of the same concept — "awaiting approval" — use completely different colours.
+The post-registration "pending" screen uses amber to communicate waiting state. The Admin Overview uses `text-[#b91c1c]` (brand red) for pending counts. These two views of the same concept  "awaiting approval"  use completely different colours.
 
 ---
 
-## 13. `finance/page.tsx` — Inconsistent Routing Pattern
+## 13. `finance/page.tsx`  Inconsistent Routing Pattern
 
-[finance/page.tsx](apps/web/src/app/(main)/finance/page.tsx) fetches permissions with a direct Supabase call (`supabase.from('profiles').select(...)`) rather than through `getCachedMainShellLayoutBundle()` + `parseShellPermissionKeys()` — the pattern used by every other page in the admin section.
+[finance/page.tsx](apps/web/src/app/(main)/finance/page.tsx) fetches permissions with a direct Supabase call (`supabase.from('profiles').select(...)`) rather than through `getCachedMainShellLayoutBundle()` + `parseShellPermissionKeys()`  the pattern used by every other page in the admin section.
 
 This is an architecture inconsistency that means the Finance page:
 - Does not benefit from the shared shell bundle cache
@@ -345,7 +345,7 @@ These are redundant. The rest of the app does not set `font-sans` explicitly on 
 
 ---
 
-## 15. AppShell Amber Badge — Nav Notification Count
+## 15. AppShell Amber Badge  Nav Notification Count
 
 [AppShell.tsx:123](apps/web/src/components/AppShell.tsx#L123):
 ```tsx
@@ -360,7 +360,7 @@ Navigation badge counters (e.g. pending approval count in the sidebar) use `bg-a
 
 | # | Issue | Severity | File(s) | Effort to fix |
 |---|---|---|---|---|
-| 1 | `text-red-300` error text — fails WCAG contrast | **Critical** | admin/users/page.tsx:39 | Trivial |
+| 1 | `text-red-300` error text  fails WCAG contrast | **Critical** | admin/users/page.tsx:39 | Trivial |
 | 2 | Role badge function duplicated + `unassigned`/`society_leader` colour clash | **High** | AdminOverviewView + AdminUsersClient | Small |
 | 3 | Error banner colours inconsistent (red-200/50, brand red, red-300) | **High** | ~30 files | Medium |
 | 4 | No page uses CSS custom properties (token bypass) | **High** | All pages | Large |
@@ -382,26 +382,26 @@ Navigation badge counters (e.g. pending approval count in the sidebar) use `bg-a
 
 ## Recommended Fix Order
 
-### Phase 1 — Quick wins (1–2 hours total)
+### Phase 1  Quick wins (1–2 hours total)
 1. Fix `text-red-300` → `text-[#b91c1c]` in [admin/users/page.tsx:39](apps/web/src/app/(main)/admin/users/page.tsx#L39)
 2. Fix `border-[#e8e8e8]` → `border-[#d8d8d8]` in [admin/hr/[userId]/page.tsx:61](apps/web/src/app/(main)/admin/hr/%5BuserId%5D/page.tsx#L61)
 3. Remove redundant `font-sans` from hr/page.tsx, manager/org-chart, reports
 4. Add `mx-auto max-w-6xl px-5 py-7 sm:px-7` wrapper to hr/page.tsx to match standard
 5. Standardise `tracking-[-0.03em]` on h1 headings that use `tracking-tight`
 
-### Phase 2 — Colour standardisation (half day)
+### Phase 2  Colour standardisation (half day)
 6. Extract `roleBadgeClass` to `lib/roleBadgeClass.ts`, fix `unassigned`/`society_leader` colour clash
 7. Extract `statFillPct` to `lib/format/statFillPct.ts`
 8. Extract `initials` to `lib/format/initials.ts`
 9. Establish a standard error banner component to unify `border-red-200 bg-red-50` vs `text-[#b91c1c]`
 10. Replace `bg-amber-400` nav badge with brand-consistent colour
 
-### Phase 3 — Layout standardisation (half day)
+### Phase 3  Layout standardisation (half day)
 11. Document the intended max-width standard for each section (admin=6xl, finance=90rem) in a CLAUDE.md note
 12. Standardise H1 sizes to two values: `text-[28px]` for main hubs, `text-[26px]` for sub-pages
 13. Standardise vertical padding to `py-7` for admin/standard pages, `py-8` for wide finance/report pages
 
-### Phase 4 — Token adoption (ongoing, per-component)
+### Phase 4  Token adoption (ongoing, per-component)
 14. Migrate components to use `campsite.*` Tailwind utilities or CSS vars rather than hardcoded hex (start with the most-visited components: DashboardHome, AdminOverviewView, AdminUsersClient)
 
 ---

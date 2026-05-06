@@ -20,7 +20,7 @@ export function ProblemSection() {
     threshold: 0.06,
   });
 
-  // Separate ref for the quote block — gets the deep word-split treatment
+  // Separate ref for the quote block  gets the deep word-split treatment
   const chaosRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export function ProblemSection() {
     const sideTags = Array.from(chaos.querySelectorAll<HTMLElement>('.problem-index, .problem-source'));
     sideTags.forEach((t, i) => {
       t.style.opacity = '0';
-      t.dataset.wd = String(i * 22); // approximate — aligns with first word of each row
+      t.dataset.wd = String(i * 22); // approximate  aligns with first word of each row
     });
 
     let triggered = false;
@@ -128,7 +128,7 @@ export function ProblemSection() {
 
         <div ref={chaosRef} className="problem-chaos">
           {ISSUES.map((item, index) => (
-            // No data-anime-reveal — the word-split useEffect owns this block
+            // No data-anime-reveal  the word-split useEffect owns this block
             <div key={item.quote} className="problem-line">
               <span className="problem-index">{String(index + 1).padStart(2, '0')}</span>
               <p className="problem-quote">{item.quote}</p>

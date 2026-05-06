@@ -354,10 +354,10 @@ function GradientColorInput({
 }
 
 const tabs: { id: TabId; label: string }[] = [
-  { id: 'branding', label: '🎨 Branding' },
-  { id: 'general', label: '⚙️ General' },
-  { id: 'celebrations', label: '🎉 Celebrations' },
-  { id: 'danger', label: '⚠️ Danger zone' },
+  { id: 'branding', label: 'Branding' },
+  { id: 'general', label: 'General' },
+  { id: 'celebrations', label: 'Celebrations' },
+  { id: 'danger', label: 'Danger zone' },
 ];
 
 export function OrgSettingsClient({
@@ -1735,6 +1735,10 @@ export function OrgSettingsClient({
                   <span className="font-medium text-[#121212]">Save celebrations</span> at the bottom to keep
                   changes.
                 </p>
+                <div className="mt-3 rounded-lg border border-[#eceae6] bg-[#faf9f6] px-3 py-2.5 text-[12px] text-[#6b6b6b]">
+                  <span className="font-medium text-[#121212]">Quick flow:</span> choose country, refresh official
+                  dates, then search and add or enable holidays.
+                </div>
                 {calendarificPreview?.migrationPending ? (
                   <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] leading-relaxed text-amber-950">
                     <strong>Database migration required</strong> before public holidays can load. From the
@@ -1754,12 +1758,12 @@ export function OrgSettingsClient({
                         {calendarificPreview.migrationFile ??
                           'supabase/migrations/20260804120000_calendarific_celebration_cache.sql'}
                       </code>{' '}
-                      — then reload this page.
+                       then reload this page.
                     </p>
                   </div>
                 ) : null}
-                <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                  <label className="min-w-0 flex-1 max-w-md">
+                <div className="mt-4 grid gap-3 rounded-lg border border-[#eceae6] bg-[#faf9f6] p-3 sm:grid-cols-2">
+                  <label className="min-w-0">
                     <span className="text-[12px] font-medium text-[#121212]">Country for public holidays</span>
                     <FormSelect
                       wrapperClassName="mt-1"
@@ -1779,16 +1783,26 @@ export function OrgSettingsClient({
                       ))}
                     </FormSelect>
                   </label>
-                  <button
-                    type="button"
-                    disabled={
-                      publicHolidayDatesRefreshing || loading || calendarificPreview?.migrationPending
-                    }
-                    onClick={() => void syncOfficialHolidayDates({ forceRefreshCache: false, silent: false })}
-                    className="shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6] disabled:opacity-50"
-                  >
-                    {publicHolidayDatesRefreshing ? 'Refreshing…' : 'Refresh official dates'}
-                  </button>
+                  <div className="flex flex-wrap items-end gap-2 sm:justify-end">
+                    <button
+                      type="button"
+                      disabled={
+                        publicHolidayDatesRefreshing || loading || calendarificPreview?.migrationPending
+                      }
+                      onClick={() => void syncOfficialHolidayDates({ forceRefreshCache: false, silent: false })}
+                      className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#faf9f6] disabled:opacity-50"
+                    >
+                      {publicHolidayDatesRefreshing ? 'Refreshing…' : 'Refresh official dates'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => void saveCelebrations()}
+                      className="rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      Save celebrations
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-3 space-y-1 text-[11.5px] text-[#9b9b9b]">
                   {holidayDateRefreshNote ? (
@@ -1820,7 +1834,7 @@ export function OrgSettingsClient({
                   <label className="block">
                     <span className="text-[12px] font-medium text-[#121212]">Find a holiday</span>
                     <input
-                      className="mt-1 w-full max-w-lg rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
+                      className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
                       placeholder="e.g. Christmas, bank holiday, 2026-01-01"
                       value={holidaySearchQuery}
                       onChange={(e) => setHolidaySearchQuery(e.target.value)}
@@ -1925,7 +1939,7 @@ export function OrgSettingsClient({
                                 )
                               ) : !builtin && !h.iso ? (
                                 <span className="self-center text-[11px] text-[#9b9b9b]">
-                                  No fixed date — create a custom mode below with your own dates
+                                  No fixed date  create a custom mode below with your own dates
                                 </span>
                               ) : null}
                             </div>

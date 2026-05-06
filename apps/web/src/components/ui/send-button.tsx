@@ -10,7 +10,7 @@ export type SendButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 /**
  * Primary “send” control with paper-plane hover motion.
- * Uses org branding tokens (same as the rest of the tenant shell) — no styled-components.
+ * Uses org branding tokens (same as the rest of the tenant shell)  no styled-components.
  */
 export function SendButton({ className, children = 'Send now', type = 'button', ...props }: SendButtonProps) {
   return (

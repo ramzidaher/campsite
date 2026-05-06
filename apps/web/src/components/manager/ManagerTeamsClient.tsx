@@ -126,7 +126,7 @@ export function ManagerTeamsClient({
           <Link href="/manager/departments" className="font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]">
             Departments
           </Link>{' '}
-          — department membership (rota and channels) is separate from teams.
+           department membership (rota and channels) is separate from teams.
         </p>
       </div>
 

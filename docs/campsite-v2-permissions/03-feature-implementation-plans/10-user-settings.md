@@ -1,4 +1,4 @@
-# 10 — User settings and profile
+# 10  User settings and profile
 
 ## 1. Product intent
 
@@ -15,11 +15,11 @@ See `ProfileSettings` initial select in `apps/web/src/app/(main)/settings/page.t
 - `accent_preset`, `color_scheme`
 - `dnd_enabled`, `dnd_start`, `dnd_end`
 - `shift_reminder_before_minutes`
-- `role` (display only — **not** in client `update` payload)
+- `role` (display only  **not** in client `update` payload)
 
 ### 2.2 RLS
 
-- **`profiles_update_self`** (`20250325120001_phase1_core_platform.sql`): `using (id = auth.uid())` and `with check (id = auth.uid())` — cannot update another user’s row.
+- **`profiles_update_self`** (`20250325120001_phase1_core_platform.sql`): `using (id = auth.uid())` and `with check (id = auth.uid())`  cannot update another user’s row.
 - **`profiles_update_by_approver`**: approvers update **other** users in org (approval flows).
 - **`profiles_update_org_admin`**: org admin updates **other** members (`id <> auth.uid()`).
 
@@ -49,7 +49,7 @@ See `ProfileSettings` initial select in `apps/web/src/app/(main)/settings/page.t
 
 **File:** `apps/web/src/components/ProfileSettings.tsx`
 
-- **`saveProfile`:** `.from('profiles').update({...}).eq('id', u.user.id)` — **does not** send `role`, `status`, or `org_id`.
+- **`saveProfile`:** `.from('profiles').update({...}).eq('id', u.user.id)`  **does not** send `role`, `status`, or `org_id`.
 - **`changePassword`:** `auth.updateUser`.
 - **`deactivate`:** `update({ status: 'inactive' })`, then **`signOut`**, **`router.replace('/login')`**.
 - **Org admin link:** if `isOrgAdminRole(profile.role)`, link to `/settings/discount-tiers`.
@@ -69,9 +69,9 @@ See `ProfileSettings` initial select in `apps/web/src/app/(main)/settings/page.t
 
 ## 5. Verification checklist
 
-- [x] User A cannot update user B’s profile row — **RLS** `profiles_update_self` requires `id = auth.uid()` for self path.
+- [x] User A cannot update user B’s profile row  **RLS** `profiles_update_self` requires `id = auth.uid()` for self path.
 - [x] **`role`** not sent from settings save; trigger blocks self **`role`** changes regardless.
-- [x] Non–org-admin cannot open **`/settings/discount-tiers`** — server **`isOrgAdminRole`** redirect.
+- [x] Non–org-admin cannot open **`/settings/discount-tiers`**  server **`isOrgAdminRole`** redirect.
 - [x] Deactivate: **`active` → `inactive`** allowed by trigger; **`signOut`** clears session.
 
 ## 6. Automated tests

@@ -20,7 +20,7 @@ const config: Config = {
           '0%': { backgroundPosition: '200% 0' },
           '100%': { backgroundPosition: '-200% 0' },
         },
-        /** Broadcast compose send control — vertical bob on paper-plane icon (motion-safe only in component). */
+        /** Broadcast compose send control  vertical bob on paper-plane icon (motion-safe only in component). */
         'send-btn-icon-bob': {
           from: { transform: 'translateY(0.1em)' },
           to: { transform: 'translateY(-0.1em)' },

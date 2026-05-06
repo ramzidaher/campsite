@@ -1,4 +1,4 @@
-# Page Layer Stage G — Profile Final Normalization
+# Page Layer Stage G  Profile Final Normalization
 **Date:** 2026-05-01  
 **Owner:** Engineering  
 **Scope:** `apps/web/src/app/(main)/profile/page.tsx`

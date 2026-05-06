@@ -26,18 +26,18 @@ export function getProfileInitials(fullName: string | null | undefined, preferre
   const legal = (fullName ?? '').trim();
   const preferred = (preferredName ?? '').trim();
   const source = preferred || legal;
-  if (!source) return '—';
+  if (!source) return '';
   const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '—';
+  if (parts.length === 0) return '';
   if (parts.length === 1) {
     const letters = lettersOnly(parts[0]!);
-    if (!letters) return '—';
+    if (!letters) return '';
     return letters.slice(0, 2).toUpperCase();
   }
   const first = firstLetterInToken(parts[0]!);
   const last = firstLetterInToken(parts[parts.length - 1]!);
-  if (!first && !last) return '—';
-  if (!first) return (last ?? '—').toUpperCase();
+  if (!first && !last) return '';
+  if (!first) return (last ?? '').toUpperCase();
   if (!last) return first.toUpperCase();
   return `${first}${last}`.toUpperCase();
 }

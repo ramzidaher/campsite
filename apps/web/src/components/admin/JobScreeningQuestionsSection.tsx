@@ -525,7 +525,7 @@ export function JobScreeningQuestionsSection({
 
                 {q.questionType === 'section_title' ? (
                   <p className={hintClass}>
-                    Applicants only see this heading and optional help text—there is no answer field. Open{' '}
+                    Applicants only see this heading and optional help textthere is no answer field. Open{' '}
                     <strong className="font-medium text-neutral-700">More</strong> and use{' '}
                     <strong className="font-medium text-neutral-700">Change to</strong> when you need answer fields.
                   </p>

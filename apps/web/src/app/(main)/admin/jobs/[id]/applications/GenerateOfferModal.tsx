@@ -66,7 +66,7 @@ export function GenerateOfferModal({
         return;
       }
       setBodyHtml(r.html);
-      setMsg({ type: 'ok', text: 'Merge applied — review and edit the letter below before sending.' });
+      setMsg({ type: 'ok', text: 'Merge applied  review and edit the letter below before sending.' });
     });
   };
 

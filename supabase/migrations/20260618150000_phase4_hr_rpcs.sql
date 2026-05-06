@@ -3,7 +3,7 @@
 -- 4.2 onboarding_template_task_delete
 -- 4.3 review_cycle_create
 -- 4.4 interview_joining_instructions_set
--- 4.5 hr_employee_file multi-tier access — already shipped in 20260618130000_phase2_hr_permissions.sql
+-- 4.5 hr_employee_file multi-tier access  already shipped in 20260618130000_phase2_hr_permissions.sql
 
 -- ---------------------------------------------------------------------------
 -- 4.1 onboarding_template_task_upsert

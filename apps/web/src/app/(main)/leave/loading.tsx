@@ -8,7 +8,7 @@ const BALANCE_COLS = 3;
 const REQUEST_ROWS = 5;
 
 /**
- * Route-level skeleton for `/leave` — mirrors {@link LeaveHubClient} header + balances grid + list column.
+ * Route-level skeleton for `/leave`  mirrors {@link LeaveHubClient} header + balances grid + list column.
  */
 export default function LeaveLoading() {
   return (

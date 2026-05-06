@@ -10,7 +10,7 @@ import { normalizeUiMode } from '@/lib/uiMode';
 export default async function HRDirectoryPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ q?: string | string[] }>;
+  searchParams?: Promise<{ q?: string | string[]; limit?: string | string[] }>;
 }) {
   const pathStartedAtMs = Date.now();
   const user = await getAuthUser();
@@ -37,7 +37,10 @@ export default async function HRDirectoryPage({
 
   const params = (await searchParams) ?? {};
   const qRaw = params.q;
+  const limitRaw = params.limit;
   const initialQuery = (Array.isArray(qRaw) ? qRaw[0] : qRaw ?? '').trim();
+  const parsedLimit = Number.parseInt((Array.isArray(limitRaw) ? limitRaw[0] : limitRaw ?? '').trim(), 10);
+  const initialPageLimit = [25, 50, 100, 200].includes(parsedLimit) ? parsedLimit : 25;
 
   const view = (
     <HRDirectoryClient
@@ -48,6 +51,7 @@ export default async function HRDirectoryPage({
       initialRows={(rows ?? []) as Parameters<typeof HRDirectoryClient>[0]['initialRows']}
       dashStats={(dashStats ?? null) as Record<string, unknown> | null}
       initialQuery={initialQuery}
+      initialPageLimit={initialPageLimit}
       initialUiMode={initialUiMode}
     />
   );

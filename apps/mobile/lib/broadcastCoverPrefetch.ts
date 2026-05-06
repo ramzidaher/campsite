@@ -9,7 +9,7 @@ export function prefetchBroadcastCover(url: string | null | undefined): void {
   void Image.prefetch(u, { cachePolicy: 'memory-disk' });
 }
 
-/** Prefetch cover (if any) then push detail — call from list / home carousel for smoother entry. */
+/** Prefetch cover (if any) then push detail  call from list / home carousel for smoother entry. */
 export function openBroadcastDetail(
   router: { push: (href: string) => void },
   row: Pick<MobileBroadcastRow, 'id' | 'cover_image_url'>,

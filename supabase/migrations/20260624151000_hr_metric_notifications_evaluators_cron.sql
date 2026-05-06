@@ -264,7 +264,7 @@ begin
         'bradford_threshold',
         'warning',
         'Bradford factor threshold',
-        format('%s — Bradford score is %s (threshold %s).', bf.fn, round(bf.score)::text, round(v_threshold)::text),
+        format('%s  Bradford score is %s (threshold %s).', bf.fn, round(bf.score)::text, round(v_threshold)::text),
         jsonb_build_object('bradford_score', bf.score, 'threshold', v_threshold),
         bf.uid,
         'bradford:' || p_org_id::text || ':' || bf.uid::text || ':' || v_week
@@ -320,7 +320,7 @@ begin
           'warning',
           'Working hours above limit',
           format(
-            '%s — scheduled hours this week are about %s h (limit %s h).',
+            '%s  scheduled hours this week are about %s h (limit %s h).',
             wk.fn,
             round(v_hours, 1)::text,
             round(v_cap, 1)::text
@@ -389,7 +389,7 @@ begin
             'warning',
             'Recruitment diversity target',
             format(
-              '%s — share of applicants in selected equality categories is about %s%% (target %s%%).',
+              '%s  share of applicants in selected equality categories is about %s%% (target %s%%).',
               jl.title,
               round(v_share, 1)::text,
               round(jl.tgt, 1)::text
@@ -441,7 +441,7 @@ begin
         'probation_review_due',
         'critical',
         'Probation review overdue',
-        format('%s — probation ended on %s; review not recorded.', emp.fn, emp.end_dt::text),
+        format('%s  probation ended on %s; review not recorded.', emp.fn, emp.end_dt::text),
         jsonb_build_object('probation_end_date', emp.end_dt),
         emp.uid,
         'probation:' || p_org_id::text || ':' || emp.uid::text || ':' || v_week
@@ -484,7 +484,7 @@ begin
         'missing_hr_record',
         'warning',
         'Missing HR record',
-        format('%s — no employee HR file.', m.fn),
+        format('%s  no employee HR file.', m.fn),
         jsonb_build_object(),
         m.uid,
         'missing_hr:' || p_org_id::text || ':' || m.uid::text || ':' || v_week
@@ -521,7 +521,7 @@ begin
         'review_cycle_manager_overdue',
         'warning',
         'Performance review awaiting manager',
-        format('Cycle "%s" — manager assessment was due %s.', rv.cname, rv.due::text),
+        format('Cycle "%s"  manager assessment was due %s.', rv.cname, rv.due::text),
         jsonb_build_object('performance_review_id', rv.rid, 'cycle', rv.cname),
         rv.rev_id,
         'perf:' || rv.rid::text || ':' || v_week

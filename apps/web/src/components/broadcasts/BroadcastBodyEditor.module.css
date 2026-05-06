@@ -1,4 +1,4 @@
-/* TipTap / ProseMirror — Notion-style writing surface */
+/* TipTap / ProseMirror  Notion-style writing surface */
 .root :global(.ProseMirror) {
   min-height: min(55vh, 360px);
   outline: none;

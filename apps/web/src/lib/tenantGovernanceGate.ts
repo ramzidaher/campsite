@@ -20,7 +20,7 @@ export function isTenantGovernanceExemptPath(pathname: string): boolean {
 
 export type TenantGovernanceRedirectInput = {
   pathname: string;
-  /** platform_admins row — bypasses tenant blocks */
+  /** platform_admins row  bypasses tenant blocks */
   isPlatformOperator: boolean;
   hasOrgId: boolean;
   orgIsLocked: boolean;

@@ -6,6 +6,7 @@ import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { Check, Search, X } from 'lucide-react';
 
 const ROLE_LABEL: Record<string, string> = {
   unassigned: 'Unassigned',
@@ -207,9 +208,7 @@ export function PendingApprovalsClient({
   return (
     <div>
       <div className="mb-4 flex h-9 w-full max-w-[280px] items-center gap-2 rounded-lg border border-campsite-border bg-campsite-surface px-3">
-        <span className="text-[13px] text-campsite-text-muted" aria-hidden>
-          🔍
-        </span>
+        <Search className="h-3.5 w-3.5 text-campsite-text-muted" aria-hidden />
         <input
           type="search"
           value={q}
@@ -315,7 +314,7 @@ export function PendingApprovalsClient({
                           className="flex h-9 w-9 items-center justify-center rounded-lg bg-campsite-success text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                           onClick={() => void approve(p.id)}
                         >
-                          ✓
+                          <Check className="h-4 w-4" aria-hidden />
                         </button>
                         <button
                           type="button"
@@ -324,7 +323,7 @@ export function PendingApprovalsClient({
                           className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-campsite-warning bg-campsite-elevated text-[15px] font-semibold text-campsite-warning transition-colors hover:bg-[#fef2f2] disabled:opacity-50"
                           onClick={() => setRejectingId(p.id)}
                         >
-                          ✕
+                          <X className="h-4 w-4" aria-hidden />
                         </button>
                       </div>
                     </div>

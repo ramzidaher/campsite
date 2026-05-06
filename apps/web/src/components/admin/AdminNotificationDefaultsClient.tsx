@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { Bell, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -84,6 +85,14 @@ export function AdminNotificationDefaultsClient({
           <Toggle on={on} onToggle={() => setOn((v) => !v)} disabled={loading} />
         </div>
 
+        <div className="rounded-lg border border-[#eceae6] bg-[#faf9f6] px-3 py-2.5 text-[12px] text-[#6b6b6b]">
+          <p className="font-medium text-[#121212]">What this changes</p>
+          <p className="mt-1">
+            New members will start with {on ? 'notifications enabled' : 'notifications disabled'} by default. Existing
+            member preferences are not changed.
+          </p>
+        </div>
+
         {msg ? (
           <p
             className={[
@@ -100,14 +109,16 @@ export function AdminNotificationDefaultsClient({
             type="button"
             disabled={loading}
             onClick={() => void save()}
-            className="h-9 rounded-lg border border-[#121212] bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] disabled:opacity-45"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#121212] bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] disabled:opacity-45"
           >
+            <Bell className="h-3.5 w-3.5" aria-hidden />
             {loading ? 'Saving...' : 'Save'}
           </button>
           <Link
             href="/admin/settings"
-            className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
           >
+            <Settings2 className="h-3.5 w-3.5" aria-hidden />
             Org settings
           </Link>
         </div>

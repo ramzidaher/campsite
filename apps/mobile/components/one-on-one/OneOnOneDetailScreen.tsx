@@ -217,7 +217,7 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
             />
           ) : (
             <Text style={{ ...mainShellText.body, color: textPrimary, marginTop: mainShell.spacing.xxs }}>
-              {q.answer || '—'}
+              {q.answer || ''}
             </Text>
           )}
         </View>
@@ -236,7 +236,7 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
           style={[styles.input, { color: textPrimary, borderColor: border }]}
         />
       ) : (
-        <Text style={[styles.body, { color: textPrimary }]}>{doc.manager_notes_shared || '—'}</Text>
+        <Text style={[styles.body, { color: textPrimary }]}>{doc.manager_notes_shared || ''}</Text>
       )}
 
       {isManager ? (
@@ -254,7 +254,7 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
               style={[styles.input, { color: textPrimary, borderColor: border, minHeight: 80 }]}
             />
           ) : (
-            <Text style={[styles.body, { color: textPrimary }]}>{doc.private_manager_notes || '—'}</Text>
+            <Text style={[styles.body, { color: textPrimary }]}>{doc.private_manager_notes || ''}</Text>
           )}
         </>
       ) : null}
@@ -307,7 +307,7 @@ export function OneOnOneDetailScreen({ profile, meetingId }: { profile: ProfileR
               style={[styles.input, { flex: 1, color: textPrimary, borderColor: border, minHeight: 44 }]}
             />
           ) : (
-            <Text style={[styles.body, { flex: 1, color: textPrimary }]}>{a.text || '—'}</Text>
+            <Text style={[styles.body, { flex: 1, color: textPrimary }]}>{a.text || ''}</Text>
           )}
         </View>
       ))}

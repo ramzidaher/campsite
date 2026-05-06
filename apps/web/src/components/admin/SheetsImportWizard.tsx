@@ -3,6 +3,16 @@
 import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
 import { extractSpreadsheetId } from '@/lib/rota/sheetsImportParse';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Database,
+  ExternalLink,
+  Link2,
+  Play,
+  Settings2,
+  Table2,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 /** Org admin - Google Sheets rota import wizard; links `google_connections`, `sheets_mappings`, then POST import. */
@@ -193,45 +203,82 @@ export function SheetsImportWizard({ orgId }: { orgId: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6 px-5 py-7 sm:px-[28px]">
+    <div className="mx-auto max-w-4xl space-y-6 px-5 py-7 sm:px-[28px]">
       <div>
-        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           Rota import (Google Sheets)
         </h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          Org: <span className="font-mono text-xs text-[#121212]">{orgId}</span>
+          Connect a spreadsheet, map your columns, and import shifts into rota.
+        </p>
+        <p className="mt-1 text-[12px] text-[#9b9b9b]">
+          Organisation: <span className="font-mono text-[11px] text-[#6b6b6b]">{orgId}</span>
         </p>
       </div>
 
-      <ol className="list-inside list-decimal space-y-4 text-[13px] text-[#121212]">
-        <li className={step >= 1 ? 'opacity-100' : 'opacity-40'}>
-          <strong>Connect Google</strong>
-          <p className="mt-1 text-[#6b6b6b]">
-            Use Settings → Integrations → Connect Google Sheets, then return here.
-          </p>
+      <div className="space-y-4 text-[13px] text-[#121212]">
+        <section
+          className={[
+            'rounded-xl border bg-white p-4',
+            step >= 1 ? 'border-[#d8d8d8] opacity-100' : 'border-[#e8e6e1] opacity-70',
+          ].join(' ')}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[11px] font-semibold text-[#6b6b6b]">
+              1
+            </span>
+            <p className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#121212]">
+              <Link2 className="h-3.5 w-3.5" aria-hidden />
+              Connect Google Sheets
+            </p>
+          </div>
+          <p className="text-[#6b6b6b]">Connect Google Sheets in Integrations, then return here.</p>
           {!sheetsConnId ? (
-            <p className="mt-1 text-[12px] text-amber-800">No Sheets connection on this account yet.</p>
+            <p className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-amber-800">
+              <Database className="h-3.5 w-3.5" aria-hidden />
+              No Sheets connection on this account yet.
+            </p>
           ) : (
-            <p className="mt-1 text-[12px] text-[#6b6b6b]">Sheets OAuth linked.</p>
+            <p className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-[#15803d]">
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+              Sheets OAuth linked.
+            </p>
           )}
-          <a
-            href="/api/google/oauth/start?type=sheets"
-            className="mt-2 inline-block rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
-          >
-            Open Google OAuth
-          </a>
-          <button
-            type="button"
-            disabled={busy}
-            className="ml-2 rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-[#faf9f6] hover:opacity-90 disabled:opacity-50"
-            onClick={() => setStep(2)}
-          >
-            Next
-          </button>
-        </li>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href="/api/google/oauth/start?type=sheets"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              Open Google OAuth
+            </a>
+            <button
+              type="button"
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-[#faf9f6] hover:opacity-90 disabled:opacity-50"
+              onClick={() => setStep(2)}
+            >
+              Continue
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </div>
+        </section>
 
-        <li className={step >= 2 ? 'opacity-100' : 'opacity-40'}>
-          <strong>Sheets URL</strong>
+        <section
+          className={[
+            'rounded-xl border bg-white p-4',
+            step >= 2 ? 'border-[#d8d8d8] opacity-100' : 'border-[#e8e6e1] opacity-70',
+          ].join(' ')}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[11px] font-semibold text-[#6b6b6b]">
+              2
+            </span>
+            <p className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#121212]">
+              <Table2 className="h-3.5 w-3.5" aria-hidden />
+              Add spreadsheet URL
+            </p>
+          </div>
           <input
             className="mt-2 w-full rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] text-[#121212] outline-none focus:ring-1 focus:ring-[#121212]"
             placeholder="https://docs.google.com/spreadsheets/d/..."
@@ -241,16 +288,30 @@ export function SheetsImportWizard({ orgId }: { orgId: string }) {
           <button
             type="button"
             disabled={busy}
-            className="mt-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
             onClick={() => void validateSheetUrl()}
           >
-            Validate &amp; continue
+            Validate and continue
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </button>
-        </li>
+        </section>
 
-        <li className={step >= 3 ? 'opacity-100' : 'opacity-40'}>
-          <strong>Column mapping &amp; target rota</strong>
-          <p className="mt-1 text-[#6b6b6b]">
+        <section
+          className={[
+            'rounded-xl border bg-white p-4',
+            step >= 3 ? 'border-[#d8d8d8] opacity-100' : 'border-[#e8e6e1] opacity-70',
+          ].join(' ')}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[11px] font-semibold text-[#6b6b6b]">
+              3
+            </span>
+            <p className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#121212]">
+              <Settings2 className="h-3.5 w-3.5" aria-hidden />
+              Map columns and choose rota
+            </p>
+          </div>
+          <p className="text-[#6b6b6b]">
             Column letters (row below header is first data row). Dates use the organisation timezone when converting to
             UTC. Names must match an active member&apos;s full name or email (or use &quot;open&quot; for unassigned).
           </p>
@@ -340,31 +401,48 @@ export function SheetsImportWizard({ orgId }: { orgId: string }) {
           <button
             type="button"
             disabled={busy}
-            className="mt-2 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
             onClick={() => void saveMapping()}
           >
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
             Save mapping
           </button>
-        </li>
+        </section>
 
-        <li className={step >= 4 ? 'opacity-100' : 'opacity-40'}>
-          <strong>Run import</strong>
-          <p className="mt-1 text-[#6b6b6b]">
+        <section
+          className={[
+            'rounded-xl border bg-white p-4',
+            step >= 4 ? 'border-[#d8d8d8] opacity-100' : 'border-[#e8e6e1] opacity-70',
+          ].join(' ')}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[11px] font-semibold text-[#6b6b6b]">
+              4
+            </span>
+            <p className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#121212]">
+              <Play className="h-3.5 w-3.5" aria-hidden />
+              Run import
+            </p>
+          </div>
+          <p className="text-[#6b6b6b]">
             Pulls the configured range from your sheet and upserts <code className="text-xs">rota_shifts</code> by
             stable row key. Sync interval on the Google connection applies to future automation.
           </p>
           <button
             type="button"
             disabled={busy}
-            className="mt-2 rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-[#faf9f6] hover:opacity-90 disabled:opacity-50"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-[#faf9f6] hover:opacity-90 disabled:opacity-50"
             onClick={() => void runImport()}
           >
+            <Play className="h-3.5 w-3.5" aria-hidden />
             {busy ? 'Working...' : 'Import now'}
           </button>
-        </li>
-      </ol>
+        </section>
+      </div>
 
-      {msg ? <p className="text-[13px] text-[#6b6b6b]">{msg}</p> : null}
+      {msg ? (
+        <p className="rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] text-[#6b6b6b]">{msg}</p>
+      ) : null}
     </div>
   );
 }

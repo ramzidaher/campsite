@@ -2,7 +2,7 @@
 
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { Check, ChevronLeft } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -74,7 +74,7 @@ function StepProgress({ step, labels }: { step: number; labels: readonly string[
                       : 'border-[#d8d8d8] bg-white text-[#9b9b9b]',
                 ].join(' ')}
               >
-                {isDone ? '✓' : n}
+                {isDone ? <Check className="h-3.5 w-3.5" aria-hidden /> : n}
               </div>
             );
             return (
@@ -820,7 +820,7 @@ export function RegisterWizard({
               setStep(2);
             }}
           >
-            Continue →
+            Continue
           </button>
         </div>
       ) : null}
@@ -831,7 +831,7 @@ export function RegisterWizard({
           <p className="auth-sub">
             {inviteFlow
               ? 'We matched your workspace from the sign-up link and locked it to your organisation.'
-              : 'Tell us your organisation name. We’ll suggest a short identifier for shared links and invites — change it only if you want to.'}
+              : 'Tell us your organisation name. We’ll suggest a short identifier for shared links and invites  change it only if you want to.'}
           </p>
 
           {inviteFlow ? (
@@ -992,7 +992,7 @@ export function RegisterWizard({
                 setStep(1);
               }}
             >
-              ← Back
+              Back
             </button>
             <button
               type="button"
@@ -1032,7 +1032,7 @@ export function RegisterWizard({
                 setStep(3);
               }}
             >
-              Continue →
+              Continue
             </button>
           </div>
         </div>
@@ -1115,7 +1115,7 @@ export function RegisterWizard({
                 setStep(2);
               }}
             >
-              ← Back
+              Back
             </button>
             <button
               type="button"
@@ -1139,9 +1139,9 @@ export function RegisterWizard({
                   Create your workspace
                 </>
               ) : optionalAvatarFile ? (
-                'Continue →'
+                'Continue'
               ) : (
-                'Skip →'
+                'Skip'
               )}
             </button>
           </div>
@@ -1192,7 +1192,7 @@ export function RegisterWizard({
           </div>
           <div className="flex gap-3">
             <button type="button" className="auth-btn-ghost flex-1" onClick={() => setStep(3)}>
-              ← Back
+              Back
             </button>
             <button
               type="button"

@@ -232,7 +232,7 @@ export function RotaStaffAvailabilityPanel({
                   </button>
                 </div>
                 {rows.length === 0 ? (
-                  <p className="text-[13px] text-[#6b6b6b]">Not set — you won&apos;t show as available this day.</p>
+                  <p className="text-[13px] text-[#6b6b6b]">Not set  you won&apos;t show as available this day.</p>
                 ) : (
                   <ul className="space-y-2">
                     {rows.map((r, idx) => (

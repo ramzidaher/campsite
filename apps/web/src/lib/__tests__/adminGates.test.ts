@@ -5,6 +5,7 @@ import {
   canManageOrgSettings,
   canManageOrgUsers,
   getMainShellAdminNavItems,
+  getMainShellManagerNavItemsByPermissions,
 } from '@/lib/adminGates';
 
 describe('adminGates', () => {
@@ -27,5 +28,18 @@ describe('adminGates', () => {
   it('disables legacy role-based admin nav builder', () => {
     expect(getMainShellAdminNavItems('org_admin')).toBeNull();
     expect(getMainShellAdminNavItems('manager')).toBeNull();
+  });
+
+  it('hides manager department workspace links for org admins even when they have the permissions', () => {
+    const permissions = ['departments.view', 'teams.view', 'org_chart.view'] as const;
+    const orgAdminItems = getMainShellManagerNavItemsByPermissions(permissions, { pendingApprovalCount: 0 }, 'org_admin') ?? [];
+    const managerItems = getMainShellManagerNavItemsByPermissions(permissions, { pendingApprovalCount: 0 }, 'manager') ?? [];
+
+    expect(orgAdminItems.some((item) => item.href === '/manager/departments')).toBe(false);
+    expect(orgAdminItems.some((item) => item.href === '/manager/teams')).toBe(false);
+    expect(orgAdminItems.some((item) => item.href === '/manager/org-chart')).toBe(true);
+
+    expect(managerItems.some((item) => item.href === '/manager/departments')).toBe(true);
+    expect(managerItems.some((item) => item.href === '/manager/teams')).toBe(true);
   });
 });

@@ -87,7 +87,7 @@ export function HrHubScreen({ profile }: { profile: ProfileRow }) {
         })}
       </View>
 
-      {/* Content — each screen manages its own scroll + loading */}
+      {/* Content  each screen manages its own scroll + loading */}
       <View style={{ flex: 1 }}>
         {tab === 'leave' && <LeaveScreen profile={profile} />}
         {tab === 'attendance' && <AttendanceScreen profile={profile} />}

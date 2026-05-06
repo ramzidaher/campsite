@@ -14,32 +14,32 @@ These are treated as **intentional/simple direct-read surfaces** unless noted ot
 
 ---
 
-## Medium Priority (18) — Disposition
+## Medium Priority (18)  Disposition
 
 All routes in this section are classified as **intentional direct-read** with bounded/simple query shape, no mixed read model, and no unresolved cache-invalidation dependency for critical high-touch closure scope.
 
-- `/admin/broadcasts` — intentional direct-read admin utility surface
-- `/admin/categories` — intentional direct-read admin utility surface
-- `/admin/discount` — intentional direct-read admin utility surface
-- `/admin/integrations` — intentional direct-read admin utility surface
-- `/admin/notifications` — intentional direct-read admin utility surface
-- `/admin/scan-logs` — intentional direct-read admin utility surface
-- `/admin/settings` — intentional direct-read admin utility surface
-- `/founders` — intentional founder plane exception (already documented)
-- `/hr/jobs/[id]/preview` — bounded detail route; acceptable direct-read behavior
-- `/finance` — single-query operational surface; acceptable direct-read behavior
-- `/notifications/calendar` — single-query notification surface; acceptable direct-read behavior
-- `/notifications/hr-metrics` — single-query notification surface; acceptable direct-read behavior
-- `/notifications/leave` — single-query notification surface; acceptable direct-read behavior
-- `/notifications/recruitment` — single-query notification surface; acceptable direct-read behavior
-- `/one-on-ones` — single-query personal workspace surface; acceptable direct-read behavior
-- `/one-on-ones/[meetingId]` — bounded detail personal workspace surface; acceptable direct-read behavior
-- `/pending-approvals` — single-query action queue surface; acceptable direct-read behavior
-- `/manager/org-chart` — single-query manager utility surface; acceptable direct-read behavior
+- `/admin/broadcasts`  intentional direct-read admin utility surface
+- `/admin/categories`  intentional direct-read admin utility surface
+- `/admin/discount`  intentional direct-read admin utility surface
+- `/admin/integrations`  intentional direct-read admin utility surface
+- `/admin/notifications`  intentional direct-read admin utility surface
+- `/admin/scan-logs`  intentional direct-read admin utility surface
+- `/admin/settings`  intentional direct-read admin utility surface
+- `/founders`  intentional founder plane exception (already documented)
+- `/hr/jobs/[id]/preview`  bounded detail route; acceptable direct-read behavior
+- `/finance`  single-query operational surface; acceptable direct-read behavior
+- `/notifications/calendar`  single-query notification surface; acceptable direct-read behavior
+- `/notifications/hr-metrics`  single-query notification surface; acceptable direct-read behavior
+- `/notifications/leave`  single-query notification surface; acceptable direct-read behavior
+- `/notifications/recruitment`  single-query notification surface; acceptable direct-read behavior
+- `/one-on-ones`  single-query personal workspace surface; acceptable direct-read behavior
+- `/one-on-ones/[meetingId]`  bounded detail personal workspace surface; acceptable direct-read behavior
+- `/pending-approvals`  single-query action queue surface; acceptable direct-read behavior
+- `/manager/org-chart`  single-query manager utility surface; acceptable direct-read behavior
 
 ---
 
-## Low Priority (7) — Disposition
+## Low Priority (7)  Disposition
 
 All routes in this section are **public/job-candidate surfaces** or root landing where direct reads are acceptable in the current model and are not part of Stage G high-touch enterprise consistency closure.
 

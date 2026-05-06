@@ -374,6 +374,10 @@ export async function loadDashboardHomeGuarded(
   const key = dashboardCacheKey(userId, orgId, profile.role);
   const manualRefresh = options?.manualRefresh === true;
   if (manualRefresh) {
+    // Avoid refresh-triggered stampedes: if one request is already rebuilding this key,
+    // coalesce to that in-flight promise instead of deleting it and starting another load.
+    const existingInFlight = dashboardHomeInFlight.get(key);
+    if (existingInFlight) return existingInFlight;
     await invalidateSharedCache('campsite:dashboard:home', key);
   }
 

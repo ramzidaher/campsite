@@ -1,6 +1,6 @@
-# Role mapping — Option A (product spec → codebase)
+# Role mapping  Option A (product spec → codebase)
 
-**Status:** implemented in app + migration `20260329120000_v2_profile_roles.sql` — apply per **§10** (no Docker required).  
+**Status:** implemented in app + migration `20260329120000_v2_profile_roles.sql`  apply per **§10** (no Docker required).  
 **Authority:** [mainaccesslevel.md](../../../mainaccesslevel.md) (v2) + this file.  
 **Consumers:** DB migrations, RLS, Edge Functions, `@campsite/types`, web/mobile gates, admin UI.
 
@@ -8,8 +8,8 @@
 
 ## 1. Permission model (unchanged from spec)
 
-- **Layer 1 — Role baseline:** `profiles.role` defines what a user can always do inside their org (and platform admins are out-of-band; see below).
-- **Layer 2 — Department toggles:** `dept_broadcast_permissions` (and future per-feature toggle tables if needed) add capabilities **per department**; effective permission = baseline ∪ toggles for relevant depts. Resolution rules: [02-broadcast-baseline-toggles/PLAN.md](../02-broadcast-baseline-toggles/PLAN.md) and Plan 08 when added.
+- **Layer 1  Role baseline:** `profiles.role` defines what a user can always do inside their org (and platform admins are out-of-band; see below).
+- **Layer 2  Department toggles:** `dept_broadcast_permissions` (and future per-feature toggle tables if needed) add capabilities **per department**; effective permission = baseline ∪ toggles for relevant depts. Resolution rules: [02-broadcast-baseline-toggles/PLAN.md](../02-broadcast-baseline-toggles/PLAN.md) and Plan 08 when added.
 
 Agents must not reintroduce ad hoc `if (role === …)` without going through the shared resolution helpers / RLS the plans describe.
 
@@ -25,7 +25,7 @@ Existing code already uses this pattern ([phase5_admin_platform.sql](../../../su
 
 ---
 
-## 3. Canonical tenant roles (`profiles.role`) — **target** after Option A
+## 3. Canonical tenant roles (`profiles.role`)  **target** after Option A
 
 These are the **only** values that should remain in `profiles.role` long term (snake_case, stable for RLS and APIs).
 
@@ -40,7 +40,7 @@ These are the **only** values that should remain in `profiles.role` long term (s
 
 **Display names** in the app may differ per org; **`org_role_labels`** maps `(org_id, role)` → `display_name` for white-label. Underlying codes above stay fixed (per spec white-label note for `duty_manager` / `csa`).
 
-**No payroll / pay-frequency roles:** `profiles.role` is **permission identity only**. There is **no** `weekly_paid` (or similar) in v2 — it confused real roles (**Administrator**, **Duty Manager**, **CSA** are different jobs/capabilities, not “how someone is paid”). Do not reintroduce a pay-type enum on `profiles.role`.
+**No payroll / pay-frequency roles:** `profiles.role` is **permission identity only**. There is **no** `weekly_paid` (or similar) in v2  it confused real roles (**Administrator**, **Duty Manager**, **CSA** are different jobs/capabilities, not “how someone is paid”). Do not reintroduce a pay-type enum on `profiles.role`.
 
 **Temporary extension (until societies/clubs ship):** `society_leader` remains a valid `profiles.role` value alongside the canonical list above. See §8 O1.
 
@@ -60,11 +60,11 @@ Current CHECK on `profiles.role` (Phase 1):
 | `manager`              | `manager`              | Unchanged code; verify alignment with spec matrices. |
 | `coordinator`          | `coordinator`          | Unchanged code. |
 | `assistant`            | `administrator`        | Spec “Administrator”; broadcasts = **full send** (like manager); DM/CSA stay draft + approval. |
-| `senior_manager`       | `manager`              | **Product approved (§8 O3):** migrate rows to `manager`; extra powers only via department toggles / spec — no `senior_manager` literal after migration. |
+| `senior_manager`       | `manager`              | **Product approved (§8 O3):** migrate rows to `manager`; extra powers only via department toggles / spec  no `senior_manager` literal after migration. |
 | `weekly_paid`          | `csa` (default)        | **Role removed (§8 O2):** `weekly_paid` must not appear in CHECK or UI after migration. **Default** data fix: `UPDATE … SET role = 'csa'` for existing rows so constraints succeed; **Org Admin should recategorise** anyone who should be `administrator` or `duty_manager`. Remove `weekly_paid` from `discount_tiers` (merge into `csa` tier or org-specific cleanup). |
 | `society_leader`       | `society_leader`       | **Product approved (§8 O1):** keep value temporarily; no remap to `coordinator` until societies spec + implementation land. |
 
-**SQL touchpoints (non-exhaustive — agents grep and update):**
+**SQL touchpoints (non-exhaustive  agents grep and update):**
 
 - `profiles.role` CHECK constraint
 - `discount_tiers.role` CHECK (and any row defaulting by role)
@@ -96,7 +96,7 @@ Allowed keys must match **canonical** `profiles.role` values that are tenant-fac
 ## 7. Agent execution checklist (order matters)
 
 1. **Add migration:** new role CHECK; `UPDATE profiles SET role = …` mapping table above; same for `discount_tiers` and any table storing role text.
-2. **Replace literals** in all migrations is not possible for applied history — **new** forward migration + codebase string replace.
+2. **Replace literals** in all migrations is not possible for applied history  **new** forward migration + codebase string replace.
 3. **RLS / functions:** `org_admin` shortcut for “full org”; manager/coordinator paths + `dept_managers` / `user_departments` per Plan 01/02.
 4. **Types package:** export new union; deprecate old literals in a single PR if possible.
 5. **UI gates:** map `org_admin` to org admin shell; remove `super_admin` from user-facing strings (DB still migrates first).
@@ -108,36 +108,36 @@ Allowed keys must match **canonical** `profiles.role` values that are tenant-fac
 
 | ID | Decision |
 |----|----------|
-| **O1** | **Keep `society_leader` temporarily** — remain in `profiles.role` CHECK; do not migrate those users until societies/clubs feature is specified and built. RLS/helpers must keep supporting `society_leader` where they do today. |
-| **O2** | **Drop `weekly_paid` entirely** — it is not a permission role and must not be conflated with Administrator or Duty Manager. Remove from schema, types, seeds, and discount-tier keys. Migrate existing `profiles.role = 'weekly_paid'` with default `csa` plus manual Org Admin cleanup where job type is Administrator or Duty Manager. **Never** add a pay-frequency role to `profiles.role` again. |
-| **O3** | **`senior_manager` → `manager` is acceptable** — losing org-wide powers unless toggles/spec cover them is approved. |
+| **O1** | **Keep `society_leader` temporarily**  remain in `profiles.role` CHECK; do not migrate those users until societies/clubs feature is specified and built. RLS/helpers must keep supporting `society_leader` where they do today. |
+| **O2** | **Drop `weekly_paid` entirely**  it is not a permission role and must not be conflated with Administrator or Duty Manager. Remove from schema, types, seeds, and discount-tier keys. Migrate existing `profiles.role = 'weekly_paid'` with default `csa` plus manual Org Admin cleanup where job type is Administrator or Duty Manager. **Never** add a pay-frequency role to `profiles.role` again. |
+| **O3** | **`senior_manager` → `manager` is acceptable**  losing org-wide powers unless toggles/spec cover them is approved. |
 
 ---
 
 ## 9. Related docs
 
-- [mainaccesslevel.md](../../../mainaccesslevel.md) — full matrices and broadcast toggles.
-- [02-broadcast-baseline-toggles/PLAN.md](../02-broadcast-baseline-toggles/PLAN.md) — broadcast implementation contract (depends on this mapping).
+- [mainaccesslevel.md](../../../mainaccesslevel.md)  full matrices and broadcast toggles.
+- [02-broadcast-baseline-toggles/PLAN.md](../02-broadcast-baseline-toggles/PLAN.md)  broadcast implementation contract (depends on this mapping).
 
 ---
 
-## 10. Applying the v2 roles migration (hosted Supabase — **no Docker**)
+## 10. Applying the v2 roles migration (hosted Supabase  **no Docker**)
 
 This project is intended to run against **Supabase Cloud**. You do **not** need Docker or `supabase start`.
 
-### Option A — Supabase Dashboard (simplest)
+### Option A  Supabase Dashboard (simplest)
 
 1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**.
 2. Paste the full contents of [`supabase/migrations/20260329120000_v2_profile_roles.sql`](../../../supabase/migrations/20260329120000_v2_profile_roles.sql) and run it **once** per environment (staging, then production).
 3. If the editor times out, split into logical chunks (discount_tiers block → profiles block → functions → policies), or use Option B.
 
-### Option B — Supabase CLI against the remote project (no local DB)
+### Option B  Supabase CLI against the remote project (no local DB)
 
 1. Install CLI ad hoc: `npm run supabase -- --version` (uses `npx supabase@latest` from repo root).
 2. `npx supabase@latest login`
 3. `cd` to repo root and link: `npx supabase@latest link --project-ref <your-project-ref>` (ref is in Dashboard → Project Settings → General).
 4. Push pending migrations: `npm run supabase:db:push`  
-   This applies any migration files under `supabase/migrations/` that are not yet recorded in the remote migration history — **no Docker**.
+   This applies any migration files under `supabase/migrations/` that are not yet recorded in the remote migration history  **no Docker**.
 
 ### Verify
 
@@ -145,7 +145,7 @@ Run queries in [`supabase/scripts/verify_v2_roles.sql`](../../../supabase/script
 
 After the DB shows `org_admin`, the app’s `super_admin` compatibility shim is optional; you can remove it in a later cleanup PR.
 
-### Edge Function — discount QR verify
+### Edge Function  discount QR verify
 
 If you use verification in production, redeploy after DB role names change:
 
@@ -155,4 +155,4 @@ If you use verification in production, redeploy after DB role names change:
 
 ---
 
-*Document version: 1.3 — §10: Docker-free hosted apply + verify + function deploy.*
+*Document version: 1.3  §10: Docker-free hosted apply + verify + function deploy.*

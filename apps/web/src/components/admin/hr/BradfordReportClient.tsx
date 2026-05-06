@@ -4,6 +4,7 @@ import { useShellRefresh } from '@/hooks/useShellRefresh';
 import { createClient } from '@/lib/supabase/client';
 import { getDisplayName } from '@/lib/names';
 import Link from 'next/link';
+import { AlertTriangle, Download, RefreshCw } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 
 const ALERT_THRESHOLD = 200;
@@ -128,8 +129,8 @@ export function BradfordReportClient({
   }, [visible, asOf]);
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-8 sm:px-7">
-      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">Absence reporting</h1>
           <p className="mt-1 max-w-xl text-[13.5px] text-[#6b6b6b]">
@@ -140,37 +141,41 @@ export function BradfordReportClient({
             <p className="mt-2 text-[12.5px] text-[#6b6b6b]">Showing your direct reports only.</p>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-[12px] text-[#6b6b6b]">
-            As of
-            <input
-              type="date"
-              value={asOf}
-              onChange={(e) => setAsOf(e.target.value)}
-              className="rounded-lg border border-[#d8d8d8] bg-white px-2 py-1.5 text-[13px] text-[#121212] focus:border-[#121212] focus:outline-none"
-            />
-          </label>
-          <button
-            type="button"
-            disabled={busy || !asOf}
-            onClick={() => void load()}
-            className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
-          >
-            {busy ? 'Loading…' : 'Apply'}
-          </button>
-          <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[#6b6b6b]">
-            <input type="checkbox" checked={alertsOnly} onChange={(e) => setAlertsOnly(e.target.checked)} className="rounded border-[#d8d8d8]" />
-            Alerts only (≥{ALERT_THRESHOLD})
-          </label>
-          <button
-            type="button"
-            onClick={exportCsv}
-            disabled={!visible.length}
-            className="inline-flex h-9 items-center rounded-lg bg-[#121212] px-3 text-[12px] font-medium text-white disabled:opacity-50"
-          >
-            Export CSV
-          </button>
-        </div>
+      </div>
+
+      <div className="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-[#d8d8d8] bg-white p-4 md:grid-cols-[auto_auto_1fr_auto] md:items-end">
+        <label className="flex flex-col gap-1 text-[12px] text-[#6b6b6b]">
+          As of
+          <input
+            type="date"
+            value={asOf}
+            onChange={(e) => setAsOf(e.target.value)}
+            className="h-10 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] focus:border-[#121212] focus:outline-none"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={busy || !asOf}
+          onClick={() => void load()}
+          className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
+        >
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+          {busy ? 'Loading…' : 'Apply'}
+        </button>
+        <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] text-[#6b6b6b] md:justify-center">
+          <input type="checkbox" checked={alertsOnly} onChange={(e) => setAlertsOnly(e.target.checked)} className="rounded border-[#d8d8d8]" />
+          <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+          Alerts only (≥{ALERT_THRESHOLD})
+        </label>
+        <button
+          type="button"
+          onClick={exportCsv}
+          disabled={!visible.length}
+          className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-white disabled:opacity-50"
+        >
+          <Download className="h-3.5 w-3.5" aria-hidden />
+          Export CSV
+        </button>
       </div>
 
       {err ? (
@@ -205,7 +210,7 @@ export function BradfordReportClient({
                         {getDisplayName(r.full_name, r.preferred_name)}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-[#4a4a4a]">{r.reports_to_name ?? '—'}</td>
+                    <td className="px-4 py-3 text-[#4a4a4a]">{r.reports_to_name ?? ''}</td>
                     <td className="px-4 py-3 tabular-nums">{r.spell_count}</td>
                     <td className="px-4 py-3 tabular-nums">{r.total_days}</td>
                     <td className="px-4 py-3">
@@ -260,7 +265,7 @@ export function BradfordReportClient({
                         {getDisplayName(h.full_name, h.preferred_name)}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 text-[#4a4a4a]">{h.reports_to_name ?? '—'}</td>
+                    <td className="px-3 py-2 text-[#4a4a4a]">{h.reports_to_name ?? ''}</td>
                     <td className="px-3 py-2 tabular-nums">{h.spell_count}</td>
                     <td className="px-3 py-2 tabular-nums">{h.total_days}</td>
                     <td className="px-3 py-2 tabular-nums font-semibold text-[#b91c1c]">{h.bradford_score}</td>

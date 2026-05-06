@@ -1,7 +1,7 @@
-# Phase 1 Stage Report — Production Hardening
+# Phase 1 Stage Report  Production Hardening
 **Date:** 2026-04-30
 **Follow-up to:** `reports/phase1-cache-invalidation-stage-report.md`
-**Status:** SUBSTANTIALLY COMPLETE — production hardening shipped; remaining gaps are narrow and mostly outside the shared Redis cache surfaces
+**Status:** SUBSTANTIALLY COMPLETE  production hardening shipped; remaining gaps are narrow and mostly outside the shared Redis cache surfaces
 
 **Current follow-up:** founder/back-office and org-settings closure work is tracked in `reports/phase1-code-closure-stage-report.md`
 

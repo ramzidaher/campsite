@@ -1,7 +1,7 @@
 'use client';
 
 import { FormSelect } from '@campsite/ui/web';
-import { Copy, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Copy, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
@@ -134,9 +134,7 @@ export function HiringApplicationFormsTableClient({ rows }: { rows: FormRow[] })
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex h-9 w-full max-w-[260px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 transition-[box-shadow,border-color] focus-within:border-[#121212] focus-within:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]">
-          <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
-            🔍
-          </span>
+          <Search className="h-3.5 w-3.5 text-[#9b9b9b]" aria-hidden />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}

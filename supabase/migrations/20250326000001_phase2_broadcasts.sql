@@ -1,4 +1,4 @@
--- Phase 2 — Broadcasts: messaging, reads, search, push tokens, scheduling.
+-- Phase 2  Broadcasts: messaging, reads, search, push tokens, scheduling.
 
 -- ---------------------------------------------------------------------------
 -- Tables
@@ -361,14 +361,14 @@ alter table public.broadcast_reads enable row level security;
 alter table public.push_tokens enable row level security;
 alter table public.broadcast_notification_jobs enable row level security;
 
--- broadcasts — select
+-- broadcasts  select
 create policy broadcasts_select_visible
   on public.broadcasts
   for select
   to authenticated
   using (public.broadcast_visible_to_reader(broadcasts));
 
--- broadcasts — insert (cancelled only via update)
+-- broadcasts  insert (cancelled only via update)
 drop policy if exists broadcasts_insert_scoped on public.broadcasts;
 
 create policy broadcasts_insert_scoped
@@ -389,7 +389,7 @@ create policy broadcasts_insert_scoped
     )
   );
 
--- broadcasts — update (creator)
+-- broadcasts  update (creator)
 create policy broadcasts_update_creator
   on public.broadcasts
   for update
@@ -408,7 +408,7 @@ create policy broadcasts_update_creator
     )
   );
 
--- broadcasts — update (manager approval / senior admin)
+-- broadcasts  update (manager approval / senior admin)
 create policy broadcasts_update_manager
   on public.broadcasts
   for update
@@ -479,7 +479,7 @@ create policy push_tokens_all_self
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
--- notification jobs — service role only (no user access)
+-- notification jobs  service role only (no user access)
 create policy broadcast_notification_jobs_deny
   on public.broadcast_notification_jobs
   for all

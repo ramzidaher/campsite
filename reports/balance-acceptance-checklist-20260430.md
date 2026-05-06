@@ -13,7 +13,7 @@
 
 ---
 
-## Gate A — Route-Family Read Model Consistency
+## Gate A  Route-Family Read Model Consistency
 
 Required checks:
 
@@ -34,7 +34,7 @@ Evidence to attach:
 
 ---
 
-## Gate B — Cache Model and Invalidation Integrity
+## Gate B  Cache Model and Invalidation Integrity
 
 Required checks:
 
@@ -50,7 +50,7 @@ Evidence to attach:
 
 ---
 
-## Gate C — Access and Shell Consistency
+## Gate C  Access and Shell Consistency
 
 Required checks:
 
@@ -64,7 +64,7 @@ Evidence to attach:
 
 ---
 
-## Gate D — Fallback Completeness Compliance
+## Gate D  Fallback Completeness Compliance
 
 Required checks:
 
@@ -83,7 +83,7 @@ Policy references:
 
 ---
 
-## Gate E — Verification Baseline
+## Gate E  Verification Baseline
 
 Required checks:
 
@@ -100,7 +100,7 @@ Evidence to attach:
 
 ---
 
-## Gate F — Inventory and Drift Control
+## Gate F  Inventory and Drift Control
 
 Required checks:
 

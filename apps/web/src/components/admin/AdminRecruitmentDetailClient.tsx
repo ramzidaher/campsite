@@ -184,11 +184,11 @@ export function AdminRecruitmentDetailClient({
   useEffect(() => { setStatus(req.status); }, [req.status]);
 
   const d = req.departments;
-  const deptName = (Array.isArray(d) ? d[0]?.name : d?.name) ?? '—';
+  const deptName = (Array.isArray(d) ? d[0]?.name : d?.name) ?? '';
   const shortlistingDates = parseDateArray(req.shortlisting_dates);
   const interviewSchedule = parseInterviewSchedule(req.interview_schedule);
   const sub = req.submitter;
-  const submitterName = ((Array.isArray(sub) ? sub[0]?.full_name : sub?.full_name) ?? '').trim() || '—';
+  const submitterName = ((Array.isArray(sub) ? sub[0]?.full_name : sub?.full_name) ?? '').trim() || '';
 
   function applyStatus() {
     setError(null);
@@ -475,7 +475,7 @@ export function AdminRecruitmentDetailClient({
               <ol className="space-y-4">
                 {events.map((ev) => {
                   const actor = ev.profiles;
-                  const actorName = ((Array.isArray(actor) ? actor[0]?.full_name : actor?.full_name) ?? '').trim() || '—';
+                  const actorName = ((Array.isArray(actor) ? actor[0]?.full_name : actor?.full_name) ?? '').trim() || '';
                   const from = ev.from_status ? recruitmentStatusLabel(ev.from_status) : null;
                   const to = recruitmentStatusLabel(ev.to_status);
                   return (

@@ -45,6 +45,6 @@
 
 - **`apps/mobile` is out of scope** for these documents; they describe **`apps/web`** UI only. Shared packages (`packages/types`, `packages/api`) are referenced where the web app imports them.
 - **Org admin** means `profiles.role` in `org_admin` (legacy `super_admin` may still appear in DB until fully migrated).
-- **Platform admin** means `platform_admins` table — never infer from `profiles.role`.
+- **Platform admin** means `platform_admins` table  never infer from `profiles.role`.
 - **Server gate:** Next.js Server Component or `layout.tsx` that `redirect()`s before rendering children.
 - **Client gate:** UI only; must not be sole enforcement for sensitive data.

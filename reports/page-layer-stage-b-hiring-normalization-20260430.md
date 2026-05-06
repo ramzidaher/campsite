@@ -1,6 +1,6 @@
-# Page Layer Stage B Report — Hiring Route Normalization Slice 1
+# Page Layer Stage B Report  Hiring Route Normalization Slice 1
 **Date:** 2026-04-30
-**Status:** COMPLETE — first hiring/admin list normalization slice
+**Status:** COMPLETE  first hiring/admin list normalization slice
 **Follow-up to:** `reports/page-layer-stage-a-route-inventory-20260430.md`
 
 ---

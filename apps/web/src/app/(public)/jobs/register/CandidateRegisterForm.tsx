@@ -4,6 +4,7 @@ import { tenantJobsSubrouteRelativePath } from '@/lib/tenant/adminUrl';
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { Check } from 'lucide-react';
 
 type Props = {
   orgSlug: string;
@@ -55,7 +56,7 @@ export function CandidateRegisterForm({ orgSlug, hostHeader }: Props) {
           className="flex h-12 w-12 items-center justify-center rounded-full text-[20px]"
           style={{ background: 'color-mix(in oklab, var(--org-brand-primary) 12%, var(--org-brand-surface))' }}
         >
-          ✓
+          <Check className="h-6 w-6 text-[var(--org-brand-primary)]" aria-hidden />
         </div>
         <h2
           className="mt-4 font-authSerif text-[1.5rem] tracking-[-0.02em]"

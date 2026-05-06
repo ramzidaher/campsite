@@ -4,6 +4,7 @@ import {
   advertReleaseDateToScheduledPublishAtIso,
 } from '@/lib/datetime/advertClosingDateToApplicationsCloseAtIso';
 import { mergeOrgTimeZoneIntoFormatOptions } from '@/lib/datetime';
+import { buildCandidateJobsLoginRedirectUrl } from '@/lib/jobs/candidateAuthRedirect';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
 import { onColorFor, orgBrandingCssVars, resolveOrgBranding } from '@/lib/orgBranding';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
@@ -69,7 +70,7 @@ function isTransientDataAccessError(message: string): boolean {
 
 function formatSalary(raw: string): string {
   const t = raw?.trim() ?? '';
-  if (!t) return '—';
+  if (!t) return '';
   return t.startsWith('£') ? t : `£${t}`;
 }
 
@@ -96,9 +97,9 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 }
 
 function formatDateValue(iso: string | null | undefined, orgTz: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return '';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString(
     'en-GB',
     mergeOrgTimeZoneIntoFormatOptions(orgTz, { day: 'numeric', month: 'short', year: 'numeric' }),
@@ -106,9 +107,9 @@ function formatDateValue(iso: string | null | undefined, orgTz: string | null | 
 }
 
 function formatDateTimeValue(iso: string | null | undefined, orgTz: string | null | undefined): string {
-  if (!iso) return 'Rolling — apply while listed';
+  if (!iso) return 'Rolling  apply while listed';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return 'Rolling — apply while listed';
+  if (Number.isNaN(d.getTime())) return 'Rolling  apply while listed';
   return d.toLocaleString(
     'en-GB',
     mergeOrgTimeZoneIntoFormatOptions(orgTz, {
@@ -156,7 +157,7 @@ function formatMultiDateSummary(values: string[]): string {
     .map((isoDay) => new Date(`${isoDay}T00:00:00.000Z`))
     .sort((a, b) => a.getTime() - b.getTime());
 
-  if (sortedUnique.length === 0) return '—';
+  if (sortedUnique.length === 0) return '';
   if (sortedUnique.length === 1) return formatDateDdMm(sortedUnique[0], true);
 
   const isConsecutive = sortedUnique
@@ -220,6 +221,9 @@ export default async function PublicJobPage({
   if (!orgSlug) notFound();
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const orgCandidates = Array.from(new Set([orgSlug, orgFromQuery, orgFromHost].filter(Boolean)));
   let data: unknown = null;
   let error: { message?: string | null } | null = null;
@@ -357,7 +361,16 @@ export default async function PublicJobPage({
   const applySummary =
     applyBits.length > 0 ? applyBits.join(', ') : jobApplicationModeLabel(job.application_mode);
 
-  const applyHref = tenantJobApplyRelativePath(jobSlug, orgSlug, host);
+  const applyDestination = tenantJobApplyRelativePath(jobSlug, orgSlug, host);
+  const applyHref = user
+    ? applyDestination
+    : buildCandidateJobsLoginRedirectUrl({
+        hostHeader: host,
+        orgSlug,
+        nextPath: applyDestination,
+      });
+  const applyLabel = user ? 'Apply now' : 'Sign in to apply';
+  const applyMobileLabel = user ? 'Apply for this role' : 'Sign in to apply for this role';
   const jobsIndexHref = tenantPublicJobsIndexRelativePath(orgSlug, host);
 
   const postedLong = job.published_at
@@ -491,7 +504,7 @@ export default async function PublicJobPage({
                 className="flex w-full items-center justify-center rounded-xl px-5 py-3.5 text-[15px] font-semibold transition-opacity hover:opacity-90"
                 style={{ background: 'var(--org-brand-primary)', color: 'var(--jobs-on-primary)' }}
               >
-                Apply for this role
+                {applyMobileLabel}
               </Link>
             </div>
           </div>
@@ -509,10 +522,12 @@ export default async function PublicJobPage({
                   className="flex w-full items-center justify-center rounded-xl px-4 py-3 text-[15px] font-semibold transition-opacity hover:opacity-90"
                   style={{ background: 'var(--org-brand-primary)', color: 'var(--jobs-on-primary)' }}
                 >
-                  Apply now
+                  {applyLabel}
                 </Link>
                 <p className="mt-3 text-[12px] leading-relaxed" style={{ color: 'var(--org-brand-muted)' }}>
-                  Submit online — accepts {applySummary}. You will receive a private link to track your application.
+                  {user
+                    ? `Submit online  accepts ${applySummary}. Track every application from your candidate portal.`
+                    : `Sign in or create a candidate account to apply. Accepts ${applySummary}.`}
                 </p>
               </div>
 

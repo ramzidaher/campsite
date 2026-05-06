@@ -66,7 +66,7 @@ type Props<T extends WeekGridShiftBase> = {
   } | null;
   /**
    * Org calendar busy blocks for the signed-in user (manual / broadcast events), drawn behind shifts.
-   * Same coordinate system as shifts — use normalized `{ id, start_time, end_time }` from `calendarEventForWeekLayout`.
+   * Same coordinate system as shifts  use normalized `{ id, start_time, end_time }` from `calendarEventForWeekLayout`.
    */
   calendarBusyBlocks?: Array<{ id: string; title: string; start_time: string; end_time: string }>;
 };

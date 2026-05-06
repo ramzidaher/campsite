@@ -7,7 +7,7 @@ export function usesAppleCommandKey(): boolean {
 
   const ua = navigator.userAgent ?? '';
 
-  // Chrome OS / Chromebooks — Ctrl-based shortcuts (no Command key)
+  // Chrome OS / Chromebooks  Ctrl-based shortcuts (no Command key)
   if (/CrOS/i.test(ua)) return false;
 
   // Chromium User-Agent Client Hints (preferred when available)

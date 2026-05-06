@@ -3,7 +3,7 @@
 import { FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check, Search, UserCheck, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -214,8 +214,9 @@ export function AdminPendingApprovalsClient({
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/users?status=pending"
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
           >
+            <UserCheck className="h-3.5 w-3.5" aria-hidden />
             Manage in Users
           </Link>
         </div>
@@ -246,8 +247,9 @@ export function AdminPendingApprovalsClient({
               type="button"
               disabled={bulkAllBusy}
               onClick={() => void approveAllPending()}
-              className="shrink-0 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:opacity-50"
             >
+              <Check className="h-3.5 w-3.5" aria-hidden />
               {bulkAllBusy ? 'Working...' : 'Approve all pending'}
             </button>
           </div>
@@ -255,9 +257,7 @@ export function AdminPendingApprovalsClient({
       ) : null}
 
       <div className="mb-4 flex h-9 w-full max-w-[280px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3">
-        <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
-          🔍
-        </span>
+        <Search className="h-3.5 w-3.5 text-[#9b9b9b]" aria-hidden />
         <input
           type="search"
           value={q}
@@ -328,16 +328,18 @@ export function AdminPendingApprovalsClient({
                         <button
                           type="button"
                           disabled={busy === p.id}
-                          className="rounded-lg bg-[#b91c1c] px-3 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#b91c1c] px-3 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50"
                           onClick={() => void reject(p.id)}
                         >
+                          <X className="h-3.5 w-3.5" aria-hidden />
                           Confirm reject
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b]"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b]"
                           onClick={() => setRejectingId(null)}
                         >
+                          <ArrowRight className="h-3.5 w-3.5 rotate-180" aria-hidden />
                           Cancel
                         </button>
                       </div>
@@ -361,21 +363,21 @@ export function AdminPendingApprovalsClient({
                       <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        title="Approve"
                         disabled={busy === p.id}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#15803d] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                        className="inline-flex h-9 items-center justify-center rounded-lg bg-[#15803d] px-3 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                         onClick={() => void approve(p.id)}
                       >
-                        ✓
+                        <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                        Approve
                       </button>
                       <button
                         type="button"
-                        title="Reject"
                         disabled={busy === p.id}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-[#b91c1c] bg-white text-[15px] font-semibold text-[#b91c1c] transition-colors hover:bg-[#fef2f2] disabled:opacity-50"
+                        className="inline-flex h-9 items-center justify-center rounded-lg border border-[#b91c1c] bg-white px-3 text-[12.5px] font-medium text-[#b91c1c] transition-colors hover:bg-[#fef2f2] disabled:opacity-50"
                         onClick={() => setRejectingId(p.id)}
                       >
-                        ✕
+                        <X className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                        Reject
                       </button>
                       </div>
                     </div>

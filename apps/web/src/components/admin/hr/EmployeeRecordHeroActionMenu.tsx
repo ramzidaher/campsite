@@ -14,7 +14,7 @@ type Props = {
   editLabel: string;
   canExportCsv: boolean;
   canExportPdf: boolean;
-  /** Sensitive CSV — same gate as page: `include_sensitive` + CSV permission. */
+  /** Sensitive CSV  same gate as page: `include_sensitive` + CSV permission. */
   canExportSensitive: boolean;
   className?: string;
 };
@@ -41,7 +41,7 @@ export function EmployeeRecordHeroActionMenu({
   if (!showEdit && !hasExports) return null;
 
   const hasStandardExports = canExportCsv || canExportPdf;
-  /** Separator after Edit when CSV/PDF follow (not when only sensitive follows — that uses the divider before sensitive). */
+  /** Separator after Edit when CSV/PDF follow (not when only sensitive follows  that uses the divider before sensitive). */
   const showDividerAfterEdit = showEdit && hasStandardExports;
   const showDividerBeforeSensitive =
     canExportSensitive && (showEdit || hasStandardExports);

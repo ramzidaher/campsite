@@ -91,7 +91,7 @@ function resourcePromptPreamble(title: string, description: string): string {
   const d = description.trim();
   return `You help staff understand internal policy and reference documents for camps, schools, and teams.
 Summarize in 2–5 short bullet points (max ~150 words) what readers need to know: key rules, deadlines, who to contact, exceptions, and required actions.
-If information is missing from the document, say so — do not invent policies or dates.
+If information is missing from the document, say so  do not invent policies or dates.
 
 Title: ${t}
 ${d ? `Description: ${d}\n` : ''}`;

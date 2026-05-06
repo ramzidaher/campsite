@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: 'Data processing · Campsite',
-  description: 'How Campsite processes personal data — Common Ground Studios Ltd',
+  description: 'How Campsite processes personal data  Common Ground Studios Ltd',
 };
 
 export default async function DataProcessingPage() {

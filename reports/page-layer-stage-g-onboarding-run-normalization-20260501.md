@@ -1,4 +1,4 @@
-# Page Layer Stage G Report — Onboarding Run Detail Normalization
+# Page Layer Stage G Report  Onboarding Run Detail Normalization
 **Date:** 2026-05-01  
 **Status:** COMPLETE (slice)  
 **Workstream:** Stage G global page-balance closure

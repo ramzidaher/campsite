@@ -96,7 +96,7 @@ export const getCachedJobApplicationsPipelinePageData = cache(
           supabase
             .from('job_applications')
             .select(
-              'id, candidate_name, candidate_email, stage, submitted_at, cv_storage_path, loom_url, staffsavvy_score, offer_letter_status'
+              'id, candidate_name, candidate_email, stage, submitted_at, cv_storage_path, loom_url, staffsavvy_score, offer_letter_status, candidate_user_id'
             )
             .eq('job_listing_id', jobId)
             .eq('org_id', orgId)
@@ -146,6 +146,7 @@ export const getCachedJobApplicationsPipelinePageData = cache(
             offer_letter_status: (row.offer_letter_status as string | null) ?? null,
             screening_overall_avg: agg?.overall_avg ?? null,
             screening_scorer_count: agg?.distinct_scorer_count ?? 0,
+            is_account_linked: Boolean((row.candidate_user_id as string | null | undefined) ?? null),
           };
         });
 

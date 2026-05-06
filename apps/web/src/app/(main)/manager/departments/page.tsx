@@ -4,6 +4,7 @@ import { parseShellPermissionKeys, shellBundleOrgId, shellBundleProfileStatus } 
 import { getCachedMainShellLayoutBundle } from '@/lib/supabase/cachedMainShellLayoutBundle';
 import { redirect } from 'next/navigation';
 import { warnIfSlowServerPath, withServerPerf } from '@/lib/perf/serverPerf';
+import { isOrgAdminRole } from '@campsite/types';
 
 export default async function ManagerDepartmentsPage({
   searchParams,
@@ -27,6 +28,7 @@ export default async function ManagerDepartmentsPage({
   if (shellBundleProfileStatus(bundle) !== 'active') redirect('/broadcasts');
   const permissionKeys = parseShellPermissionKeys(bundle);
   if (!permissionKeys.includes('departments.view')) redirect('/forbidden');
+  if (isOrgAdminRole(role)) redirect(openDeptId ? `/admin/departments?dept=${encodeURIComponent(openDeptId)}` : '/admin/departments');
 
   const pageData = await withServerPerf(
     '/manager/departments',

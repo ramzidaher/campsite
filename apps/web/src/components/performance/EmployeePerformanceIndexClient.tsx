@@ -49,7 +49,7 @@ function statusInfo(status: string, isReviewee: boolean): { label: string; dot: 
     case 'self_submitted':
       return isReviewee
         ? { label: 'Self-assessment done', dot: 'bg-[#1d4ed8]', hint: 'Waiting for your manager' }
-        : { label: 'Ready to review', dot: 'bg-[#d97706]', hint: 'Employee has submitted — your turn' };
+        : { label: 'Ready to review', dot: 'bg-[#d97706]', hint: 'Employee has submitted  your turn' };
     case 'manager_submitted':
       return { label: 'Manager done', dot: 'bg-[#7c3aed]', hint: '' };
     default:
@@ -98,7 +98,7 @@ function ReviewCard({ r }: { r: ReviewSummary }) {
           {info.hint ? <span className="text-[12px] text-[#9b9b9b]">· {info.hint}</span> : null}
         </div>
         {isOverdue && dueDate ? (
-          <p className="mt-1 text-[11.5px] font-medium text-[#b91c1c]">Overdue — was due {fmtDate(dueDate)}</p>
+          <p className="mt-1 text-[11.5px] font-medium text-[#b91c1c]">Overdue  was due {fmtDate(dueDate)}</p>
         ) : dueDate && r.status !== 'completed' ? (
           <p className="mt-1 text-[11.5px] text-[#9b9b9b]">Due {fmtDate(dueDate)}</p>
         ) : r.completed_at ? (

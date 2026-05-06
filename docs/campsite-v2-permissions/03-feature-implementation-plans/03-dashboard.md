@@ -1,4 +1,4 @@
-# 03 — Dashboard (home)
+# 03  Dashboard (home)
 
 ## 1. Product intent
 
@@ -26,7 +26,7 @@
 
 ### 2.2 Count queries
 
-**File:** `packages/api/src/dashboardStatCounts.ts` — `fetchDashboardStatCounts(supabase, { userId, orgId, role })`
+**File:** `packages/api/src/dashboardStatCounts.ts`  `fetchDashboardStatCounts(supabase, { userId, orgId, role })`
 
 - Imports **`dashboardAggregateScope`** from **`@campsite/types`** (no duplicated role matrix).
 
@@ -35,7 +35,7 @@
 - **`org` scope:** `broadcasts` count `status = 'sent'` for `org_id`; `profiles` count `status = 'active'` for `org_id`.
 - **`dept` scope:** Union `user_departments` for user; for **managers**, also union `dept_managers`. Filter `broadcasts` and member counts to those departments (see implementation for exact queries).
 
-**Rule:** If you change scope in `dashboard.ts`, **`fetchDashboardStatCounts` follows automatically** via the shared import — still verify query behaviour for each scope.
+**Rule:** If you change scope in `dashboard.ts`, **`fetchDashboardStatCounts` follows automatically** via the shared import  still verify query behaviour for each scope.
 
 ## 3. Backend (Supabase)
 
@@ -52,7 +52,7 @@
 ### 3.2 RLS
 
 - All queries run as **authenticated** user; **RLS** must ensure counts cannot include data the user cannot otherwise read.
-- If KPI numbers ever **diverge** from feed visibility, treat it as a **security bug** — fix RLS or restrict the query.
+- If KPI numbers ever **diverge** from feed visibility, treat it as a **security bug**  fix RLS or restrict the query.
 
 ### 3.3 RPCs used on dashboard page
 
@@ -98,15 +98,15 @@
 - [x] Org admin sees org-wide counts via `fetchDashboardStatCounts` with `scope === 'org'`. _Spot-check vs SQL when changing RLS._
 - [x] Manager sees counts across union of **managed + member** departments (`dept_managers` + `user_departments`, filtered by org).
 - [x] Administrator / duty manager / CSA see **no** KPI tiles (`dashboardAggregateScope` → `none`; `broadcastTotal` / `memberActiveTotal` omitted).
-- [x] `packages/types` and `packages/api` stay aligned — **`dashboardStatCounts` imports `dashboardAggregateScope` from `@campsite/types`**.
+- [x] `packages/types` and `packages/api` stay aligned  **`dashboardStatCounts` imports `dashboardAggregateScope` from `@campsite/types`**.
 
 ## 6. Automated tests (`npm run test --workspace=@campsite/web`)
 
-- `src/lib/__tests__/dashboardAggregateScope.test.ts` — scope per role class (must match §2.1).
+- `src/lib/__tests__/dashboardAggregateScope.test.ts`  scope per role class (must match §2.1).
 
 ## 7. Extension notes
 
-- If product later gives **administrator** KPI tiles, change **`dashboardAggregateScope`** first, then verify **`fetchDashboardStatCounts`** branch behaviour and UI copy — not the reverse.
+- If product later gives **administrator** KPI tiles, change **`dashboardAggregateScope`** first, then verify **`fetchDashboardStatCounts`** branch behaviour and UI copy  not the reverse.
 
 ## 8. Database migrations
 

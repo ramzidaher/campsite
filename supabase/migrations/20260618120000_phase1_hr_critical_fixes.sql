@@ -1,8 +1,8 @@
 -- Phase 1: Critical HR bug fixes
--- 1. review_cycles.created_by — add auth.uid() default so direct INSERT doesn't crash on NOT NULL
--- 2. review_manager_submit — fix permission gate: view_reports (read) wrongly used as write gate
--- 3. review_goal_upsert    — same permission fix
--- 4. offer_letter_status   — add superseded to check constraint + trigger to keep it in sync
+-- 1. review_cycles.created_by  add auth.uid() default so direct INSERT doesn't crash on NOT NULL
+-- 2. review_manager_submit  fix permission gate: view_reports (read) wrongly used as write gate
+-- 3. review_goal_upsert     same permission fix
+-- 4. offer_letter_status    add superseded to check constraint + trigger to keep it in sync
 
 -- ---------------------------------------------------------------------------
 -- 1. review_cycles: default created_by to auth.uid()
@@ -71,7 +71,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 3. Fix review_goal_upsert: same permission fix — HR override must use
+-- 3. Fix review_goal_upsert: same permission fix  HR override must use
 --    performance.manage_cycles, not the read-only performance.view_reports.
 -- ---------------------------------------------------------------------------
 

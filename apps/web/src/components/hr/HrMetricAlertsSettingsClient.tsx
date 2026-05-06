@@ -43,7 +43,7 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
   });
 
   const field =
-    'mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]';
+    'mt-1 h-10 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none focus:border-[#121212]';
   const label = 'mb-1 block text-[12px] font-medium text-[#505050]';
 
   const save = useCallback(async () => {
@@ -119,7 +119,7 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 px-5 py-8 sm:px-7">
+    <div className="w-full space-y-6 px-5 py-6 sm:px-[28px] sm:py-7">
       <div>
         <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
           HR metric alerts
@@ -143,7 +143,7 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
 
       <section className="rounded-xl border border-[#d8d8d8] bg-white p-5">
         <h2 className="mb-4 font-authSerif text-[18px] text-[#121212]">Which metrics are on</h2>
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {(
             [
               ['bradford', 'Bradford factor (sickness + leave)'],
@@ -199,7 +199,7 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
         </label>
         <div className="mt-3">
           <label className={label} htmlFor="abs_max">
-            Absolute weekly cap (hours), if no contract hours — default 48
+            Absolute weekly cap (hours), if no contract hours  default 48
           </label>
           <input
             id="abs_max"
@@ -260,7 +260,7 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
         </p>
         <div className="space-y-2">
           {eqCodes.map((row, i) => (
-            <div key={i} className="flex flex-wrap gap-2">
+            <div key={i} className="grid gap-2 md:grid-cols-[170px_minmax(0,1fr)_auto] md:items-end">
               <input
                 value={row.code}
                 onChange={(e) => updateEqRow(i, 'code', e.target.value)}
@@ -278,7 +278,7 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
               <button
                 type="button"
                 onClick={() => removeEqRow(i)}
-                className="rounded-lg border border-[#d8d8d8] px-2 text-[12px] text-[#6b6b6b]"
+                className="h-10 rounded-lg border border-[#d8d8d8] px-3 text-[12px] text-[#6b6b6b]"
                 disabled={busy}
               >
                 Remove
@@ -296,12 +296,12 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
         </button>
       </section>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           disabled={busy}
           onClick={() => void save()}
-          className="rounded-lg bg-[#121212] px-4 py-2.5 text-[13px] font-medium text-white disabled:opacity-50"
+          className="h-10 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-white disabled:opacity-50"
         >
           Save settings
         </button>
@@ -309,7 +309,7 @@ export function HrMetricAlertsSettingsClient({ initial }: { initial: SettingsRow
           type="button"
           disabled={busy}
           onClick={() => void runNow()}
-          className="rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#121212] disabled:opacity-50"
+          className="h-10 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212] disabled:opacity-50"
         >
           Run evaluation now
         </button>

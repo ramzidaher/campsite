@@ -137,7 +137,7 @@ export function RecruitmentNotificationsClient({
                         </p>
                         <p className="mt-0.5 text-[12px] text-[#6b6b6b]">
                           <span className="font-medium text-[#121212]">{n.job_title}</span>
-                          {n.actor_name ? ` — raised by ${n.actor_name}` : ''}
+                          {n.actor_name ? `  raised by ${n.actor_name}` : ''}
                         </p>
                       </>
                     ) : n.kind === 'panel_assignment' ? (
@@ -145,7 +145,7 @@ export function RecruitmentNotificationsClient({
                         <p className="text-[13px] font-medium text-[#121212]">You were added to a recruitment panel</p>
                         <p className="mt-0.5 text-[12px] text-[#6b6b6b]">
                           <span className="font-medium text-[#121212]">{n.job_title}</span>
-                          {n.actor_name ? ` — assigned by ${n.actor_name}` : ''}
+                          {n.actor_name ? `  assigned by ${n.actor_name}` : ''}
                         </p>
                       </>
                     ) : (

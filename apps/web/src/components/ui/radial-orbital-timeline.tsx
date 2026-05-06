@@ -46,6 +46,11 @@ export interface TimelineItem {
 
 interface RadialOrbitalTimelineProps {
   timelineData: TimelineItem[];
+  showEnergy?: boolean;
+  showConnectedNodes?: boolean;
+  centerAvatarUrl?: string | null;
+  centerAvatarAlt?: string;
+  centerFallbackText?: string;
 }
 
 const timelineIconMap = {
@@ -65,6 +70,11 @@ const ORBIT_RADIUS_PX = 192; // Matches the visible 24rem orbit ring.
 
 export default function RadialOrbitalTimeline({
   timelineData,
+  showEnergy = true,
+  showConnectedNodes = true,
+  centerAvatarUrl = null,
+  centerAvatarAlt = 'Profile avatar',
+  centerFallbackText = '',
 }: RadialOrbitalTimelineProps) {
   const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({});
   const [rotationAngle, setRotationAngle] = useState<number>(0);
@@ -181,13 +191,19 @@ export default function RadialOrbitalTimeline({
           ref={orbitRef}
           style={{ perspective: '1000px' }}
         >
-          <div className="absolute z-10 flex h-16 w-16 items-center justify-center rounded-full animate-pulse bg-[radial-gradient(circle_at_30%_30%,color-mix(in_srgb,var(--org-brand-primary,#0f6e56)_92%,white)_0%,var(--org-brand-primary,#0f6e56)_68%,color-mix(in_srgb,var(--org-brand-bg,#faf9f6)_65%,var(--org-brand-primary,#0f6e56))_100%)]">
+          <div className="absolute z-10 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full animate-pulse bg-[radial-gradient(circle_at_30%_30%,color-mix(in_srgb,var(--org-brand-primary,#0f6e56)_92%,white)_0%,var(--org-brand-primary,#0f6e56)_68%,color-mix(in_srgb,var(--org-brand-bg,#faf9f6)_65%,var(--org-brand-primary,#0f6e56))_100%)]">
             <div className="absolute h-20 w-20 animate-ping rounded-full border border-[color-mix(in_srgb,var(--org-brand-primary,#0f6e56)_35%,transparent)] opacity-70" />
             <div
               className="absolute h-24 w-24 animate-ping rounded-full border border-[color-mix(in_srgb,var(--org-brand-primary,#0f6e56)_20%,transparent)] opacity-50"
               style={{ animationDelay: '0.5s' }}
             />
-            <div className="h-8 w-8 rounded-full backdrop-blur-lg bg-[color-mix(in_srgb,var(--org-brand-bg,#faf9f6)_82%,white)]" />
+            <div className="relative z-10 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full backdrop-blur-lg bg-[color-mix(in_srgb,var(--org-brand-bg,#faf9f6)_82%,white)] text-[10px] font-semibold text-[var(--org-brand-primary,#0f6e56)]">
+              {centerAvatarUrl ? (
+                <img src={centerAvatarUrl} alt={centerAvatarAlt} className="h-full w-full object-cover" />
+              ) : (
+                <span>{centerFallbackText}</span>
+              )}
+            </div>
           </div>
 
           <div className="absolute h-96 w-96 rounded-full border border-[color-mix(in_srgb,var(--org-brand-border,#d8d8d8)_45%,transparent)]" />
@@ -270,23 +286,25 @@ export default function RadialOrbitalTimeline({
                     </CardHeader>
                     <CardContent className="text-xs text-[color-mix(in_srgb,var(--org-brand-text,#121212)_84%,var(--org-brand-muted,#6b6b6b))]">
                       <p>{item.content}</p>
-                      <div className="mt-4 border-t border-[color-mix(in_srgb,var(--org-brand-border,#d8d8d8)_65%,transparent)] pt-3">
-                        <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="flex items-center">
-                            <Zap size={10} className="mr-1" />
-                            Energy Level
-                          </span>
-                          <span className="font-mono">{item.energy}%</span>
+                      {showEnergy ? (
+                        <div className="mt-4 border-t border-[color-mix(in_srgb,var(--org-brand-border,#d8d8d8)_65%,transparent)] pt-3">
+                          <div className="mb-1 flex items-center justify-between text-xs">
+                            <span className="flex items-center">
+                              <Zap size={10} className="mr-1" />
+                              Energy Level
+                            </span>
+                            <span className="font-mono">{item.energy}%</span>
+                          </div>
+                          <div className="h-1 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--org-brand-border,#d8d8d8)_60%,transparent)]">
+                            <div
+                              className="h-full bg-[linear-gradient(90deg,var(--org-brand-primary,#0f6e56)_0%,color-mix(in_srgb,var(--org-brand-primary,#0f6e56)_62%,var(--org-brand-secondary,#4f4f4f))_100%)]"
+                              style={{ width: `${item.energy}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-1 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--org-brand-border,#d8d8d8)_60%,transparent)]">
-                          <div
-                            className="h-full bg-[linear-gradient(90deg,var(--org-brand-primary,#0f6e56)_0%,color-mix(in_srgb,var(--org-brand-primary,#0f6e56)_62%,var(--org-brand-secondary,#4f4f4f))_100%)]"
-                            style={{ width: `${item.energy}%` }}
-                          />
-                        </div>
-                      </div>
+                      ) : null}
 
-                      {item.relatedIds.length > 0 && (
+                      {showConnectedNodes && item.relatedIds.length > 0 && (
                         <div className="mt-4 border-t border-[color-mix(in_srgb,var(--org-brand-border,#d8d8d8)_65%,transparent)] pt-3">
                           <div className="mb-2 flex items-center">
                             <Link size={10} className="mr-1 text-[var(--org-brand-muted,#6b6b6b)]" />

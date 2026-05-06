@@ -107,7 +107,7 @@ create policy calendar_event_attendees_manage
   );
 
 -- ---------------------------------------------------------------------------
--- In-app notifications (survive event delete — link optional)
+-- In-app notifications (survive event delete  link optional)
 -- ---------------------------------------------------------------------------
 
 create table if not exists public.calendar_event_notifications (
@@ -692,4 +692,4 @@ revoke all   on function public.main_shell_badge_counts_bundle() from public;
 grant execute on function public.main_shell_badge_counts_bundle() to authenticated;
 
 -- Allow SECURITY DEFINER triggers to insert notifications (bypass RLS via owner)
--- Notifications are inserted by trigger running as superuser — already bypasses RLS.
+-- Notifications are inserted by trigger running as superuser  already bypasses RLS.

@@ -200,7 +200,7 @@ export async function loadAdminOverview(
     const title = (b.title as string) ?? 'Broadcast';
     activities.push({
       id: `b-${b.id}`,
-      icon: '📡',
+      icon: 'radio',
       text: `${who} sent “${title.length > 48 ? `${title.slice(0, 48)}...` : title}”`,
       timeLabel: relTime(sent),
       at: t,
@@ -218,7 +218,7 @@ export async function loadAdminOverview(
         : `${name} joined the organisation`;
     activities.push({
       id: `p-${p.id}`,
-      icon: '👤',
+      icon: 'user',
       text: line,
       timeLabel: relTime(created),
       at: t,

@@ -1,4 +1,4 @@
--- Dev seed — applied after migrations. Uses idempotent checks.
+-- Dev seed  applied after migrations. Uses idempotent checks.
 
 insert into public.organisations (name, slug, is_active)
 values ('Demo Students'' Union', 'demo', true)
@@ -53,7 +53,7 @@ select
   p.id,
   p.id,
   'Sample: Active employees',
-  'Dev seed — active staff only (quick filter). Use Run to preview rows.',
+  'Dev seed  active staff only (quick filter). Use Run to preview rows.',
   array['hr']::text[],
   '{"domains":["hr"],"fields":["employee_name","employee_department","employee_role","employee_status"],"filters":[],"filterMode":"and","sort":[],"groupBy":[],"quickFilters":["active_only"],"departmentIds":[]}'::jsonb,
   array['seed', 'sample']::text[],
@@ -73,7 +73,7 @@ select
   p.id,
   p.id,
   'Sample: Staff directory',
-  'Dev seed — directory-style columns including tenure and onboarding.',
+  'Dev seed  directory-style columns including tenure and onboarding.',
   array['hr']::text[],
   '{"domains":["hr"],"fields":["employee_name","employee_department","employee_role","employee_status","employee_start_date","onboarding_status","onboarding_days_since_start"],"filters":[],"filterMode":"and","sort":[{"field":"employee_name","direction":"asc"}],"groupBy":[],"quickFilters":[],"departmentIds":[]}'::jsonb,
   array['seed', 'sample']::text[],
@@ -93,7 +93,7 @@ select
   p.id,
   p.id,
   'Sample: Time & pay snapshot',
-  'Dev seed — HR + finance fields (timesheets, wagesheets, bank changes).',
+  'Dev seed  HR + finance fields (timesheets, wagesheets, bank changes).',
   array['hr', 'finance']::text[],
   '{"domains":["hr","finance"],"fields":["employee_name","employee_department","timesheet_week_start","timesheet_hours_total","timesheet_status","wagesheet_status","tax_document_status","bank_detail_change_status","bank_detail_change_at"],"filters":[],"filterMode":"and","sort":[],"groupBy":[],"quickFilters":[],"departmentIds":[]}'::jsonb,
   array['seed', 'sample']::text[],

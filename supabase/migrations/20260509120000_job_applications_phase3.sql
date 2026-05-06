@@ -2,7 +2,7 @@
 -- extend public job RPC, auto-archive listing when an application is marked hired.
 
 -- ---------------------------------------------------------------------------
--- Storage bucket (private — uploads via service role / server only)
+-- Storage bucket (private  uploads via service role / server only)
 -- ---------------------------------------------------------------------------
 
 insert into storage.buckets (id, name, public)
@@ -176,7 +176,7 @@ create trigger job_applications_archive_listing_on_hired_trg
   when (new.stage = 'hired' and old.stage is distinct from new.stage)
   execute procedure public.job_applications_archive_listing_on_hired();
 
--- Note: job_listings has updated_at trigger already; archive won't bump it unless we add side effect — acceptable for Phase 3
+-- Note: job_listings has updated_at trigger already; archive won't bump it unless we add side effect  acceptable for Phase 3
 
 -- ---------------------------------------------------------------------------
 -- Extend public job listing RPC (add job_listing_id)

@@ -1,4 +1,4 @@
--- Phase 3: draft vs published rotas — visibility + suppress shift notification jobs while draft.
+-- Phase 3: draft vs published rotas  visibility + suppress shift notification jobs while draft.
 
 alter table public.rotas
   add column if not exists status text not null default 'published'

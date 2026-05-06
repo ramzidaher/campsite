@@ -1,4 +1,4 @@
--- Phase 4 — Staff discount tiers, QR token audit rows, verify rate limiting, scan logs.
+-- Phase 4  Staff discount tiers, QR token audit rows, verify rate limiting, scan logs.
 
 -- ---------------------------------------------------------------------------
 -- Discount tiers (one row per role per org)
@@ -28,7 +28,7 @@ create table public.discount_tiers (
 create index discount_tiers_org_idx on public.discount_tiers (org_id);
 
 -- ---------------------------------------------------------------------------
--- Staff QR tokens (hash only — issued by Edge Function + service role)
+-- Staff QR tokens (hash only  issued by Edge Function + service role)
 -- ---------------------------------------------------------------------------
 
 create table public.staff_qr_tokens (

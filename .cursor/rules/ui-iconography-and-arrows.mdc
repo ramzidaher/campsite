@@ -19,6 +19,13 @@ Use these rules when adding or editing UI actions (links, buttons, CTA rows) in 
    - icon size typically `h-3.5 w-3.5` to `h-4 w-4` for inline action text
    - icon should be `aria-hidden` when decorative
 
+## Emoji-as-icon ban
+
+1. **Do not use emoji glyphs as UI icons** in product surfaces (headers, stat cards, actions, filters, tabs, empty states, modal controls).
+   - Avoid examples: `🔍`, `📡`, `👥`, `⏳`, `📬`, `✓`, `✕`, `📅`.
+2. Replace emoji affordances with `lucide-react` icons (or the canonical icon set already used by that surface).
+3. Keep emoji only when it is user/content data (for example user-selected persona/theme content), not interface chrome.
+
 ## Hover/interaction style for “View all” style links
 
 1. Prefer **no underline by default**.

@@ -1,6 +1,6 @@
-# Page Layer Stage D Report — HR Recruitment Branch Unification Slice 3
+# Page Layer Stage D Report  HR Recruitment Branch Unification Slice 3
 **Date:** 2026-04-30  
-**Status:** COMPLETE — `/hr/recruitment` unified under shared cached page read model  
+**Status:** COMPLETE  `/hr/recruitment` unified under shared cached page read model  
 **Follow-up to:** `reports/product-balance-readiness-audit-20260430.md`
 
 ---

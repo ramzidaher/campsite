@@ -91,7 +91,7 @@ export default async function CandidateApplicationDetailPage({
         dateStyle: 'medium',
         timeStyle: 'short',
       })
-    : '—';
+    : '';
 
   return (
     <div
@@ -196,7 +196,7 @@ export default async function CandidateApplicationDetailPage({
           className="mt-10 text-center text-[11px]"
           style={{ color: 'var(--org-brand-muted)' }}
         >
-          You can also bookmark your private tracker link from the confirmation email — no sign-in required.
+          You can also bookmark your private tracker link from the confirmation email  no sign-in required.
         </p>
       </div>
     </div>

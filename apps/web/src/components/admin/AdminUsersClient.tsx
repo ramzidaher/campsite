@@ -5,7 +5,7 @@ import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewM
 import { MemberPermissionOverridesPanel } from '@/components/admin/MemberPermissionOverridesPanel';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
-import { Lock } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Download, FilterX, Link2, Lock, Plus, Search, UserX, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
@@ -20,7 +20,6 @@ export type UserRow = {
   departments: string[];
 };
 
-const PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 350;
 
 const ROLE_OPTION_LABEL: Record<string, string> = {
@@ -115,7 +114,7 @@ export function AdminUsersClient({
   managerChoices: { id: string; full_name: string }[];
   initialRows: UserRow[];
   departments: { id: string; name: string; type: string; is_archived: boolean }[];
-  defaultFilters: { q?: string; dept?: string; status?: string; role?: string };
+  defaultFilters: { q?: string; dept?: string; status?: string; role?: string; limit?: string };
   orgName: string;
   totalMemberCount: number;
   /** When true, quick-view can link to `/hr/records/{id}` */
@@ -147,6 +146,10 @@ export function AdminUsersClient({
   const [statusFilter, setStatusFilter] = useState(defaultFilters.status ?? 'all');
   const [roleFilter, setRoleFilter] = useState(defaultFilters.role ?? 'all');
   const [deptFilter, setDeptFilter] = useState(defaultFilters.dept ?? 'all');
+  const [perPage, setPerPage] = useState(() => {
+    const parsed = Number.parseInt(defaultFilters.limit ?? '25', 10);
+    return [25, 50, 100, 200].includes(parsed) ? parsed : 25;
+  });
   const [showInfo, setShowInfo] = useState(false);
   const [isSearchPending, startSearchTransition] = useTransition();
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -211,7 +214,9 @@ export function AdminUsersClient({
     setStatusFilter(defaultFilters.status ?? 'all');
     setRoleFilter(defaultFilters.role ?? 'all');
     setDeptFilter(defaultFilters.dept ?? 'all');
-  }, [defaultFilters.q, defaultFilters.status, defaultFilters.role, defaultFilters.dept]);
+    const parsed = Number.parseInt(defaultFilters.limit ?? '25', 10);
+    setPerPage([25, 50, 100, 200].includes(parsed) ? parsed : 25);
+  }, [defaultFilters.q, defaultFilters.status, defaultFilters.role, defaultFilters.dept, defaultFilters.limit]);
 
   useEffect(() => {
     const inUrl = (searchParams?.get('q') ?? '').trim();
@@ -249,8 +254,8 @@ export function AdminUsersClient({
     });
   }, [rows, statusFilter, roleFilter, deptFilter, activeDepts]);
 
-  const slice = filteredRows.slice(page * PAGE, page * PAGE + PAGE);
-  const pages = Math.max(1, Math.ceil(filteredRows.length / PAGE));
+  const slice = filteredRows.slice(page * perPage, page * perPage + perPage);
+  const pages = Math.max(1, Math.ceil(filteredRows.length / perPage));
 
   function toggleAll() {
     if (selected.size === slice.length) setSelected(new Set());
@@ -576,7 +581,7 @@ export function AdminUsersClient({
           <p className="mt-1 text-[13px] text-[#6b6b6b]">
             {totalMemberCount} member{totalMemberCount === 1 ? '' : 's'} across {orgName}
             {filteredRows.length < totalMemberCount ? (
-              <span className="text-[#9b9b9b]"> · {filteredRows.length} shown (filters / max 500 loaded)</span>
+              <span className="text-[#9b9b9b]"> · {filteredRows.length} shown</span>
             ) : null}
           </p>
         </div>
@@ -604,16 +609,18 @@ export function AdminUsersClient({
           <button
             type="button"
             onClick={() => openInviteModal()}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
           >
-            + Invite by email
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            Invite by email
           </button>
           <button
             type="button"
             onClick={() => void openSelfSignupLink()}
             disabled={busy === 'self-signup-link'}
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
           >
+            <Link2 className="h-3.5 w-3.5" aria-hidden />
             {busy === 'self-signup-link' ? 'Generating link...' : 'Open self-signup link'}
           </button>
         </div>
@@ -621,9 +628,7 @@ export function AdminUsersClient({
 
       <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex h-9 w-full max-w-[240px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 transition-[box-shadow] focus-within:border-[#121212] focus-within:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]">
-          <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
-            🔍
-          </span>
+          <Search className="h-3.5 w-3.5 text-[#9b9b9b]" aria-hidden />
           <input
             type="text"
             inputMode="search"
@@ -640,40 +645,68 @@ export function AdminUsersClient({
           />
         </div>
 
-        <FormSelect
-          value={roleFilter}
-          onChange={(e) => {
-            setRoleFilter(e.target.value);
-            setPage(0);
-          }}
-          className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
-          aria-label="Filter by role"
-        >
-          <option value="all">All roles</option>
-          <option value="unassigned">{ROLE_OPTION_LABEL.unassigned}</option>
-          {roleFilterOptions.map((r) => (
-            <option key={r.key} value={r.key}>
-              {r.label}
-            </option>
-          ))}
-        </FormSelect>
+        <div className="min-w-[170px]">
+          <FormSelect
+            wrapperClassName="w-full"
+            value={roleFilter}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(0);
+            }}
+            className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
+            aria-label="Filter by role"
+          >
+            <option value="all">All roles</option>
+            <option value="unassigned">{ROLE_OPTION_LABEL.unassigned}</option>
+            {roleFilterOptions.map((r) => (
+              <option key={r.key} value={r.key}>
+                {r.label}
+              </option>
+            ))}
+          </FormSelect>
+        </div>
 
-        <FormSelect
-          value={deptFilter}
-          onChange={(e) => {
-            setDeptFilter(e.target.value);
-            setPage(0);
-          }}
-          className="h-9 min-w-[160px] rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
-          aria-label="Filter by department"
-        >
-          <option value="all">All departments</option>
-          {activeDepts.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </FormSelect>
+        <div className="min-w-[190px]">
+          <FormSelect
+            wrapperClassName="w-full"
+            value={deptFilter}
+            onChange={(e) => {
+              setDeptFilter(e.target.value);
+              setPage(0);
+            }}
+            className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
+            aria-label="Filter by department"
+          >
+            <option value="all">All departments</option>
+            {activeDepts.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </FormSelect>
+        </div>
+        <div className="min-w-[145px]">
+          <FormSelect
+            wrapperClassName="w-full"
+            value={String(perPage)}
+            onChange={(e) => {
+              const next = Number.parseInt(e.target.value, 10);
+              const safe = [25, 50, 100, 200].includes(next) ? next : 25;
+              setPerPage(safe);
+              setPage(0);
+              startSearchTransition(() => {
+                router.replace(filterHref({ limit: safe === 25 ? undefined : String(safe) }));
+              });
+            }}
+            className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[13px] text-[#121212] outline-none"
+            aria-label="Rows per page"
+          >
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+            <option value="100">100 per page</option>
+            <option value="200">200 per page</option>
+          </FormSelect>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => { setStatusFilter('all'); setPage(0); }} className={pillClass(statusFilter === 'all')}>
@@ -711,23 +744,26 @@ export function AdminUsersClient({
           type="button"
           onClick={() => void bulkApprovePending()}
           disabled={busy !== null}
-          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
         >
+          <Check className="h-3.5 w-3.5" aria-hidden />
           Approve selected (pending)
         </button>
         <button
           type="button"
           onClick={() => void bulkDeactivate()}
           disabled={busy !== null || !selected.size}
-          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] disabled:opacity-50"
         >
+          <UserX className="h-3.5 w-3.5" aria-hidden />
           Deactivate selected
         </button>
         <button
           type="button"
           onClick={() => exportCsv()}
-          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[12.5px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
         >
+          <Download className="h-3.5 w-3.5" aria-hidden />
           Export CSV
         </button>
         <button
@@ -737,10 +773,15 @@ export function AdminUsersClient({
             setStatusFilter('all');
             setRoleFilter('all');
             setDeptFilter('all');
+            setPerPage(25);
             setPage(0);
+            startSearchTransition(() => {
+              router.replace('/admin/users');
+            });
           }}
-          className="text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+          className="inline-flex items-center gap-1 text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
         >
+          <FilterX className="h-3.5 w-3.5" aria-hidden />
           Clear filters
         </button>
       </div>
@@ -908,9 +949,10 @@ export function AdminUsersClient({
         <button
           type="button"
           disabled={page <= 0}
-          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[#6b6b6b] disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[#6b6b6b] disabled:opacity-40"
           onClick={() => setPage((p) => Math.max(0, p - 1))}
         >
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
           Previous
         </button>
         <span className="text-[#6b6b6b]">
@@ -919,10 +961,11 @@ export function AdminUsersClient({
         <button
           type="button"
           disabled={page >= pages - 1}
-          className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[#6b6b6b] disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[#6b6b6b] disabled:opacity-40"
           onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
         >
           Next
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
         </button>
       </div>
 
@@ -970,7 +1013,7 @@ export function AdminUsersClient({
             <div className="sm:col-span-2">
               <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Departments</dt>
               <dd className="mt-0.5 text-[#121212]">
-                {memberPreview.departments.length ? memberPreview.departments.join(', ') : '—'}
+                {memberPreview.departments.length ? memberPreview.departments.join(', ') : ''}
               </dd>
             </div>
             <div>
@@ -1005,7 +1048,7 @@ export function AdminUsersClient({
                 onClick={() => setInviteOpen(false)}
                 aria-label="Close"
               >
-                ✕
+                <X className="h-4 w-4" aria-hidden />
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -1123,7 +1166,7 @@ export function AdminUsersClient({
                 onClick={() => setEdit(null)}
                 aria-label="Close"
               >
-                ✕
+                <X className="h-4 w-4" aria-hidden />
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -1152,7 +1195,7 @@ export function AdminUsersClient({
                         <option key={role.id} value={role.key}>
                           {role.label}
                           {!assignableRoles.some((r) => r.key === role.key)
-                            ? ' (current role — not assignable by your access)'
+                            ? ' (current role  not assignable by your access)'
                             : role.is_system
                               ? ' (predefined)'
                               : ''}

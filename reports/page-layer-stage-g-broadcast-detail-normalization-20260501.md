@@ -1,4 +1,4 @@
-# Page Layer Stage G — Broadcast Detail Route Normalization
+# Page Layer Stage G  Broadcast Detail Route Normalization
 **Date:** 2026-05-01  
 **Owner:** Engineering  
 **Scope:** `apps/web/src/app/(main)/broadcasts/[id]/page.tsx`, `apps/web/src/app/(main)/broadcasts/[id]/edit/page.tsx`

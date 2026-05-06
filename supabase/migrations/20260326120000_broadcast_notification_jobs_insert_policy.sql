@@ -1,7 +1,7 @@
 -- Sending a broadcast (status = 'sent') fires AFTER INSERT trigger broadcasts_queue_notify_fn,
 -- which inserts into broadcast_notification_jobs. That table had RLS with a deny-all policy
 -- for `authenticated` only. When the nested INSERT runs in the client session role, Postgres
--- rejects it and rolls back the whole broadcasts INSERT — PostgREST returns 400.
+-- rejects it and rolls back the whole broadcasts INSERT  PostgREST returns 400.
 --
 -- Allow enqueue rows that reference a sent broadcast created by the current user (same txn).
 

@@ -46,6 +46,7 @@ export type PipelineApplicationRow = {
   offer_letter_status: string | null;
   screening_overall_avg: number | null;
   screening_scorer_count: number;
+  is_account_linked: boolean;
 };
 
 type StageDialogState = {
@@ -1165,7 +1166,17 @@ export function JobPipelineClient({
                           {app.candidate_name}{' '}
                           <span className="text-[#6b6b6b]">({applicantNumberById.get(app.id) ? String(applicantNumberById.get(app.id)).padStart(4, '0') : 'Draft'})</span>
                         </p>
-                        <p className="text-[12px] text-[#6b6b6b]">{app.candidate_email}</p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                          <p className="text-[12px] text-[#6b6b6b]">{app.candidate_email}</p>
+                          {app.is_account_linked ? (
+                            <span
+                              className="inline-flex items-center rounded-full border border-[#bbf7d0] bg-[#ecfdf5] px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wide text-[#047857]"
+                              title="This candidate is signed in via the candidate portal  application linked to their account."
+                            >
+                              Account-linked
+                            </span>
+                          ) : null}
+                        </div>
                         {app.screening_overall_avg != null ? (
                           <p className="mt-1 text-[11px] text-[#0f766e]">
                             App Q avg {app.screening_overall_avg.toFixed(1)}
@@ -1464,8 +1475,8 @@ export function JobPipelineClient({
                               <p className="mt-1 whitespace-pre-wrap text-[13px] text-[#303030]">{ans.display_value}</p>
                               <p className="mt-2 text-[11px] text-[#6b6b6b]">
                                 Team avg:{' '}
-                                {ans.team_avg == null ? '—' : ans.team_avg.toFixed(2)} · Your score:{' '}
-                                {ans.my_score ?? '—'}
+                                {ans.team_avg == null ? '' : ans.team_avg.toFixed(2)} · Your score:{' '}
+                                {ans.my_score ?? ''}
                               </p>
                               {canScoreScreening ? (
                                 <div className="mt-2 flex flex-wrap gap-1">
@@ -1526,7 +1537,7 @@ export function JobPipelineClient({
                             : detail.application.offer_letter_status === 'declined'
                               ? 'Declined'
                               : detail.application.offer_letter_status === 'sent'
-                                ? 'Sent — awaiting candidate signature'
+                                ? 'Sent  awaiting candidate signature'
                                 : 'Not sent yet'}
                         </span>
                       </p>
@@ -1581,6 +1592,7 @@ export function JobPipelineClient({
                               offer_letter_status: detail.application.offer_letter_status,
                               screening_overall_avg: row?.screening_overall_avg ?? null,
                               screening_scorer_count: row?.screening_scorer_count ?? 0,
+                              is_account_linked: row?.is_account_linked ?? false,
                             });
                           }}
                         >

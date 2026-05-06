@@ -118,7 +118,7 @@ export function ResourceDocumentAssistant({
         {showIntro ? (
           <div className="flex flex-col gap-1 self-start">
             <div className="max-w-[85%] rounded-[14px] rounded-bl-[4px] border border-[color-mix(in_oklab,var(--org-brand-border)_88%,transparent)] bg-[var(--org-brand-bg)] px-3.5 py-2.5 text-[13.5px] leading-[1.55] text-[var(--org-brand-text)]">
-              Hi! I&apos;m Scout — I can answer questions about this file using its contents when I can read them (for
+              Hi! I&apos;m Scout  I can answer questions about this file using its contents when I can read them (for
               example PDF and text). Here are some ideas to get started:
             </div>
           </div>

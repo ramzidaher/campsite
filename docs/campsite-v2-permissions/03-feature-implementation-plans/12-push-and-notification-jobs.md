@@ -1,4 +1,4 @@
-O# 12 — Push tokens and broadcast notification jobs
+O# 12  Push tokens and broadcast notification jobs
 
 **Scope:** This plan covers **database + Edge delivery** and **web-adjacent UX** (e.g. unread indicators). It does **not** document native app clients; token registration UIs live outside these web-only runbooks.
 
@@ -23,22 +23,22 @@ O# 12 — Push tokens and broadcast notification jobs
 
 | Concept | Notes |
 |---------|--------|
-| `push_tokens` | RLS: **`push_tokens_all_self`** — `FOR ALL` / `TO authenticated` with `user_id = auth.uid()` on `USING` and `WITH CHECK` (no other users’ rows). |
-| `broadcast_notification_jobs` | **`broadcast_notification_jobs_deny`** — authenticated cannot read/update/delete. **`broadcast_notification_jobs_insert_own_sent_broadcast`** — authenticated may **insert** only when the row’s `broadcast_id` refers to a **`sent`** broadcast with **`created_by = auth.uid()`** (so the sender’s session can enqueue in the same transaction as insert). **Service role** bypasses RLS for the Edge worker. |
+| `push_tokens` | RLS: **`push_tokens_all_self`**  `FOR ALL` / `TO authenticated` with `user_id = auth.uid()` on `USING` and `WITH CHECK` (no other users’ rows). |
+| `broadcast_notification_jobs` | **`broadcast_notification_jobs_deny`**  authenticated cannot read/update/delete. **`broadcast_notification_jobs_insert_own_sent_broadcast`**  authenticated may **insert** only when the row’s `broadcast_id` refers to a **`sent`** broadcast with **`created_by = auth.uid()`** (so the sender’s session can enqueue in the same transaction as insert). **Service role** bypasses RLS for the Edge worker. |
 
 ### 2.2 Triggers
 
-- **`broadcasts_queue_notify`** — `AFTER INSERT OR UPDATE` on `public.broadcasts`, function **`public.broadcasts_queue_notify_fn()`** (`SECURITY DEFINER`): when status becomes **`sent`**, inserts into **`broadcast_notification_jobs`** (`ON CONFLICT (broadcast_id) DO NOTHING`), gated on `notifications_sent_at` / transition logic in the function body.
+- **`broadcasts_queue_notify`**  `AFTER INSERT OR UPDATE` on `public.broadcasts`, function **`public.broadcasts_queue_notify_fn()`** (`SECURITY DEFINER`): when status becomes **`sent`**, inserts into **`broadcast_notification_jobs`** (`ON CONFLICT (broadcast_id) DO NOTHING`), gated on `notifications_sent_at` / transition logic in the function body.
 
 ### 2.3 RPCs (fan-out rules)
 
-- **`public.broadcast_notification_recipient_user_ids(p_broadcast_id uuid)`** — **`service_role` only**; implements the same recipient rules as sent visibility (see migration comments). Used by the Edge worker, not the browser.
+- **`public.broadcast_notification_recipient_user_ids(p_broadcast_id uuid)`**  **`service_role` only**; implements the same recipient rules as sent visibility (see migration comments). Used by the Edge worker, not the browser.
 
 ### 2.4 Edge Function
 
 **Path:** `supabase/functions/process-broadcast-notifications/index.ts`
 
-**Config:** `supabase/config.toml` — `[functions.process-broadcast-notifications]` **`verify_jwt = false`**; caller must send **`Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>`** (see function source).
+**Config:** `supabase/config.toml`  `[functions.process-broadcast-notifications]` **`verify_jwt = false`**; caller must send **`Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>`** (see function source).
 
 **Responsibilities (current):**
 
@@ -55,18 +55,18 @@ O# 12 — Push tokens and broadcast notification jobs
 ## 3. Web frontend (`apps/web`)
 
 - **Unread / badges:** `(main)/layout.tsx` calls **`broadcast_unread_count`** and passes **`unreadBroadcasts`** into `AppShell` (see also `BroadcastFeed.tsx` and `loadDashboardHome` for the same RPC).
-- **Push token registration (server):** `POST` **`/api/push-token`** — `apps/web/src/app/api/push-token/route.ts` — session user only; upserts **`push_tokens`** with `user_id` from auth (RLS enforces self-only if the client were used anon incorrectly; route uses server client with user session).
-- **Validation helper (tests):** `apps/web/src/lib/push/parsePushTokenBody.ts` — shared parsing for the route body.
+- **Push token registration (server):** `POST` **`/api/push-token`**  `apps/web/src/app/api/push-token/route.ts`  session user only; upserts **`push_tokens`** with `user_id` from auth (RLS enforces self-only if the client were used anon incorrectly; route uses server client with user session).
+- **Validation helper (tests):** `apps/web/src/lib/push/parsePushTokenBody.ts`  shared parsing for the route body.
 
 ## 4. Tests
 
-- `apps/web/src/lib/push/__tests__/parsePushTokenBody.test.ts` — request body validation for `/api/push-token`.
+- `apps/web/src/lib/push/__tests__/parsePushTokenBody.test.ts`  request body validation for `/api/push-token`.
 
 ## 5. Verification checklist
 
 - [x] User can only insert/update/delete **their** push token rows under RLS (`push_tokens_all_self`).
 - [x] Client cannot read other users’ tokens (same policy scopes all operations to `auth.uid()`).
-- [x] Notification job processor uses **service role** Bearer — not anon/browser key (`process-broadcast-notifications/index.ts` + `verify_jwt = false` with explicit service key check).
+- [x] Notification job processor uses **service role** Bearer  not anon/browser key (`process-broadcast-notifications/index.ts` + `verify_jwt = false` with explicit service key check).
 - [x] Sent broadcast enqueues a job row (`broadcasts_queue_notify_fn`); sender session can insert job via **`broadcast_notification_jobs_insert_own_sent_broadcast`** (see migration). **Staging:** send a broadcast and inspect `broadcast_notification_jobs` for `broadcast_id`.
 
 ## 6. Implementation order (change delivery pipeline)
@@ -77,9 +77,9 @@ O# 12 — Push tokens and broadcast notification jobs
 
 ## 7. Rota notification jobs (parallel to broadcasts)
 
-**Queue + triggers:** `supabase/migrations/20260430332000_rota_notification_jobs.sql` — `rota_notification_jobs`; triggers on `rota_shifts` and `rota_change_requests` enqueue rows (`authenticated` cannot read/update jobs; **service role** in the worker).
+**Queue + triggers:** `supabase/migrations/20260430332000_rota_notification_jobs.sql`  `rota_notification_jobs`; triggers on `rota_shifts` and `rota_change_requests` enqueue rows (`authenticated` cannot read/update jobs; **service role** in the worker).
 
-**Recipient RPC (service role only):** `supabase/migrations/20260430340000_rota_notification_recipient_user_ids.sql` — **`public.rota_notification_recipient_user_ids(p_job_id uuid)`** — same pattern as **`broadcast_notification_recipient_user_ids`**: Edge calls with service-role client only; not for browser sessions.
+**Recipient RPC (service role only):** `supabase/migrations/20260430340000_rota_notification_recipient_user_ids.sql`  **`public.rota_notification_recipient_user_ids(p_job_id uuid)`**  same pattern as **`broadcast_notification_recipient_user_ids`**: Edge calls with service-role client only; not for browser sessions.
 
 **Edge Function:** `supabase/functions/process-rota-notifications/index.ts`
 
@@ -89,8 +89,8 @@ O# 12 — Push tokens and broadcast notification jobs
 
 **Deploy:** root script **`npm run supabase:functions:deploy:rota-notify`**.
 
-**Scheduling:** not defined in-repo — run the function on a short interval (e.g. 1–5 minutes) via Supabase **scheduled Edge Functions**, **Dashboard cron**, or external cron hitting the invoke URL with the service-role Bearer. Product runbook: [06-rota.md](./06-rota.md) §2.4.
+**Scheduling:** not defined in-repo  run the function on a short interval (e.g. 1–5 minutes) via Supabase **scheduled Edge Functions**, **Dashboard cron**, or external cron hitting the invoke URL with the service-role Bearer. Product runbook: [06-rota.md](./06-rota.md) §2.4.
 
 **When changing recipient rules:** extend the SQL function and keep behaviour aligned with [docs/rota-feature-spec.md](../../rota-feature-spec.md) and rota RLS (who should be notified for shifts vs requests).
 
-**Shift reminders (Phase 3):** `event_type` **`shift_reminder`** — enqueued by **`public.enqueue_rota_shift_reminders()`** (deduped via **`rota_shift_reminder_sent`**). Assignees with **`profiles.shift_reminder_before_minutes`** set (see web profile settings) receive a push when the shift enters the reminder window. The Edge worker calls **`enqueue_rota_shift_reminders`** at the start of each run, so scheduling **`process-rota-notifications`** on a short interval (e.g. every 15–20 minutes) covers both reminder enqueue and delivery.
+**Shift reminders (Phase 3):** `event_type` **`shift_reminder`**  enqueued by **`public.enqueue_rota_shift_reminders()`** (deduped via **`rota_shift_reminder_sent`**). Assignees with **`profiles.shift_reminder_before_minutes`** set (see web profile settings) receive a push when the shift enters the reminder window. The Edge worker calls **`enqueue_rota_shift_reminders`** at the start of each run, so scheduling **`process-rota-notifications`** on a short interval (e.g. every 15–20 minutes) covers both reminder enqueue and delivery.

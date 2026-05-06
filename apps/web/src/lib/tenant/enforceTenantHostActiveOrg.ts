@@ -12,7 +12,7 @@ function normSlug(s: string | null | undefined): string {
  * Tenant subdomains identify an org in the URL, but shell data follows `profiles.org_id`.
  * When those diverge (multi-org members, bookmarks, partial navigations after switching
  * workspace), keep the **active profile org** as source of truth and redirect to its
- * canonical host — never call `set_my_active_org` here (that would undo an intentional
+ * canonical host  never call `set_my_active_org` here (that would undo an intentional
  * workspace switch while the browser is still on the old subdomain).
  */
 export async function enforceTenantHostMatchesActiveOrg(

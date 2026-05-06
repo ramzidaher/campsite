@@ -62,7 +62,7 @@ function invalidateLocalSharedCacheByPrefix(cacheNamespace: string, keyPrefix: s
  * Tiered cache: L1 in-process Map → L2 Redis → L3 DB.
  *
  * L1 (Map): zero-latency hits within a warm instance, with per-instance in-flight coalescing.
- * L2 (Redis): shared across all Vercel instances — eliminates thundering-herd on cold instances.
+ * L2 (Redis): shared across all Vercel instances  eliminates thundering-herd on cold instances.
  * L3 (load): the actual DB fetch, called only on a full miss.
  *
  * Redis is optional: if UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are absent (local dev),
@@ -88,7 +88,7 @@ export async function getOrLoadSharedCachedValue<T>({
 }): Promise<T> {
   const now = Date.now();
 
-  // L1: in-process Map — zero-latency within same warm instance
+  // L1: in-process Map  zero-latency within same warm instance
   const l1 = cache.get(key);
   if (l1 && l1.expiresAt > now) return l1.value;
 
@@ -102,7 +102,7 @@ export async function getOrLoadSharedCachedValue<T>({
   const task = (async (): Promise<T> => {
     const redis = getRedis();
 
-    // L2: Redis — shared across all Vercel instances, ~1ms hit latency
+    // L2: Redis  shared across all Vercel instances, ~1ms hit latency
     if (redis) {
       try {
         const envelope = await redis.get<CacheEnvelope<T>>(redisKey);
@@ -112,7 +112,7 @@ export async function getOrLoadSharedCachedValue<T>({
           return envelope.v;
         }
       } catch {
-        // Redis unavailable — fall through to DB without surfacing the error
+        // Redis unavailable  fall through to DB without surfacing the error
       }
     }
 

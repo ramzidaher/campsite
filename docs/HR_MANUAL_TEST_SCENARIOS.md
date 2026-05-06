@@ -1,9 +1,9 @@
 # HR manual test scenarios (detailed)
 
-Step-by-step checks for CampSite’s HR area. Written for **manual QA** after `**npm run seed-qa-full`** — see `[QA_SEED_AND_SCENARIOS.md](QA_SEED_AND_SCENARIOS.md)` for setup, migrations, and troubleshooting.
+Step-by-step checks for CampSite’s HR area. Written for **manual QA** after `**npm run seed-qa-full`**  see `[QA_SEED_AND_SCENARIOS.md](QA_SEED_AND_SCENARIOS.md)` for setup, migrations, and troubleshooting.
 
 **Default password (unless overridden):** `CampSiteQA2026!`  
-**QA org:** `campsite-qa-lab` — **CampSite QA Lab**
+**QA org:** `campsite-qa-lab`  **CampSite QA Lab**
 
 ---
 
@@ -27,8 +27,8 @@ Step-by-step checks for CampSite’s HR area. Written for **manual QA** after `*
 | --------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | **Org admin**         | `campsite-qa-orgadmin@example.com`     | Full HR directory, all employee files, recruitment admin, onboarding admin, org-wide leave if shown |
 | **Jane (manager)**    | `campsite-qa-jane-trueman@example.com` | **Activities** manager; Darcey’s line manager; scoped HR views                                      |
-| **Darcey (staff)**    | `campsite-qa-darcey-james@example.com` | **Activities**; reports to Jane — leave submit, own performance/onboarding                          |
-| **Isla (other dept)** | `campsite-qa-isla-thorpe@example.com`  | **Events** — isolation checks vs Activities                                                         |
+| **Darcey (staff)**    | `campsite-qa-darcey-james@example.com` | **Activities**; reports to Jane  leave submit, own performance/onboarding                          |
+| **Isla (other dept)** | `campsite-qa-isla-thorpe@example.com`  | **Events**  isolation checks vs Activities                                                         |
 
 
 Seeded context that matters for HR:
@@ -42,7 +42,7 @@ Seeded context that matters for HR:
 
 **Goal:** HR can see the people overview; opening a person shows the right file; edits only when allowed.
 
-### 1.1 Org admin — full directory **[Smoke]**
+### 1.1 Org admin  full directory **[Smoke]**
 
 1. Log in as **Org admin**.
 2. Open `**/hr/records`** (or **Employee records** in the HR section).
@@ -52,20 +52,20 @@ Seeded context that matters for HR:
 
 **Pass / Fail / Notes:** _______________
 
-### 1.2 Org admin — open an employee file **[Smoke]**
+### 1.2 Org admin  open an employee file **[Smoke]**
 
-1. Still as **Org admin**, open **Darcey**’s file from the directory (path will look like `**/hr/records/darceys-user-id`** — use the link from the list).
+1. Still as **Org admin**, open **Darcey**’s file from the directory (path will look like `**/hr/records/darceys-user-id`**  use the link from the list).
 2. **Expect:** File loads. You see employment / HR fields (contract-style info, dates, etc. as built).
-3. If an **audit / history** section exists for changes, **expect:** it loads or shows “none” — not an error.
-4. **Optional:** Change a non-critical field **if** the UI allows save — **expect:** save succeeds or you see a clear validation message (not a blank failure).
+3. If an **audit / history** section exists for changes, **expect:** it loads or shows “none”  not an error.
+4. **Optional:** Change a non-critical field **if** the UI allows save  **expect:** save succeeds or you see a clear validation message (not a blank failure).
 
 **Pass / Fail / Notes:** _______________
 
-### 1.3 Jane (manager) — scoped directory **[Smoke]**
+### 1.3 Jane (manager)  scoped directory **[Smoke]**
 
 1. Log out. Log in as **Jane**.
 2. Open `**/hr/records`**.
-3. **Expect:** Page loads. The list should reflect **people Jane is allowed to see** (typically her dept / hierarchy — **not necessarily every person in the org**).
+3. **Expect:** Page loads. The list should reflect **people Jane is allowed to see** (typically her dept / hierarchy  **not necessarily every person in the org**).
 4. **Expect:** **Darcey** appears (same department / report).
 5. Open **Darcey**’s file.
 6. **Expect:** File loads. If Jane is view-only, **expect:** no edit controls (or disabled save). If she can manage records for visible people, editing behavior should match your policy.
@@ -86,7 +86,7 @@ Seeded context that matters for HR:
 
 **Goal:** Reporting lines match setup; sensitive masking behaves when a viewer cannot see a manager.
 
-### 2.1 Org admin — full tree **[Smoke]**
+### 2.1 Org admin  full tree **[Smoke]**
 
 1. Log in as **Org admin**.
 2. Open `**/hr/org-chart`**.
@@ -96,7 +96,7 @@ Seeded context that matters for HR:
 
 **Pass / Fail / Notes:** _______________
 
-### 2.2 Jane — scoped chart **[Smoke]**
+### 2.2 Jane  scoped chart **[Smoke]**
 
 1. Log in as **Jane**.
 2. Open `**/hr/org-chart`**.
@@ -111,7 +111,7 @@ Seeded context that matters for HR:
 
 **Goal:** Staff submit; manager approves direct reports; statuses stay in sync.
 
-### 3.1 Darcey — submit leave **[Smoke]**
+### 3.1 Darcey  submit leave **[Smoke]**
 
 1. Log in as **Darcey**.
 2. Open `**/leave`** (or **Time off** from staff HR tabs if shown).
@@ -121,7 +121,7 @@ Seeded context that matters for HR:
 
 **Pass / Fail / Notes:** _______________
 
-### 3.2 Jane — approve Darcey’s leave **[Smoke]**
+### 3.2 Jane  approve Darcey’s leave **[Smoke]**
 
 1. Log in as **Jane**.
 2. Open `**/leave`** or the **manager / team** view where approvals live (follow product navigation).
@@ -131,7 +131,7 @@ Seeded context that matters for HR:
 
 **Pass / Fail / Notes:** _______________
 
-### 3.3 Darcey — sees outcome
+### 3.3 Darcey  sees outcome
 
 1. Log in as **Darcey** again.
 2. Open `**/leave`**.
@@ -139,7 +139,7 @@ Seeded context that matters for HR:
 
 **Pass / Fail / Notes:** _______________
 
-### 3.4 Negative — Isla cannot approve Jane’s requests (quick)
+### 3.4 Negative  Isla cannot approve Jane’s requests (quick)
 
 1. Log in as **Isla**.
 2. Try to find **Jane**’s leave to approve (same screens as above).
@@ -161,7 +161,7 @@ Seeded context that matters for HR:
 
 **Goal:** Cycles exist or can be created; staff see own items; managers see team where allowed.
 
-### 4.1 Org admin — cycles hub **[Smoke]**
+### 4.1 Org admin  cycles hub **[Smoke]**
 
 1. Log in as **Org admin**.
 2. Open `**/hr/performance`**.
@@ -170,7 +170,7 @@ Seeded context that matters for HR:
 
 **Pass / Fail / Notes:** _______________
 
-### 4.2 Darcey — own performance **[Smoke]**
+### 4.2 Darcey  own performance **[Smoke]**
 
 1. Log in as **Darcey**.
 2. Open `**/performance`**.
@@ -178,7 +178,7 @@ Seeded context that matters for HR:
 
 **Pass / Fail / Notes:** _______________
 
-### 4.3 Jane — team / direct reports
+### 4.3 Jane  team / direct reports
 
 1. Log in as **Jane**.
 2. Open `**/performance`** (and cycle detail if needed).
@@ -192,7 +192,7 @@ Seeded context that matters for HR:
 
 **Goal:** Templates and runs work; assignees can complete tasks.
 
-### 5.1 Org admin — templates & runs **[Smoke]**
+### 5.1 Org admin  templates & runs **[Smoke]**
 
 1. Log in as **Org admin**.
 2. Open `**/hr/onboarding`**.
@@ -202,7 +202,7 @@ Seeded context that matters for HR:
 
 **Pass / Fail / Notes:** _______________
 
-### 5.2 Darcey — complete a task **[Smoke]**
+### 5.2 Darcey  complete a task **[Smoke]**
 
 1. Log in as **Darcey**.
 2. Open `**/onboarding`**.
@@ -217,7 +217,7 @@ Seeded context that matters for HR:
 
 ## 6. Recruitment (pipeline)
 
-**Goal:** Request → approval → job → applications/interviews — in order. The QA seed does **not** auto-create listings; **do the setup block once** per fresh DB.
+**Goal:** Request → approval → job → applications/interviews  in order. The QA seed does **not** auto-create listings; **do the setup block once** per fresh DB.
 
 ### 6.0 One-time setup (Org admin) **[Smoke for recruitment]**
 
@@ -270,8 +270,8 @@ Seeded context that matters for HR:
 2. Log out. Log in as **Isla**.
 3. Open `**/hr/records`**.
 4. **Expect:** List differs: Isla should **not** see Activities-only people **if** your isolation rules say so. If she sees the **whole org**, document that as product intent or bug.
-5. Try to open a **deep link** to an Activities member’s file (copy URL while Jane if you need a user id — optional).
-6. **Expect:** Isla is **blocked**, redirected, or sees empty — **not** full salary/contract for someone outside scope.
+5. Try to open a **deep link** to an Activities member’s file (copy URL while Jane if you need a user id  optional).
+6. **Expect:** Isla is **blocked**, redirected, or sees empty  **not** full salary/contract for someone outside scope.
 
 **Pass / Fail / Notes:** _______________
 
@@ -285,8 +285,8 @@ Run these after the happy paths.
 | #   | Step                                                                              | Expect                                                                                                                                                                          |
 | --- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A   | **Jane** → **Admin → All members** → find **Isla** → try **permission overrides** | **Cannot** override Isla if Isla is **not** Jane’s report (subordinate-only).                                                                                                   |
-| B   | **Jane** → role assignment for a member                                           | Cannot assign a **higher** role than policy allows — clear error.                                                                                                               |
-| C   | **Invites** (if you test hiring): anyone with **invite** power                    | See `[RBAC_SECURITY_REVIEW.md](RBAC_SECURITY_REVIEW.md)` — validate **who** may invite and **which** roles they may set in real life until the documented invite gap is closed. |
+| B   | **Jane** → role assignment for a member                                           | Cannot assign a **higher** role than policy allows  clear error.                                                                                                               |
+| C   | **Invites** (if you test hiring): anyone with **invite** power                    | See `[RBAC_SECURITY_REVIEW.md](RBAC_SECURITY_REVIEW.md)`  validate **who** may invite and **which** roles they may set in real life until the documented invite gap is closed. |
 
 
 **Pass / Fail / Notes:** _______________

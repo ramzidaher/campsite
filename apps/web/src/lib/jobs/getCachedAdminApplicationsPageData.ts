@@ -23,6 +23,7 @@ export type AdminApplicationsListRow = {
   submitted_at: string | null;
   job_listing_id: string | null;
   department_id: string | null;
+  candidate_user_id: string | null;
   job_listings: { title?: string } | { title?: string }[] | null;
   departments: { name?: string } | { name?: string }[] | null;
 };
@@ -95,6 +96,7 @@ async function loadAdminApplicationsPageData(
         submitted_at,
         job_listing_id,
         department_id,
+        candidate_user_id,
         job_listings ( title ),
         departments ( name )
       `

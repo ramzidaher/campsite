@@ -98,22 +98,22 @@ const DEPT_SPECS = [
 const PEOPLE = [
   { label: 'Org Admin (primary)', role: 'org_admin', memberOf: [], manages: [] },
   { label: 'Org Admin (secondary)', role: 'org_admin', memberOf: [], manages: [] },
-  { label: 'Manager — Ops', role: 'manager', memberOf: ['ops'], manages: ['ops'] },
-  { label: 'Manager — Programs', role: 'manager', memberOf: ['programs'], manages: ['programs'] },
-  { label: 'Manager — Guest', role: 'manager', memberOf: ['guest'], manages: ['guest'] },
-  { label: 'Manager — Ops + Programs', role: 'manager', memberOf: ['ops', 'programs'], manages: ['ops', 'programs'] },
-  { label: 'Coordinator — Ops', role: 'coordinator', memberOf: ['ops'], manages: [] },
-  { label: 'Coordinator — Programs', role: 'coordinator', memberOf: ['programs'], manages: [] },
-  { label: 'Coordinator — Ops (overlap)', role: 'coordinator', memberOf: ['ops'], manages: [] },
-  { label: 'Duty manager — Guest', role: 'duty_manager', memberOf: ['guest'], manages: [] },
-  { label: 'Duty manager — Programs', role: 'duty_manager', memberOf: ['programs'], manages: [] },
-  { label: 'Administrator — Ops', role: 'administrator', memberOf: ['ops'], manages: [] },
-  { label: 'Administrator — Programs', role: 'administrator', memberOf: ['programs'], manages: [] },
-  { label: 'CSA — Ops A', role: 'csa', memberOf: ['ops'], manages: [] },
-  { label: 'CSA — Ops B', role: 'csa', memberOf: ['ops'], manages: [] },
-  { label: 'CSA — Programs', role: 'csa', memberOf: ['programs'], manages: [] },
-  { label: 'CSA — Guest', role: 'csa', memberOf: ['guest'], manages: [] },
-  { label: 'Leader — Alumni Society', role: 'society_leader', memberOf: ['society'], manages: [] },
+  { label: 'Manager  Ops', role: 'manager', memberOf: ['ops'], manages: ['ops'] },
+  { label: 'Manager  Programs', role: 'manager', memberOf: ['programs'], manages: ['programs'] },
+  { label: 'Manager  Guest', role: 'manager', memberOf: ['guest'], manages: ['guest'] },
+  { label: 'Manager  Ops + Programs', role: 'manager', memberOf: ['ops', 'programs'], manages: ['ops', 'programs'] },
+  { label: 'Coordinator  Ops', role: 'coordinator', memberOf: ['ops'], manages: [] },
+  { label: 'Coordinator  Programs', role: 'coordinator', memberOf: ['programs'], manages: [] },
+  { label: 'Coordinator  Ops (overlap)', role: 'coordinator', memberOf: ['ops'], manages: [] },
+  { label: 'Duty manager  Guest', role: 'duty_manager', memberOf: ['guest'], manages: [] },
+  { label: 'Duty manager  Programs', role: 'duty_manager', memberOf: ['programs'], manages: [] },
+  { label: 'Administrator  Ops', role: 'administrator', memberOf: ['ops'], manages: [] },
+  { label: 'Administrator  Programs', role: 'administrator', memberOf: ['programs'], manages: [] },
+  { label: 'CSA  Ops A', role: 'csa', memberOf: ['ops'], manages: [] },
+  { label: 'CSA  Ops B', role: 'csa', memberOf: ['ops'], manages: [] },
+  { label: 'CSA  Programs', role: 'csa', memberOf: ['programs'], manages: [] },
+  { label: 'CSA  Guest', role: 'csa', memberOf: ['guest'], manages: [] },
+  { label: 'Leader  Alumni Society', role: 'society_leader', memberOf: ['society'], manages: [] },
 ];
 
 function printOrgTree() {
@@ -127,7 +127,7 @@ function printOrgTree() {
 │   └── Alumni Society (type: society)
 │
 ├── org_admin × 2
-│   └── (no team rows — full-org scope)
+│   └── (no team rows  full-org scope)
 │
 ├── manager × 4  (+ dept_managers + same teams in user_departments)
 │   ├── → Operations
@@ -138,7 +138,7 @@ function printOrgTree() {
 ├── coordinator × 3  (user_departments only)
 │   ├── → Operations
 │   ├── → Programs
-│   └── → Operations  (second coord — overlap with first for approval tests)
+│   └── → Operations  (second coord  overlap with first for approval tests)
 │
 ├── duty_manager × 2
 │   ├── → Guest Services
@@ -228,11 +228,11 @@ async function main() {
     return { ...p, email, fullName, password: sharedPassword };
   });
 
-  console.log('Planned logins (copy after run — emails are random per invocation):\n');
+  console.log('Planned logins (copy after run  emails are random per invocation):\n');
   console.log('role\temail\tpassword\tteams');
   for (const r of rows) {
     const teams = [...r.memberOf, ...r.manages].filter((v, j, a) => a.indexOf(v) === j);
-    console.log(`${r.role}\t${r.email}\t${r.password}\t${teams.join(', ') || '—'}`);
+    console.log(`${r.role}\t${r.email}\t${r.password}\t${teams.join(', ') || ''}`);
   }
   console.log('');
 

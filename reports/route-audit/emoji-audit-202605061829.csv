@@ -1,0 +1,11 @@
+file,surface,hit_count,line_hits
+apps/mobile/app/settings.tsx,mobile-route:/settings,1,"170"
+apps/web/src/app/(auth)/layout.tsx,web-route:/,1,"105"
+apps/web/src/app/(public)/jobs/candidatePersonaOptions.ts,web-route:/jobs/candidatePersonaOptions.ts,6,"26|27|28|29|30|31"
+apps/web/src/app/(public)/jobs/page.tsx,web-route:/jobs,1,"714"
+apps/web/src/components/admin/OrgSettingsClient.tsx,web-component,6,"648|649|1231|1232|2572|2589"
+apps/web/src/components/founders/FounderHqApp.tsx,web-component,48,"278|360|372|964|966|974|979|980|985|986|987|988|994|997|1033|1035|1036|1087|1105|1122|1137|1238|1290|1293|1296|1299|1302|1328|1357|1405|1417|1427|1437|1788|1806|1818|1830|1877|2036|2044|2090|2250|2397|2504|2511|2667|2782|2829"
+apps/web/src/components/founders/mockData.ts,web-component,10,"366|373|380|387|409|414|419|424|429|434"
+apps/web/src/components/landing/Footer.tsx,web-component,1,"24"
+apps/web/src/components/shell/HolidayOverlay.tsx,web-component,4,"1010|1011|1041|1103"
+apps/web/src/lib/holidayThemes.ts,other,59,"147|155|163|171|179|187|195|204|213|221|229|237|245|253|261|269|277|285|293|301|309|317|325|333|341|349|357|365|381|382|383|384|385|386|387|388|389|390|391|392|393|394|395|396|397|398|399|400|401|402|403|404|405|406|407|408|420|421|507"

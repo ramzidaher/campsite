@@ -1,7 +1,7 @@
 /**
  * Server-side helpers that push CampSite entities into / out of Google Calendar.
  * All functions require a service-role SupabaseClient.
- * All functions are best-effort — failures are logged but not thrown.
+ * All functions are best-effort  failures are logged but not thrown.
  */
 
 import { calendarDeleteEvent, calendarInsertPrimaryEvent, calendarPatchEvent } from '@/lib/google/googleCalendarApi';
@@ -38,7 +38,7 @@ export async function syncShiftToGoogle(admin: SupabaseClient, shiftId: string):
   const orgName = org?.name?.trim() || 'CampSite';
   const tz = org?.timezone?.trim() || 'UTC';
   const role = (shift.role_label as string | null)?.trim();
-  const summary = role ? `[Shift] ${role} — ${orgName}` : `[Shift] ${orgName}`;
+  const summary = role ? `[Shift] ${role}  ${orgName}` : `[Shift] ${orgName}`;
   const description = (shift.notes as string | null)?.trim() || `Scheduled shift at ${orgName}.`;
 
   try {
@@ -287,7 +287,7 @@ export async function syncLeaveToGoogle(admin: SupabaseClient, leaveId: string):
   const kind = ((leave.kind as string) || 'leave').replace('_', ' ');
   const startDate = leave.start_date as string;
   const endDate = leave.end_date as string;
-  const summary = `Leave — ${kind.charAt(0).toUpperCase() + kind.slice(1)} (${startDate} to ${endDate})`;
+  const summary = `Leave  ${kind.charAt(0).toUpperCase() + kind.slice(1)} (${startDate} to ${endDate})`;
   const description = 'Approved leave period via CampSite.';
 
   // All-day: Google Calendar uses exclusive end date for date-only events

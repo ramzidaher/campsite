@@ -40,7 +40,7 @@ export async function sendInterviewScheduledEmail(payload: InterviewScheduledEma
   const portalPath = `/jobs/status/${encodeURIComponent(payload.portalToken)}`;
   const portalUrl = base ? `${base.replace(/\/+$/, '')}${portalPath}` : portalPath;
 
-  const subject = `${payload.orgName}: Interview scheduled — ${payload.jobTitle}`;
+  const subject = `${payload.orgName}: Interview scheduled  ${payload.jobTitle}`;
   const instr = payload.joiningInstructions.trim()
     ? `<p style="font-weight:600;">Joining details</p><p style="white-space:pre-wrap;">${escapeHtml(payload.joiningInstructions.trim())}</p>`
     : '';

@@ -43,7 +43,7 @@ create policy onboarding_run_tasks_select_direct_reports
   );
 
 -- ---------------------------------------------------------------------------
--- Fix onboarding_task_update RPC — resolve direct manager via profiles
+-- Fix onboarding_task_update RPC  resolve direct manager via profiles
 -- ---------------------------------------------------------------------------
 
 create or replace function public.onboarding_task_update(

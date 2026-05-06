@@ -54,7 +54,7 @@ export function QrScannerScreen() {
 
   const onBarcodeScanned = useCallback(
     async ({ data }: { data: string }) => {
-      // Debounce — ignore same token within 3s
+      // Debounce  ignore same token within 3s
       if (scanning || data === lastScanned.current) return;
       lastScanned.current = data;
       setScanning(true);

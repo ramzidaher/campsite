@@ -5,7 +5,7 @@
 -- Two changes:
 --   1. permission_keys now uses _safe_my_permission_keys_json (1200ms fail-soft).
 --      Previously a slow permission query would stall the whole RPC, hit the
---      app-level 1500ms timeout, and cache an empty bundle for 10s — making the
+--      app-level 1500ms timeout, and cache an empty bundle for 10s  making the
 --      user look like a member with no modules.
 --
 --   2. All badge/count fields now read from user_badge_counters (a single PK
@@ -57,7 +57,7 @@ begin
   v_have_counters := found;
 
   if not v_have_counters then
-    -- No row yet — kick off an async recalc and return zeros for now.
+    -- No row yet  kick off an async recalc and return zeros for now.
     perform public.enqueue_badge_counter_recalc_for_user(v_uid, 'missing_bundle_read');
   end if;
 

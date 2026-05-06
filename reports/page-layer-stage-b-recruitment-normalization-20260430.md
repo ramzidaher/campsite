@@ -1,6 +1,6 @@
-# Page Layer Stage B Report — Recruitment Route Normalization Slice 2
+# Page Layer Stage B Report  Recruitment Route Normalization Slice 2
 **Date:** 2026-04-30
-**Status:** COMPLETE — recruitment queue normalized, interviews verified
+**Status:** COMPLETE  recruitment queue normalized, interviews verified
 **Follow-up to:** `reports/page-layer-stage-b-hiring-normalization-20260430.md`
 
 ---

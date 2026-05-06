@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Pencil, Pin } from 'lucide-react';
+import { ArrowRight, CalendarRange, Hourglass, Inbox, Pencil, Pin, RadioTower, Users } from 'lucide-react';
 
 import { DashboardCampfireAmbient } from '@/components/dashboard/DashboardCampfireAmbient';
 import { DashboardCalendarWidget } from '@/components/dashboard/DashboardCalendarWidget';
@@ -79,7 +79,7 @@ export function DashboardHome({
   const memberTileInner = (
     <>
       <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-        <span>👥</span> Active members
+        <Users className="h-3.5 w-3.5" aria-hidden /> Active members
       </div>
       <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
         {data.memberActiveTotal}
@@ -104,7 +104,10 @@ export function DashboardHome({
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="campsite-stack-sm">
           <h2 className="campsite-title">
-            {greetingLine}
+            <span className="inline-flex items-center gap-2">
+              {greetingLine}
+              <span aria-hidden>👋</span>
+            </span>
           </h2>
           <p className="campsite-subheading">
             {now.toLocaleDateString(
@@ -148,7 +151,7 @@ export function DashboardHome({
         {showBroadcastTotal ? (
           <Link href="/broadcasts" prefetch={false} className={statTileClass}>
             <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-              <span>📡</span> Total broadcasts
+              <RadioTower className="h-3.5 w-3.5" aria-hidden /> Total broadcasts
             </div>
             <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
               {data.broadcastTotal}
@@ -177,7 +180,7 @@ export function DashboardHome({
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
             <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-              <span>⏳</span> Pending approvals
+              <Hourglass className="h-3.5 w-3.5" aria-hidden /> Pending approvals
             </div>
             <div
               className={[
@@ -201,7 +204,7 @@ export function DashboardHome({
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
             <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-              <span>📬</span> Unread
+              <Inbox className="h-3.5 w-3.5" aria-hidden /> Unread
             </div>
             <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
               {data.unreadCount}
@@ -215,7 +218,7 @@ export function DashboardHome({
             className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
           >
             <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-              <span>📬</span> Broadcasts
+              <Inbox className="h-3.5 w-3.5" aria-hidden /> Broadcasts
             </div>
             <div className="mt-2 campsite-subheading font-medium text-[#121212]">View feed</div>
             <div className="mt-2 campsite-body text-[#9b9b9b]">Updates from your organisation</div>
@@ -228,7 +231,7 @@ export function DashboardHome({
           className="rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]"
         >
           <div className="mb-2.5 flex items-center gap-1.5 campsite-body font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-            <span>🗓</span> Shifts this week
+            <CalendarRange className="h-3.5 w-3.5" aria-hidden /> Shifts this week
           </div>
           <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {data.shiftsThisWeek}
@@ -310,9 +313,7 @@ export function DashboardHome({
                       unread
                         ? 'border-sky-200 bg-sky-50/90 hover:border-sky-300 hover:shadow-[0_1px_3px_rgba(14,165,233,0.12),0_4px_12px_rgba(0,0,0,0.04)]'
                         : 'border-[#d8d8d8] bg-white hover:border-[#c8c8c8] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
-                      unread
-                        ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-sky-600 before:content-['']"
-                        : '',
+                      '',
                     ].join(' ')}
                   >
                     <div className="flex items-start justify-between gap-3">

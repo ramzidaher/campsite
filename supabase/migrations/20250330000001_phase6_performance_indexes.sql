@@ -1,4 +1,4 @@
--- Phase 6 — Additional indexes for feed, admin filters, and junction lookups.
+-- Phase 6  Additional indexes for feed, admin filters, and junction lookups.
 -- (Core FK indexes already exist from earlier phases; this adds composites and missing junction indexes.)
 
 -- Feed: sent broadcasts by org, newest first (partial index keeps it small).

@@ -14,7 +14,7 @@ export type SectionNavProps = {
   pathname: string;
   'aria-label'?: string;
   className?: string;
-  /** `underline` — text tabs with a bottom rule (hiring hub). Default `pill` matches HR workspace chips. */
+  /** `underline`  text tabs with a bottom rule (hiring hub). Default `pill` matches HR workspace chips. */
   variant?: 'pill' | 'underline';
 };
 

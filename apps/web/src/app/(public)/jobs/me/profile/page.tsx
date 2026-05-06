@@ -29,7 +29,7 @@ export default async function CandidateProfilePage() {
 
   const { data: profile } = await supabase
     .from('candidate_profiles')
-    .select('full_name, phone, location, linkedin_url, portfolio_url')
+    .select('full_name, phone, location, current_title, linkedin_url, portfolio_url, persona, skills')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -106,8 +106,11 @@ export default async function CandidateProfilePage() {
               full_name: profile?.full_name ?? null,
               phone: profile?.phone ?? null,
               location: profile?.location ?? null,
+              current_title: (profile?.current_title as string | null) ?? null,
               linkedin_url: profile?.linkedin_url ?? null,
               portfolio_url: profile?.portfolio_url ?? null,
+              persona: (profile?.persona as string | null) ?? null,
+              skills: Array.isArray(profile?.skills) ? (profile?.skills as string[]) : [],
             }}
           />
         </div>

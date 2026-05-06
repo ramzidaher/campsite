@@ -1,4 +1,4 @@
--- v2 tenant roles (Option A — ROLE-MAPPING.md): rename literals, retire weekly_paid / senior_manager / assistant / super_admin.
+-- v2 tenant roles (Option A  ROLE-MAPPING.md): rename literals, retire weekly_paid / senior_manager / assistant / super_admin.
 -- Platform admins unchanged (platform_admins table).
 
 -- ---------------------------------------------------------------------------
@@ -421,7 +421,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- RLS policies — drop & recreate with org_admin / org-scoped rota
+-- RLS policies  drop & recreate with org_admin / org-scoped rota
 -- ---------------------------------------------------------------------------
 
 -- Phase 1
@@ -520,7 +520,7 @@ create policy dept_managers_mutate_org_admin
     )
   );
 
--- Phase 2 — broadcast manager approval path
+-- Phase 2  broadcast manager approval path
 drop policy if exists broadcasts_update_manager on public.broadcasts;
 create policy broadcasts_update_manager
   on public.broadcasts
@@ -548,7 +548,7 @@ create policy broadcasts_update_manager
     and status in ('draft', 'scheduled', 'sent', 'cancelled')
   );
 
--- Phase 3 — rota / calendar / sheets
+-- Phase 3  rota / calendar / sheets
 drop policy if exists rota_shifts_select on public.rota_shifts;
 create policy rota_shifts_select
   on public.rota_shifts
@@ -736,7 +736,7 @@ create policy sheets_mappings_write
     )
   );
 
--- Phase 4 — discounts
+-- Phase 4  discounts
 drop policy if exists discount_tiers_insert on public.discount_tiers;
 create policy discount_tiers_insert
   on public.discount_tiers
@@ -790,7 +790,7 @@ create policy scan_logs_org_admin_select
     )
   );
 
--- Phase 5 — org admin extensions
+-- Phase 5  org admin extensions
 drop policy if exists rota_sheets_sync_log_super_select on public.rota_sheets_sync_log;
 create policy rota_sheets_sync_log_org_admin_select
   on public.rota_sheets_sync_log

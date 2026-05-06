@@ -1,0 +1,28 @@
+---
+description: Cross-page UI branding consistency for app surfaces
+globs:
+  - apps/web/src/**/*.tsx
+alwaysApply: false
+---
+
+# Global UI branding (all app pages)
+
+Use these defaults when adding or updating product UI so pages feel consistent across Dashboard, Admin, HR, and other app surfaces.
+
+1. **Page rails and spacing**
+   - Prefer dashboard-aligned rails for primary page content: `w-full px-5 py-6 sm:px-[28px] sm:py-7`.
+   - Avoid adding root `max-w-*` wrappers unless the page pattern explicitly requires constrained reading width.
+2. **Primary CTA treatment**
+   - Use icon + label buttons for primary actions (`inline-flex items-center gap-2`).
+   - Decorative icons should be `aria-hidden`.
+   - Prefer action labels without symbol prefixes (for example `Invite member`, not `+ Invite member`).
+   - For top-level create/start actions (for example New broadcast, Start onboarding, New template), use the black primary style: `bg-[#121212]`, `text-[#faf9f6]`, with subtle hover opacity.
+3. **Directional affordances**
+   - Never use unicode arrows in UI copy (`→`, `←`, `›`, `‹`).
+   - Use icon components (for example `lucide-react`) for directional cues.
+4. **Surface styling**
+   - Keep cards white with subtle borders (`border-[#d8d8d8]` or `border-[#e8e8e8]`) on the paper background.
+   - Preserve consistent hover affordances (`hover:bg-[#f5f4f1]` or subtle shadow/raise on clickable cards).
+5. **Action rows**
+   - Primary/secondary page actions should sit in a simple inline row (`flex flex-wrap items-center gap-3`) without an extra bordered wrapper container unless the action area itself is a distinct settings card.
+   - Secondary buttons should use muted text with standard hover treatment (`text-[#6b6b6b]`, `hover:bg-[#f5f4f1]`, `hover:text-[#121212]`).

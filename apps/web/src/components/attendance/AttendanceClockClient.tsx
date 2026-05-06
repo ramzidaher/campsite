@@ -194,7 +194,7 @@ export function AttendanceClockClient({
           className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212]"
         />
         <p className="mt-1 text-[12px] text-[#9b9b9b]">
-          {weekStart} – {weekEnd} · Timesheet: {tsStatus ?? '—'}
+          {weekStart} – {weekEnd} · Timesheet: {tsStatus ?? ''}
         </p>
       </div>
 
@@ -223,7 +223,7 @@ export function AttendanceClockClient({
       <div className="rounded-xl border border-[#e8e4dc] bg-white px-4 py-3">
         <p className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">This week (from punches)</p>
         <p className="mt-1 font-authSerif text-[22px] text-[#121212]">
-          {displayMinutes != null ? `${Math.floor(displayMinutes / 60)}h ${displayMinutes % 60}m` : '—'}
+          {displayMinutes != null ? `${Math.floor(displayMinutes / 60)}h ${displayMinutes % 60}m` : ''}
         </p>
       </div>
 

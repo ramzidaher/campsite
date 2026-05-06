@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-/** Matches `/forbidden` primary CTA — outline pill on cream workspace. */
+/** Matches `/forbidden` primary CTA  outline pill on cream workspace. */
 export const simpleStatusOutlineButtonClass =
   'inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#f5f4f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#121212]/15 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--campsite-bg)]';
 

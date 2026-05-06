@@ -8,7 +8,7 @@ import {
 } from '@campsite/types';
 import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
-import { Pencil } from 'lucide-react';
+import { Pencil, Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -239,7 +239,7 @@ export function BroadcastsClient({
           } else if (rec.status === 'scheduled') {
             setApprovalToast(`Approved: "${title}" is scheduled to send.`);
           } else if (rec.status === 'draft') {
-            setApprovalToast(`Not approved — "${title}" was returned to your drafts.`);
+            setApprovalToast(`Not approved  "${title}" was returned to your drafts.`);
           }
           void loadMeta();
         }
@@ -347,7 +347,7 @@ export function BroadcastsClient({
 
   return (
     <div className={composeOpen && composeAllowed ? 'w-full' : 'w-full px-5 py-8 sm:px-7'}>
-      {/* Page header — hidden in compose so the journal-style composer owns the canvas */}
+      {/* Page header  hidden in compose so the journal-style composer owns the canvas */}
       {!(composeOpen && composeAllowed) ? (
         <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -460,9 +460,7 @@ export function BroadcastsClient({
                 </FormSelect>
               ) : null}
               <div className="relative min-w-[240px] flex-[2_1_360px]">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9b9b9b]">
-                  🔍
-                </span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9b9b9b]" aria-hidden />
                 <input
                   type="search"
                   placeholder="Search broadcasts..."

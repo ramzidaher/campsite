@@ -691,7 +691,7 @@ begin
 
   if v_lel is not null and v_awe is not null and v_awe < v_lel then
     v_ineligible_lel := true;
-    notes := array_append(notes, 'Average weekly earnings below Lower Earnings Limit — SSP not payable (legacy rule).');
+    notes := array_append(notes, 'Average weekly earnings below Lower Earnings Limit  SSP not payable (legacy rule).');
   end if;
 
   if not v_ineligible_lel then

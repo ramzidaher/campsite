@@ -107,7 +107,7 @@ export async function sendRecruitmentRequestHrEmail(payload: RecruitmentRequestE
 
   const specifics = payload.specificRequirements?.trim()
     ? escapeHtml(payload.specificRequirements.trim())
-    : '—';
+    : '';
 
   const html = `
 <p>A department manager submitted a new recruitment request.</p>

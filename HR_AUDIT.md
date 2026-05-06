@@ -1,15 +1,15 @@
 # CampSite HR System Audit
 
 > Audit date: 2026-04-15  
-> Scope: Full HR module review — what is built, what is partial, what is missing entirely.
+> Scope: Full HR module review  what is built, what is partial, what is missing entirely.
 
 ---
 
 ## Legend
 
-- `[x]` — Implemented & functional  
-- `[~]` — Partially implemented / needs work  
-- `[ ]` — Missing / not yet built  
+- `[x]`  Implemented & functional  
+- `[~]`  Partially implemented / needs work  
+- `[ ]`  Missing / not yet built  
 
 ---
 
@@ -285,7 +285,7 @@
 - [ ] Sensitive data field-level permissions (e.g. salary visible only to HR)
 - [ ] Document-level access control (who can view which HR documents)
 - [ ] HR data access audit log (who viewed whose record and when)
-- [ ] Data access request workflow (employee requests own data — GDPR SAR)
+- [ ] Data access request workflow (employee requests own data  GDPR SAR)
 
 ---
 
@@ -341,7 +341,7 @@
 - [ ] Employment contract digital signature workflow (not just upload)
 - [ ] Policy version control (know who signed which version)
 - [ ] Working Time Regulations tracking (48-hour week opt-out, rest breaks)
-- [ ] Holiday pay calculation (includes commission / overtime — post-Bear Scotland)
+- [ ] Holiday pay calculation (includes commission / overtime  post-Bear Scotland)
 - [ ] IR35 / off-payroll worker determination workflow
 - [ ] Auto-enrolment pension compliance tracking
 - [ ] Equality Act reasonable adjustments log
@@ -392,10 +392,10 @@
 - [x] Org slug / subdomain routing
 - [x] Subscription gating (org-locked, trial-ended states)
 - [x] Founder/platform admin portal
-- [ ] PWA (manifest exists, service worker not active — noted in DEPLOY.md)
+- [ ] PWA (manifest exists, service worker not active  noted in DEPLOY.md)
 - [ ] Content-Security-Policy header (noted as missing in DEPLOY.md)
-- [ ] Email delivery system (currently using Supabase email — production email provider not confirmed)
-- [ ] In-app notification inbox (bell icon + unread count — notification hubs exist but no unified inbox)
+- [ ] Email delivery system (currently using Supabase email  production email provider not confirmed)
+- [ ] In-app notification inbox (bell icon + unread count  notification hubs exist but no unified inbox)
 - [ ] Audit log UI (HR data access events viewable by admin)
 - [ ] Multi-language / i18n support
 - [ ] Accessibility audit (WCAG 2.1 AA compliance)

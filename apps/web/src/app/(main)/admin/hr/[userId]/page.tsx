@@ -55,9 +55,9 @@ export default async function EmployeeHRFilePage({
       Boolean(limitedData.targetProfile.show_pronouns) &&
       String(limitedData.targetProfile.pronouns ?? '').trim()
         ? String(limitedData.targetProfile.pronouns).trim()
-      : '—';
+      : '';
     return (
-      <div className="mx-auto max-w-3xl px-5 py-8 sm:px-7">
+      <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
         <div className="rounded-2xl border border-[#e8e8e8] bg-white p-6">
           <h1 className="font-authSerif text-[26px] leading-tight text-[#121212]">
             {getDisplayName(limitedData.targetProfile.full_name, null)}
@@ -69,7 +69,7 @@ export default async function EmployeeHRFilePage({
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Preferred name</p>
-              <p className="text-[14px] text-[#121212]">{limitedData.targetProfile.preferred_name ?? '—'}</p>
+              <p className="text-[14px] text-[#121212]">{limitedData.targetProfile.preferred_name ?? ''}</p>
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pronouns</p>
@@ -77,12 +77,12 @@ export default async function EmployeeHRFilePage({
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Work email</p>
-              <p className="text-[14px] text-[#121212]">{limitedData.targetProfile.email ?? '—'}</p>
+              <p className="text-[14px] text-[#121212]">{limitedData.targetProfile.email ?? ''}</p>
             </div>
             <div className="sm:col-span-2">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Department</p>
               <p className="text-[14px] text-[#121212]">
-                {limitedData.deptNames.length ? limitedData.deptNames.join(', ') : '—'}
+                {limitedData.deptNames.length ? limitedData.deptNames.join(', ') : ''}
               </p>
             </div>
           </div>
@@ -605,9 +605,9 @@ export default async function EmployeeHRFilePage({
               label: 'Record Core',
               description: 'Core employee record and audit events.',
               facts: [
-                { label: 'Status', value: String(fileRow.status ?? '—') },
-                { label: 'Department', value: String(fileRow.department_name ?? '—') },
-                { label: 'Job title', value: String(fileRow.job_title ?? '—') },
+                { label: 'Status', value: String(fileRow.status ?? '') },
+                { label: 'Department', value: String(fileRow.department_name ?? '') },
+                { label: 'Job title', value: String(fileRow.job_title ?? '') },
               ],
             },
             {
@@ -658,7 +658,7 @@ export default async function EmployeeHRFilePage({
                 },
                 {
                   label: 'Bradford score',
-                  value: absenceScore ? `${absenceScore.bradford_score}` : '—',
+                  value: absenceScore ? `${absenceScore.bradford_score}` : '',
                 },
               ],
             },
@@ -728,7 +728,7 @@ export default async function EmployeeHRFilePage({
                   label: 'Requested at',
                   value: activePrivacyRequest
                     ? String(activePrivacyRequest.created_at).slice(0, 10)
-                    : '—',
+                    : '',
                 },
               ],
             },

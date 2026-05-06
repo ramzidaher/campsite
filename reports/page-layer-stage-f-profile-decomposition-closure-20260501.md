@@ -1,4 +1,4 @@
-# Page Layer Stage F Report — Profile Decomposition Closure
+# Page Layer Stage F Report  Profile Decomposition Closure
 **Date:** 2026-05-01  
 **Status:** COMPLETE (WS1.4 closed)  
 **Workstream:** WS1.4 profile decomposition (deeper pass)

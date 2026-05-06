@@ -40,7 +40,7 @@ export function HeroSection() {
     window.addEventListener('scroll', onScroll, { passive: true });
     media.addEventListener('change', onMotionPrefChange);
 
-    // Stagger the UI cards in — opacity only, so parallax transforms are untouched
+    // Stagger the UI cards in  opacity only, so parallax transforms are untouched
     if (!media.matches) {
       const cardEls = Array.from(cards.querySelectorAll<HTMLElement>('.v5-ui-card'));
       if (cardEls.length) {

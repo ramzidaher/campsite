@@ -39,7 +39,7 @@ where table_schema = 'public'
 order by 1;
 
 -- ---------------------------------------------------------------------------
--- 4) Manual QA — § Stacking examples (PLAN.md)
+-- 4) Manual QA  § Stacking examples (PLAN.md)
 -- ---------------------------------------------------------------------------
 -- Use staging users: HR Manager, HR Coordinator, Engagement Manager,
 -- Engagement Coordinator with appropriate profiles.role, dept_managers /

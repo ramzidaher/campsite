@@ -11,7 +11,7 @@
  *   CAMPSITE_SUPER_ADMIN_NAME    (default: founder name from email local part)
  *   CAMPSITE_ORG_SLUG            (default: common-ground-studios)
  *   CAMPSITE_ORG_NAME            (default: Common Ground Studios)
- *   CAMPSITE_ORG_ID              (optional UUID — skip org insert if set)
+ *   CAMPSITE_ORG_ID              (optional UUID  skip org insert if set)
  *
  * The API key MUST be the service_role secret (JWT `role` = service_role), not the anon key.
  * If you see "row-level security policy" on organisations, you pasted the wrong key.
@@ -114,7 +114,7 @@ async function main() {
   if (keyRole !== 'service_role') {
     console.error(
       'SUPABASE_SERVICE_ROLE_KEY must be the service_role JWT (Dashboard → Project Settings → API).\n' +
-        'You likely pasted the anon / public key — that key cannot insert organisations (RLS will block).\n' +
+        'You likely pasted the anon / public key  that key cannot insert organisations (RLS will block).\n' +
         `Detected JWT role: ${keyRole ?? 'unknown (not a Supabase JWT?)'}`
     );
     process.exit(1);

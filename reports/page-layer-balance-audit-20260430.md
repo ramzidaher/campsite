@@ -1,6 +1,6 @@
 # Page Layer Balance Audit & Normalization Plan
 **Date:** 2026-04-30
-**Status:** OPEN — Phase 1 is complete, but the page layer is still uneven
+**Status:** OPEN  Phase 1 is complete, but the page layer is still uneven
 **Follow-up to:** `reports/phase1-production-validation-stage-report.md`
 **Related source:** `reports/architecture-findings-20260429.md`
 **Stage A inventory:** `reports/page-layer-stage-a-route-inventory-20260430.md`
@@ -134,7 +134,7 @@ This matters because the next pass should stay disciplined.
 
 ## What Needs To Be Done
 
-### Stage A — Build a route inventory that is actually useful
+### Stage A  Build a route inventory that is actually useful
 
 Create a route inventory for all `page.tsx` files with these columns:
 
@@ -148,7 +148,7 @@ Create a route inventory for all `page.tsx` files with these columns:
 
 Do not start by editing everything. Start by making the route inventory trustworthy.
 
-### Stage B — Normalize the shared list surfaces first
+### Stage B  Normalize the shared list surfaces first
 
 These routes are the highest-value normalization targets because users hit them often and they already show mixed behavior:
 
@@ -169,7 +169,7 @@ Possible outcome:
 - create shared “base dataset + filtered view” loaders where appropriate
 - or clearly separate “cached list page” vs “search/detail query page” behavior if one shared path is not realistic
 
-### Stage C — Normalize the people and manager surfaces
+### Stage C  Normalize the people and manager surfaces
 
 Priority routes:
 
@@ -191,7 +191,7 @@ Specific rules:
 - if a route only needs shell-derived profile and permissions, do not re-fetch them differently without a strong reason
 - if a route uses fallback logic, prefer stale-but-complete data over partial primary datasets
 
-### Stage D — Explicitly label special back-office surfaces
+### Stage D  Explicitly label special back-office surfaces
 
 Routes to treat separately:
 
@@ -204,7 +204,7 @@ Goal:
 - if yes, document that they are intentionally outside the main tenant-facing route model
 - if no, give them their own shared loader strategy instead of leaving them as ad hoc multi-RPC pages
 
-### Stage E — Audit fallback behavior for completeness, not just speed
+### Stage E  Audit fallback behavior for completeness, not just speed
 
 This is important because the original user concern was not only load time but also the “cheap feel” from partial or degraded data.
 
@@ -218,7 +218,7 @@ Primary rule:
 
 **Do not silently return partial primary datasets for main workspace pages unless the UI clearly communicates it.**
 
-### Stage F — Add route-family acceptance criteria before more optimization work
+### Stage F  Add route-family acceptance criteria before more optimization work
 
 Before calling the page layer “balanced,” each major route family should meet these checks:
 

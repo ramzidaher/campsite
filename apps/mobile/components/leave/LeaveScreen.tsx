@@ -816,7 +816,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
             </View>
             {absenceScore.bradford_score >= 200 ? (
               <Text style={{ marginTop: 10, fontSize: 13, color: '#b91c1c' }}>
-                Above the usual review threshold — HR may follow up.
+                Above the usual review threshold  HR may follow up.
               </Text>
             ) : null}
           </View>
@@ -1249,14 +1249,14 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
               </Text>
               {approvalModal ? (
                 <Text style={[styles.modalSubtitle, { color: textSecondary }]}>
-                  {approvalModal.name} — optional note for the employee.
+                  {approvalModal.name}  optional note for the employee.
                 </Text>
               ) : null}
               <Text style={[styles.fieldLabel, { color: textSecondary, marginTop: 12 }]}>Note (optional)</Text>
               <TextInput
                 value={approvalNote}
                 onChangeText={setApprovalNote}
-                placeholder="e.g. approved — enjoy your break"
+                placeholder="e.g. approved  enjoy your break"
                 placeholderTextColor={textSecondary}
                 multiline
                 numberOfLines={3}

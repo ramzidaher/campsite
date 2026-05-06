@@ -38,7 +38,7 @@ begin
   v_have_counters := found;
 
   if not v_have_counters then
-    -- Never block on a full recompute — enqueue and return empty.
+    -- Never block on a full recompute  enqueue and return empty.
     perform public.enqueue_badge_counter_recalc_for_user(v_uid, 'missing_shell_read');
     return '{}'::jsonb;
   end if;
@@ -67,7 +67,7 @@ begin
   end if;
 
   -- If a flag is disabled the cache row already has the right value from
-  -- the last background recalc — just surface it. If it looks stale,
+  -- the last background recalc  just surface it. If it looks stale,
   -- the enqueue above will refresh it within the next cron cycle.
   if not v_broadcast_enabled then
     v_result := jsonb_set(v_result, '{broadcast_unread}',

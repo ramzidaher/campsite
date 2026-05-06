@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Moon } from 'lucide-react';
+import { Bell, Menu, Moon } from 'lucide-react';
 
 import { ShellCommandMenu } from '@/components/shell/ShellCommandMenu';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
@@ -172,7 +172,7 @@ export function AppTopBar({
             onClick={onOpenMobileNav}
             style={{ borderColor: 'var(--org-brand-border)' }}
           >
-            ☰
+            <Menu className="h-4 w-4" aria-hidden />
           </button>
         ) : null}
       </div>
@@ -244,10 +244,10 @@ export function AppTopBar({
             }}
             title={
               !dndOn
-                ? 'Do Not Disturb: off — enable quiet hours (set times in Settings → Notifications)'
+                ? 'Do Not Disturb: off  enable quiet hours (set times in Settings → Notifications)'
                 : quietHoursActiveNow
-                  ? `Quiet hours active now (${dndQuietStart ?? '?'}–${dndQuietEnd ?? '?'}) — UI sounds muted`
-                  : `Quiet hours on (${dndQuietStart ?? '?'}–${dndQuietEnd ?? '?'}) — outside quiet window; click to disable`
+                  ? `Quiet hours active now (${dndQuietStart ?? '?'}–${dndQuietEnd ?? '?'})  UI sounds muted`
+                  : `Quiet hours on (${dndQuietStart ?? '?'}–${dndQuietEnd ?? '?'})  outside quiet window; click to disable`
             }
             aria-label={
               dndOn
@@ -287,7 +287,7 @@ export function AppTopBar({
               color: 'var(--org-brand-muted)',
             }}
           >
-            🔔
+            <Bell className="h-[1.05rem] w-[1.05rem]" aria-hidden />
             {notificationCount > 0 ? (
               <span
                 className="absolute -right-1 -top-1 flex min-h-[19px] min-w-[19px] items-center justify-center rounded-full bg-[#E11D48] px-1 text-[10px] font-bold leading-none tracking-tight text-white ring-[2.5px] ring-white shadow-[0_2px_8px_rgba(225,29,72,0.55)] motion-safe:animate-pulse"

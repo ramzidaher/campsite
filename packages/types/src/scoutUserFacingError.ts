@@ -1,4 +1,4 @@
-/** Errors we generate locally — safe to show as-is (no vendor URLs or codes). */
+/** Errors we generate locally  safe to show as-is (no vendor URLs or codes). */
 const INTERNAL_SCOUT_ERROR = new Set([
   'Invalid response from AI service',
   'No summary returned; try again or shorten the message.',

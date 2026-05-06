@@ -401,7 +401,7 @@ export function DisciplinaryGrievanceLogClient({
             {events.slice(0, 12).map((e) => (
               <li key={e.id}>
                 {new Date(e.created_at).toISOString().slice(0, 10)} · {e.event_type}
-                {e.old_status || e.new_status ? ` (${e.old_status ?? '—'} → ${e.new_status ?? '—'})` : ''}
+                {e.old_status || e.new_status ? ` (${e.old_status ?? ''} → ${e.new_status ?? ''})` : ''}
               </li>
             ))}
           </ul>

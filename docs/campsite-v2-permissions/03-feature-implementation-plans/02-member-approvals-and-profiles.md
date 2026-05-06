@@ -1,8 +1,8 @@
-# 02 — Member approvals and profiles
+# 02  Member approvals and profiles
 
 ## 1. Product intent
 
-- **Approvers** (org admin, manager, coordinator — see `isApproverRole` in `packages/types/src/roles.ts`) review **pending** members (`profiles.status = 'pending'`).
+- **Approvers** (org admin, manager, coordinator  see `isApproverRole` in `packages/types/src/roles.ts`) review **pending** members (`profiles.status = 'pending'`).
 - Approvers **assign a real `profiles.role`** from a role list that depends on **viewer role** (`rolesAssignableOnApprove` in same file).
 - **Org admins** have the broadest assignable set; managers/coordinators cannot assign `org_admin` or `manager` from the queue (per `rolesAssignableOnApprove`).
 
@@ -13,12 +13,12 @@
 | Table | Relevant columns |
 |-------|------------------|
 | `profiles` | `id`, `org_id`, `role`, `status`, `full_name`, `email`, timestamps |
-| `user_departments` | `user_id`, `dept_id` — must be consistent after approval |
+| `user_departments` | `user_id`, `dept_id`  must be consistent after approval |
 | `departments` | Used for displaying pending member’s departments |
 
 ### 2.2 RLS expectations
 
-- Approvers must **only** see pending users in their **organisation** (and often scoped by **department** overlap — confirm in latest migrations for `can_approve_profile` or equivalent).
+- Approvers must **only** see pending users in their **organisation** (and often scoped by **department** overlap  confirm in latest migrations for `can_approve_profile` or equivalent).
 - Updates to `profiles.status` and `profiles.role` must be **denied** for non-approvers.
 - **Do not** expose full org member list to pending users.
 
@@ -67,8 +67,8 @@ Any new role added to `PROFILE_ROLES` must update:
 
 **Files:**
 
-- `apps/web/src/lib/admin/loadPendingApprovals.ts` — pending rows (name, email, departments, registration `role`).
-- `apps/web/src/lib/admin/pendingApprovalScope.ts` — pure **`userIdsWithMembershipInDepartments`** (used for manager/coordinator filtering; tested in Jest).
+- `apps/web/src/lib/admin/loadPendingApprovals.ts`  pending rows (name, email, departments, registration `role`).
+- `apps/web/src/lib/admin/pendingApprovalScope.ts`  pure **`userIdsWithMembershipInDepartments`** (used for manager/coordinator filtering; tested in Jest).
 - **Counts / preview:** `getPendingApprovalCount` and `loadPendingApprovalsPreview` in `apps/web/src/lib/dashboard/loadDashboardHome.ts` delegate to **`loadPendingApprovalRows`**, so nav badges and standalone queue stay aligned.
 
 **Note:** Admin **overview** `pendingCount` (`loadAdminOverview`) is **org-wide** pending total for KPIs; only **org admins** see **Admin → Overview** bulk approve. Manager/coordinator counts in the shell use **`getPendingApprovalCount`**.
@@ -97,8 +97,8 @@ Any new role added to `PROFILE_ROLES` must update:
 
 ## 5. Automated tests (`npm run test --workspace=@campsite/web`)
 
-- `src/lib/__tests__/pendingApprovalScope.test.ts` — department overlap set logic.
-- `src/lib/__tests__/rolesAssignableOnApprove.test.ts` — UI role matrix matches RPC expectations.
+- `src/lib/__tests__/pendingApprovalScope.test.ts`  department overlap set logic.
+- `src/lib/__tests__/rolesAssignableOnApprove.test.ts`  UI role matrix matches RPC expectations.
 
 ## 6. Implementation order (when extending)
 

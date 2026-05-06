@@ -9,7 +9,7 @@
 -- Why this shape: `user_permission_overrides` already existed with these three modes; composing subtractive
 -- after allowlist keeps rules intuitive; replace is opt-in per user via presence of rows (no extra flag).
 --
--- DOCUMENTED EXAMPLES (conceptual — keys depend on your catalog):
+-- DOCUMENTED EXAMPLES (conceptual  keys depend on your catalog):
 -- 1) Onboarding-limited manager: A user keeps the Manager role but must not access integration settings until
 --    a start-date rule is enforced in product; use subtractive `integrations.manage` (and related keys) so
 --    the role template stays standard while this individual is tightened. (Broader “data before start date”

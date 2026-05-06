@@ -1554,9 +1554,9 @@ export function FounderHqApp({
                       const daysLeft = trialDaysRemaining(org.subscription_trial_ends_at);
                       const trialLabel =
                         org.subscription_trial_ends_at == null
-                          ? '—'
+                          ? ''
                           : daysLeft === null
-                            ? '—'
+                            ? ''
                             : daysLeft < 0
                               ? `Ended ${Math.abs(daysLeft)}d ago`
                               : `${daysLeft}d left`;
@@ -1790,7 +1790,7 @@ export function FounderHqApp({
                 <div className="stat-value">
                   {growthStats.momPct !== null
                     ? `${growthStats.momPct >= 0 ? '+' : ''}${growthStats.momPct.toFixed(1)}%`
-                    : '—'}
+                    : ''}
                 </div>
                 <div className="stat-sub">
                   {growthStats.lastMonthMembers > 0
@@ -2154,7 +2154,7 @@ export function FounderHqApp({
                             <td style={{ color: 'var(--text2)' }}>{s.org_name}</td>
                             <td style={{ color: 'var(--text2)' }}>{dateStr}</td>
                             <td style={{ color: 'var(--text2)' }}>{timeStr}</td>
-                            <td style={{ color: 'var(--text3)' }}>{s.role_label ?? '—'}</td>
+                            <td style={{ color: 'var(--text3)' }}>{s.role_label ?? ''}</td>
                           </tr>
                         );
                       })}
@@ -2648,7 +2648,7 @@ export function FounderHqApp({
                             <td style={{ padding: '10px 12px', color: 'var(--text)' }}>{s.staff_name ?? 'Unassigned'}</td>
                             <td style={{ padding: '10px 12px', color: 'var(--text2)' }}>{dateStr}</td>
                             <td style={{ padding: '10px 12px', color: 'var(--text2)' }}>{timeStr}</td>
-                            <td style={{ padding: '10px 12px', color: 'var(--text3)' }}>{s.role_label ?? '—'}</td>
+                            <td style={{ padding: '10px 12px', color: 'var(--text3)' }}>{s.role_label ?? ''}</td>
                           </tr>
                         );
                       })}

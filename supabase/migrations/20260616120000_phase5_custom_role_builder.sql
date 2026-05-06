@@ -1,4 +1,4 @@
--- Phase 5: custom role builder — privilege caps on role definitions, system-role protection, custom-only assignment for non–org admins.
+-- Phase 5: custom role builder  privilege caps on role definitions, system-role protection, custom-only assignment for non–org admins.
 
 -- ---------------------------------------------------------------------------
 -- create_org_role: cap permissions to actor; block founder-only keys for tenants

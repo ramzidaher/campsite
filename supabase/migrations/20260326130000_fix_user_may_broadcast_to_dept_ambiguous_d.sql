@@ -1,4 +1,4 @@
--- PostgreSQL (newer) rejects `select d.* into d from departments d` — variable `d` and alias `d` collide.
+-- PostgreSQL (newer) rejects `select d.* into d from departments d`  variable `d` and alias `d` collide.
 
 create or replace function public.user_may_broadcast_to_dept(p_dept_id uuid)
 returns boolean

@@ -10,7 +10,7 @@ const FOLDER_ROWS = 3;
 const FILE_ROWS = 6;
 
 /**
- * Route-level skeleton for `/resources` — mirrors {@link ResourcesListClient} header, search, and grouped list.
+ * Route-level skeleton for `/resources`  mirrors {@link ResourcesListClient} header, search, and grouped list.
  */
 export default function ResourcesLoading() {
   return (
