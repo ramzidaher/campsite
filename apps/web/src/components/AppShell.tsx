@@ -81,6 +81,8 @@ function DegradedLastUpdatedText({ shellLastSuccessAt }: { shellLastSuccessAt: n
 }
 
 function titleFromPathSegment(segment: string): string {
+  const trimmed = segment.trim();
+  if (trimmed.toLowerCase() === 'hr') return 'HR';
   return segment
     .replace(/[-_]/g, ' ')
     .replace(/\b\w/g, (match) => match.toUpperCase());
@@ -357,7 +359,7 @@ export function AppShell({
   profileDndEnabled?: boolean;
   profileDndStart?: string | null;
   profileDndEnd?: string | null;
-  /** Hydrated from merged server shell bundle — avoids duplicate badge RPC right after load. */
+  /** Hydrated from merged server shell bundle  avoids duplicate badge RPC right after load. */
   initialShellBadgeCounts?: ShellBadgeCounts;
   initialUiMode?: UiMode;
   shellDegraded?: boolean;
@@ -378,7 +380,7 @@ export function AppShell({
   const [userAvatarFailed, setUserAvatarFailed] = useState(false);
   const playUiSound = useUiSound();
 
-  // Live badge counts — polled while the tab is visible; focus refetch for freshness.
+  // Live badge counts  polled while the tab is visible; focus refetch for freshness.
   // Server bundle seeds React Query so the first client fetch is not redundant.
   const { data: live } = useShellBadgeCounts(initialShellBadgeCounts);
 
@@ -412,7 +414,7 @@ export function AppShell({
     }
   };
 
-  // Sum of all badge counts in a section — shown on the collapsed header.
+  // Sum of all badge counts in a section  shown on the collapsed header.
   const sectionBadgeTotal = (items: MainShellAdminNavItem[] | null) =>
     items ? items.reduce((s, i) => { const r = withLiveBadge(i); return s + (r.badge ?? 0) + (r.secondaryBadge ?? 0); }, 0) : 0;
   const adminSectionBadge   = sectionBadgeTotal(adminNavItems);
@@ -420,7 +422,7 @@ export function AppShell({
   const hrSectionBadge      = sectionBadgeTotal(hrNavItems);
   const financeSectionBadge = sectionBadgeTotal(financeNavItems);
 
-  // Top-bar notification bell — rebuilt from live counts so new items appear
+  // Top-bar notification bell  rebuilt from live counts so new items appear
   // even if they were zero on the initial server render (and thus filtered out).
   const liveTopBarNotifications = useMemo<TopBarNotificationItem[]>(() => {
     if (!live) return topBarNotifications;

@@ -4,7 +4,7 @@
  */
 
 export type GraphEventTime = {
-  dateTime: string; // ISO-8601, no trailing Z — Graph interprets via timeZone
+  dateTime: string; // ISO-8601, no trailing Z  Graph interprets via timeZone
   timeZone: string; // IANA or Windows tz name
 };
 

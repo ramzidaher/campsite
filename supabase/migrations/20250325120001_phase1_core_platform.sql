@@ -1,4 +1,4 @@
--- Phase 1 — Core platform: orgs, profiles, departments, subscriptions, RLS.
+-- Phase 1  Core platform: orgs, profiles, departments, subscriptions, RLS.
 
 -- ---------------------------------------------------------------------------
 -- Tables
@@ -86,7 +86,7 @@ create table public.dept_managers (
 );
 
 -- ---------------------------------------------------------------------------
--- Helper functions (after tables — can_approve_profile references junction tables)
+-- Helper functions (after tables  can_approve_profile references junction tables)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.current_org_id()
@@ -207,7 +207,7 @@ create policy profiles_insert_self
 
 -- New self-registration: default role weekly_paid until manager changes (optional). Spec: pending until approved.
 -- Keep role as weekly_paid for applicants; managers approve into intended role via separate flow Phase 1+.
--- Spec lists roles — registration sets pending; we store requested role in profile.role as weekly_paid baseline.
+-- Spec lists roles  registration sets pending; we store requested role in profile.role as weekly_paid baseline.
 
 create policy profiles_update_self
   on public.profiles

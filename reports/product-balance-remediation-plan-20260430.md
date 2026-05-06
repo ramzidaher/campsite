@@ -30,7 +30,7 @@ Close remaining imbalance so that:
 
 ## Workstreams
 
-## WS1 — Route Model Normalization (Core)
+## WS1  Route Model Normalization (Core)
 **Purpose:** remove remaining architectural drift between sibling routes.
 
 ### WS1.1 Admin system overview parity
@@ -74,7 +74,7 @@ Close remaining imbalance so that:
 
 ---
 
-## WS2 — Fallback & Completeness Governance (Non-Performance Critical)
+## WS2  Fallback & Completeness Governance (Non-Performance Critical)
 **Purpose:** ensure degraded behavior is trustworthy and transparent.
 
 ### WS2.1 Fallback taxonomy
@@ -98,7 +98,7 @@ Close remaining imbalance so that:
 
 ---
 
-## WS3 — Quality & Release Balance Gate
+## WS3  Quality & Release Balance Gate
 **Purpose:** add explicit launch confidence checks for “balanced product”, not just code quality.
 
 ### WS3.1 Balance acceptance checklist (Stage F formalization)
@@ -123,7 +123,7 @@ Add a pre-release checklist requiring:
 
 ---
 
-## WS4 — Intentional Exception Documentation
+## WS4  Intentional Exception Documentation
 **Purpose:** avoid hidden special-cases.
 
 ### WS4.1 Founder surface decision

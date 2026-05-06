@@ -1,5 +1,6 @@
 import { candidateStageTimeline } from '@/lib/jobs/applicationStageTimeline';
 import { jobApplicationStageLabel } from '@/lib/jobs/labels';
+import { Check } from 'lucide-react';
 
 export function ApplicationStageTimeline({ stage }: { stage: string }) {
   const t = candidateStageTimeline(stage);
@@ -33,7 +34,7 @@ export function ApplicationStageTimeline({ stage }: { stage: string }) {
                       : 'bg-[#e8e8e8] text-[#9b9b9b]'
                 }`}
               >
-                {done ? '✓' : i + 1}
+                {done ? <Check className="h-3.5 w-3.5" aria-hidden /> : i + 1}
               </span>
               {i < t.stages.length - 1 ? (
                 <span className="my-0.5 block min-h-[18px] w-px grow bg-[#dcdcdc]" aria-hidden />

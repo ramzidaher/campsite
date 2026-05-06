@@ -751,7 +751,7 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
 
             {view === 'team' && profile.role === 'manager' && managedDeptIds.length === 0 ? (
               <Text style={[styles.empty, { color: tokens.textSecondary }]}>
-                No managed departments — team view is empty.
+                No managed departments  team view is empty.
               </Text>
             ) : loading ? (
               <ActivityIndicator style={{ marginTop: 24 }} color={tokens.textPrimary} />
@@ -985,7 +985,7 @@ export function RotaScreen({ profile }: { profile: ProfileRow }) {
 
             {pendingPeer.length > 0 ? (
               <View style={{ marginTop: 24 }}>
-                <Text style={[styles.section, { color: tokens.textPrimary }]}>Swap — your OK</Text>
+                <Text style={[styles.section, { color: tokens.textPrimary }]}>Swap  your OK</Text>
                 {pendingPeer.map((r: { id: string }) => (
                   <Pressable
                     key={r.id}

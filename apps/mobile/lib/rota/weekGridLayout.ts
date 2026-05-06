@@ -47,7 +47,7 @@ export function gridBandMinutesForShiftOnStartDay(start: Date, end: Date): { sta
   return clampToGrid(startMin, endMin);
 }
 
-/** Same as web — maps calendar rows for `layoutWeekShifts` on the week grid. */
+/** Same as web  maps calendar rows for `layoutWeekShifts` on the week grid. */
 export function calendarEventForWeekLayout(row: {
   id: string;
   start_time: string;

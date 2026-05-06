@@ -1,4 +1,4 @@
-# Page Layer Stage A Report — Route Inventory
+# Page Layer Stage A Report  Route Inventory
 **Date:** 2026-04-30
 **Status:** COMPLETE
 **Follow-up to:** `reports/page-layer-balance-audit-20260430.md`
@@ -219,7 +219,7 @@ These were not only script-classified; they were manually read and confirmed ear
 
 ## What Needs To Be Done Next
 
-### Stage B — Normalize hiring and recruitment list routes
+### Stage B  Normalize hiring and recruitment list routes
 
 Start with:
 
@@ -235,7 +235,7 @@ Goal:
 - remove mixed cached/uncached behavior within the same route family
 - make filtered vs unfiltered states feel like one system
 
-### Stage C — Normalize people and manager surfaces
+### Stage C  Normalize people and manager surfaces
 
 Start with:
 
@@ -251,7 +251,7 @@ Goal:
 - reduce timeout-driven special-case behavior
 - align shell, permission, and route data strategy
 
-### Stage D — Separate special back-office routes explicitly
+### Stage D  Separate special back-office routes explicitly
 
 Review:
 

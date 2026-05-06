@@ -199,7 +199,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const managerNavItems = managesPeople
     ? getMainShellManagerNavItemsByPermissions(permissionKeys, {
         pendingApprovalCount,
-      })
+      }, profileRole)
     : null;
 
   const adminNavItemsRaw = getMainShellAdminNavItemsByPermissions(permissionKeys);

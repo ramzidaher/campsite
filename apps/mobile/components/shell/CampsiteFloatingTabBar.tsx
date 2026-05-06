@@ -54,7 +54,7 @@ export function CampsiteFloatingTabBar({ state, navigation }: CampsiteFloatingTa
   const selectedLabel = isDark ? tokens.textPrimary : mainShell.pageText;
   const activeIcon = isDark ? tokens.textPrimary : mainShell.pageText;
 
-  /** Must match `tabBarStyle.height` in `_layout.android.tsx` — never use `flex:1` here (it splits the screen with the tab scenes). */
+  /** Must match `tabBarStyle.height` in `_layout.android.tsx`  never use `flex:1` here (it splits the screen with the tab scenes). */
   const slotHeight = campsiteAndroidFloatingTabBarSlotHeight(insets.bottom);
 
   const handlePress = (name: string) => {

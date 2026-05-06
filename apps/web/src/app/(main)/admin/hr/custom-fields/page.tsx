@@ -29,7 +29,15 @@ export default async function AdminHrCustomFieldsPage() {
   );
 
   const view = (
-    <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
+    <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
+      <header className="mb-6">
+        <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">
+          HR custom fields
+        </h1>
+        <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-[#6b6b6b]">
+          Define organisation-level fields used in HR records. These fields can be shown to managers and employees based on visibility settings.
+        </p>
+      </header>
       {canManageDefs ? (
         <CustomHrFieldDefinitionsClient
           orgId={orgId}

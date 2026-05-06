@@ -1,0 +1,22 @@
+---
+description: Admin overview layout width and action-card composition
+globs:
+  - apps/web/src/components/admin/AdminOverviewView.tsx
+alwaysApply: false
+---
+
+# Admin overview wide layout
+
+When editing the admin landing overview, keep it visually aligned with the wider workspace pages.
+
+1. Match dashboard rails for outer page spacing:
+   - `w-full px-5 py-6 sm:px-[28px] sm:py-7`
+   - Avoid `max-w-*` wrappers on the root admin overview container.
+2. Keep the lower content area as a wide split layout on desktop:
+   - Left: recent activity list.
+   - Right: quick actions and role summary.
+3. Avoid forcing all right-side sections into a single vertical rail on desktop; use a 2-column composition on wide screens where practical.
+4. Keep quick-action items responsive:
+   - Mobile: single column.
+   - Tablet/desktop: allow multi-column wrapping so actions read as wide cards, not only a long vertical list.
+5. Follow shared branding defaults from `global-ui-branding.mdc` for CTA/icon/link style; this rule should only add admin-overview-specific layout guidance.

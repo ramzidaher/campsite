@@ -95,7 +95,7 @@ function getVisualTier(row: OrgChartRow): { tier: string; tc: string } {
   return tenantRoleTier(row.role) ?? { tier: 'Team', tc: 't-core' };
 }
 
-/** Sample hierarchy only — uses role *keys* like ceo, head_ops; avoids substring false-positives (e.g. coordinator vs coo). */
+/** Sample hierarchy only  uses role *keys* like ceo, head_ops; avoids substring false-positives (e.g. coordinator vs coo). */
 function getTierDemoPreset(role: string): { tier: string; tc: string } {
   const r = role.toLowerCase().trim();
   if (r.includes('board') || r.includes('chair')) return { tier: 'Board', tc: 't-board' };
@@ -397,6 +397,7 @@ export function OrgChartClient({
   const draggingRef = useRef<{ id: string; sx: number; sy: number; ox: number; oy: number } | null>(null);
   const panningRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
   const settleFrameRef = useRef<number | null>(null);
+  const hasUserAdjustedViewRef = useRef(false);
 
   const [showEdges, setShowEdges] = useState(true);
   const [vpX, setVpX] = useState(0);
@@ -408,7 +409,7 @@ export function OrgChartClient({
 
   const bump = useCallback(() => setRenderTick((n) => n + 1), []);
 
-  const fitToView = useCallback(() => {
+  const fitToView = useCallback((focusNodeId?: string) => {
     const scene = sceneRef.current;
     if (!scene) return;
     const ids = Object.keys(positionsRef.current);
@@ -431,10 +432,46 @@ export function OrgChartClient({
     const contentH = Math.max(1, maxY - minY + pad * 2);
     const sRaw = Math.min(scene.clientWidth / contentW, scene.clientHeight / contentH);
     const s = Math.max(0.06, Math.min(2.75, sRaw));
+    let nextVpX = minX - pad;
+    let nextVpY = minY - pad;
+
+    if (focusNodeId) {
+      const focus = positionsRef.current[focusNodeId];
+      if (focus) {
+        const focusCenterX = focus.x + CARD_W / 2;
+        // Place the focus node near the upper part of the viewport on load.
+        const focusTargetY = focus.y - 56;
+        nextVpX = Math.max(minX - pad, focusCenterX - scene.clientWidth / (2 * s));
+        nextVpY = Math.max(minY - pad, focusTargetY);
+      }
+    }
+
     setVpScale(s);
-    setVpX(minX - pad);
-    setVpY(minY - pad);
+    setVpX(nextVpX);
+    setVpY(nextVpY);
   }, []);
+
+  const startFocusNodeId = useMemo(() => {
+    const orgAdmin = activeRows.find((row) => row.role?.toLowerCase().trim() === 'org_admin');
+    if (orgAdmin) return orgAdmin.user_id;
+    const managerFallback = activeRows.find((row) => !row.reports_to_user_id);
+    return managerFallback?.user_id;
+  }, [activeRows]);
+
+  const runInitialFit = useCallback(() => {
+    // Fit a few times on first load so late layout/size changes do not leave the tree off to one side.
+    const rafA = window.requestAnimationFrame(() => {
+      fitToView(startFocusNodeId);
+      const rafB = window.requestAnimationFrame(() => fitToView(startFocusNodeId));
+      window.setTimeout(() => window.cancelAnimationFrame(rafB), 250);
+    });
+    const delayed = window.setTimeout(() => fitToView(startFocusNodeId), 140);
+
+    return () => {
+      window.cancelAnimationFrame(rafA);
+      window.clearTimeout(delayed);
+    };
+  }, [fitToView, startFocusNodeId]);
 
   useEffect(() => {
     const next = computeCenteredTreeLayout(activeRows);
@@ -443,19 +480,20 @@ export function OrgChartClient({
       Object.entries(next).map(([k, v]) => [k, { ...v }]),
     );
     bump();
-    const t = window.setTimeout(() => {
-      fitToView();
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, [bump, activeRows, fitToView]);
+    hasUserAdjustedViewRef.current = false;
+    return runInitialFit();
+  }, [bump, activeRows, runInitialFit]);
 
   useEffect(() => {
     const onResize = () => {
       bump();
+      if (!hasUserAdjustedViewRef.current) {
+        fitToView();
+      }
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [bump]);
+  }, [bump, fitToView]);
 
   /** Top / bottom centre anchors so edges attach like graph tools (e.g. Obsidian). Reads live ref positions. */
   const nodeAnchors = useCallback((id: string) => {
@@ -681,19 +719,28 @@ export function OrgChartClient({
   const startPan = (e: ReactMouseEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement;
     if (t.closest(`.${styles.nd}`) || t.closest(`.${styles.ndBtn}`)) return;
+    hasUserAdjustedViewRef.current = true;
     panningRef.current = { sx: e.clientX, sy: e.clientY, ox: vpX, oy: vpY };
     setGrabbing(true);
   };
 
   const onWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
     e.preventDefault();
+    hasUserAdjustedViewRef.current = true;
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setVpScale((s) => Math.max(0.06, Math.min(2.75, s * delta)));
   };
 
-  const zoomIn = () => setVpScale((s) => Math.min(2.75, s * 1.12));
-  const zoomOut = () => setVpScale((s) => Math.max(0.06, s * 0.9));
+  const zoomIn = () => {
+    hasUserAdjustedViewRef.current = true;
+    setVpScale((s) => Math.min(2.75, s * 1.12));
+  };
+  const zoomOut = () => {
+    hasUserAdjustedViewRef.current = true;
+    setVpScale((s) => Math.max(0.06, s * 0.9));
+  };
   const resetView = () => {
+    hasUserAdjustedViewRef.current = true;
     setVpX(0);
     setVpY(0);
     setVpScale(1);
@@ -848,7 +895,8 @@ export function OrgChartClient({
     downloadBlob(new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' }), 'org-chart-data.csv');
   }, [activeRows]);
 
-  const transform = `translate(${-vpX}px,${-vpY}px) scale(${vpScale})`;
+  // Apply pan in scene-space before zoom: screen = (world - vp) * scale.
+  const transform = `scale(${vpScale}) translate(${-vpX}px,${-vpY}px)`;
   const tierLegend = useMemo(() => {
     const seen = new Set<string>();
     return nodes
@@ -873,13 +921,13 @@ export function OrgChartClient({
             <>
               <strong>Fictional sample</strong>
               <span className={styles.dataSourceMeta}>
-                Directory returned 0 rows — preview only; set managers on All members and refresh for your org
+                Directory returned 0 rows  preview only; set managers on All members and refresh for your org
               </span>
             </>
           ) : (
             <>
               <strong>Empty canvas</strong>
-              <span className={styles.dataSourceMeta}>Preview sample is off — turn it on or load members above</span>
+              <span className={styles.dataSourceMeta}>Preview sample is off  turn it on or load members above</span>
             </>
           )}
         </span>
@@ -894,14 +942,14 @@ export function OrgChartClient({
         </button>
         <button type="button" onClick={zoomOut} aria-label="Zoom out">-</button>
         <button type="button" onClick={zoomIn} aria-label="Zoom in">+</button>
-        <button type="button" onClick={fitToView}>Fit</button>
+        <button type="button" onClick={() => fitToView()}>Fit</button>
         <button type="button" onClick={resetView}>Reset view</button>
         <span className={styles.exportGroup} aria-label="Export options">
           <span className={styles.exportLabel}>Export</span>
-          <button type="button" onClick={exportSvg} title="Scalable vector — best for print and design tools">
+          <button type="button" onClick={exportSvg} title="Scalable vector  best for print and design tools">
             SVG
           </button>
-          <button type="button" onClick={exportPng} title="Raster image — easy to share">
+          <button type="button" onClick={exportPng} title="Raster image  easy to share">
             PNG
           </button>
           <button type="button" onClick={exportJson} title="Full directory snapshot as structured data">
@@ -915,7 +963,7 @@ export function OrgChartClient({
           {rows.length > 0
             ? 'Names and roles come from your live directory (same source as All members). Drag cards to rearrange locally (not saved); pan and zoom on the background.'
             : viewingFictionalSample
-              ? 'Hardcoded demo hierarchy — not your staff. If you expect real names here, the directory query returned no rows (check All members and refresh).'
+              ? 'Hardcoded demo hierarchy  not your staff. If you expect real names here, the directory query returned no rows (check All members and refresh).'
               : 'Sample preview is hidden. Choose Show sample org for a demo layout, or add active members with managers and refresh.'}
         </span>
       </div>
@@ -1000,25 +1048,25 @@ export function OrgChartClient({
             <div>
               <div className={styles.pr}>
                 <span className={styles.pk}>Role</span>
-                <span className={`${styles.pv} ${styles.lim}`}>{modalNode?.role ?? '—'}</span>
+                <span className={`${styles.pv} ${styles.lim}`}>{modalNode?.role ?? ''}</span>
               </div>
               <div className={styles.pr}>
                 <span className={styles.pk}>Manager</span>
-                <span className={`${styles.pv} ${styles.lim}`}>{modalNode?.reports_to_name ?? '—'}</span>
+                <span className={`${styles.pv} ${styles.lim}`}>{modalNode?.reports_to_name ?? ''}</span>
               </div>
               <div className={styles.pr}>
                 <span className={styles.pk}>Departments</span>
                 <span className={`${styles.pv} ${styles.lim}`}>
-                  {modalNode?.department_names?.length ? modalNode.department_names.join(', ') : '—'}
+                  {modalNode?.department_names?.length ? modalNode.department_names.join(', ') : ''}
                 </span>
               </div>
               <div className={styles.pr}>
                 <span className={styles.pk}>Location</span>
-                <span className={`${styles.pv} ${styles.lim}`}>{modalNode?.work_location ?? '—'}</span>
+                <span className={`${styles.pv} ${styles.lim}`}>{modalNode?.work_location ?? ''}</span>
               </div>
               <div className={styles.pr}>
                 <span className={styles.pk}>Email</span>
-                <span className={`${styles.pv} ${styles.lim}`}>{modalNode?.email ?? '—'}</span>
+                <span className={`${styles.pv} ${styles.lim}`}>{modalNode?.email ?? ''}</span>
               </div>
             </div>
             <button type="button" className={styles.mc} onClick={() => setModalNode(null)}>Close</button>

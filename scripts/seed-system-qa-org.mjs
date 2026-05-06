@@ -817,7 +817,7 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
         created_by: byKey(userMap, "tarek_khalil").id,
         channel_id: null,
         team_id: null,
-        title: "Wellbeing week — org-wide kickoff",
+        title: "Wellbeing week  org-wide kickoff",
         body: "Non-mandatory org-wide broadcast for feed variety and search snippets.",
         status: "sent",
         is_org_wide: true,
@@ -873,7 +873,7 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
         created_by: byKey(userMap, "ruby_gislingham").id,
         channel_id: eventsChannel?.id ?? null,
         team_id: null,
-        title: "Rota change — extra stewards needed",
+        title: "Rota change  extra stewards needed",
         body: "Draft rota comms for composer and approval flows.",
         status: "draft",
         is_org_wide: false,
@@ -941,7 +941,7 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
         created_by: byKey(userMap, "sophie_morland").id,
         channel_id: commercialChannel?.id ?? null,
         team_id: lateBarTeamId,
-        title: "Late bar promo — staff discount weekend",
+        title: "Late bar promo  staff discount weekend",
         body: "Pinned commercial team broadcast for tills and discount checks.",
         status: "sent",
         is_org_wide: false,
@@ -982,7 +982,7 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
         created_by: byKey(userMap, "marcela_gomez_valdes").id,
         channel_id: studentVoiceChannel?.id ?? null,
         team_id: null,
-        title: "Student voice survey — spring pulse",
+        title: "Student voice survey  spring pulse",
         body: "Cross-audience comms seed for student voice channel and read states.",
         status: "sent",
         is_org_wide: false,
@@ -1013,7 +1013,7 @@ async function seedBroadcasts(org, deptMap, userMap, teamMap) {
   const teamTargeted = broadcastMap.get("Team targeted event cover note");
   const perfHr = broadcastMap.get("Mid-year performance review window");
   const financePayroll = broadcastMap.get("Month-end payroll cut-off");
-  const wellbeing = broadcastMap.get("Wellbeing week — org-wide kickoff");
+  const wellbeing = broadcastMap.get("Wellbeing week  org-wide kickoff");
 
   await maybeInsert(
     "broadcast_reads",
@@ -1737,7 +1737,7 @@ async function seedHr(org, deptMap, userMap) {
       visa_type: rtwStatus === "in_progress" ? "Student visa (seed)" : "",
       notes:
         persona.status === "inactive"
-          ? "Seeded inactive employee — contract ended (QA)."
+          ? "Seeded inactive employee  contract ended (QA)."
           : "Seeded HR core record for System QA Lab.",
       created_by: byKey(userMap, "olga_saskova").id,
     });
@@ -1972,7 +1972,7 @@ async function seedHr(org, deptMap, userMap) {
         submitted_by: byKey(userMap, "timothy_bartlett").id,
         reviewed_by: byKey(userMap, "aarun_palmer").id,
         reviewed_at: nowPlus(-8, 10),
-        review_note: "Seeded NI mismatch — resubmit (QA).",
+        review_note: "Seeded NI mismatch  resubmit (QA).",
       },
       {
         org_id: org.id,
@@ -2708,13 +2708,13 @@ async function seedHiring(org, deptMap, userMap) {
         org_id: org.id,
         job_application_id: appMap.get("interview_scheduled")?.id,
         created_by: byKey(userMap, "sophie_morland").id,
-        body: "Interview invite — seeded candidate portal message.",
+        body: "Interview invite  seeded candidate portal message.",
       },
       {
         org_id: org.id,
         job_application_id: appMap.get("offer_sent")?.id,
         created_by: byKey(userMap, "olga_saskova").id,
-        body: "Offer update — seeded read candidate message.",
+        body: "Offer update  seeded read candidate message.",
       },
     ].filter((row) => row.job_application_id),
     "*",
@@ -3545,7 +3545,7 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
         meeting_id: meetingMap.get("completed")?.id,
         requester_id: byKey(userMap, "ruby_gislingham").id,
         status: "approved",
-        proposed_notes: "Approved seeded note edit — tighten checklist language.",
+        proposed_notes: "Approved seeded note edit  tighten checklist language.",
         resolved_by: byKey(userMap, "olga_saskova").id,
         resolved_at: nowPlus(-2, 12),
       },
@@ -3554,7 +3554,7 @@ async function seedOnboardingPerformanceOneOnOnes(org, deptMap, userMap) {
         meeting_id: meetingMap.get("completed")?.id,
         requester_id: byKey(userMap, "sophie_morland").id,
         status: "rejected",
-        proposed_notes: "Rejected seeded note edit — keep original sign-off wording.",
+        proposed_notes: "Rejected seeded note edit  keep original sign-off wording.",
         resolved_by: byKey(userMap, "olga_saskova").id,
         resolved_at: nowPlus(-1, 12),
       },
@@ -3839,7 +3839,7 @@ async function seedResourcesReportsPrivacyAdmin(org, deptMap, userMap) {
         requester_user_id: byKey(userMap, "olga_saskova").id,
         request_reason: "Seeded rejected erasure request.",
         status: "rejected",
-        review_note: "Seeded legal hold — rejected by review.",
+        review_note: "Seeded legal hold  rejected by review.",
       },
     ],
     "*",

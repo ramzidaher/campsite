@@ -6,21 +6,21 @@
  *   - Repo root `.env`: NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY
  *
  * Required:
- *   - CAMPSITE_USSU_PASSWORD  — shared initial password for all seeded auth users (set in env; never commit)
+ *   - CAMPSITE_USSU_PASSWORD   shared initial password for all seeded auth users (set in env; never commit)
  *
  * Optional:
- *   - CAMPSITE_USSU_XLSX       — path to workbook (defaults to the repo copy with the long filename)
- *   - CAMPSITE_USSU_ORG_SLUG   — default: university-of-sussex-student-union
- *   - CAMPSITE_USSU_ORG_NAME   — default: University of Sussex Student Union
- *   - PYTHON                   — default: python3
- *   - --plan                   — parse + print role mix only (no Supabase)
- *   - --continue               — use existing org with same CAMPSITE_USSU_ORG_SLUG (re-run safe)
- *   - CAMPSITE_USSU_SKIP_EMPLOYEE_HR=1 — skip HR table (users/depts/managers still run)
+ *   - CAMPSITE_USSU_XLSX        path to workbook (defaults to the repo copy with the long filename)
+ *   - CAMPSITE_USSU_ORG_SLUG    default: university-of-sussex-student-union
+ *   - CAMPSITE_USSU_ORG_NAME    default: University of Sussex Student Union
+ *   - PYTHON                    default: python3
+ *   - --plan                    parse + print role mix only (no Supabase)
+ *   - --continue                use existing org with same CAMPSITE_USSU_ORG_SLUG (re-run safe)
+ *   - CAMPSITE_USSU_SKIP_EMPLOYEE_HR=1  skip HR table (users/depts/managers still run)
  *
  * Outputs (gitignored):
  *   - scripts/ussu-provision-output/logins-<timestamp>.csv
- *   - scripts/ussu-provision-output/ussu-password-import.csv — Chrome Password Manager export shape
- *     (header: name,url,username,password,note — same as Chrome Passwords.csv)
+ *   - scripts/ussu-provision-output/ussu-password-import.csv  Chrome Password Manager export shape
+ *     (header: name,url,username,password,note  same as Chrome Passwords.csv)
  *
  * Usage:
  *   CAMPSITE_USSU_PASSWORD='…' node scripts/provision-university-of-sussex-student-union.mjs
@@ -468,7 +468,7 @@ async function main() {
     }
 
     provisioned.push({ person, userId });
-    console.log('  User:', person.role, person.email, '—', person.full_name);
+    console.log('  User:', person.role, person.email, '', person.full_name);
   }
 
   const idByFold = new Map();

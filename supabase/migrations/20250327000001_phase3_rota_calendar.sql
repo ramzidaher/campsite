@@ -1,4 +1,4 @@
--- Phase 3 — Rota, calendar events, Google connections, Sheets mappings.
+-- Phase 3  Rota, calendar events, Google connections, Sheets mappings.
 
 -- ---------------------------------------------------------------------------
 -- Profile: shift reminder preference (minutes before shift; NULL = off)

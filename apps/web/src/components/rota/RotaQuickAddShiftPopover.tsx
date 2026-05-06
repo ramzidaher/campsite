@@ -336,7 +336,7 @@ export function RotaQuickAddShiftPopover({
               <option value="">Open slot</option>
               {eligibleStaff.map((s) => {
                 const hint = assigneeHintById.get(s.id);
-                const hintLabel = hint ? ` — ${formatAvailabilityHint(hint)}` : '';
+                const hintLabel = hint ? `  ${formatAvailabilityHint(hint)}` : '';
                 return (
                   <option key={s.id} value={s.id}>
                     {s.full_name}

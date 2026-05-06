@@ -1,4 +1,4 @@
-# 01 — Auth and registration
+# 01  Auth and registration
 
 ## 1. Product intent
 
@@ -14,7 +14,7 @@
 - **JWT:** Session available to Next.js via `@supabase/ssr` cookie helpers (`apps/web/src/lib/supabase/server.ts`, `client.ts`).
 - **User metadata:** Registration wizard may stash:
   - **Join existing org:** `register_org_id`, `register_dept_ids`, `register_subscriptions`, `full_name`, optional **`register_avatar_url`** (public `http`/`https` image link; also applied via join-only client fallback in `completeRegistrationProfile.ts`).
-  - **Create new org (first org admin for that tenant, not platform founders):** `register_create_org_name`, `register_create_org_slug`, `full_name`, optional **`register_avatar_url`** (no `register_org_id`; profile is **`org_admin` + `active`**). RPC `apply_registration_from_user_meta` still accepts legacy keys `register_founder_org_*` — see `20260410120000_org_creator_registration_metadata.sql`, `20260411120000_registration_optional_avatar_url.sql`, and `20260409120000_founder_registration_bootstrap.sql`.
+  - **Create new org (first org admin for that tenant, not platform founders):** `register_create_org_name`, `register_create_org_slug`, `full_name`, optional **`register_avatar_url`** (no `register_org_id`; profile is **`org_admin` + `active`**). RPC `apply_registration_from_user_meta` still accepts legacy keys `register_founder_org_*`  see `20260410120000_org_creator_registration_metadata.sql`, `20260411120000_registration_optional_avatar_url.sql`, and `20260409120000_founder_registration_bootstrap.sql`.
 - **Invite links** from Admin → All members use the **organisation slug** in the query string: `/register?org={slug}` (not the org UUID). Middleware exposes this as `x-campsite-org-slug` for the register page.
 
 ### 2.2 Tables (read-only for this feature’s “bootstrap” story)
@@ -28,8 +28,8 @@
 
 ### 2.3 RPCs and triggers (registration path)
 
-- **`ensure_my_registration_profile`** (if deployed): `SECURITY DEFINER` path that creates profile from server-side context; see migrations under `supabase/migrations/20260402120000_ensure_my_registration_profile_rpc.sql` and related. It calls **`apply_registration_from_user_meta`**, which implements both **join** (pending `unassigned`) and **create org** (active `org_admin` + new org + bootstrap department). **Platform founders** are separate (`platform_admins`, `/founders` — see [11-platform-founders.md](./11-platform-founders.md)).
-- **Auth trigger** (if deployed): may insert placeholder profiles on signup — see `20260401120000_auth_user_registration_trigger.sql`. **Do not duplicate** client insert logic without reconciling with `completeRegistrationProfileIfNeeded`.
+- **`ensure_my_registration_profile`** (if deployed): `SECURITY DEFINER` path that creates profile from server-side context; see migrations under `supabase/migrations/20260402120000_ensure_my_registration_profile_rpc.sql` and related. It calls **`apply_registration_from_user_meta`**, which implements both **join** (pending `unassigned`) and **create org** (active `org_admin` + new org + bootstrap department). **Platform founders** are separate (`platform_admins`, `/founders`  see [11-platform-founders.md](./11-platform-founders.md)).
+- **Auth trigger** (if deployed): may insert placeholder profiles on signup  see `20260401120000_auth_user_registration_trigger.sql`. **Do not duplicate** client insert logic without reconciling with `completeRegistrationProfileIfNeeded`.
 
 ### 2.4 Row Level Security
 
@@ -63,7 +63,7 @@
 | `/` | `apps/web/src/app/page.tsx` | If session: no `profiles` row → `/pending` (profile completion); else branch on `status` → `/dashboard`, `/pending`, or inactive (`/login?error=inactive`). Else: `LandingPage`. |
 | `/login` | `(auth)/login/page.tsx` | Sign-in UI. |
 | `/register` | `(auth)/register/page.tsx` | Registration wizard entry. |
-| `/register/done` | `(auth)/register/done/page.tsx` | Post-register handoff. **`?creator=1&org={slug}`** — org creator (email confirm + sign in to workspace); default copy — join flow awaiting manager approval. |
+| `/register/done` | `(auth)/register/done/page.tsx` | Post-register handoff. **`?creator=1&org={slug}`**  org creator (email confirm + sign in to workspace); default copy  join flow awaiting manager approval. |
 | `/forgot-password` | `(auth)/forgot-password/page.tsx` | Recovery. |
 | `/auth/callback` | Handled by Supabase exchange (matcher excludes or includes per config) | OAuth / email-confirmation completion. |
 | `/pending` | `(main)/pending/page.tsx` | **Awaiting org approval** for pending members; calls `completeRegistrationProfileIfNeeded` when profile missing. **Org-creator** stuck state (`org_creator_pending`) can **Retry workspace setup** (second RPC). If the profile is already **`active`** (e.g. create-org registration), redirects to **`/dashboard`**. |
@@ -77,7 +77,7 @@
 1. If `profiles` row exists → return success.
 2. Call RPC `ensure_my_registration_profile`; reload profile. If still missing, **call the RPC once more** (absorbs rare races / cache timing), then reload again.
 3. If still no profile and JWT metadata looks like **create-org** (`register_create_org_*` or legacy `register_founder_org_*`) → return **`kind: 'org_creator_pending'`** with actionable copy; **do not** call the join-only client path.
-4. Otherwise → `insertProfileFromJwtMetadata`: insert `profiles` with `PROFILE_REGISTRATION_ROLE` (`unassigned` from `@campsite/types`), `user_departments`, optional `user_subscriptions` — **only for the join-existing-org metadata shape** (`register_org_id` + departments). **Create-org** metadata must be applied by the RPC (clients cannot insert `org_admin` under RLS).
+4. Otherwise → `insertProfileFromJwtMetadata`: insert `profiles` with `PROFILE_REGISTRATION_ROLE` (`unassigned` from `@campsite/types`), `user_departments`, optional `user_subscriptions`  **only for the join-existing-org metadata shape** (`register_org_id` + departments). **Create-org** metadata must be applied by the RPC (clients cannot insert `org_admin` under RLS).
 
 **Implementation rules:**
 
@@ -93,27 +93,27 @@
 
 ### 3.4 Layout interactions
 
-- **`(main)/layout.tsx`** wraps **`/pending`** and the rest of the signed-in app. It loads `profiles.role` for the shell (`unassigned` shows as “Pending role” until an approver assigns a role). **`RegisterWizard`** (`apps/web/src/components/RegisterWizard.tsx`): default `/register` is **create organisation** only (Account → Organisation → optional profile photo, then **Create your workspace** — no separate review step); **join existing org** (dropdown + teams + subscriptions + **Review & submit**) appears when the URL has **`?org={slug}`** (invite link). The org list is not fetched without that param.
+- **`(main)/layout.tsx`** wraps **`/pending`** and the rest of the signed-in app. It loads `profiles.role` for the shell (`unassigned` shows as “Pending role” until an approver assigns a role). **`RegisterWizard`** (`apps/web/src/components/RegisterWizard.tsx`): default `/register` is **create organisation** only (Account → Organisation → optional profile photo, then **Create your workspace**  no separate review step); **join existing org** (dropdown + teams + subscriptions + **Review & submit**) appears when the URL has **`?org={slug}`** (invite link). The org list is not fetched without that param.
 
 ## 4. Shared types
 
 **File:** `packages/types/src/roles.ts`
 
-- `PROFILE_REGISTRATION_ROLE`, `PROFILE_STATUSES`, `ProfileRole` — used when creating or validating registration state.
+- `PROFILE_REGISTRATION_ROLE`, `PROFILE_STATUSES`, `ProfileRole`  used when creating or validating registration state.
 
 ## 5. Verification checklist
 
 - [x] New user with valid metadata gets `profiles` + `user_departments` without duplicate key errors. _DB: `apply_registration_from_user_meta` exits early if a profile exists; client path treats Postgres `23505` as success when the row is present (`completeRegistrationProfile.ts`). Jest: `completeRegistrationProfile.test.ts`._
 - [x] User without metadata sees clear error, not infinite spinner. _(`/pending` + `completeRegistrationProfileIfNeeded` error UI.)_
-- [x] Middleware does not strip cookies on `NextResponse.next` clone bugs. _`middleware.ts` rebuilds `NextResponse.next` in `setAll` (Supabase SSR pattern). No automated cookie e2e here — rely on that pattern + manual login smoke._
+- [x] Middleware does not strip cookies on `NextResponse.next` clone bugs. _`middleware.ts` rebuilds `NextResponse.next` in `setAll` (Supabase SSR pattern). No automated cookie e2e here  rely on that pattern + manual login smoke._
 - [x] `/pending` shows email verification hint when `email_confirmed_at` missing. _(Amber callout; copy distinguishes org approval vs email.)_
 - [x] Platform admin host behaves per `middleware.ts` (no accidental org slug). _`resolveHostRequestContext` ignores `?org=` when the host is `admin.camp-site.co.uk` or `admin.localhost`. Jest: `middlewareHostContext.test.ts`._
 
 ### Automated tests (`npm run test --workspace=@campsite/web`)
 
-- `src/lib/__tests__/middlewareHostContext.test.ts` — tenant vs platform-admin host, `?org=` rules.
-- `src/lib/__tests__/authPaths.test.ts` — auth path matcher used by middleware.
-- `src/lib/__tests__/completeRegistrationProfile.test.ts` — RPC fallback, duplicate-profile race, missing metadata.
+- `src/lib/__tests__/middlewareHostContext.test.ts`  tenant vs platform-admin host, `?org=` rules.
+- `src/lib/__tests__/authPaths.test.ts`  auth path matcher used by middleware.
+- `src/lib/__tests__/completeRegistrationProfile.test.ts`  RPC fallback, duplicate-profile race, missing metadata.
 
 ### Routing note
 
@@ -121,5 +121,5 @@
 
 ## 6. Common pitfalls
 
-- **Double insert** on `profiles` if both trigger and client insert run — coordinate migrations with `completeRegistrationProfileIfNeeded`.
+- **Double insert** on `profiles` if both trigger and client insert run  coordinate migrations with `completeRegistrationProfileIfNeeded`.
 - **Role literal drift:** never hardcode `'unassigned'` in SQL CHECK without updating `packages/types`.

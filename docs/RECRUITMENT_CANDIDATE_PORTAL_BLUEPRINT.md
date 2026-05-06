@@ -6,7 +6,7 @@ Convert the static recruitment HTML references into production React/TSX pages t
 
 ---
 
-## Phase 0 & 1 — Verification audit (complete)
+## Phase 0 & 1  Verification audit (complete)
 
 | Area | Status |
 |------|--------|
@@ -18,7 +18,7 @@ Convert the static recruitment HTML references into production React/TSX pages t
 
 ---
 
-## Phase 2 — Candidate identity & auth (complete)
+## Phase 2  Candidate identity & auth (complete)
 
 | Deliverable | Implementation |
 |-------------|----------------|
@@ -30,17 +30,17 @@ Convert the static recruitment HTML references into production React/TSX pages t
 | Login redirect when anonymous | [`buildCandidateJobsLoginRedirectUrl`](../apps/web/src/lib/jobs/candidateAuthRedirect.ts) on [`/jobs/me`](../apps/web/src/app/(public)/jobs/me/page.tsx) |
 | Self-service RPC | [`get_my_candidate_applications()`](../../supabase/migrations/20260620120000_candidate_portal_auth_and_public_listings.sql) (`auth.uid()` only) |
 
-**Phase 2 verification:** Candidate routes and middleware behave as documented; `account_type: candidate` on signup; DB trigger creates `candidate_profiles` when not on staff registration path. **Note:** `submit_job_application` was further hardened in Phase 3 (uses `auth.uid()` only — see below).
+**Phase 2 verification:** Candidate routes and middleware behave as documented; `account_type: candidate` on signup; DB trigger creates `candidate_profiles` when not on staff registration path. **Note:** `submit_job_application` was further hardened in Phase 3 (uses `auth.uid()` only  see below).
 
 ---
 
-## Phase 3 — Application submission & attachments (complete)
+## Phase 3  Application submission & attachments (complete)
 
 | Deliverable | Implementation |
 |-------------|----------------|
 | Trusted candidate linkage | [`submit_job_application`](../../supabase/migrations/20260620150000_phase3_submit_application_security_and_cover_letter.sql) sets `candidate_user_id` from **`auth.uid()`** only; enforces **email matches** `auth.users` when signed in (no forged UUID param). |
 | Cover letter | Column `job_applications.cover_letter`; passed as `p_cover_letter` from server action. |
-| CV validation | [`cvUploadConstraints.ts`](../apps/web/src/lib/recruitment/cvUploadConstraints.ts) — max 5 MB, PDF/Word; validated **before** RPC on server; client file picker validates before continue. |
+| CV validation | [`cvUploadConstraints.ts`](../apps/web/src/lib/recruitment/cvUploadConstraints.ts)  max 5 MB, PDF/Word; validated **before** RPC on server; client file picker validates before continue. |
 | Upload failure UX | Server action appends a clear message if storage upload fails after application row exists. |
 | Apply UI | [`ApplyJobFormClient`](../apps/web/src/app/(public)/jobs/[slug]/apply/ApplyJobFormClient.tsx): guest vs signed-in banner, email readonly when authenticated, sign-in link with `next` back to apply, hidden `cover_letter` submit. |
 | Tests | [`cvUploadConstraints.test.ts`](../apps/web/src/lib/recruitment/__tests__/cvUploadConstraints.test.ts) |
@@ -49,26 +49,26 @@ Convert the static recruitment HTML references into production React/TSX pages t
 
 ---
 
-## Phase 4 — Candidate portal (track status, history, profile) (complete)
+## Phase 4  Candidate portal (track status, history, profile) (complete)
 
 | Deliverable | Implementation |
 |-------------|----------------|
-| Application list polish | [`/jobs/me`](../apps/web/src/app/(public)/jobs/me/page.tsx) — status chips ([`CandidateApplicationStageBadge`](../apps/web/src/app/(public)/jobs/me/CandidateApplicationStageBadge.tsx)), links to detail + token tracker |
-| Authenticated application detail | [`get_my_candidate_application_detail`](../../supabase/migrations/20260620160000_phase4_candidate_application_detail_rpc.sql) — same payload as token portal for `candidate_user_id = auth.uid()`; page [`/jobs/me/[applicationId]`](../apps/web/src/app/(public)/jobs/me/[applicationId]/page.tsx) — messages, joining instructions, synthetic **Progress** timeline ([`applicationStageTimeline`](../apps/web/src/lib/jobs/applicationStageTimeline.ts), [`ApplicationStageTimeline`](../apps/web/src/app/(public)/jobs/me/ApplicationStageTimeline.tsx)) |
+| Application list polish | [`/jobs/me`](../apps/web/src/app/(public)/jobs/me/page.tsx)  status chips ([`CandidateApplicationStageBadge`](../apps/web/src/app/(public)/jobs/me/CandidateApplicationStageBadge.tsx)), links to detail + token tracker |
+| Authenticated application detail | [`get_my_candidate_application_detail`](../../supabase/migrations/20260620160000_phase4_candidate_application_detail_rpc.sql)  same payload as token portal for `candidate_user_id = auth.uid()`; page [`/jobs/me/[applicationId]`](../apps/web/src/app/(public)/jobs/me/[applicationId]/page.tsx)  messages, joining instructions, synthetic **Progress** timeline ([`applicationStageTimeline`](../apps/web/src/lib/jobs/applicationStageTimeline.ts), [`ApplicationStageTimeline`](../apps/web/src/app/(public)/jobs/me/ApplicationStageTimeline.tsx)) |
 | Shared HR messages UI | [`CandidateApplicationMessages`](../apps/web/src/app/(public)/jobs/me/CandidateApplicationMessages.tsx) used by detail + [`/jobs/status/[token]`](../apps/web/src/app/(public)/jobs/status/[token]/page.tsx) |
-| Candidate profile | [`/jobs/me/profile`](../apps/web/src/app/(public)/jobs/me/profile/page.tsx) — [`candidate_profiles`](../supabase/migrations/20260620120000_candidate_portal_auth_and_public_listings.sql) upsert via [`actions.ts`](../apps/web/src/app/(public)/jobs/me/profile/actions.ts) |
+| Candidate profile | [`/jobs/me/profile`](../apps/web/src/app/(public)/jobs/me/profile/page.tsx)  [`candidate_profiles`](../supabase/migrations/20260620120000_candidate_portal_auth_and_public_listings.sql) upsert via [`actions.ts`](../apps/web/src/app/(public)/jobs/me/profile/actions.ts) |
 | Portal navigation | [`CandidatePortalNav`](../apps/web/src/app/(public)/jobs/CandidatePortalNav.tsx); jobs board adds Profile tab; [`tenantJobsSubrouteRelativePath('me/profile')`](../apps/web/src/lib/tenant/adminUrl.ts), [`tenantJobMeApplicationRelativePath`](../apps/web/src/lib/tenant/adminUrl.ts) |
 
 **Phase 4 verification:** Routes [`/jobs/me`](../apps/web/src/app/(public)/jobs/me/page.tsx), [`/jobs/me/[applicationId]`](../apps/web/src/app/(public)/jobs/me/[applicationId]/page.tsx), [`/jobs/me/profile`](../apps/web/src/app/(public)/jobs/me/profile/page.tsx) exist; RPC [`get_my_candidate_application_detail`](../../supabase/migrations/20260620160000_phase4_candidate_application_detail_rpc.sql) is granted to `authenticated`; shared components [`CandidateApplicationStageBadge`](../apps/web/src/app/(public)/jobs/me/CandidateApplicationStageBadge.tsx) / [`CandidateApplicationMessages`](../apps/web/src/app/(public)/jobs/me/CandidateApplicationMessages.tsx) are referenced from the status tracker.
 
 ---
 
-## Phase 5 — HR publishing, org linking, and public funnel metrics (complete)
+## Phase 5  HR publishing, org linking, and public funnel metrics (complete)
 
 | Deliverable | Implementation |
 |-------------|----------------|
 | `published_at` when going live | Trigger [`job_listings_ensure_published_at`](../../supabase/migrations/20260620121000_hr_job_publishing_hardening.sql) sets `published_at` if null when `status = 'live'`. |
-| Public funnel events | Table [`job_listing_public_metrics`](../../supabase/migrations/20260620121000_hr_job_publishing_hardening.sql); RPC [`track_public_job_metric`](../../supabase/migrations/20260620121000_hr_job_publishing_hardening.sql) — wired from job detail ([`[slug]/page.tsx`](../apps/web/src/app/(public)/jobs/[slug]/page.tsx)), apply ([`apply/page.tsx`](../apps/web/src/app/(public)/jobs/[slug]/apply/page.tsx), [`apply/actions.ts`](../apps/web/src/app/(public)/jobs/[slug]/apply/actions.ts)) for `impression`, `apply_start`, `apply_submit`. |
+| Public funnel events | Table [`job_listing_public_metrics`](../../supabase/migrations/20260620121000_hr_job_publishing_hardening.sql); RPC [`track_public_job_metric`](../../supabase/migrations/20260620121000_hr_job_publishing_hardening.sql)  wired from job detail ([`[slug]/page.tsx`](../apps/web/src/app/(public)/jobs/[slug]/page.tsx)), apply ([`apply/page.tsx`](../apps/web/src/app/(public)/jobs/[slug]/apply/page.tsx), [`apply/actions.ts`](../apps/web/src/app/(public)/jobs/[slug]/apply/actions.ts)) for `impression`, `apply_start`, `apply_submit`. |
 | Metrics storage hardening | RLS enabled on `job_listing_public_metrics`; HR reads via [`get_job_listing_public_metrics_summary`](../../supabase/migrations/20260620170000_phase5_job_metrics_rls_and_hr_summary.sql) (`jobs.edit` + org match). |
 | HR UI | [`AdminJobEditClient`](../apps/web/src/components/admin/AdminJobEditClient.tsx) “Public careers funnel” strip when listing is **live**; data loaded in [`admin/jobs/[id]/edit/page.tsx`](../apps/web/src/app/(main)/admin/jobs/[id]/edit/page.tsx) (shared by HR re-export). |
 | Org context for public careers | Tenant host + `?org=` → [`resolveHostRequestContext`](../apps/web/src/lib/middleware/resolveHostRequestContext.ts) / `x-campsite-org-slug` (middleware); public RPCs require matching active org slug. |
@@ -77,22 +77,22 @@ Convert the static recruitment HTML references into production React/TSX pages t
 
 ---
 
-## Phase 6 — Quality, security review, and rollout (complete)
+## Phase 6  Quality, security review, and rollout (complete)
 
 | Area | Implementation / notes |
 |------|-------------------------|
 | Typecheck / CI | Run `npm run typecheck` at repo root before merge. |
-| Unit tests | [`cvUploadConstraints.test.ts`](../apps/web/src/lib/recruitment/__tests__/cvUploadConstraints.test.ts); [`applicationStageTimeline.test.ts`](../apps/web/src/lib/jobs/__tests__/applicationStageTimeline.test.ts) — run `npm test` in `apps/web`. |
+| Unit tests | [`cvUploadConstraints.test.ts`](../apps/web/src/lib/recruitment/__tests__/cvUploadConstraints.test.ts); [`applicationStageTimeline.test.ts`](../apps/web/src/lib/jobs/__tests__/applicationStageTimeline.test.ts)  run `npm test` in `apps/web`. |
 | Application spam / abuse | DB throttling for `submit_job_application` via [`job_application_rate_limit_events`](../../supabase/migrations/20260618170000_phase7_cleanup_rate_limit_and_integrity.sql) (rolling window). |
 | Candidate trust boundaries | Signed-in apply: [`submit_job_application`](../../supabase/migrations/20260620150000_phase3_submit_application_security_and_cover_letter.sql) uses `auth.uid()` and email match; candidate RPCs (`get_my_candidate_*`) scoped to `auth.uid()`. |
-| Public metrics | [`job_listing_public_metrics`](../../supabase/migrations/20260620121000_hr_job_publishing_hardening.sql) RLS + HR-only read RPC [`get_job_listing_public_metrics_summary`](../../supabase/migrations/20260620170000_phase5_job_metrics_rls_and_hr_summary.sql). Funnel events are best-effort (server-side `track_public_job_metric`); expect noise from bots and staff previews — copy on HR edit screen states this. |
+| Public metrics | [`job_listing_public_metrics`](../../supabase/migrations/20260620121000_hr_job_publishing_hardening.sql) RLS + HR-only read RPC [`get_job_listing_public_metrics_summary`](../../supabase/migrations/20260620170000_phase5_job_metrics_rls_and_hr_summary.sql). Funnel events are best-effort (server-side `track_public_job_metric`); expect noise from bots and staff previews  copy on HR edit screen states this. |
 | Environment | `NEXT_PUBLIC_SUPABASE_URL` and a publishable anon key; tenant host config via existing app env (see `getTenantRootDomain` / middleware org resolution). |
-| Pre-launch QA | Run the **Phase 1 — Manual verification checklist** (below) on a tenant with at least one live listing; smoke-test candidate register → apply → `/jobs/me` → `/jobs/status/[token]`. |
+| Pre-launch QA | Run the **Phase 1  Manual verification checklist** (below) on a tenant with at least one live listing; smoke-test candidate register → apply → `/jobs/me` → `/jobs/status/[token]`. |
 | Candidate vs staff | [`middleware.ts`](../apps/web/src/middleware.ts): `account_type === 'candidate'` restricted to `/jobs` tree + auth routes (see Phase 2 table). |
 
 ---
 
-## Phase 0 — Section → component matrix (complete)
+## Phase 0  Section → component matrix (complete)
 
 ### `campsite_careers_portal.html`
 
@@ -104,7 +104,7 @@ Convert the static recruitment HTML references into production React/TSX pages t
 | Logged-in top bar (`top-bar`, brand, user chip, sign out) | [`CareersSessionStrip`](../apps/web/src/app/(public)/jobs/CareersSessionStrip.tsx) | Shows session email + sign out, or sign in/register |
 | Nav tabs (`Open roles` / `My applications`) | [`/jobs` page nav](../apps/web/src/app/(public)/jobs/page.tsx) | Links to `/jobs` and `/jobs/me`; `?org=` preserved via helpers |
 | Board header (`board-title`, `board-meta` “X positions across Y departments”) | Same page header + [`public_job_listings_org_summary`](../../supabase/migrations/20260620130000_public_jobs_summary_and_departments.sql) | Live counts from DB |
-| Search row (`search-input` + filter chips) | Search `GET` form + contract chip links | Mock “Remote” / “Fast hire” **not** in schema — omitted (see out of scope) |
+| Search row (`search-input` + filter chips) | Search `GET` form + contract chip links | Mock “Remote” / “Fast hire” **not** in schema  omitted (see out of scope) |
 | Department tabs (`dept-tabs`, “All teams” + departments) | Team pills + [`public_job_listing_department_names`](../../supabase/migrations/20260620130000_public_jobs_summary_and_departments.sql) | Distinct `departments.name` for live listings |
 | Job cards (`job-card`, dept, tags, footer, apply) | Listing cards on `/jobs` | Includes **org name** on each card, contract/grade/salary pills, posted date |
 | Job list container (`#job-list`) | Paginated grid | [`public_job_listings`](../../supabase/migrations/20260620120000_candidate_portal_auth_and_public_listings.sql), page size 12 |
@@ -125,7 +125,7 @@ Convert the static recruitment HTML references into production React/TSX pages t
 
 ---
 
-## HR / admin route map (staff — not candidate)
+## HR / admin route map (staff  not candidate)
 
 Jobs and pipeline remain under authenticated `(main)` routes (org context + RBAC):
 
@@ -159,9 +159,9 @@ Candidate-facing URLs must **not** assume access to these; middleware blocks `ac
 
 ## Tenant URL helpers
 
-- [`tenantPublicJobsIndexRelativePath`](../apps/web/src/lib/tenant/adminUrl.ts) — `/jobs` with `?org=` when needed.
-- [`tenantJobsSubrouteRelativePath`](../apps/web/src/lib/tenant/adminUrl.ts) — `/jobs/login`, `/jobs/me`, etc.
-- [`buildPublicJobsHref`](../apps/web/src/app/(public)/jobs/buildPublicJobsHref.ts) — listing filters with org preservation.
+- [`tenantPublicJobsIndexRelativePath`](../apps/web/src/lib/tenant/adminUrl.ts)  `/jobs` with `?org=` when needed.
+- [`tenantJobsSubrouteRelativePath`](../apps/web/src/lib/tenant/adminUrl.ts)  `/jobs/login`, `/jobs/me`, etc.
+- [`buildPublicJobsHref`](../apps/web/src/app/(public)/jobs/buildPublicJobsHref.ts)  listing filters with org preservation.
 
 ---
 
@@ -175,13 +175,13 @@ Candidate-facing URLs must **not** assume access to these; middleware blocks `ac
 
 ## Mock features intentionally out of scope (Phase 1)
 
-- **Google / LinkedIn OAuth** on login mock — not wired (Supabase providers can be enabled later).
-- **Remote / Fast hire filter chips** — no `remote` / `fast_hire` fields on `job_listings`; contract + department + search cover real data.
-- **Location filter** — no `location` column on listings; search still matches advert copy for place names if HR paste them into copy.
+- **Google / LinkedIn OAuth** on login mock  not wired (Supabase providers can be enabled later).
+- **Remote / Fast hire filter chips**  no `remote` / `fast_hire` fields on `job_listings`; contract + department + search cover real data.
+- **Location filter**  no `location` column on listings; search still matches advert copy for place names if HR paste them into copy.
 
 ---
 
-## Phase 1 — Manual verification checklist
+## Phase 1  Manual verification checklist
 
 Run on a tenant with at least one **live** job (and `?org=slug` if not using org subdomain):
 

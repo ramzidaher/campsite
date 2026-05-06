@@ -1,6 +1,6 @@
-# Page Layer Stage B Report — Jobs Detail Normalization Slice 4
+# Page Layer Stage B Report  Jobs Detail Normalization Slice 4
 **Date:** 2026-04-30
-**Status:** COMPLETE — jobs detail edit + applications routes moved to shared cached loaders
+**Status:** COMPLETE  jobs detail edit + applications routes moved to shared cached loaders
 **Follow-up to:** `reports/page-layer-stage-b-recruitment-detail-normalization-20260430.md`
 
 ---

@@ -2,6 +2,7 @@
 
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
+import { ArrowRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -37,6 +38,12 @@ const STATUS_LABELS: Record<string, string> = {
   manager_submitted: 'Manager assessed',
   completed: 'Completed',
   cancelled: 'Cancelled',
+};
+
+const CYCLE_STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  active: 'Active',
+  closed: 'Closed',
 };
 
 function statusBadge(s: string) {
@@ -115,6 +122,10 @@ export function PerformanceCycleDetailClient({
 
   const completed = reviews.filter((r) => r.status === 'completed').length;
   const progress = reviews.length > 0 ? Math.round((completed / reviews.length) * 100) : 0;
+  const cycleTypeLabel = cycle.type
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-7">
@@ -122,10 +133,16 @@ export function PerformanceCycleDetailClient({
         <div>
           <h1 className="font-authSerif text-[24px] leading-tight tracking-[-0.03em] text-[#121212]">{cycle.name}</h1>
           <p className="mt-0.5 text-[13px] text-[#6b6b6b]">
-            {cycle.period_start} → {cycle.period_end}
+            {cycle.period_start} to {cycle.period_end}
             {cycle.self_assessment_due ? ` · Self-assessment due ${cycle.self_assessment_due}` : ''}
             {cycle.manager_assessment_due ? ` · Manager due ${cycle.manager_assessment_due}` : ''}
           </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[10.5px] text-[#6b6b6b]">{cycleTypeLabel}</span>
+            <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[10.5px] text-[#6b6b6b]">
+              {CYCLE_STATUS_LABELS[cycle.status] ?? cycle.status}
+            </span>
+          </div>
         </div>
         <div className="flex gap-2">
           {cycle.status === 'draft' && (
@@ -135,7 +152,13 @@ export function PerformanceCycleDetailClient({
           )}
           {cycle.status === 'active' && (
             <>
-              <button type="button" disabled={busy} onClick={() => setShowEnroll(true)} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setShowEnroll(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-3 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden />
                 Enroll members
               </button>
               <button type="button" disabled={busy} onClick={() => void closeCycle()} className="rounded-lg border border-[#d8d8d8] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#b91c1c] hover:bg-[#fef2f2]">
@@ -222,11 +245,15 @@ export function PerformanceCycleDetailClient({
                 </td>
                 <td className="px-4 py-3 text-[#6b6b6b]">{r.reviewer_name ?? <span className="text-[#c8c8c8]">None</span>}</td>
                 <td className="px-4 py-3">{statusBadge(r.status)}</td>
-                <td className="px-4 py-3 text-[#6b6b6b]">{r.overall_rating ? RATING_LABELS[r.overall_rating] ?? r.overall_rating : '—'}</td>
+                <td className="px-4 py-3 text-[#6b6b6b]">{r.overall_rating ? RATING_LABELS[r.overall_rating] ?? r.overall_rating : ''}</td>
                 <td className="px-4 py-3 text-[#9b9b9b]">{r.goal_count}</td>
                 <td className="px-4 py-3 text-right">
-                  <Link href={`/performance/${r.review_id}`} className="text-[12px] font-medium text-[#121212] underline underline-offset-2">
+                  <Link
+                    href={`/performance/${r.review_id}`}
+                    className="inline-flex items-center gap-1 text-[12px] font-medium text-[#121212] hover:underline hover:underline-offset-2"
+                  >
                     Open
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </Link>
                 </td>
               </tr>

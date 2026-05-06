@@ -36,7 +36,7 @@ create policy rota_notification_jobs_deny
   with check (false);
 
 -- ---------------------------------------------------------------------------
--- Enqueue (SECURITY DEFINER triggers — bypass RLS)
+-- Enqueue (SECURITY DEFINER triggers  bypass RLS)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.rota_enqueue_notification_fn()

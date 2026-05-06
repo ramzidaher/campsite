@@ -1,4 +1,4 @@
--- First org admin self-serve (creates tenant). Not platform founders — those use platform_admins / Founder HQ.
+-- First org admin self-serve (creates tenant). Not platform founders  those use platform_admins / Founder HQ.
 -- Prefer user_metadata keys register_create_org_*; still accept register_founder_* for backward compatibility.
 
 create or replace function public.apply_registration_from_user_meta(

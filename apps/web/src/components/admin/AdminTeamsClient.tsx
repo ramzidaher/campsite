@@ -3,6 +3,7 @@
 import { FormSelect } from '@campsite/ui/web';
 import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
 import { createClient } from '@/lib/supabase/client';
+import { ArrowRight, Plus, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -171,9 +172,10 @@ export function AdminTeamsClient({
                   </div>
                   <Link
                     href={`/admin/departments?dept=${encodeURIComponent(d.id)}`}
-                    className="shrink-0 text-[12px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+                    className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
                   >
-                    Open department...
+                    Open department
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </Link>
                 </div>
 
@@ -298,42 +300,53 @@ export function AdminTeamsClient({
                   </ul>
                 )}
 
-                <div className="mt-3 space-y-2">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <input
-                      className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] outline-none focus:border-[#121212]"
-                      placeholder="New team name (e.g. Night shift)"
-                      value={draft}
-                      disabled={busyDept}
-                      onChange={(e) => setDraftByDept((prev) => ({ ...prev, [d.id]: e.target.value }))}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          void addTeam(d.id);
-                        }
-                      }}
-                    />
-                    <FormSelect
-                      className="min-w-0 flex-1 rounded-lg border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2 text-[13px] sm:max-w-xs"
-                      value={newOwnerByDept[d.id] ?? ''}
-                      disabled={busyDept}
-                      onChange={(e) => setNewOwnerByDept((prev) => ({ ...prev, [d.id]: e.target.value }))}
-                      aria-label="Optional owner for new team"
-                    >
-                      <option value="">Owner (optional)</option>
-                      {staffOptions.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.full_name} ({s.role})
-                        </option>
-                      ))}
-                    </FormSelect>
+                <div className="mt-4 rounded-lg border border-[#eceae6] bg-[#faf9f6] p-3">
+                  <p className="text-[12px] font-medium text-[#121212]">Create a team</p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="text-[11px] text-[#9b9b9b]">Team name</span>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px] text-[#121212] outline-none focus:border-[#121212]"
+                        placeholder="e.g. Night shift"
+                        value={draft}
+                        disabled={busyDept}
+                        onChange={(e) => setDraftByDept((prev) => ({ ...prev, [d.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            void addTeam(d.id);
+                          }
+                        }}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="inline-flex items-center gap-1 text-[11px] text-[#9b9b9b]">
+                        <UserRound className="h-3 w-3" aria-hidden />
+                        Owner (optional)
+                      </span>
+                      <FormSelect
+                        className="mt-1 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 py-2 text-[13px]"
+                        value={newOwnerByDept[d.id] ?? ''}
+                        disabled={busyDept}
+                        onChange={(e) => setNewOwnerByDept((prev) => ({ ...prev, [d.id]: e.target.value }))}
+                        aria-label="Optional owner for new team"
+                      >
+                        <option value="">No owner</option>
+                        {staffOptions.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.full_name} ({s.role})
+                          </option>
+                        ))}
+                      </FormSelect>
+                    </label>
                   </div>
                   <button
                     type="button"
                     disabled={busyDept || !draft.trim()}
-                    className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
                     onClick={() => void addTeam(d.id)}
                   >
+                    <Plus className="h-3.5 w-3.5" aria-hidden />
                     Add team
                   </button>
                 </div>

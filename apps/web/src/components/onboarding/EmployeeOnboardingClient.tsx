@@ -148,7 +148,7 @@ export function EmployeeOnboardingClient({
             Onboarding complete
           </h1>
           <p className="mt-2 text-[14px] text-[#6b6b6b]">
-            All tasks are done. You&apos;re all set — welcome to the team!
+            All tasks are done. You&apos;re all set  welcome to the team!
           </p>
           <p className="mt-1 text-[12px] text-[#9b9b9b]">Started {fmtDate(employmentStartDate)}</p>
         </div>
@@ -407,7 +407,7 @@ export function EmployeeOnboardingClient({
               <span className="text-[13px] leading-snug text-[#121212]">
                 <span className="font-medium">Campfire on the home dashboard</span>
                 <span className="mt-0.5 block text-[12.5px] text-[#6b6b6b]">
-                  Optional ambience on Dashboard — change anytime in Settings → Notifications.
+                  Optional ambience on Dashboard  change anytime in Settings → Notifications.
                 </span>
               </span>
             </label>

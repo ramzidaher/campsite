@@ -272,7 +272,7 @@
 
       <div class="linkedin-strip" onclick="prefillLinkedIn()">
         <div class="linkedin-logo">in</div>
-        <span><strong>Import from LinkedIn</strong> — skip the typing, live your best life</span>
+        <span><strong>Import from LinkedIn</strong>  skip the typing, live your best life</span>
         <span style="margin-left:auto;font-size:18px;">→</span>
       </div>
       <div class="divider">or fill in manually (we believe in you)</div>
@@ -342,7 +342,7 @@
       <div class="question-item">
         <p>3. What's your preferred working style?</p>
         <div class="option-row" id="work-style">
-          <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">🙋 Deep focus, async — I do my best thinking alone then share</button>
+          <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">🙋 Deep focus, async  I do my best thinking alone then share</button>
           <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">🤝 Collaborative, lots of real-time feedback loops</button>
           <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">⚖️ Mix of both depending on the task</button>
           <button class="option-btn" onclick="selectOption('work-style',this);checkStep1()">🤷 Honestly depends on my coffee intake</button>
@@ -374,7 +374,7 @@
       </div>
 
       <div style="margin-top:1.25rem;">
-        <label>Cover letter <span style="color:var(--text3);font-weight:400;text-transform:none;">(optional — but we actually read these)</span></label>
+        <label>Cover letter <span style="color:var(--text3);font-weight:400;text-transform:none;">(optional  but we actually read these)</span></label>
         <textarea id="cover" placeholder="Tell us something your CV doesn't. Or paste a 50-page manifesto. Your call." style="min-height:100px;"></textarea>
       </div>
     </div>
@@ -388,7 +388,7 @@
   <div class="step-panel" id="panel-3">
     <div class="form-card">
       <div class="form-section-title">Review & submit</div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;">Take one last look. You've come this far — no backing out now.</p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;">Take one last look. You've come this far  no backing out now.</p>
       <div id="review-content"></div>
     </div>
     <div style="margin-top:0.75rem;">
@@ -408,14 +408,14 @@
     <div class="success-screen">
       <div class="success-circle">✓</div>
       <h2>You actually did it!</h2>
-      <p style="margin-top:0.5rem;">Your application for <strong>Senior Product Designer</strong> is in. We'll review it and get back to you within 5 working days. In the meantime — treat yourself. You've earned it.</p>
+      <p style="margin-top:0.5rem;">Your application for <strong>Senior Product Designer</strong> is in. We'll review it and get back to you within 5 working days. In the meantime  treat yourself. You've earned it.</p>
       <div style="margin-top:1.5rem;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);text-align:left;max-width:360px;margin-left:auto;margin-right:auto;">
         <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">What happens next</div>
         <div style="font-size:13px;color:var(--text2);line-height:1.7;">
           ① Application reviewed by the hiring team<br>
           ② Shortlisted candidates contacted for a chat<br>
           ③ Interview process (2 rounds, max)<br>
-          ④ Offer or honest feedback — always
+          ④ Offer or honest feedback  always
         </div>
       </div>
       <div style="margin-top:1.25rem;">
@@ -439,7 +439,7 @@ let cvFileName = '';
 const banters = [
   { step: 0, icon: '👋', msg: "Hey! Yes, applying takes 4 minutes. We timed it. Also we lied, it's 6 minutes. Still fine.", em: "We promise not to ghost you. (Unlike your last interviewer.)" },
   { step: 1, icon: '🎯', msg: "Look at you, smashing through the first bit. Only 3 questions stand between you and the finish line.", em: "We kept it short. Our HR team also hates long forms." },
-  { step: 2, icon: '📎', msg: "Just your CV now. If it's from 2019 and still says 'proficient in Microsoft Word' — no judgement. Update it though.", em: "Seriously, one file. You're basically done." },
+  { step: 2, icon: '📎', msg: "Just your CV now. If it's from 2019 and still says 'proficient in Microsoft Word'  no judgement. Update it though.", em: "Seriously, one file. You're basically done." },
   { step: 3, icon: '🏁', msg: "THIS IS IT. One click away. You've put in the work. Hit submit before you talk yourself out of it.", em: "Future you is already grateful." },
 ];
 
@@ -492,7 +492,7 @@ function prevStep() {
 }
 
 function getMilestoneMsg(s) {
-  const msgs = ['','Step 1 done — names are easy, right? 😌','The hard questions are DONE. Big brain.','CV uploaded! Only legends do it this fast.'];
+  const msgs = ['','Step 1 done  names are easy, right? 😌','The hard questions are DONE. Big brain.','CV uploaded! Only legends do it this fast.'];
   return msgs[s] || '';
 }
 
@@ -551,7 +551,7 @@ function setUploadDone() {
   const zone = document.getElementById('upload-zone');
   zone.classList.add('has-file');
   document.getElementById('upload-icon').textContent = '✅';
-  document.getElementById('upload-label').innerHTML = `<strong>${cvFileName}</strong><br><span style="color:var(--success);font-size:12px;">Uploaded successfully — nice one</span>`;
+  document.getElementById('upload-label').innerHTML = `<strong>${cvFileName}</strong><br><span style="color:var(--success);font-size:12px;">Uploaded successfully  nice one</span>`;
   document.getElementById('btn-2').disabled = false;
   showToast('CV uploaded! You\'re on fire 🔥');
 }
@@ -564,7 +564,7 @@ function prefillLinkedIn() {
   document.getElementById('location').value = 'Brighton, UK';
   document.getElementById('portfolio').value = 'https://linkedin.com/in/alexmorgan';
   checkStep0();
-  showToast('LinkedIn import complete! ✓ (Demo mode — it\'s pretend)');
+  showToast('LinkedIn import complete! ✓ (Demo mode  it\'s pretend)');
 }
 
 function buildReview() {
@@ -577,10 +577,10 @@ function buildReview() {
   const rows = [
     ['Name', `${fname} ${lname}`],
     ['Email', email],
-    ['Figma rating', figmaRating ? figmaRating.textContent : '—'],
-    ['Working style', styleOpt ? styleOpt.textContent.slice(2,40)+'…' : '—'],
+    ['Figma rating', figmaRating ? figmaRating.textContent : ''],
+    ['Working style', styleOpt ? styleOpt.textContent.slice(2,40)+'…' : ''],
     ['CV', cvFileName || 'Not uploaded'],
-    ['Motivation', q1 ? q1.slice(0,60)+'…' : '—'],
+    ['Motivation', q1 ? q1.slice(0,60)+'…' : ''],
   ];
   document.getElementById('review-content').innerHTML = rows.map(([l,v]) =>
     `<div class="review-row"><span class="review-label">${l}</span><span class="review-value">${v}</span></div>`

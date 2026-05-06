@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { isMissingArchivedAtColumn, isMissingFolderHierarchyColumn } from '@/lib/staffResourceArchiveCompat';
 import { parseStaffResourceFolderEmbed } from '@/lib/staffResourceFolderEmbed';
 import { campusSurface } from '@campsite/ui/web';
-import { MoreVertical, Search, X } from 'lucide-react';
+import { FolderArchive, MoreVertical, Search, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { PostgrestError } from '@supabase/supabase-js';
@@ -303,7 +303,7 @@ export function ResourcesListClient({
         if (folderHierarchyOk && isMissingFolderHierarchyColumn(e as PostgrestError)) {
           setFolderHierarchyOk(false);
         }
-        /* folders load failure — still try resources; keep prior folders */
+        /* folders load failure  still try resources; keep prior folders */
       }
 
       const wantsArchiveList = Boolean(canManage && viewArchived);
@@ -845,13 +845,13 @@ export function ResourcesListClient({
   const showFolderStrip = folders.length > 0 || (!archiveOnly && canManage);
 
   const outlineHeaderBtn =
-    'inline-flex h-10 shrink-0 items-center rounded-full border border-[color-mix(in_oklab,var(--org-brand-text)_88%,var(--org-brand-border))] bg-[var(--org-brand-bg)] px-5 text-[13px] font-medium text-[var(--org-brand-text)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-border)_45%,var(--org-brand-bg))]';
+    'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#121212] transition-colors hover:bg-[#f8f8f8]';
 
   const headerSearchIconBtn =
-    'relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--org-brand-text)_88%,var(--org-brand-border))] bg-[var(--org-brand-bg)] text-[var(--org-brand-text)] transition hover:bg-[color-mix(in_oklab,var(--org-brand-border)_45%,var(--org-brand-bg))]';
+    'relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white text-[#121212] transition-colors hover:bg-[#f8f8f8]';
 
   const primaryHeaderBtn =
-    'inline-flex h-10 shrink-0 items-center rounded-full border border-transparent bg-[var(--org-brand-text)] px-5 text-[13px] font-medium text-[var(--org-brand-bg)] transition hover:opacity-[0.92]';
+    'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90';
 
   const filterChipBase =
     'inline-flex h-9 max-w-[220px] items-center justify-center truncate rounded-full px-4 text-[12.5px] font-medium transition';
@@ -925,7 +925,7 @@ export function ResourcesListClient({
                         value={fileSearchInput}
                         onChange={(e) => setFileSearchInput(e.target.value)}
                         placeholder="Titles & indexed text…"
-                        className="h-10 w-full min-w-[12rem] rounded-full border border-[color-mix(in_oklab,var(--org-brand-text)_88%,var(--org-brand-border))] bg-[var(--org-brand-bg)] py-0 pl-10 pr-[3.25rem] text-[13px] text-[var(--org-brand-text)] outline-none ring-0 transition placeholder:text-[var(--org-brand-muted)] focus:border-[var(--org-brand-text)] sm:min-w-[16rem]"
+                        className="h-10 w-full min-w-[12rem] rounded-lg border border-[#d8d8d8] bg-white py-0 pl-10 pr-[3.25rem] text-[13px] text-[#121212] outline-none ring-0 transition placeholder:text-[var(--org-brand-muted)] focus:border-[#121212] sm:min-w-[16rem]"
                       />
                       {fileSearchInput.trim() ? (
                         <button
@@ -962,10 +962,12 @@ export function ResourcesListClient({
                     }
                     className={outlineHeaderBtn}
                   >
+                    <FolderArchive className="h-4 w-4" aria-hidden />
                     {archiveOnly ? 'Active library' : 'Archived'}
                   </Link>
                 ) : null}
                 <Link href={uploadHref} className={primaryHeaderBtn}>
+                  <Upload className="h-4 w-4" aria-hidden />
                   Upload file
                 </Link>
               </>

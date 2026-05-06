@@ -78,7 +78,7 @@ export default async function DashboardPage() {
   );
 
   const hour = new Date().getHours();
-  const greetingLine = `${greeting(hour, data.userName)} 👋`;
+  const greetingLine = greeting(hour, data.userName);
 
   const canViewOrgDirectory = permissionKeys.includes('members.view');
   const canCompose = canComposeBroadcastByPermissions(permissionKeys);

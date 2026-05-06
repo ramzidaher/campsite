@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { Building2, Hourglass, Mail, RadioTower, Settings, User, UserPlus, Users } from 'lucide-react';
 import type { AdminOverviewModel } from '@/lib/admin/loadAdminOverview';
 
 function statFillPct(value: number, cap: number) {
@@ -61,7 +62,7 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
   const totalActiveForRoles = data.roleBreakdown.reduce((s, r) => s + r.count, 0) || 1;
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+    <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
       <div className="mb-6 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
@@ -73,9 +74,10 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
           {canUsers ? (
             <Link
               href="/admin/users"
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
             >
-              + Invite member
+              <UserPlus className="h-4 w-4" aria-hidden />
+              Invite member
             </Link>
           ) : null}
         </div>
@@ -84,7 +86,7 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
       <div className="mb-6 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <StatShell href={canUsers ? '/admin/users' : undefined}>
           <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-            👥 Total members
+            <Users className="h-3.5 w-3.5" aria-hidden /> Total members
           </div>
           <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {data.totalMembers}
@@ -108,7 +110,7 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
 
         <StatShell href="/admin/pending">
           <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-            ⏳ Pending approval
+            <Hourglass className="h-3.5 w-3.5" aria-hidden /> Pending approval
           </div>
           <div
             className={[
@@ -135,7 +137,7 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
 
         <StatShell href={canBroadcastsAdmin ? '/admin/broadcasts' : '/broadcasts'}>
           <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-            📡 Broadcasts (30d)
+            <RadioTower className="h-3.5 w-3.5" aria-hidden /> Broadcasts (30d)
           </div>
           <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {data.broadcasts30d}
@@ -159,7 +161,7 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
 
         <StatShell href={canDepts ? '/admin/departments' : undefined}>
           <div className="mb-2.5 flex items-center gap-1.5 text-[11.5px] font-medium uppercase tracking-[0.06em] text-[#9b9b9b]">
-            🏢 Departments
+            <Building2 className="h-3.5 w-3.5" aria-hidden /> Departments
           </div>
           <div className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {data.deptTotal}
@@ -176,7 +178,7 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
         </StatShell>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(430px,1fr)]">
         <div>
           <div className="mb-3.5 flex items-center gap-3">
             <h2 className="font-authSerif text-[17px] tracking-tight text-[#121212]">Recent activity</h2>
@@ -192,7 +194,11 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
                     className="flex gap-3 border-b border-[#d8d8d8] px-3.5 py-3.5 last:border-0"
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] text-[14px]">
-                      {a.icon}
+                      {a.icon === 'radio' ? (
+                        <RadioTower className="h-3.5 w-3.5 text-[#6b6b6b]" aria-hidden />
+                      ) : (
+                        <User className="h-3.5 w-3.5 text-[#6b6b6b]" aria-hidden />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] leading-snug text-[#6b6b6b]">{a.text}</p>
@@ -205,24 +211,26 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="min-w-0">
             <div className="mb-3.5 flex items-center justify-between">
               <h2 className="font-authSerif text-[17px] tracking-tight text-[#121212]">Quick actions</h2>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Link
                 href="/admin/pending"
                 className="inline-flex w-full items-center justify-start rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-left text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
               >
-                ⏳ Review{data.pendingCount > 0 ? ` ${data.pendingCount}` : ''} pending approvals
+                <Hourglass className="mr-1 h-3.5 w-3.5" aria-hidden />
+                Review{data.pendingCount > 0 ? ` ${data.pendingCount}` : ''} pending approvals
               </Link>
               {canUsers ? (
                 <Link
                   href="/admin/users"
                   className="inline-flex w-full items-center justify-start rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-left text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
                 >
-                  ✉️ Invite a new member
+                  <Mail className="mr-1 h-3.5 w-3.5" aria-hidden />
+                  Invite a new member
                 </Link>
               ) : null}
               {canDepts ? (
@@ -230,7 +238,8 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
                   href="/admin/departments"
                   className="inline-flex w-full items-center justify-start rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-left text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
                 >
-                  🏢 Manage departments
+                  <Building2 className="mr-1 h-3.5 w-3.5" aria-hidden />
+                  Manage departments
                 </Link>
               ) : null}
               {canBroadcastsAdmin ? (
@@ -238,7 +247,7 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
                   href="/admin/broadcasts"
                   className="inline-flex w-full items-center justify-start rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-left text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
                 >
-                  📡{' '}
+                  <RadioTower className="mr-1 h-3.5 w-3.5" aria-hidden />
                   {data.draftBroadcastsCount > 0
                     ? `Review ${data.draftBroadcastsCount} draft broadcast${data.draftBroadcastsCount === 1 ? '' : 's'}`
                     : 'Broadcast admin'}
@@ -248,7 +257,8 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
                   href="/broadcasts"
                   className="inline-flex w-full items-center justify-start rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-left text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
                 >
-                  📡 Open broadcasts
+                  <RadioTower className="mr-1 h-3.5 w-3.5" aria-hidden />
+                  Open broadcasts
                 </Link>
               )}
               {canSettings ? (
@@ -256,13 +266,14 @@ export function AdminOverviewView({ data }: { data: AdminOverviewModel }) {
                   href="/admin/settings"
                   className="inline-flex w-full items-center justify-start rounded-lg border border-[#d8d8d8] bg-white px-4 py-2.5 text-left text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
                 >
-                  ⚙️ Organisation settings
+                  <Settings className="mr-1 h-3.5 w-3.5" aria-hidden />
+                  Organisation settings
                 </Link>
               ) : null}
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div className="mb-3.5">
               <h2 className="font-authSerif text-[17px] tracking-tight text-[#121212]">Members by role</h2>
             </div>

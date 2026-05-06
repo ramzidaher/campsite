@@ -1,6 +1,6 @@
 # Campsite
 
-**Campsite** is a white-label internal communications and staff management platform built and owned by **Common Ground Studios Ltd** (UK private limited company). It is sold as isolated SaaS to organisations—initially **Student Unions** (e.g. University of Sussex Students' Union). Each customer gets a fully isolated deployment with a custom subdomain.
+**Campsite** is a white-label internal communications and staff management platform built and owned by **Common Ground Studios Ltd** (UK private limited company). It is sold as isolated SaaS to organisationsinitially **Student Unions** (e.g. University of Sussex Students' Union). Each customer gets a fully isolated deployment with a custom subdomain.
 
 This document is the single source of truth for **what we are building**, **how it is structured**, and **in what order** we implement it (phase by phase).
 
@@ -28,7 +28,7 @@ This document is the single source of truth for **what we are building**, **how 
 
 | Aspect | Detail |
 |--------|--------|
-| **What it is** | One-way broadcasts, rota, calendar, staff discount verification, org admin—no org chat at MVP. |
+| **What it is** | One-way broadcasts, rota, calendar, staff discount verification, org adminno org chat at MVP. |
 | **Who uses it** | Staff and leaders within an organisation; Common Ground operates a **platform admin** for all orgs. |
 | **Isolation** | Per-org data; default approach is **one Supabase project with RLS** on `organisation_id` unless a client requires full project isolation. |
 | **Access** | `{org-slug}.camp-site.co.uk` (subdomain routing; no custom domains at MVP). |
@@ -50,7 +50,7 @@ Use a **monorepo** (e.g. **Turborepo**) with shared packages:
 |------|---------|
 | `apps/mobile` | Expo app |
 | `apps/web` | Next.js app |
-| `packages/api` | Shared API (tRPC or REST—pick one for maintainability) |
+| `packages/api` | Shared API (tRPC or RESTpick one for maintainability) |
 | `packages/ui` | Shared UI components |
 | `packages/types` | Shared TypeScript types (recommended) |
 | `packages/theme` | Design tokens + `themePresets.ts` |
@@ -84,7 +84,7 @@ Use a **monorepo** (e.g. **Turborepo**) with shared packages:
 
 - Each organisation is logically isolated (`organisation_id` on all tenant data).
 - **RLS** on every table scoped to `org_id` is the default.
-- **Super Platform Admin** (Common Ground) uses **`admin.camp-site.co.uk`** to manage organisations—not org content.
+- **Super Platform Admin** (Common Ground) uses **`admin.camp-site.co.uk`** to manage organisationsnot org content.
 
 ### Onboarding (provider → customer)
 
@@ -192,14 +192,14 @@ Broadcasts: title, rich-text body, department, category, optional `scheduled_at`
 
 - Verified staff get a **rotating QR** (e.g. user, org, role, expiry ~24h).
 - **Scan** (Manager+): shows name, department, role, active status.
-- Super Admin configures **discount tiers per role** (informational only—no payments at MVP).
+- Super Admin configures **discount tiers per role** (informational onlyno payments at MVP).
 - Screens: My Discount Card, Scan a Card, Discount Rules (Super Admin).
 
 ### 7. Admin surfaces
 
 - **Org Super Admin:** overview, users, departments, broadcasts, rota, discounts, org settings, notification defaults (web-first; also mobile).
 - **Manager:** pending verifications, department broadcasts, department rota, assistant draft approval.
-- **Platform admin:** list/create/suspend orgs, aggregate stats—**no org content**.
+- **Platform admin:** list/create/suspend orgs, aggregate stats**no org content**.
 
 ### 8. Notifications
 
@@ -218,7 +218,7 @@ Conceptual tables (all subject to RLS by `org_id`):
 | `organisations` | Org identity, slug, logo, etc. |
 | `users` | User, org, role, status (pending/active/inactive) |
 | `departments` | Dept, org, type, description |
-| `broadcast_channels` | Broadcast channels (audience lists) per department — was `dept_categories` before migration `20260430270000` |
+| `broadcast_channels` | Broadcast channels (audience lists) per department  was `dept_categories` before migration `20260430270000` |
 | `user_departments` | User ↔ department M:N |
 | `user_subscriptions` | User ↔ category subscription flags |
 | `broadcasts` | Messages, scheduling, status |
@@ -297,11 +297,11 @@ campsite/
 
 ## Developer setup (local)
 
-1. **Prerequisites:** Node 20+, npm 10+, accounts for **hosted** Supabase / Vercel / Expo as needed. **Docker is not required** — this repo is normally used against Supabase Cloud; apply migrations via the Dashboard SQL editor or `npx supabase db push` after `supabase link` (see [ROLE-MAPPING.md](docs/campsite-v2-permissions/01-core-model-resolution/ROLE-MAPPING.md) §10).
+1. **Prerequisites:** Node 20+, npm 10+, accounts for **hosted** Supabase / Vercel / Expo as needed. **Docker is not required**  this repo is normally used against Supabase Cloud; apply migrations via the Dashboard SQL editor or `npx supabase db push` after `supabase link` (see [ROLE-MAPPING.md](docs/campsite-v2-permissions/01-core-model-resolution/ROLE-MAPPING.md) §10).
 2. **Install:** From the repo root run `npm install`.
 3. **Environment:** Copy `.env.example` to `.env` at the repo root and set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and other keys referenced in `apps/web` and `supabase/functions`. The web app also merges root `.env` in `next.config.ts`.
 4. **Database:** Apply migrations from `supabase/migrations/` to your Supabase project (`supabase db push` or SQL editor). Bootstrap the first platform admin per Phase 5 notes in `DEPLOY.md` when using CGS admin.
-5. **Web:** `npm run dev --workspace=@campsite/web` — use `tenant.localhost:3000` or `?org=slug` for tenancy (see middleware).
+5. **Web:** `npm run dev --workspace=@campsite/web`  use `tenant.localhost:3000` or `?org=slug` for tenancy (see middleware).
 6. **Mobile:** `npm run start --workspace=@campsite/mobile` and Expo Go / simulator.
 7. **Tests:** `npm run test --workspace=@campsite/web` (Jest). See `ARCHITECTURE.md` / `DEPLOY.md` for production build notes.
 
@@ -312,15 +312,15 @@ campsite/
 - No **real-time chat** (one-way broadcast only at MVP).
 - No **payment processing**; discount module is verification + info only.
 - No **two-way** Google Calendar sync at MVP (push from app only).
-- **No hardcoded departments**—all config per org.
-- **No custom email server**—Supabase Auth + transactional provider (e.g. Resend).
-- **No mixing org data**—every query and policy respects `org_id`.
+- **No hardcoded departments**all config per org.
+- **No custom email server**Supabase Auth + transactional provider (e.g. Resend).
+- **No mixing org data**every query and policy respects `org_id`.
 
 ---
 
 ## Ownership
 
-**Campsite** — © Common Ground Studios Ltd — [commongroundstudios.co.uk](https://commongroundstudios.co.uk)
+**Campsite**  © Common Ground Studios Ltd  [commongroundstudios.co.uk](https://commongroundstudios.co.uk)
 
 ---
 

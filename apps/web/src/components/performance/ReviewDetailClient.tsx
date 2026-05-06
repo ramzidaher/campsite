@@ -2,6 +2,7 @@
 
 import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
+import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -188,7 +189,7 @@ export function ReviewDetailClient({
           {isReviewee ? (cycle?.name ?? 'Review') : review.reviewee_name}
         </h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          {cycle ? `${TYPE_LABELS[cycle.type] ?? cycle.type} · ${cycle.period_start} – ${cycle.period_end}` : ''}
+          {cycle ? `${TYPE_LABELS[cycle.type] ?? cycle.type} · ${cycle.period_start} to ${cycle.period_end}` : ''}
           {!isReviewee && isReviewer ? ` · ${review.reviewee_name}` : ''}
           {isReviewee && review.reviewer_name ? ` · Reviewed by ${review.reviewer_name}` : ''}
         </p>
@@ -298,9 +299,10 @@ export function ReviewDetailClient({
             <button
               type="button"
               onClick={() => openGoalForm()}
-              className="rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#f0efe9] transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-1.5 text-[12px] font-medium text-[#121212] hover:bg-[#f0efe9] transition-colors"
             >
-              + Add goal
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              Add goal
             </button>
           ) : null}
         </div>

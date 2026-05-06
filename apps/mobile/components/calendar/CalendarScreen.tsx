@@ -887,7 +887,7 @@ function DetailModalMobile({
               <Text style={{ fontSize: 12, fontWeight: '700', color: tokens.textPrimary }}>Attendees</Text>
               {attendees.map((a) => (
                 <Text key={a.profile_id} style={{ fontSize: 13, color: tokens.textSecondary, marginTop: 4 }}>
-                  {a.full_name?.trim() || 'Member'} — {a.status}
+                  {a.full_name?.trim() || 'Member'}  {a.status}
                 </Text>
               ))}
             </View>

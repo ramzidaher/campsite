@@ -67,7 +67,7 @@ export async function buildSignedOfferPdfBytes(opts: {
 
   draw(opts.orgName, 9);
   y -= 4;
-  draw(`Offer letter — ${opts.jobTitle}`, 13, true);
+  draw(`Offer letter  ${opts.jobTitle}`, 13, true);
   y -= 6;
   draw(`Candidate: ${opts.candidateName}`, 10);
   y -= 10;

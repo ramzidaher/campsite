@@ -1,4 +1,4 @@
-# Page Layer Stage G — Hiring Forms Surfaces Normalization
+# Page Layer Stage G  Hiring Forms Surfaces Normalization
 **Date:** 2026-05-01  
 **Owner:** Engineering  
 **Scope:**  

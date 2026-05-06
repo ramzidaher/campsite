@@ -123,7 +123,7 @@ export function ResourceLibraryAssistant({
       {showIntro ? (
         <div className="flex flex-col gap-1 self-start">
           <div className="max-w-[85%] rounded-[14px] rounded-bl-[4px] border border-[color-mix(in_oklab,var(--org-brand-border)_75%,transparent)] bg-[var(--org-brand-bg)] px-3.5 py-2.5 text-[13.5px] leading-[1.55] text-[var(--org-brand-text)]">
-            Ask about your whole library — titles, descriptions, folders, and small text files. For deep questions
+            Ask about your whole library  titles, descriptions, folders, and small text files. For deep questions
             inside a PDF or Word file, open that document and use Scout there.
           </div>
         </div>
@@ -203,11 +203,11 @@ export function ResourceLibraryAssistant({
                 void send();
               }
             }}
-            placeholder="Scout — ask questions across your library"
+            placeholder="Scout  ask questions across your library"
             disabled={busy}
             autoComplete="off"
             className="h-12 w-full rounded-full border border-[color-mix(in_oklab,var(--org-brand-border)_90%,transparent)] bg-[var(--org-brand-bg)] py-2 pl-11 pr-[5.25rem] text-[15px] text-[var(--org-brand-text)] outline-none placeholder:text-[color-mix(in_oklab,var(--org-brand-muted)_72%,transparent)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--org-brand-border)_25%,transparent)] focus:border-[color-mix(in_oklab,var(--org-brand-text)_35%,var(--org-brand-border))] focus:ring-[3px] focus:ring-[color-mix(in_oklab,var(--org-brand-text)_12%,transparent)] disabled:opacity-60"
-            aria-label="Scout — ask questions across your library"
+            aria-label="Scout  ask questions across your library"
           />
           <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
             <button

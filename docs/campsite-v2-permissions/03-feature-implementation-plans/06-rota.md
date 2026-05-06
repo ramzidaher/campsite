@@ -1,10 +1,10 @@
-# 06 — Rota (shifts) and admin rota
+# 06  Rota (shifts) and admin rota
 
 ## 1. Product intent
 
 - **Staff rota (`/rota`):** Members view **their shifts** and, depending on role, **team** or **full org** schedules. **Rotas** (named schedules with `kind`: shift / activity / reception / other) group shifts via `rota_shifts.rota_id`. **Swap / change requests** use RPCs; **final approval** is org-wide for **`manager`**, **`duty_manager`**, and **`org_admin`** (see `can_final_approve_rota_request`).
-- **Admin rota (`/admin/rota`):** Org-wide management UI for coverage and links to import — **only org admins** reach this route via `admin/layout.tsx`.
-- **Sheets import (`/admin/rota-import`):** Google Sheets–based import wizard + history — **guaranteed org-admin-only** via parent layout; page loads `org_id` only. Not part of rota v1 product iteration.
+- **Admin rota (`/admin/rota`):** Org-wide management UI for coverage and links to import  **only org admins** reach this route via `admin/layout.tsx`.
+- **Sheets import (`/admin/rota-import`):** Google Sheets–based import wizard + history  **guaranteed org-admin-only** via parent layout; page loads `org_id` only. Not part of rota v1 product iteration.
 
 **Product spec:** [docs/rota-feature-spec.md](../../rota-feature-spec.md)
 
@@ -21,7 +21,7 @@
 | `20260430330000_rota_definitions_members_rls.sql` | `rotas`, `rota_members`, `rota_shifts.rota_id`, RLS, `can_manage_rota_assignments`, `rota_transfer_owner`, `rota_claim_open_shift` |
 | `20260430331000_rota_change_requests.sql` | `rota_change_requests`; RPCs: submit swap/change, peer accept, final approve/reject, cancel (mutations RPC-only) |
 | `20260430332000_rota_notification_jobs.sql` | `rota_notification_jobs` + triggers on `rota_shifts` / `rota_change_requests` |
-| `20260430340000_rota_notification_recipient_user_ids.sql` | **`rota_notification_recipient_user_ids(p_job_id)`** — **`service_role` only**; fan-out rules per `event_type` |
+| `20260430340000_rota_notification_recipient_user_ids.sql` | **`rota_notification_recipient_user_ids(p_job_id)`**  **`service_role` only**; fan-out rules per `event_type` |
 | `20260430333000_pending_approvals_rota_count.sql` | `pending_approvals_nav_count()` includes `pending_final` rota requests for approvers |
 | `20260430350000_phase3_org_timezone_sheets_target_rota.sql` | **`organisations.timezone`**; **`sheets_mappings.target_rota_id`** (+ org validation trigger); **`rota_sheets_sync_log.target_rota_id`** |
 | `20260430360000_rota_shifts_sheets_import_key.sql` | **`rota_shifts.sheets_import_key`** + partial unique **`(org_id, sheets_import_key)`** for Sheets upserts |
@@ -32,7 +32,7 @@
 | Table | Notes |
 |-------|--------|
 | **`rotas`** | `org_id`, optional `dept_id` / `department_team_id`, `kind`, `title`, `owner_id`, **`status`** (`draft` \| `published`), **`published_at`** |
-| **`rota_members`** | Invited participants `(rota_id, user_id)` — managed by same pool as rota assignments |
+| **`rota_members`** | Invited participants `(rota_id, user_id)`  managed by same pool as rota assignments |
 | **`rota_shifts`** | **`rota_id`** nullable: `NULL` = **legacy** row (original `can_manage_rota_for_dept` insert/update/delete rules); set = **rota-scoped** mutations via `can_manage_rota_assignments(rota_id)` |
 | **`rota_change_requests`** | `request_type` `swap` \| `change`; `status` `pending_peer` \| `pending_final` \| `approved` \| `rejected` \| `cancelled` |
 | **`rota_notification_jobs`** | Outbound notification queue; `authenticated` denied; workers use **service role** |
@@ -43,7 +43,7 @@
 
 - **Select:** active org member; **`published`** rotas are visible to all; **`draft`** rotas only if **`can_manage_rota_assignments(id)`** (editors).
 - **Insert:** `owner_id = auth.uid()` and caller is **`org_admin` / `super_admin`**, **`coordinator`**, or **`manager`** with **`dept_id`** set and `can_manage_rota_for_dept(dept_id)`.
-- **Update / delete:** `can_manage_rota_assignments(id)` — **`org_admin`**, **`coordinator`**, **rota owner**, or **`manager`** when `rotas.dept_id` is set and `can_manage_rota_for_dept` holds.
+- **Update / delete:** `can_manage_rota_assignments(id)`  **`org_admin`**, **`coordinator`**, **rota owner**, or **`manager`** when `rotas.dept_id` is set and `can_manage_rota_for_dept` holds.
 
 **`rota_members`**
 
@@ -60,7 +60,7 @@
 **`rota_change_requests`**
 
 - **Select:** requester, counterparty, final approvers (`can_final_approve_rota_request`), or org admins/coordinators.
-- **Insert / update:** none for `authenticated` — use RPCs only.
+- **Insert / update:** none for `authenticated`  use RPCs only.
 
 ### 2.3 RPCs (authenticated)
 
@@ -76,32 +76,32 @@
 
 ### 2.4 Rota notification delivery (RPC + Edge)
 
-- **`public.rota_notification_recipient_user_ids(p_job_id uuid)`** — returns `user_id` rows for the job’s `event_type` (shift assignee + rota owner + `rota_members` for shift events; **assignee only** for **`shift_reminder`**; requester/counterparty/approvers for request lifecycle). **`GRANT EXECUTE` to `service_role` only** (not `authenticated`).
-- **`public.enqueue_rota_shift_reminders()`** — **`service_role` only**; finds upcoming **`rota_shifts`** per assignee **`profiles.shift_reminder_before_minutes`**, inserts dedupe rows into **`rota_shift_reminder_sent`**, enqueues **`shift_reminder`** jobs. Invoked at the start of each **`process-rota-notifications`** run (so one schedule covers enqueue + send).
-- **`supabase/functions/process-rota-notifications`** — `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>`; calls **`enqueue_rota_shift_reminders`**; then selects pending jobs (`processed_at IS NULL`, `attempts < 5`), calls the RPC, loads **`push_tokens`**, sends via **Expo** (optional **`EXPO_ACCESS_TOKEN`**). Sets **`processed_at`** after success or empty send; increments **`attempts`** / **`last_error`** on failure.
+- **`public.rota_notification_recipient_user_ids(p_job_id uuid)`**  returns `user_id` rows for the job’s `event_type` (shift assignee + rota owner + `rota_members` for shift events; **assignee only** for **`shift_reminder`**; requester/counterparty/approvers for request lifecycle). **`GRANT EXECUTE` to `service_role` only** (not `authenticated`).
+- **`public.enqueue_rota_shift_reminders()`**  **`service_role` only**; finds upcoming **`rota_shifts`** per assignee **`profiles.shift_reminder_before_minutes`**, inserts dedupe rows into **`rota_shift_reminder_sent`**, enqueues **`shift_reminder`** jobs. Invoked at the start of each **`process-rota-notifications`** run (so one schedule covers enqueue + send).
+- **`supabase/functions/process-rota-notifications`**  `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>`; calls **`enqueue_rota_shift_reminders`**; then selects pending jobs (`processed_at IS NULL`, `attempts < 5`), calls the RPC, loads **`push_tokens`**, sends via **Expo** (optional **`EXPO_ACCESS_TOKEN`**). Sets **`processed_at`** after success or empty send; increments **`attempts`** / **`last_error`** on failure.
 - **Deploy:** `npm run supabase:functions:deploy:rota-notify` (see root `package.json`).
 - **Scheduling:** invoke the function on an interval (e.g. every 1–5 minutes) via **Supabase Scheduled Functions**, **Dashboard cron**, or external cron `POST` to the function URL with the service-role Bearer. Not wired in-repo; align with [12-push-and-notification-jobs.md](./12-push-and-notification-jobs.md).
 - **Config:** `[functions.process-rota-notifications]` `verify_jwt = false` in `supabase/config.toml`.
 
 ### 2.5 Client query entry points
 
-- `apps/web/src/components/rota/RotaClient.tsx` — `rota_shifts`, `rotas` (incl. **draft/publish** in setup), **`RotaMembersPanel`**, shift CRUD + overlap, **`org_timezone`** from **`organisations`** for time display
-- `apps/web/src/app/(main)/rota/page.tsx` — loads **`organisations.timezone`** for `RotaClient`
-- `apps/web/src/components/rota/RotaMembersPanel.tsx` — members CRUD for a selected rota
-- `apps/web/src/components/rota/RotaRequestsPanel.tsx` — change requests + RPCs
-- `apps/web/src/lib/admin/loadAdminRota.ts` — admin dashboard aggregates
-- `apps/web/src/lib/dashboard/loadDashboardHome.ts` — shifts + `pending_approvals_nav_count`
-- `apps/web/src/components/calendar/CalendarClient.tsx` — shifts + `rotas` join; org TZ for shift detail times
-- `apps/web/src/app/(main)/admin/settings/page.tsx` + **`OrgSettingsClient`** — org admin sets **`organisations.timezone`**
-- `apps/mobile/app/(tabs)/rota.tsx` — my / team shifts, org TZ query, **overlap** badge, swap/change requests, claim, approvals
+- `apps/web/src/components/rota/RotaClient.tsx`  `rota_shifts`, `rotas` (incl. **draft/publish** in setup), **`RotaMembersPanel`**, shift CRUD + overlap, **`org_timezone`** from **`organisations`** for time display
+- `apps/web/src/app/(main)/rota/page.tsx`  loads **`organisations.timezone`** for `RotaClient`
+- `apps/web/src/components/rota/RotaMembersPanel.tsx`  members CRUD for a selected rota
+- `apps/web/src/components/rota/RotaRequestsPanel.tsx`  change requests + RPCs
+- `apps/web/src/lib/admin/loadAdminRota.ts`  admin dashboard aggregates
+- `apps/web/src/lib/dashboard/loadDashboardHome.ts`  shifts + `pending_approvals_nav_count`
+- `apps/web/src/components/calendar/CalendarClient.tsx`  shifts + `rotas` join; org TZ for shift detail times
+- `apps/web/src/app/(main)/admin/settings/page.tsx` + **`OrgSettingsClient`**  org admin sets **`organisations.timezone`**
+- `apps/mobile/app/(tabs)/rota.tsx`  my / team shifts, org TZ query, **overlap** badge, swap/change requests, claim, approvals
 
 ### 2.6 Google Sheets
 
 - **`POST /api/admin/rota-sheets-import`** (session user must be **org admin**): loads the org’s **`sheets_mappings`** row and the caller’s **`google_connections`** row (`type = 'sheets'`, `connection_id`); refreshes OAuth if needed; reads **`organisations.timezone`** and maps sheet date/time through **`date-fns-tz`** (`fromZonedTime`); upserts **`rota_shifts`** with **`source = 'sheets_import'`**, **`rota_id`** from **`target_rota_id`**, stable **`sheets_import_key`** = `spreadsheetId:encodedTab:sheetRowNumber`; writes **`rota_sheets_sync_log`** (`rows_imported`, optional **`error_message`** summary).
-- **Column contract (letters):** name, date, start time, end time; optional dept and role. **Name** cell **`open`** / **`—`** / empty-skip patterns → **`user_id` null**. Dept text matched to **`departments.name`** in-org; name matched to **`profiles.full_name`** or **`email`** (active).
+- **Column contract (letters):** name, date, start time, end time; optional dept and role. **Name** cell **`open`** / **``** / empty-skip patterns → **`user_id` null**. Dept text matched to **`departments.name`** in-org; name matched to **`profiles.full_name`** or **`email`** (active).
 - **`SheetsImportWizard`** stores **`spreadsheet_id`** / URL on the user’s Sheets **`google_connections`**, saves **`connection_id`** + column letters + tab + **`header_row`** on **`sheets_mappings`**, and **Import now** calls the route above.
 
-## 3. Frontend — staff (`apps/web`)
+## 3. Frontend  staff (`apps/web`)
 
 ### 3.1 Route
 
@@ -133,14 +133,14 @@
 
 | Helper | Purpose |
 |--------|---------|
-| `canViewRotaDepartmentScope` | Manager, coordinator, or org admin — Department tab. |
-| `canViewRotaFullOrgGrid` | Org admin only — Full rota tab. |
-| `canEditRotaShifts` | Manager, coordinator, or org admin — shift / rota management entry (owner-specific rules in RLS). |
+| `canViewRotaDepartmentScope` | Manager, coordinator, or org admin  Department tab. |
+| `canViewRotaFullOrgGrid` | Org admin only  Full rota tab. |
+| `canEditRotaShifts` | Manager, coordinator, or org admin  shift / rota management entry (owner-specific rules in RLS). |
 | `canCreateRota` | Same as `canEditRotaShifts` for UI gates. |
 | `canFinalApproveRotaRequests` | Manager, duty_manager, or org admin. |
 | `canTransferRotaOwnership` | Org admin (matches RPC). |
 
-## 5. Frontend — admin (`apps/web`)
+## 5. Frontend  admin (`apps/web`)
 
 ### 5.1 Layout gate
 
@@ -153,7 +153,7 @@
 **File:** `apps/web/src/app/(main)/admin/rota/page.tsx`
 
 - Loads `loadAdminRotaDashboard(supabase, orgId)`.
-- Renders **`AdminRotaView`** — org-admin-only copy (managers use `/manager` + `/rota`).
+- Renders **`AdminRotaView`**  org-admin-only copy (managers use `/manager` + `/rota`).
 
 ### 5.3 Sheets import
 
@@ -166,7 +166,7 @@
 ### 5.4 Cross-links
 
 - `AdminRotaView` links to `/admin/rota-import` and `/rota`.
-- `AppTopBar` title map includes `/admin/rota-import` — update if route renames.
+- `AppTopBar` title map includes `/admin/rota-import`  update if route renames.
 
 ## 6. Manager workspace cross-links
 
@@ -176,11 +176,11 @@
 
 ## 7. Verification checklist
 
-- [x] Manager sees shifts consistent with **`dept_managers`** + own rows — **RLS** `rota_shifts_select`; client **team** view filters by managed `dept_id`.
+- [x] Manager sees shifts consistent with **`dept_managers`** + own rows  **RLS** `rota_shifts_select`; client **team** view filters by managed `dept_id`.
 - [x] Coordinators get **Department** tab and can manage rotas/shifts per RLS (`can_manage_rota_assignments` / coordinator insert on `rotas`).
-- [x] Non–org-admin cannot enable **Full rota** tab — **`canViewRotaFullOrgGrid`**.
-- [x] Import wizard: **`admin/layout`** org-admin gate; writes to mappings / import tables use org-scoped RLS — URL guessing without org admin session fails at layout.
-- [x] Shift create respects **`org_id`** / **`dept_id`** / optional **`rota_id`** — client sends profile org; FKs enforced by DB.
+- [x] Non–org-admin cannot enable **Full rota** tab  **`canViewRotaFullOrgGrid`**.
+- [x] Import wizard: **`admin/layout`** org-admin gate; writes to mappings / import tables use org-scoped RLS  URL guessing without org admin session fails at layout.
+- [x] Shift create respects **`org_id`** / **`dept_id`** / optional **`rota_id`**  client sends profile org; FKs enforced by DB.
 - [x] Swap / change flows and **`pending_approvals_nav_count`** include rota approvals for managers / duty managers / org admins.
 - [x] Rota push pipeline: **`rota_notification_recipient_user_ids`** + **`process-rota-notifications`** (Expo); schedule worker in hosting/cron.
 - [x] Web: **`rota_members`** UI + shift edit/delete + overlap warning when applicable.
@@ -189,7 +189,7 @@
 
 ## 8. Automated tests (`npm run test --workspace=@campsite/web`)
 
-- `src/lib/__tests__/rotaTypes.test.ts` — rota tab / edit / approval helpers.
+- `src/lib/__tests__/rotaTypes.test.ts`  rota tab / edit / approval helpers.
 
 ## 9. Implementation order (reference)
 

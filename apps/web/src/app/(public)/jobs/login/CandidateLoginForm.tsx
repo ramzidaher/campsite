@@ -35,6 +35,9 @@ export function CandidateLoginForm({ orgSlug, hostHeader, defaultNext = '/jobs/m
       setLoading(false);
       return;
     }
+    const { error: claimErr } = await supabase.rpc('claim_my_applications');
+    void claimErr;
+    setLoading(false);
     router.replace(next);
     router.refresh();
   }

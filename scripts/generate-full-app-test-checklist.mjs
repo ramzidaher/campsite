@@ -225,14 +225,14 @@ g('/manager/system-overview', 'G-048', 'Manager system overview (scoped graph if
 g('/hr/org-chart', 'G-049', 'Org chart: reports_to tree + masked manager if hidden', 'hr.view_records', 'web');
 g('/hr/recruitment', 'G-050', 'Recruitment: request → approve → create job chain', 'recruitment.*|jobs.*', 'web');
 g('/pending', 'G-051', 'User with pending status: limited shell until approved', 'unassigned', 'web');
-g('/founders', 'G-052', 'Founder HQ: after add-platform-founder — orgs + RBAC + legal', 'founder.*', 'web');
+g('/founders', 'G-052', 'Founder HQ: after add-platform-founder  orgs + RBAC + legal', 'founder.*', 'web');
 g('seed/QA', 'G-053', 'Regression: approve seeded pending user (campsite-qa-pending)', 'approvals.members.review', 'web');
 g('seed/QA', 'G-054', 'Isolation: Activities vs Events user cannot see other dept private lists', 'dept_scoped', 'web');
 g('/admin/integrations', 'G-055', 'Integrations: Google OAuth connect if configured', 'integrations.manage', 'web');
 g('/attendance', 'G-056', 'Attendance view (HR nav)', 'leave.view_own', 'web');
 g('/hr/timesheets', 'G-057', 'Timesheet review (manager/HR)', 'leave.approve_direct_reports|leave.manage_org', 'web');
 g('/admin/scan-logs', 'G-058', 'Discount activity / scan logs', 'members.view', 'web');
-g('jest', 'G-059', 'Automated: npm test (turbo) — lib/authz + rules', 'n/a', 'ci');
+g('jest', 'G-059', 'Automated: npm test (turbo)  lib/authz + rules', 'n/a', 'ci');
 g('manual', 'G-060', 'Read docs/QA_SEED_AND_SCENARIOS.md scenario tables end-to-end', 'n/a', 'web+mobile');
 
 const outG = [G.join(',')];

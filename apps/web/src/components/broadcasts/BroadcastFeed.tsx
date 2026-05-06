@@ -9,7 +9,7 @@ import { departmentColorTagStyle } from '@/lib/departments/departmentColor';
 import { relTime } from '@/lib/format/relTime';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Pin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MailOpen, Pin } from 'lucide-react';
 import {
   useQuery,
   useInfiniteQuery,
@@ -264,9 +264,7 @@ function FeedBroadcastCard({
             : variant === 'timeline' && timelineHighlight
               ? 'border-violet-400 bg-[#faf8ff] hover:border-violet-500 hover:shadow-[0_1px_3px_rgba(91,33,182,0.08),0_4px_12px_rgba(0,0,0,0.04)]'
               : 'border-[#e8e8e8] bg-white hover:border-[#d4d4d4] hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)]',
-          unread
-            ? "overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl before:bg-sky-600 before:content-['']"
-            : '',
+          '',
         ].join(' ')}
       >
       <div className="mb-1.5 flex items-start justify-between gap-3">
@@ -280,7 +278,8 @@ function FeedBroadcastCard({
         </div>
         <div className="mt-0.5 flex shrink-0 items-center gap-2">
           {unread ? (
-            <span className="inline-flex items-center rounded-full border border-sky-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900">
+            <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-800">
+              <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-sky-500" aria-hidden />
               Unread
             </span>
           ) : null}
@@ -712,8 +711,8 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
 
       {loading && !rows.length ? null : trulyEmpty ? (
         <div className="py-12 text-center text-[#9b9b9b]">
-          <div className="mb-3 text-4xl" aria-hidden>
-            📭
+          <div className="mb-3 flex justify-center text-[#9b9b9b]" aria-hidden>
+            <MailOpen className="h-10 w-10" />
           </div>
           <div className="text-[15px] font-medium text-[#6b6b6b]">No broadcasts here</div>
           <p className="mt-1.5 text-[13px]">
@@ -726,8 +725,8 @@ export const BroadcastFeed = forwardRef<BroadcastFeedHandle, Props>(function Bro
         </div>
       ) : filteredOutByUnread ? (
         <div className="py-12 text-center text-[#9b9b9b]">
-          <div className="mb-3 text-4xl" aria-hidden>
-            📭
+          <div className="mb-3 flex justify-center text-[#9b9b9b]" aria-hidden>
+            <MailOpen className="h-10 w-10" />
           </div>
           <div className="text-[15px] font-medium text-[#6b6b6b]">No unread in loaded items</div>
           <p className="mt-1.5 text-[13px]">Load more below or switch to All.</p>

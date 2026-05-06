@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The system is not broken because of a bad technology choice. Supabase, Next.js, and Vercel are all appropriate for this product. The system is broken because **783 database calls are made across the app with no shared caching layer between the application tier and the database**, and the caching that does exist lives inside individual Vercel function instances — which cannot share state with each other.
+The system is not broken because of a bad technology choice. Supabase, Next.js, and Vercel are all appropriate for this product. The system is broken because **783 database calls are made across the app with no shared caching layer between the application tier and the database**, and the caching that does exist lives inside individual Vercel function instances  which cannot share state with each other.
 
 Under concurrent load, this produces a thundering herd: multiple instances all miss their local caches simultaneously, all hit Postgres at once, PgBouncer saturates, the shell RPC times out, permissions are never returned, and users see degraded or broken UI across the board.
 
@@ -22,8 +22,8 @@ Every fix applied so far (module-level Maps, guardrail timeouts, permission reco
 ### From the incident reports (`prod-route-thrash-20260428-*`)
 
 - **72 page requests → 70 slow, 17 hard timeouts, 48 degraded shell responses, 18 hard shell timeouts**
-- The system entered a degraded state at `+0ms` — before any meaningful traffic had accumulated
-- Routes that are already cached (e.g. `/hr/hiring/jobs` using `getCachedAdminJobsPageData`) still averaged **7470ms** and timed out twice — proving the bottleneck is shared DB saturation, not any single page's logic
+- The system entered a degraded state at `+0ms`  before any meaningful traffic had accumulated
+- Routes that are already cached (e.g. `/hr/hiring/jobs` using `getCachedAdminJobsPageData`) still averaged **7470ms** and timed out twice  proving the bottleneck is shared DB saturation, not any single page's logic
 - Post-login landings failed after 12–23s, meaning the collapse is total: even authenticated users navigating to `/` cannot get a shell response
 
 Worst routes by average latency:
@@ -55,19 +55,19 @@ The top consumers of database time, by `total_time`:
 
 Three signals stand out immediately:
 
-1. **`main_shell_badge_counts_bundle` mean 391ms, max 7544ms** — the shell RPC is timing out under DB contention, not because the query is inherently slow
-2. **`pg_timezone_names` runs 327 times, mean 757ms, 391k rows, 0% index hit** — PostgREST or GoTrue scans a system catalog on every connection initialisation; you cannot fix this directly, but it consumes real DB time on every request
-3. **`realtime.list_changes` 258k calls, 17% of total DB time** — the Realtime WAL subscription taxes the DB continuously regardless of whether any client is actively subscribing
+1. **`main_shell_badge_counts_bundle` mean 391ms, max 7544ms**  the shell RPC is timing out under DB contention, not because the query is inherently slow
+2. **`pg_timezone_names` runs 327 times, mean 757ms, 391k rows, 0% index hit**  PostgREST or GoTrue scans a system catalog on every connection initialisation; you cannot fix this directly, but it consumes real DB time on every request
+3. **`realtime.list_changes` 258k calls, 17% of total DB time**  the Realtime WAL subscription taxes the DB continuously regardless of whether any client is actively subscribing
 
 ### From the codebase
 
 - **783 total `supabase.rpc()` / `.from()` calls** across the app
 - **158 RPCs** called from page-level server components
 - **55 in-memory `Map` instances** across `lib/` acting as local caches
-- **10 bespoke `getCached*.ts` files**, each with its own TTL, in-flight coalescing, and eviction logic — all duplicated
+- **10 bespoke `getCached*.ts` files**, each with its own TTL, in-flight coalescing, and eviction logic  all duplicated
 - **`has_permission` RPC called 64 times across pages** despite the shell bundle already returning the full `permission_keys` array
-- **All cache TTLs are 8–12 seconds** — too short to absorb a concurrency spike, long enough to serve stale data
-- The caches are keyed by `user_id` (shell) or `org_id` (HR data), which is the right shape — but they live in module memory, not a shared store
+- **All cache TTLs are 8–12 seconds**  too short to absorb a concurrency spike, long enough to serve stale data
+- The caches are keyed by `user_id` (shell) or `org_id` (HR data), which is the right shape  but they live in module memory, not a shared store
 
 ---
 
@@ -75,7 +75,7 @@ Three signals stand out immediately:
 
 ### Primary: No shared cache between the app tier and the database
 
-The module-level `Map` caches work well within a single warm Vercel instance. Fluid Compute reuses instances across concurrent requests, so coalescing and TTL hits are real benefits within one instance. But Vercel scales horizontally — under load you have multiple instances, each with its own cold Map.
+The module-level `Map` caches work well within a single warm Vercel instance. Fluid Compute reuses instances across concurrent requests, so coalescing and TTL hits are real benefits within one instance. But Vercel scales horizontally  under load you have multiple instances, each with its own cold Map.
 
 The failure pattern is:
 
@@ -95,11 +95,11 @@ This is a textbook **thundering herd** problem caused by per-instance state in a
 
 The heaviest pages compute org-wide aggregations synchronously on page load:
 
-- `hr_directory_list()` — full org member scan with JOINs across departments, roles, HR records
-- `hr_dashboard_stats()` — org-wide aggregation of leave, performance, onboarding, and attendance data
-- `org_chart_directory_core_list()` — full org member list with manager hierarchy and department assignments
-- Performance page — loads all cycles, then counts all reviews in memory
-- Onboarding page — multiple org-wide queries for templates, runs, members, tasks, and readiness in sequence
+- `hr_directory_list()`  full org member scan with JOINs across departments, roles, HR records
+- `hr_dashboard_stats()`  org-wide aggregation of leave, performance, onboarding, and attendance data
+- `org_chart_directory_core_list()`  full org member list with manager hierarchy and department assignments
+- Performance page  loads all cycles, then counts all reviews in memory
+- Onboarding page  multiple org-wide queries for templates, runs, members, tasks, and readiness in sequence
 
 These are analytical queries. They belong in a pre-computed or materialized form, not in the synchronous request path.
 
@@ -109,15 +109,15 @@ The layout's shell bundle already fetches and caches `permission_keys` for the a
 
 ### Quaternary: Uncontrolled infrastructure overhead
 
-- `pg_timezone_names` full seq scan on every PostgREST connection — uncontrollable but eating 3% of DB time
-- Realtime WAL subscription running at 258k calls regardless of active subscribers — if Realtime is only used for broadcasts, the overhead-to-value ratio is poor
-- PostgREST session `set_config` at 79,576 calls — every `supabase.rpc()` call incurs this setup cost; reducing total RPC count reduces this proportionally
+- `pg_timezone_names` full seq scan on every PostgREST connection  uncontrollable but eating 3% of DB time
+- Realtime WAL subscription running at 258k calls regardless of active subscribers  if Realtime is only used for broadcasts, the overhead-to-value ratio is poor
+- PostgREST session `set_config` at 79,576 calls  every `supabase.rpc()` call incurs this setup cost; reducing total RPC count reduces this proportionally
 
 ---
 
 ## Remediation Plan
 
-### Phase 1 — Stop the bleeding (1–3 days, highest ROI)
+### Phase 1  Stop the bleeding (1–3 days, highest ROI)
 
 #### 1.1 Add Upstash Redis as a shared cache
 
@@ -169,7 +169,7 @@ const hrDashboardStatsResponseCache = new Map<string, TtlCacheEntry<HrDashboardS
 export const getCachedHrDashboardStats = cache(async (orgId: string) => {
   return getCachedOrLoad(
     `org:${orgId}:hr_dashboard_stats`,
-    30, // 30s — increased from 12s because Redis hits cost ~1ms
+    30, // 30s  increased from 12s because Redis hits cost ~1ms
     async () => {
       const supabase = await createClient();
       const { data } = await supabase.rpc('hr_dashboard_stats');
@@ -192,9 +192,9 @@ Cache key design:
 | Interview schedule | `org:${orgId}:interview_schedule` | 30s | Interview slot write |
 | Recruitment queue | `org:${orgId}:recruitment_queue` | 30s | Request status change |
 
-The in-process `Map` caches can stay as an L1 layer in front of Redis for the TTL duration — you get: L1 Map hit (0ms) → L2 Redis hit (~1ms) → DB miss (~50–500ms). Under load, 18 concurrent requests become at most 1 Redis fetch.
+The in-process `Map` caches can stay as an L1 layer in front of Redis for the TTL duration  you get: L1 Map hit (0ms) → L2 Redis hit (~1ms) → DB miss (~50–500ms). Under load, 18 concurrent requests become at most 1 Redis fetch.
 
-#### 1.2 Stop rechecking permissions in pages — use the shell bundle
+#### 1.2 Stop rechecking permissions in pages  use the shell bundle
 
 The layout already has `permissionKeys: PermissionKey[]`. Pass it to a React context at the layout level:
 
@@ -208,12 +208,12 @@ The layout already has `permissionKeys: PermissionKey[]`. Pass it to a React con
 Then in any page or server component that currently calls `supabase.rpc('has_permission', ...)`:
 
 ```ts
-// Before — DB round-trip per check
+// Before  DB round-trip per check
 const { data } = await supabase.rpc('has_permission', {
   p_permission_key: 'hr.view_records', ...
 });
 
-// After — array check, zero DB cost
+// After  array check, zero DB cost
 const canViewRecords = permissionKeys.includes('hr.view_records');
 ```
 
@@ -221,13 +221,13 @@ This eliminates 64 DB calls per render cycle with zero functional change. On the
 
 ---
 
-### Phase 2 — Fix the data model (1–2 weeks)
+### Phase 2  Fix the data model (1–2 weeks)
 
 #### 2.1 Materialize expensive read models
 
 The org-wide queries that are killing performance should be precomputed, not computed at request time.
 
-**Option A — Postgres materialized views (simplest, stays in Supabase):**
+**Option A  Postgres materialized views (simplest, stays in Supabase):**
 
 ```sql
 CREATE MATERIALIZED VIEW public.hr_directory_snapshot AS
@@ -240,7 +240,7 @@ CREATE UNIQUE INDEX ON public.hr_directory_snapshot (user_id, org_id);
 REFRESH MATERIALIZED VIEW CONCURRENTLY public.hr_directory_snapshot;
 ```
 
-**Option B — Cache tables updated by triggers:**
+**Option B  Cache tables updated by triggers:**
 
 ```sql
 CREATE TABLE public.org_hr_stats_cache (
@@ -286,12 +286,12 @@ Keep on primary:
 The Realtime WAL subscription is 17% of total DB time. Steps:
 
 1. In Supabase dashboard → Realtime → Connections: check for subscriptions accumulating without being cleaned up (leak from components that unmount without calling `subscription.unsubscribe()`)
-2. If Realtime is only used for the broadcast unread badge, replace it with a 30s poll — less DB overhead than continuous WAL
+2. If Realtime is only used for the broadcast unread badge, replace it with a 30s poll  less DB overhead than continuous WAL
 3. If Realtime is genuinely needed for live rota/calendar, ensure subscriptions are page-scoped and cleaned up on unmount
 
 ---
 
-### Phase 3 — Structural cleanup (2–4 weeks)
+### Phase 3  Structural cleanup (2–4 weeks)
 
 #### 3.1 Consolidate the 55 Maps into one bounded LRU cache
 
@@ -328,8 +328,8 @@ Estimated 60–80% reduction in CI reset time.
 
 `@campsite/api` was the original data-fetching layer but has been superseded by server-side RPCs in Next.js Server Components. It now only exports `fetchDashboardStatCounts` and a browser client wrapper. Either:
 
-- **Scope it to mobile explicitly** — rename to `@campsite/mobile-api`, document that the web app uses `lib/supabase/` directly
-- **Delete it** — if mobile also uses direct Supabase calls, the package has no unique value
+- **Scope it to mobile explicitly**  rename to `@campsite/mobile-api`, document that the web app uses `lib/supabase/` directly
+- **Delete it**  if mobile also uses direct Supabase calls, the package has no unique value
 
 The ambiguity about where data-fetching logic lives adds maintenance overhead.
 
@@ -397,6 +397,6 @@ The ambiguity about where data-fetching logic lives adds maintenance overhead.
 - Realtime WAL overhead reduced if subscription leaks are fixed
 
 **After Phase 3:**
-- Instance memory stable — bounded LRU, no unbounded Map growth on long-lived instances
+- Instance memory stable  bounded LRU, no unbounded Map growth on long-lived instances
 - CI reset time: 320 migrations → 1 baseline + delta, estimated 60–80% faster
 - Clear ownership of data-fetching: web uses `lib/supabase/` + Redis cache; mobile uses `@campsite/mobile-api`

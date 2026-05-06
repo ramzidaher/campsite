@@ -47,7 +47,7 @@ function Row({
 
 /**
  * Vertical timeline grouped by day (or any heading). Used as an alternate “lens”
- * alongside classic lists — same data, time-forward layout.
+ * alongside classic lists  same data, time-forward layout.
  */
 export function ChronologyTimeline({ groups }: { groups: ChronoGroup[] }) {
   if (groups.length === 0) {

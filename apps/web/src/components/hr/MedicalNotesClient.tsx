@@ -184,7 +184,7 @@ export function MedicalNotesClient({
                 {r.recommended_adjustments ? <p className="text-[#9b9b9b]">Adjustments: {r.recommended_adjustments}</p> : null}
                 {revealedById[r.id] ? (
                   <p className="mt-1 whitespace-pre-wrap rounded bg-[#f8f8f8] px-2 py-1 text-[11.5px] text-[#121212]">
-                    Clinical: {revealedById[r.id]!.clinical_notes || '—'} | Dx: {revealedById[r.id]!.diagnosis_summary || '—'} | Restrictions: {revealedById[r.id]!.medications_or_restrictions || '—'}
+                    Clinical: {revealedById[r.id]!.clinical_notes || ''} | Dx: {revealedById[r.id]!.diagnosis_summary || ''} | Restrictions: {revealedById[r.id]!.medications_or_restrictions || ''}
                   </p>
                 ) : null}
               </div>

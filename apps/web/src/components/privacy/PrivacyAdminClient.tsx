@@ -1,6 +1,7 @@
 'use client';
 
 import { FormSelect } from '@campsite/ui/web';
+import { Check, Eye, Gavel, Settings2, ShieldAlert, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -211,14 +212,16 @@ export function PrivacyAdminClient() {
               type="button"
               disabled={busy}
               onClick={() => void savePolicy()}
-              className="h-9 rounded-lg border border-[#121212] bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#121212] bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] disabled:opacity-50"
             >
+              <Check className="h-3.5 w-3.5" aria-hidden />
               Save policy
             </button>
             <Link
               href="/admin/roles"
-              className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
             >
+              <Settings2 className="h-3.5 w-3.5" aria-hidden />
               Roles and permissions
             </Link>
           </div>
@@ -262,34 +265,49 @@ export function PrivacyAdminClient() {
                 <p className="mt-2 text-[12.5px] text-[#6b6b6b]">User: {r.user_id}</p>
                 <p className="mt-1 text-[12.5px] text-[#6b6b6b]">Reason: {r.request_reason}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" disabled={busy} onClick={() => void preview(r.id)} className={secondaryButtonClass}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void preview(r.id)}
+                    className={`inline-flex items-center gap-1.5 ${secondaryButtonClass}`}
+                  >
+                    <Eye className="h-3.5 w-3.5" aria-hidden />
                     Preview
                   </button>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => void review(r.id, 'legal_review')}
-                    className={secondaryButtonClass}
+                    className={`inline-flex items-center gap-1.5 ${secondaryButtonClass}`}
                   >
+                    <Gavel className="h-3.5 w-3.5" aria-hidden />
                     Legal review
                   </button>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => void review(r.id, 'approve')}
-                    className="rounded-lg border border-[#86efac] bg-[#f0fdf4] px-2.5 py-1 text-[12px] text-[#166534] transition-colors hover:bg-[#dcfce7] disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#86efac] bg-[#f0fdf4] px-2.5 py-1 text-[12px] text-[#166534] transition-colors hover:bg-[#dcfce7] disabled:opacity-50"
                   >
+                    <Check className="h-3.5 w-3.5" aria-hidden />
                     Approve
                   </button>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => void review(r.id, 'reject')}
-                    className="rounded-lg border border-[#fecaca] bg-[#fef2f2] px-2.5 py-1 text-[12px] text-[#991b1b] transition-colors hover:bg-[#fee2e2] disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-2.5 py-1 text-[12px] text-[#991b1b] transition-colors hover:bg-[#fee2e2] disabled:opacity-50"
                   >
+                    <ShieldAlert className="h-3.5 w-3.5" aria-hidden />
                     Reject
                   </button>
-                  <button type="button" disabled={busy} onClick={() => void executeReq(r.id)} className={secondaryButtonClass}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void executeReq(r.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border border-[#b91c1c] bg-white px-2.5 py-1 text-[12px] text-[#b91c1c] transition-colors hover:bg-[#fef2f2] disabled:opacity-50`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
                     Execute
                   </button>
                 </div>

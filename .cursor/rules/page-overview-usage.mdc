@@ -1,0 +1,20 @@
+---
+description: Use overview cards only on dense pages
+alwaysApply: true
+---
+
+# Page Overview Usage
+
+Do not add KPI/overview card rows by default.
+
+Add overview cards only when the page is clearly information-dense, for example:
+- 3+ independent datasets/sections users must scan together
+- dashboard-style monitoring where quick totals materially improve decisions
+- high-volume admin pages where summary metrics reduce navigation time
+
+For simple settings or workflow pages (single primary toggle/form/table), avoid overview cards and keep the UI focused on:
+- clear heading + short helper copy
+- primary action visibility
+- section labels and reduced visual clutter
+
+If unsure, default to **no overview cards** unless the user explicitly asks for them.

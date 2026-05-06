@@ -6,7 +6,7 @@ import {
 } from '@/components/loading';
 
 /**
- * Route-level skeleton for `/calendar` — mirrors {@link CalendarClient} header + chrome + month grid.
+ * Route-level skeleton for `/calendar`  mirrors {@link CalendarClient} header + chrome + month grid.
  */
 export default function CalendarLoading() {
   const weekdayLabels = Array.from({ length: 7 });

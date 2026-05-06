@@ -1,5 +1,5 @@
 /**
- * Phase 5 — Custom Role Builder: permission picker + API contract for the frontend.
+ * Phase 5  Custom Role Builder: permission picker + API contract for the frontend.
  *
  * `GET /api/admin/custom-roles` returns `permission_picker.items[]` using this shape.
  * Only permissions with `assignable_into_custom_role: true` should be offered in the picker
@@ -23,7 +23,7 @@ export type CustomRoleResponse = {
   key: string;
   label: string;
   description: string;
-  /** Always false for this API — system roles are not returned from custom-role endpoints. */
+  /** Always false for this API  system roles are not returned from custom-role endpoints. */
   is_system: false;
   is_archived: boolean;
   permission_keys: string[];

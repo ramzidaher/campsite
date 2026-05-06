@@ -1,4 +1,4 @@
--- Plan 02 — Department broadcast toggles + org-wide / mandatory / pin (mainaccesslevel.md).
+-- Plan 02  Department broadcast toggles + org-wide / mandatory / pin (mainaccesslevel.md).
 -- Depends on v2 roles migration (org_admin, coordinator, …).
 
 -- ---------------------------------------------------------------------------
@@ -274,7 +274,7 @@ $$;
 revoke all on function public.broadcast_form_allowed(text, uuid, boolean, boolean, boolean) from public;
 grant execute on function public.broadcast_form_allowed(text, uuid, boolean, boolean, boolean) to authenticated;
 
--- Back-compat name used by older policies — delegate with default flags false
+-- Back-compat name used by older policies  delegate with default flags false
 create or replace function public.broadcast_status_allowed_for_insert(p_status text)
 returns boolean
 language sql

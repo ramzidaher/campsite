@@ -89,7 +89,7 @@ export default async function AbsenceReportingPage() {
 
   if (pageData.reportErrorMessage) {
     return (
-      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-7">
+      <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
         <p className="text-[13px] text-[#b91c1c]">Could not load absence report: {pageData.reportErrorMessage}</p>
       </div>
     );

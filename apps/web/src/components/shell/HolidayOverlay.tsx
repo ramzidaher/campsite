@@ -30,7 +30,7 @@ function styleTag(css: string) {
   return <style dangerouslySetInnerHTML={{ __html: css }} />;
 }
 
-/** Deterministic — same value SSR & browser (rounded to avoid float precision mismatch) */
+/** Deterministic  same value SSR & browser (rounded to avoid float precision mismatch) */
 function rand(min: number, max: number, seed: number) {
   const x = Math.sin(seed + 1) * 10000;
   const raw = min + ((x - Math.floor(x)) * (max - min));
@@ -49,7 +49,7 @@ function TopWire({ color = 'rgba(50,50,50,0.75)' }: { color?: string }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CHRISTMAS / BOXING DAY — fairy lights full width
+// CHRISTMAS / BOXING DAY  fairy lights full width
 // ═══════════════════════════════════════════════════════════════════════════
 const BULB_COLORS = ['#ff3b3b','#ffcc00','#3bff6e','#3bb4ff','#ff8c00','#ff3b3b','#3bff6e','#ffcc00','#ff8c00','#3bb4ff'];
 
@@ -85,7 +85,7 @@ function ChristmasLights() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Generic wire-hang helper — items spread across full viewport
+// Generic wire-hang helper  items spread across full viewport
 // ═══════════════════════════════════════════════════════════════════════════
 function WireHang({ wireColor, items }: {
   wireColor: string;
@@ -107,7 +107,7 @@ function WireHang({ wireColor, items }: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EASTER — eggs full width
+// EASTER  eggs full width
 // ═══════════════════════════════════════════════════════════════════════════
 const EGG_COLORS = [
   ['#f9a8d4','#f472b6'],['#86efac','#4ade80'],['#93c5fd','#60a5fa'],
@@ -155,7 +155,7 @@ function EasterOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HALLOWEEN — cobwebs + bats spread across screen
+// HALLOWEEN  cobwebs + bats spread across screen
 // ═══════════════════════════════════════════════════════════════════════════
 function HalloweenOverlay() {
   const bats = useMemo(() => [
@@ -198,7 +198,7 @@ function HalloweenOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DIWALI — diyas on wire full width + sparkles
+// DIWALI  diyas on wire full width + sparkles
 // ═══════════════════════════════════════════════════════════════════════════
 function DiwaliOverlay() {
   const count = 12;
@@ -245,7 +245,7 @@ function DiwaliOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// BONFIRE NIGHT — embers rising from bottom full width
+// BONFIRE NIGHT  embers rising from bottom full width
 // ═══════════════════════════════════════════════════════════════════════════
 function BonfireOverlay() {
   const embers = useMemo(() => Array.from({ length: 28 }, (_, i) => ({
@@ -269,7 +269,7 @@ function BonfireOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// NEW YEAR'S — confetti full width
+// NEW YEAR'S  confetti full width
 // ═══════════════════════════════════════════════════════════════════════════
 const CONF_COLORS = ['#f43f5e','#3b82f6','#22c55e','#facc15','#a855f7','#fb923c','#06b6d4'];
 
@@ -296,7 +296,7 @@ function NewYearsOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// VALENTINE'S DAY — hearts rising full width
+// VALENTINE'S DAY  hearts rising full width
 // ═══════════════════════════════════════════════════════════════════════════
 function ValentinesOverlay() {
   const hearts = useMemo(() => Array.from({ length: 18 }, (_, i) => ({
@@ -324,7 +324,7 @@ function ValentinesOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HOLI — colour blobs full width
+// HOLI  colour blobs full width
 // ═══════════════════════════════════════════════════════════════════════════
 function HoliOverlay() {
   const blobs = useMemo(() => Array.from({ length: 14 }, (_, i) => ({
@@ -349,7 +349,7 @@ function HoliOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HANUKKAH — menorah centred + sparkles full width
+// HANUKKAH  menorah centred + sparkles full width
 // ═══════════════════════════════════════════════════════════════════════════
 function HanukkahOverlay() {
   const sparkles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
@@ -391,7 +391,7 @@ function HanukkahOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// THANKSGIVING — leaves falling full width
+// THANKSGIVING  leaves falling full width
 // ═══════════════════════════════════════════════════════════════════════════
 function ThanksgivingOverlay() {
   const leaves = useMemo(() => Array.from({ length: 22 }, (_, i) => ({
@@ -417,7 +417,7 @@ function ThanksgivingOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// LUNAR NEW YEAR — lanterns full width
+// LUNAR NEW YEAR  lanterns full width
 // ═══════════════════════════════════════════════════════════════════════════
 function LunarNewYearOverlay() {
   const count = 10;
@@ -457,7 +457,7 @@ function LunarNewYearOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PRIDE — rainbow strips + sparkles full width
+// PRIDE  rainbow strips + sparkles full width
 // ═══════════════════════════════════════════════════════════════════════════
 function PrideOverlay() {
   const sparkles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
@@ -483,7 +483,7 @@ function PrideOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FLOWERS (Women's Day / Mother's Day) — full width wire
+// FLOWERS (Women's Day / Mother's Day)  full width wire
 // ═══════════════════════════════════════════════════════════════════════════
 function FlowerOverlay({ colors }: { colors: [string, string, string] }) {
   const count = 10;
@@ -532,7 +532,7 @@ function FlowerOverlay({ colors }: { colors: [string, string, string] }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EARTH DAY — globes on wire + falling leaves full width
+// EARTH DAY  globes on wire + falling leaves full width
 // ═══════════════════════════════════════════════════════════════════════════
 function EarthDayOverlay() {
   const count = 8;
@@ -580,7 +580,7 @@ function EarthDayOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RAMADAN — moon + stars on wire full width
+// RAMADAN  moon + stars on wire full width
 // ═══════════════════════════════════════════════════════════════════════════
 function RamadanOverlay() {
   const count = 10;
@@ -633,7 +633,7 @@ function RamadanOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EID — crescents + stars + confetti full width
+// EID  crescents + stars + confetti full width
 // ═══════════════════════════════════════════════════════════════════════════
 function EidOverlay({ green }: { green?: boolean }) {
   const accentColor = green ? '#16a34a' : '#7c3aed';
@@ -692,7 +692,7 @@ function EidOverlay({ green }: { green?: boolean }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ROSH HASHANAH — apples + honey jars on wire full width
+// ROSH HASHANAH  apples + honey jars on wire full width
 // ═══════════════════════════════════════════════════════════════════════════
 function RoshHashanahOverlay() {
   const count = 10;
@@ -737,7 +737,7 @@ function RoshHashanahOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PASSOVER — Star of David + wine cups full width
+// PASSOVER  Star of David + wine cups full width
 // ═══════════════════════════════════════════════════════════════════════════
 function PassoverOverlay() {
   const count = 10;
@@ -775,7 +775,7 @@ function PassoverOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// YOM KIPPUR — solemn white candles at bottom full width
+// YOM KIPPUR  solemn white candles at bottom full width
 // ═══════════════════════════════════════════════════════════════════════════
 function YomKippurOverlay() {
   const count = 9;
@@ -809,7 +809,7 @@ function YomKippurOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// VESAK — lotus flowers on wire full width
+// VESAK  lotus flowers on wire full width
 // ═══════════════════════════════════════════════════════════════════════════
 function VesakOverlay() {
   const count = 10;
@@ -859,7 +859,7 @@ function VesakOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// BLACK FRIDAY — price tags on wire + lightning bolts falling
+// BLACK FRIDAY  price tags on wire + lightning bolts falling
 // ═══════════════════════════════════════════════════════════════════════════
 function BlackFridayOverlay() {
   const count = 8;
@@ -904,7 +904,7 @@ function BlackFridayOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FATHER'S DAY — neckties on wire full width + stars
+// FATHER'S DAY  neckties on wire full width + stars
 // ═══════════════════════════════════════════════════════════════════════════
 const TIE_COLORS = ['#1d4ed8','#0369a1','#7c3aed','#1d4ed8','#0369a1','#6d28d9','#1e40af','#0284c7'];
 
@@ -950,7 +950,7 @@ function FathersDayOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EARLY MAY BANK HOLIDAY — Union Jack bunting full width + spring petals
+// EARLY MAY BANK HOLIDAY  Union Jack bunting full width + spring petals
 // ═══════════════════════════════════════════════════════════════════════════
 const BUNTING_COLORS = ['#ef4444','#f8f8f8','#3b82f6','#ef4444','#f8f8f8','#3b82f6','#ef4444','#f8f8f8','#3b82f6','#fbbf24'];
 

@@ -106,19 +106,45 @@ export function LiveOrgChartClient({
   useEffect(() => {
     if (!interactive) return;
     let cancelled = false;
+    let authUnavailable = false;
+    let refreshInFlight = false;
+    let touchInFlight = false;
+
+    const shouldPauseLiveCalls = (status: number) => status === 401 || status === 403;
 
     const refresh = async () => {
-      const res = await fetch('/api/org-chart/live', { cache: 'no-store', credentials: 'include' });
-      if (!res.ok || cancelled) return;
-      const json = (await res.json()) as { nodes?: OrgChartLiveNode[] };
-      if (Array.isArray(json.nodes) && !cancelled) setNodes(json.nodes);
+      if (cancelled || authUnavailable || refreshInFlight) return;
+      refreshInFlight = true;
+      try {
+        const res = await fetch('/api/org-chart/live', { cache: 'no-store', credentials: 'include' });
+        if (cancelled) return;
+        if (!res.ok) {
+          if (shouldPauseLiveCalls(res.status)) authUnavailable = true;
+          return;
+        }
+        const json = (await res.json()) as { nodes?: OrgChartLiveNode[] };
+        if (Array.isArray(json.nodes) && !cancelled) setNodes(json.nodes);
+      } catch {
+        return;
+      } finally {
+        refreshInFlight = false;
+      }
     };
 
     const touch = async () => {
+      if (cancelled || authUnavailable || touchInFlight) return;
+      touchInFlight = true;
       await fetch('/api/presence/touch', {
         method: 'POST',
         credentials: 'include',
-      }).catch(() => undefined);
+      })
+        .then((res) => {
+          if (shouldPauseLiveCalls(res.status)) authUnavailable = true;
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          touchInFlight = false;
+        });
     };
 
     void refresh();
@@ -209,11 +235,11 @@ export function LiveOrgChartClient({
         {selectedNode ? (
           <div className="grid grid-cols-1 gap-3 text-[13px] text-[#242424] sm:grid-cols-2">
             <div><strong>Role:</strong> {selectedNode.role}</div>
-            <div><strong>Manager:</strong> {selectedNode.reports_to_name ?? '—'}</div>
-            <div><strong>Department:</strong> {selectedNode.department_names?.join(', ') || '—'}</div>
-            <div><strong>Email:</strong> {selectedNode.email ?? '—'}</div>
+            <div><strong>Manager:</strong> {selectedNode.reports_to_name ?? ''}</div>
+            <div><strong>Department:</strong> {selectedNode.department_names?.join(', ') || ''}</div>
+            <div><strong>Email:</strong> {selectedNode.email ?? ''}</div>
             <div><strong>Status:</strong> {selectedNode.live_status.replaceAll('_', ' ')}</div>
-            <div><strong>Last seen:</strong> {selectedNode.last_seen_at ? new Date(selectedNode.last_seen_at).toLocaleString() : '—'}</div>
+            <div><strong>Last seen:</strong> {selectedNode.last_seen_at ? new Date(selectedNode.last_seen_at).toLocaleString() : ''}</div>
           </div>
         ) : null}
       </EmployeeQuickViewModal>

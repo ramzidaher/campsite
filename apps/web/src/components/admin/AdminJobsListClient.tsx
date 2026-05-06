@@ -6,7 +6,7 @@ import { FormSelect, campusText } from '@campsite/ui/web';
 import { recruitmentContractLabel } from '@/lib/recruitment/labels';
 import { tenantJobPublicUrl } from '@/lib/tenant/adminUrl';
 import { jobListingStatusLabel } from '@/lib/jobs/labels';
-import { Archive, ExternalLink, Share2 } from 'lucide-react';
+import { Archive, ExternalLink, Search, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
@@ -31,7 +31,7 @@ type ListScope = 'active' | 'archived' | 'all';
 
 function formatStableShortDate(iso: string): string {
   const dt = new Date(iso);
-  if (Number.isNaN(dt.getTime())) return '—';
+  if (Number.isNaN(dt.getTime())) return '';
   return new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -171,9 +171,7 @@ export function AdminJobsListClient({
           </button>
         </div>
         <div className="flex h-9 w-full max-w-[260px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3 transition-[box-shadow,border-color] focus-within:border-[#121212] focus-within:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]">
-          <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
-            🔍
-          </span>
+          <Search className="h-3.5 w-3.5 text-[#9b9b9b]" aria-hidden />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -283,7 +281,7 @@ export function AdminJobsListClient({
                         {r.title}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-[#505050]">{deptName ?? '—'}</td>
+                    <td className="px-4 py-3 text-[#505050]">{deptName ?? ''}</td>
                     <td className="px-4 py-3">
                       <span className="inline-flex rounded-full border border-[#d8d8d8] px-2.5 py-1 text-[11px]">
                         {jobListingStatusLabel(r.status)}
@@ -292,10 +290,10 @@ export function AdminJobsListClient({
                     <td className="px-4 py-3 text-[#505050]">
                       {r.published_at
                         ? formatStableShortDate(r.published_at)
-                        : '—'}
+                        : ''}
                     </td>
                     <td className="px-4 py-3 text-[#505050]">
-                      {r.applications_close_at ? formatStableShortDate(r.applications_close_at) : '—'}
+                      {r.applications_close_at ? formatStableShortDate(r.applications_close_at) : ''}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">

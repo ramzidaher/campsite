@@ -5,7 +5,7 @@ import { type TtlCacheEntry } from '@/lib/cache/readThroughTtlCache';
 import { withServerPerf } from '@/lib/perf/serverPerf';
 import { createClient } from '@/lib/supabase/server';
 
-export type AdminUsersSearchParams = { status?: string; role?: string; dept?: string; q?: string };
+export type AdminUsersSearchParams = { status?: string; role?: string; dept?: string; q?: string; limit?: string };
 
 export type AdminUsersPageData = {
   canEditRoles: boolean;
@@ -44,6 +44,15 @@ function normalizeSearchParam(value?: string): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function normalizePageLimit(raw?: string): number {
+  const parsed = Number.parseInt(raw ?? '', 10);
+  if (!Number.isFinite(parsed)) return 25;
+  if (parsed <= 25) return 25;
+  if (parsed <= 50) return 50;
+  if (parsed <= 100) return 100;
+  return 200;
+}
+
 function getAdminUsersPageCacheKey(orgId: string, userId: string, sp: AdminUsersSearchParams): string {
   return [
     `org:${orgId}`,
@@ -52,6 +61,7 @@ function getAdminUsersPageCacheKey(orgId: string, userId: string, sp: AdminUsers
     `role:${normalizeSearchParam(sp.role) ?? 'all'}`,
     `dept:${normalizeSearchParam(sp.dept) ?? 'all'}`,
     `q:${normalizeSearchParam(sp.q) ?? ''}`,
+    `limit:${normalizePageLimit(sp.limit)}`,
   ].join(':');
 }
 
@@ -190,7 +200,13 @@ async function loadAdminUsersPageData(
       departments: deptByUser[p.id as string] ?? [],
     })),
     departments: (departments ?? []) as { id: string; name: string; type: string; is_archived: boolean }[],
-    defaultFilters: { q: sp.q, dept: sp.dept, status: sp.status, role: sp.role },
+    defaultFilters: {
+      q: sp.q,
+      dept: sp.dept,
+      status: sp.status,
+      role: sp.role,
+      limit: String(normalizePageLimit(sp.limit)),
+    },
     orgName,
     orgSlug,
     totalMemberCount: totalMemberCount ?? 0,

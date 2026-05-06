@@ -65,7 +65,7 @@ function formatFileSize(n: number): string {
 
 function formatDateStable(value: string): string {
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '';
   const day = String(d.getUTCDate()).padStart(2, '0');
   const month = String(d.getUTCMonth() + 1).padStart(2, '0');
   const year = d.getUTCFullYear();
@@ -74,7 +74,7 @@ function formatDateStable(value: string): string {
 
 function formatDateTimeStable(value: string): string {
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '';
   const day = String(d.getUTCDate()).padStart(2, '0');
   const month = String(d.getUTCMonth() + 1).padStart(2, '0');
   const year = d.getUTCFullYear();
@@ -237,7 +237,7 @@ function payFrequencyLabel(pf: string) {
     case 'four_weekly':
       return 'Four-weekly';
     default:
-      return pf || '—';
+      return pf || '';
   }
 }
 
@@ -317,7 +317,7 @@ function customFieldsToRecord(rows: CustomFieldRow[]): Record<string, string> {
 }
 
 function fmt(v: string | null) {
-  if (!v || v === 'null') return '—';
+  if (!v || v === 'null') return '';
   if (v === 'created') return 'Record created';
   return v;
 }
@@ -422,13 +422,13 @@ export function EmployeeHRFileClient({
   canManageIdDocuments: boolean;
   canViewIdDocuments: boolean;
   customCategories: CustomDocumentCategory[];
-  /** HR or line manager — can record probation review completion. */
+  /** HR or line manager  can record probation review completion. */
   canMarkProbationCheck: boolean;
   canViewGrading: boolean;
   employee: Employee;
   auditEvents: AuditEvent[];
   leaveAllowance: { annual_entitlement_days: number; toil_balance_days: number } | null;
-  /** Leave year key (YYYY) for entitlement row / heading — matches org leave-year settings. */
+  /** Leave year key (YYYY) for entitlement row / heading  matches org leave-year settings. */
   leaveEntitlementYearLabel: string;
   absenceScore: { spell_count: number; total_days: number; bradford_score: number } | null;
   /** Link to org / team Bradford report (HR and managers with leave visibility). */
@@ -472,7 +472,7 @@ export function EmployeeHRFileClient({
   const [probationBusy, setProbationBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // form state — initialised from existing record or defaults
+  // form state  initialised from existing record or defaults
   const [jobTitle, setJobTitle] = useState(employee.job_title ?? '');
   const [gradeLevel, setGradeLevel] = useState(employee.grade_level ?? '');
   const [contractType, setContractType] = useState(employee.contract_type ?? 'full_time');
@@ -971,16 +971,16 @@ export function EmployeeHRFileClient({
   );
 
   const displayName = employee.display_name ?? employee.full_name;
-  const deptLine = employee.department_names.length ? employee.department_names.join(', ') : '—';
-  const emailDisplay = (employee.email ?? '').trim() || '—';
-  const subtitleJobDept = [employee.job_title, deptLine !== '—' ? deptLine : null]
+  const deptLine = employee.department_names.length ? employee.department_names.join(', ') : '';
+  const emailDisplay = (employee.email ?? '').trim() || '';
+  const subtitleJobDept = [employee.job_title, deptLine !== '' ? deptLine : null]
     .filter(Boolean)
     .join(' · ');
   const tenureLabel =
     typeof employee.length_of_service_years === 'number' &&
     typeof employee.length_of_service_months === 'number'
       ? `${employee.length_of_service_years}y ${employee.length_of_service_months}m`
-      : '—';
+      : '';
   const annualEntitlementDays = employee.annual_leave_entitlement_exempt
     ? null
     : (leaveAllowance?.annual_entitlement_days ?? null);
@@ -1107,7 +1107,7 @@ export function EmployeeHRFileClient({
   }, [activeTab, tabItems]);
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7 font-sans text-[#121212]">
+    <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7 font-sans text-[#121212]">
       <header className="mb-7 overflow-hidden rounded-2xl border border-[#e8e8e8] bg-white shadow-sm [border-left-width:4px] [border-left-style:solid] [border-left-color:var(--org-brand-primary,#0f6e56)]">
         <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-start gap-3 sm:gap-4">
@@ -1130,7 +1130,7 @@ export function EmployeeHRFileClient({
                 {displayName}
               </h1>
               <p className="mt-1 text-[13.5px] leading-relaxed text-[#6b6b6b]">
-                {subtitleJobDept || '—'} <span className="text-[#d4d4d4]">·</span> {emailDisplay}
+                {subtitleJobDept || ''} <span className="text-[#d4d4d4]">·</span> {emailDisplay}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className="rounded-full border border-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_30%,#e8e8e8)] bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_8%,#faf9f6)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
@@ -1149,7 +1149,7 @@ export function EmployeeHRFileClient({
                   Annual
                 </p>
                 <p className="mt-1 text-[22px] font-bold leading-none tracking-tight text-[var(--org-brand-primary,#0f6e56)]">
-                  {annualEntitlementDays != null ? annualEntitlementDays : '—'}
+                  {annualEntitlementDays != null ? annualEntitlementDays : ''}
                 </p>
                 <p className="mt-0.5 text-[10px] text-[#9b9b9b]">days / yr</p>
               </div>
@@ -1158,7 +1158,7 @@ export function EmployeeHRFileClient({
                   TOIL
                 </p>
                 <p className="mt-1 text-[22px] font-bold leading-none tracking-tight text-[#121212]">
-                  {toilDays != null ? toilDays : '—'}
+                  {toilDays != null ? toilDays : ''}
                 </p>
                 <p className="mt-0.5 text-[10px] text-[#9b9b9b]">days</p>
               </div>
@@ -1202,7 +1202,7 @@ export function EmployeeHRFileClient({
         </p>
       ) : null}
 
-      {/* Tab bar — same pill language as /profile; section set is HR-specific */}
+      {/* Tab bar  same pill language as /profile; section set is HR-specific */}
       <nav className="mb-7 flex flex-wrap gap-2" aria-label="HR record sections">
         {tabItems.map((item) => {
           return (
@@ -1315,26 +1315,26 @@ export function EmployeeHRFileClient({
                     Department
                   </dt>
                   <dd className="mt-1 text-[#121212]">
-                    {employee.department_names.length ? employee.department_names.join(', ') : '—'}
+                    {employee.department_names.length ? employee.department_names.join(', ') : ''}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                     Manager
                   </dt>
-                  <dd className="mt-1 text-[#121212]">{employee.reports_to_name ?? '—'}</dd>
+                  <dd className="mt-1 text-[#121212]">{employee.reports_to_name ?? ''}</dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                     Email
                   </dt>
-                  <dd className="mt-1 text-[#121212]">{employee.email ?? '—'}</dd>
+                  <dd className="mt-1 text-[#121212]">{employee.email ?? ''}</dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                     Job title
                   </dt>
-                  <dd className="mt-1 text-[#121212]">{employee.job_title || '—'}</dd>
+                  <dd className="mt-1 text-[#121212]">{employee.job_title || ''}</dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
@@ -1359,7 +1359,7 @@ export function EmployeeHRFileClient({
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                     Start date
                   </dt>
-                  <dd className="mt-1 text-[#121212]">{employee.employment_start_date ?? '—'}</dd>
+                  <dd className="mt-1 text-[#121212]">{employee.employment_start_date ?? ''}</dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
@@ -1371,7 +1371,7 @@ export function EmployeeHRFileClient({
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                     Right to work
                   </dt>
-                  <dd className="mt-1 text-[#121212]">{employee.rtw_status || '—'}</dd>
+                  <dd className="mt-1 text-[#121212]">{employee.rtw_status || ''}</dd>
                 </div>
               </dl>
             </section>
@@ -1387,7 +1387,7 @@ export function EmployeeHRFileClient({
                     Annual leave
                   </p>
                   <p className="mt-2 text-[24px] font-bold leading-none text-[#121212]">
-                    {annualEntitlementDays != null ? annualEntitlementDays : '—'}
+                    {annualEntitlementDays != null ? annualEntitlementDays : ''}
                   </p>
                   <p className="mt-1 text-[11px] text-[#9b9b9b]">days / year</p>
                 </div>
@@ -1396,7 +1396,7 @@ export function EmployeeHRFileClient({
                     TOIL
                   </p>
                   <p className="mt-2 text-[24px] font-bold leading-none text-[#121212]">
-                    {toilDays != null ? toilDays : '—'}
+                    {toilDays != null ? toilDays : ''}
                   </p>
                   <p className="mt-1 text-[11px] text-[#9b9b9b]">days available</p>
                 </div>
@@ -1405,7 +1405,7 @@ export function EmployeeHRFileClient({
                     Absence score
                   </p>
                   <p className="mt-2 text-[24px] font-bold leading-none text-[#121212]">
-                    {absenceScore ? absenceScore.bradford_score : '—'}
+                    {absenceScore ? absenceScore.bradford_score : ''}
                   </p>
                   <p className="mt-1 text-[11px] text-[#9b9b9b]">
                     {absenceScore
@@ -1418,7 +1418,7 @@ export function EmployeeHRFileClient({
                     Probation
                   </p>
                   <p className="mt-2 text-[15px] font-bold leading-tight text-[#121212]">
-                    {employee.probation_end_date ?? '—'}
+                    {employee.probation_end_date ?? ''}
                   </p>
                   <p className="mt-1 text-[11px] text-[#9b9b9b]">
                     {employee.probation_check_completed_at
@@ -1434,7 +1434,7 @@ export function EmployeeHRFileClient({
         </div>
       )}
 
-      {/* HR record — view or edit (Job tab) */}
+      {/* HR record  view or edit (Job tab) */}
       {activeTab === 'job' &&
         (editing ? (
           <form
@@ -1565,7 +1565,7 @@ export function EmployeeHRFileClient({
                 />
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
-                Average weekly earnings — AWE (£)
+                Average weekly earnings  AWE (£)
                 <input
                   type="number"
                   min="0"
@@ -1609,7 +1609,7 @@ export function EmployeeHRFileClient({
                   <span className="mt-0.5 block text-[11px] font-normal text-[#9b9b9b]">
                     Use for roles that do not accrue holiday (e.g. some hourly or casual contracts).
                     Bulk leave defaults and pro-rata will show 0 days; turning this off does not
-                    restore entitlement automatically — use Leave settings or set an allowance
+                    restore entitlement automatically  use Leave settings or set an allowance
                     manually.
                   </span>
                 </span>
@@ -1763,7 +1763,7 @@ export function EmployeeHRFileClient({
                   placeholder="https://..."
                 />
                 <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">
-                  Optional external link — use Documents below to upload files to secure storage.
+                  Optional external link  use Documents below to upload files to secure storage.
                 </span>
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
@@ -1829,7 +1829,7 @@ export function EmployeeHRFileClient({
                   placeholder="https://..."
                 />
                 <span className="mt-0.5 block text-[11px] text-[#9b9b9b]">
-                  Optional external link — use Documents below for passport / RTW scans.
+                  Optional external link  use Documents below for passport / RTW scans.
                 </span>
               </label>
               <label className="block text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
@@ -2030,14 +2030,14 @@ export function EmployeeHRFileClient({
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Job title
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.job_title || '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.job_title || ''}</dd>
                   </div>
                   {canViewGrading ? (
                     <div>
                       <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                         Grade
                       </dt>
-                      <dd className="mt-0.5 text-[#121212]">{employee.grade_level || '—'}</dd>
+                      <dd className="mt-0.5 text-[#121212]">{employee.grade_level || ''}</dd>
                     </div>
                   ) : null}
                   <div>
@@ -2055,7 +2055,7 @@ export function EmployeeHRFileClient({
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Salary band
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.salary_band || '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.salary_band || ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
@@ -2073,7 +2073,7 @@ export function EmployeeHRFileClient({
                       {employee.notice_period_weeks !== null &&
                       employee.notice_period_weeks !== undefined
                         ? `${employee.notice_period_weeks} week${employee.notice_period_weeks === 1 ? '' : 's'}`
-                        : '—'}
+                        : ''}
                     </dd>
                   </div>
                   <div>
@@ -2081,7 +2081,7 @@ export function EmployeeHRFileClient({
                       Start date
                     </dt>
                     <dd className="mt-0.5 text-[#121212]">
-                      {employee.employment_start_date ?? '—'}
+                      {employee.employment_start_date ?? ''}
                     </dd>
                   </div>
                   <div>
@@ -2092,7 +2092,7 @@ export function EmployeeHRFileClient({
                       {employee.length_of_service_years != null &&
                       employee.length_of_service_months != null
                         ? `${employee.length_of_service_years} years, ${employee.length_of_service_months} months (from employment start)`
-                        : '—'}
+                        : ''}
                     </dd>
                   </div>
                   {canViewGrading ? (
@@ -2100,27 +2100,27 @@ export function EmployeeHRFileClient({
                       <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                         Pay grade
                       </dt>
-                      <dd className="mt-0.5 text-[#121212]">{employee.pay_grade || '—'}</dd>
+                      <dd className="mt-0.5 text-[#121212]">{employee.pay_grade || ''}</dd>
                     </div>
                   ) : null}
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Position type
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.position_type || '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.position_type || ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Employment basis
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.employment_basis || '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.employment_basis || ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Weekly hours
                     </dt>
                     <dd className="mt-0.5 text-[#121212]">
-                      {employee.weekly_hours != null ? `${employee.weekly_hours}` : '—'}
+                      {employee.weekly_hours != null ? `${employee.weekly_hours}` : ''}
                     </dd>
                   </div>
                   <div>
@@ -2138,7 +2138,7 @@ export function EmployeeHRFileClient({
                     <dd className="mt-0.5 text-[#121212]">
                       {employee.contracted_days_per_week != null
                         ? String(employee.contracted_days_per_week)
-                        : '—'}
+                        : ''}
                     </dd>
                   </div>
                   <div>
@@ -2148,7 +2148,7 @@ export function EmployeeHRFileClient({
                     <dd className="mt-0.5 text-[#121212]">
                       {employee.average_weekly_earnings_gbp != null
                         ? `£${Number(employee.average_weekly_earnings_gbp).toFixed(2)}`
-                        : '—'}
+                        : ''}
                     </dd>
                   </div>
                   <div>
@@ -2166,7 +2166,7 @@ export function EmployeeHRFileClient({
                     <dd className="mt-0.5 text-[#121212]">
                       {employee.hourly_pay_gbp != null
                         ? `£${Number(employee.hourly_pay_gbp).toFixed(4)}`
-                        : '—'}
+                        : ''}
                     </dd>
                   </div>
                   <div>
@@ -2184,7 +2184,7 @@ export function EmployeeHRFileClient({
                       No. of positions
                     </dt>
                     <dd className="mt-0.5 text-[#121212]">
-                      {employee.positions_count != null ? String(employee.positions_count) : '—'}
+                      {employee.positions_count != null ? String(employee.positions_count) : ''}
                     </dd>
                   </div>
                   <div>
@@ -2194,7 +2194,7 @@ export function EmployeeHRFileClient({
                     <dd className="mt-0.5 text-[#121212]">
                       {employee.budget_amount != null
                         ? `${employee.budget_amount}${employee.budget_currency ? ` ${employee.budget_currency}` : ''}`
-                        : '—'}
+                        : ''}
                     </dd>
                   </div>
                   <div>
@@ -2202,7 +2202,7 @@ export function EmployeeHRFileClient({
                       Dept. start
                     </dt>
                     <dd className="mt-0.5 text-[#121212]">
-                      {employee.department_start_date ?? '—'}
+                      {employee.department_start_date ?? ''}
                     </dd>
                   </div>
                   <div>
@@ -2210,58 +2210,58 @@ export function EmployeeHRFileClient({
                       Continuous employment
                     </dt>
                     <dd className="mt-0.5 text-[#121212]">
-                      {employee.continuous_employment_start_date ?? '—'}
+                      {employee.continuous_employment_start_date ?? ''}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Contract start
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.contract_start_date ?? '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.contract_start_date ?? ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Contract end
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.contract_end_date ?? '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.contract_end_date ?? ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Contract signed
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.contract_signed_on ?? '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.contract_signed_on ?? ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Contract review
                     </dt>
                     <dd className="mt-0.5 text-[#121212]">
-                      {employee.contract_review_date ?? '—'}
+                      {employee.contract_review_date ?? ''}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       RTW status
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.rtw_status || '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.rtw_status || ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       RTW checked
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.rtw_checked_on ?? '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.rtw_checked_on ?? ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       RTW expiry
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.rtw_expiry_date ?? '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.rtw_expiry_date ?? ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
                       Visa type
                     </dt>
-                    <dd className="mt-0.5 text-[#121212]">{employee.visa_type || '—'}</dd>
+                    <dd className="mt-0.5 text-[#121212]">{employee.visa_type || ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">
@@ -2276,7 +2276,7 @@ export function EmployeeHRFileClient({
                           {onProbation ? ' (active)' : ' (passed)'}
                         </span>
                       ) : (
-                        '—'
+                        ''
                       )}
                       {employee.probation_check_completed_at ? (
                         <p className="mt-1 text-[12px] text-[#166534]">
@@ -2338,7 +2338,7 @@ export function EmployeeHRFileClient({
                         ([k, v]) => (
                           <div key={k}>
                             <dt className="text-[11px] text-[#9b9b9b]">{k}</dt>
-                            <dd className="text-[#121212]">{v == null ? '—' : String(v)}</dd>
+                            <dd className="text-[#121212]">{v == null ? '' : String(v)}</dd>
                           </div>
                         )
                       )}
@@ -2366,7 +2366,7 @@ export function EmployeeHRFileClient({
                 ) : null}
                 <p className="mt-3 text-[11.5px] text-[#c8c8c8]">
                   Last updated{' '}
-                  {employee.record_updated_at ? formatDateStable(employee.record_updated_at) : '—'}
+                  {employee.record_updated_at ? formatDateStable(employee.record_updated_at) : ''}
                 </p>
               </>
             )}
@@ -2388,7 +2388,7 @@ export function EmployeeHRFileClient({
                     Name
                   </dt>
                   <dd className="mt-1 text-[#121212]">
-                    {employee.emergency_contact_name || '—'}
+                    {employee.emergency_contact_name || ''}
                     {employee.emergency_contact_relationship
                       ? ` (${employee.emergency_contact_relationship})`
                       : ''}
@@ -2398,7 +2398,7 @@ export function EmployeeHRFileClient({
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
                     Phone
                   </dt>
-                  <dd className="mt-1 text-[#121212]">{employee.emergency_contact_phone || '—'}</dd>
+                  <dd className="mt-1 text-[#121212]">{employee.emergency_contact_phone || ''}</dd>
                 </div>
                 {employee.emergency_contact_email ? (
                   <div>
@@ -2420,14 +2420,14 @@ export function EmployeeHRFileClient({
             <div className="rounded-xl border border-[#e8e8e8] bg-white p-5">
               <h2 className="text-[14px] font-semibold text-[#121212]">Home address</h2>
               <address className="mt-3 not-italic text-[13px] text-[#4a4a4a] leading-relaxed">
-                <p>{employee.home_address_line1 || '—'}</p>
+                <p>{employee.home_address_line1 || ''}</p>
                 {employee.home_address_line2 ? <p>{employee.home_address_line2}</p> : null}
                 <p>
-                  {[employee.home_city, employee.home_county].filter(Boolean).join(', ') || '—'}
+                  {[employee.home_city, employee.home_county].filter(Boolean).join(', ') || ''}
                 </p>
                 <p>
                   {[employee.home_postcode, employee.home_country].filter(Boolean).join(', ') ||
-                    '—'}
+                    ''}
                 </p>
               </address>
             </div>
@@ -2450,7 +2450,7 @@ export function EmployeeHRFileClient({
             <h2 className="text-[15px] font-semibold text-[#121212]">Documents &amp; evidence</h2>
             <p className="mt-1 text-[12px] text-[#9b9b9b]">
               Private files for this employee, including sensitive photo and identity records. PDF,
-              images, Word, or Excel — max 20 MB each.
+              images, Word, or Excel  max 20 MB each.
             </p>
             {canManage || canManageEmployeePhotos || canManageIdDocuments ? (
               <div className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3">
@@ -2689,10 +2689,10 @@ export function EmployeeHRFileClient({
               </p>
               <p className="mt-2 text-[34px] font-bold leading-none tracking-tight text-[#121212]">
                 {employee.annual_leave_entitlement_exempt
-                  ? '—'
+                  ? ''
                   : leaveAllowance
                     ? leaveAllowance.annual_entitlement_days
-                    : '—'}
+                    : ''}
               </p>
               <p className="mt-1.5 text-[12px] text-[#9b9b9b]">
                 {employee.annual_leave_entitlement_exempt
@@ -2705,7 +2705,7 @@ export function EmployeeHRFileClient({
                 TOIL balance
               </p>
               <p className="mt-2 text-[34px] font-bold leading-none tracking-tight text-[#121212]">
-                {leaveAllowance ? leaveAllowance.toil_balance_days : '—'}
+                {leaveAllowance ? leaveAllowance.toil_balance_days : ''}
               </p>
               <p className="mt-1.5 text-[12px] text-[#9b9b9b]">days remaining</p>
             </div>
@@ -2728,7 +2728,7 @@ export function EmployeeHRFileClient({
                     : 'text-[#121212]',
                 ].join(' ')}
               >
-                {absenceScore ? absenceScore.bradford_score : '—'}
+                {absenceScore ? absenceScore.bradford_score : ''}
               </p>
               {absenceScore ? (
                 <p className="mt-1.5 text-[12px] text-[#9b9b9b]">

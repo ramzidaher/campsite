@@ -2,6 +2,7 @@
 
 import { FormSelect } from '@campsite/ui/web';
 import { createClient } from '@/lib/supabase/client';
+import { CalendarPlus, Check, ChevronDown, ChevronUp, Download, RefreshCw, Save } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Timesheet = {
@@ -775,13 +776,22 @@ export function FinanceHubClient({
               />
             </label>
             <button type="button" onClick={() => void load()} className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12.5px] sm:w-auto">
-              Refresh
+              <span className="inline-flex items-center gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                Refresh
+              </span>
             </button>
             <button type="button" onClick={exportCsv} className="w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
-              Export CSV
+              <span className="inline-flex items-center gap-1.5">
+                <Download className="h-3.5 w-3.5" aria-hidden />
+                Export CSV
+              </span>
             </button>
             <button type="button" onClick={() => void exportXlsx()} className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12.5px] sm:w-auto">
-              Export Excel
+              <span className="inline-flex items-center gap-1.5">
+                <Download className="h-3.5 w-3.5" aria-hidden />
+                Export Excel
+              </span>
             </button>
           </div>
         </div>
@@ -858,7 +868,19 @@ export function FinanceHubClient({
           className="flex w-full items-center justify-between text-left text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]"
         >
           <span>Payroll policy</span>
-          <span className="text-[14px]">{policyOpen ? '−' : '+'}</span>
+            <span className="inline-flex items-center gap-1 text-[11px] normal-case tracking-normal text-[#6b6b6b]">
+              {policyOpen ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+                  Collapse
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                  Expand
+                </>
+              )}
+            </span>
         </button>
         {policyOpen && canManagePolicy ? (
           <div className="mt-4">
@@ -912,7 +934,10 @@ export function FinanceHubClient({
               </label>
             </div>
             <button type="button" onClick={() => void savePolicy()} className="mt-3 w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
-              Save policy
+              <span className="inline-flex items-center gap-1.5">
+                <Save className="h-3.5 w-3.5" aria-hidden />
+                Save policy
+              </span>
             </button>
             {policy ? <p className="mt-2 text-[12px] text-[#6b6b6b]">Current policy is active for calculation and exports.</p> : null}
           </div>
@@ -927,7 +952,19 @@ export function FinanceHubClient({
             className="flex w-full items-center justify-between text-left text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]"
           >
             <span>Pay elements</span>
-            <span className="text-[14px]">{payElementsOpen ? '−' : '+'}</span>
+            <span className="inline-flex items-center gap-1 text-[11px] normal-case tracking-normal text-[#6b6b6b]">
+              {payElementsOpen ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+                  Collapse
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                  Expand
+                </>
+              )}
+            </span>
           </button>
           {payElementsOpen && canManagePayElements ? (
             <div className="mt-4">
@@ -969,10 +1006,16 @@ export function FinanceHubClient({
           </div>
           <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
             <button type="button" onClick={() => void saveRate('csa')} className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12.5px] sm:w-auto">
-              Save CSA rate version
+              <span className="inline-flex items-center gap-1.5">
+                <Save className="h-3.5 w-3.5" aria-hidden />
+                Save CSA rate version
+              </span>
             </button>
             <button type="button" onClick={() => void saveRate('dm')} className="w-full rounded-lg border border-[#d8d8d8] px-3 py-2 text-[12.5px] sm:w-auto">
-              Save DM rate version
+              <span className="inline-flex items-center gap-1.5">
+                <Save className="h-3.5 w-3.5" aria-hidden />
+                Save DM rate version
+              </span>
             </button>
           </div>
           <p className="mt-2 text-[12px] text-[#6b6b6b]">Rate versions are timestamped by effective date, so historical periods remain intact.</p>
@@ -1029,7 +1072,10 @@ export function FinanceHubClient({
               <option value="custom">Custom skill</option>
             </FormSelect>
             <button type="button" onClick={() => void savePayElement()} className="rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white">
-              Add pay element
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+                Add pay element
+              </span>
             </button>
           </div>
           <div className="mt-3 overflow-x-auto rounded-xl border border-[#eee]">
@@ -1071,7 +1117,19 @@ export function FinanceHubClient({
             className="flex w-full items-center justify-between text-left text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]"
           >
             <span>Manual overrides</span>
-            <span className="text-[14px]">{manualOverridesOpen ? '−' : '+'}</span>
+            <span className="inline-flex items-center gap-1 text-[11px] normal-case tracking-normal text-[#6b6b6b]">
+              {manualOverridesOpen ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+                  Collapse
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                  Expand
+                </>
+              )}
+            </span>
           </button>
           {manualOverridesOpen ? (
             <div className="mt-4">
@@ -1101,7 +1159,10 @@ export function FinanceHubClient({
                 </label>
               </div>
               <button type="button" onClick={() => void saveAdjustment()} className="mt-3 w-full rounded-lg bg-[#121212] px-3 py-2 text-[12.5px] text-white sm:w-auto">
-                Save override
+                <span className="inline-flex items-center gap-1.5">
+                  <Save className="h-3.5 w-3.5" aria-hidden />
+                  Save override
+                </span>
               </button>
             </div>
           ) : null}
@@ -1283,7 +1344,10 @@ export function FinanceHubClient({
                                 Finance
                               </button>
                               <button type="button" onClick={() => void decideReview(r, 'mark_paid')} className="rounded bg-[#121212] px-2 py-1 text-[11px] text-white">
-                                Paid
+                                <span className="inline-flex items-center gap-1">
+                                  <Check className="h-3 w-3" aria-hidden />
+                                  Paid
+                                </span>
                               </button>
                               <button type="button" onClick={() => void decideReview(r, 'reject')} className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-900">
                                 Reject
@@ -1293,7 +1357,7 @@ export function FinanceHubClient({
                               </button>
                             </div>
                             <p className="text-[10px] text-[#9b9b9b]">
-                              Mgr: {r.reviewMeta.managerApprovedBy ? r.reviewMeta.managerApprovedBy.slice(0, 8) : '—'} · Fin: {r.reviewMeta.financeApprovedBy ? r.reviewMeta.financeApprovedBy.slice(0, 8) : '—'} · Pay: {r.reviewMeta.paidBy ? r.reviewMeta.paidBy.slice(0, 8) : '—'}
+                              Mgr: {r.reviewMeta.managerApprovedBy ? r.reviewMeta.managerApprovedBy.slice(0, 8) : ''} · Fin: {r.reviewMeta.financeApprovedBy ? r.reviewMeta.financeApprovedBy.slice(0, 8) : ''} · Pay: {r.reviewMeta.paidBy ? r.reviewMeta.paidBy.slice(0, 8) : ''}
                             </p>
                           </div>
                         </td>

@@ -42,17 +42,17 @@ High-touch route families requested in WS2:
 
 ## Policy Gaps to Close
 
-## Gap 1 — Dashboard partial-data signaling mismatch
+## Gap 1  Dashboard partial-data signaling mismatch
 
 - Problem: timeout-partial sections can degrade without a guaranteed explicit “partial data” signal.
 - Required fix: surface a specific degraded banner when any non-critical timeout fallback fires.
 
-## Gap 2 — Profile silent partial behavior
+## Gap 2  Profile silent partial behavior
 
 - Problem: many fallback paths silently substitute empty payloads for heavy tabs.
 - Required fix: route-level degraded-state model (or per-tab degraded markers) tied to fallback activations.
 
-## Gap 3 — Admin HR fallback classification clarity
+## Gap 3  Admin HR fallback classification clarity
 
 - Problem: secondary fallback usage exists, but not formally mapped to policy classes in UI behavior.
 - Required fix: declare each fallbacked segment as either allowed partial (with visible marker) or move to hard-fail.

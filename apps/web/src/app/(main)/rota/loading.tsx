@@ -9,7 +9,7 @@ const DAY_COLS = 7;
 const GRID_ROWS = 4;
 
 /**
- * Route-level skeleton for `/rota` — mirrors {@link RotaClient} segments + week strip + time grid.
+ * Route-level skeleton for `/rota`  mirrors {@link RotaClient} segments + week strip + time grid.
  */
 export default function RotaLoading() {
   return (

@@ -22,6 +22,7 @@ import { ManualEventForm } from '@/components/calendar/ManualEventForm';
 import { TimeGridCalendar, type TimeGridItem } from '@/components/calendar/TimeGridCalendar';
 import { useOrgTimeZone } from '@/components/providers/OrgTimeZoneContext';
 import Link from 'next/link';
+import { ArrowLeft, ArrowRight, CalendarPlus, RefreshCw } from 'lucide-react';
 
 type Profile = {
   id: string;
@@ -157,7 +158,7 @@ function googleCalendarUrl(item: CalItem): string {
 type ViewMode = 'month' | 'time1' | 'time7' | 'list';
 
 const NAV_BTN =
-  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white text-sm text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]';
+  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white text-sm text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]';
 
 export function CalendarClient({
   profile,
@@ -525,8 +526,9 @@ export function CalendarClient({
         <div className="flex flex-wrap gap-2">
           <a
             href="/api/google/oauth/start?type=calendar"
-            className="rounded-lg border border-[#d8d8d8] bg-white px-3.5 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3.5 py-2 text-[13px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
           >
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
             Sync Google Calendar
           </a>
           {canManage ? (
@@ -535,7 +537,8 @@ export function CalendarClient({
               className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-[#faf9f6] transition hover:-translate-y-px hover:bg-[#2a2a2a] active:translate-y-0"
               onClick={openAddEvent}
             >
-              + Add event
+              <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+              Add event
             </button>
           ) : null}
         </div>
@@ -545,17 +548,17 @@ export function CalendarClient({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d8d8d8] px-5 py-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <button type="button" className={NAV_BTN} aria-label="Previous" onClick={goPrev}>
-              ‹
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
             </button>
             <div className="flex min-w-0 flex-wrap items-center gap-2 px-1">
               <span className="font-authSerif text-lg text-[#121212]">{cardTitleLabel}</span>
             </div>
             <button type="button" className={NAV_BTN} aria-label="Next" onClick={goNext}>
-              ›
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </button>
             <button
               type="button"
-              className="ml-1 text-[12.5px] text-[#6b6b6b] underline underline-offset-2 hover:text-[#121212]"
+              className="ml-1 inline-flex items-center gap-1 rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[12.5px] text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1] hover:text-[#121212]"
               onClick={goToday}
             >
               Today
@@ -906,7 +909,7 @@ function DetailModal({
             <ul className="mt-2 space-y-1 text-sm text-[#6b6b6b]">
               {attendees.map((a) => (
                 <li key={a.profile_id}>
-                  {a.full_name?.trim() || 'Member'} — {a.status}
+                  {a.full_name?.trim() || 'Member'}  {a.status}
                 </li>
               ))}
             </ul>

@@ -1,6 +1,6 @@
-# Page Layer Stage F Report — Profile Decomposition Slice 4
+# Page Layer Stage F Report  Profile Decomposition Slice 4
 **Date:** 2026-04-30  
-**Status:** COMPLETE (slice) — route-shape simplification after overview extraction  
+**Status:** COMPLETE (slice)  route-shape simplification after overview extraction  
 **Workstream:** WS1.4 profile decomposition (in progress overall)
 
 ---

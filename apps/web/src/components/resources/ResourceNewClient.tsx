@@ -61,7 +61,7 @@ export function ResourceNewClient({
 }: {
   orgId: string;
   userId: string;
-  /** From `?folder=` — UUID, `none`, or no selection */
+  /** From `?folder=`  UUID, `none`, or no selection */
   defaultFolder: string | null | 'none';
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -180,7 +180,7 @@ export function ResourceNewClient({
     <div className="mx-auto max-w-lg px-7 py-8">
       <h1 className="font-authSerif text-2xl text-[var(--org-brand-text)]">Upload resource</h1>
       <p className="mt-1 text-[13px] text-[var(--org-brand-muted)]">
-        PDF, plain text, Markdown, Word, Excel, or PowerPoint — max {Math.floor(MAX_BYTES / (1024 * 1024))} MB.
+        PDF, plain text, Markdown, Word, Excel, or PowerPoint  max {Math.floor(MAX_BYTES / (1024 * 1024))} MB.
       </p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">

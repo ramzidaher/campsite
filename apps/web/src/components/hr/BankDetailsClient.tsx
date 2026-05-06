@@ -211,10 +211,10 @@ export function BankDetailsClient({
         <div className="mt-4 rounded-lg border border-[#ececec] bg-[#faf9f6] p-3 text-[13px]">
           <p className="font-medium text-[#121212]">Active payroll details</p>
           <p className="mt-1 text-[#6b6b6b]">
-            Holder: {activeRow.account_holder_display || '—'} · Account ****{activeRow.account_number_last4 ?? '—'} · Sort **-**-{activeRow.sort_code_last4?.slice(-2) ?? '—'}
+            Holder: {activeRow.account_holder_display || ''} · Account ****{activeRow.account_number_last4 ?? ''} · Sort **-**-{activeRow.sort_code_last4?.slice(-2) ?? ''}
           </p>
           <p className="text-[#9b9b9b]">
-            IBAN ****{activeRow.iban_last4 ?? '—'} · {activeRow.bank_country ?? '—'} · {activeRow.currency ?? '—'}
+            IBAN ****{activeRow.iban_last4 ?? ''} · {activeRow.bank_country ?? ''} · {activeRow.currency ?? ''}
           </p>
         </div>
       ) : (
@@ -256,10 +256,10 @@ export function BankDetailsClient({
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-medium text-[#121212]">
-                  {r.account_holder_display || 'Account holder'} · ****{r.account_number_last4 ?? '—'}
+                  {r.account_holder_display || 'Account holder'} · ****{r.account_number_last4 ?? ''}
                 </p>
                 <p className="text-[#6b6b6b]">
-                  Sort **-**-{r.sort_code_last4?.slice(-2) ?? '—'} · IBAN ****{r.iban_last4 ?? '—'} · {r.bank_country ?? '—'} · {r.currency ?? '—'}
+                  Sort **-**-{r.sort_code_last4?.slice(-2) ?? ''} · IBAN ****{r.iban_last4 ?? ''} · {r.bank_country ?? ''} · {r.currency ?? ''}
                 </p>
                 <p className="text-[#9b9b9b]">
                   Status: <span className={statusTone(r.status)}>{r.status}</span>{r.is_active ? ' · Active' : ''}{r.effective_from ? ` · Effective ${r.effective_from}` : ''}

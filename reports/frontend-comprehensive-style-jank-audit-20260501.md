@@ -225,17 +225,17 @@ Bottom line: branding quality is uneven because token adoption is partial, not b
 
 ## Priority Fix Plan (Recommended Order)
 
-## P0 — Stabilize UX and source of truth
+## P0  Stabilize UX and source of truth
 1. **Unify theme pipeline**: ensure runtime CSS vars and UI theme context are synchronized from one source.
 2. **Prevent shell first-paint jump**: initialize desktop sidebar state without post-hydration margin reflow.
 3. **Throttle finance realtime refresh**: debounce/in-flight dedupe and update only changed rows where possible.
 
-## P1 — Normalize design system adoption
+## P1  Normalize design system adoption
 4. **Tokenize hardcoded colors** in shell and top-level hubs first (dashboard, manager, finance, reports, settings).
 5. **Define a single page container contract** (`max-width`, `px`, `py`) for `(main)` route groups.
 6. **Replace brittle width override dependence** with explicit page wrapper primitives.
 
-## P2 — Reduce long-term drift
+## P2  Reduce long-term drift
 7. **Extract landing style contract** into maintainable shared tokens/components where feasible.
 8. **Standardize loading behavior** for key routes with lightweight skeletons (not full blank/null).
 9. **Fix semantic inconsistencies** like nested `<main>` in page components.

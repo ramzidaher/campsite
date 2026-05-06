@@ -1,5 +1,5 @@
-# Campsite — Access Levels & Permissions Specification
-### Version 2.0 — Updated with role × department broadcast stacking
+# Campsite  Access Levels & Permissions Specification
+### Version 2.0  Updated with role × department broadcast stacking
 
 ---
 
@@ -11,12 +11,12 @@ Campsite uses a *two-layer permission system*:
 Final permission = Role baseline  +  Department toggles
 
 
-- *Role baseline* — what you can always do, regardless of department
-- *Department toggles* — additional powers the Org Admin unlocks per department
+- *Role baseline*  what you can always do, regardless of department
+- *Department toggles*  additional powers the Org Admin unlocks per department
 
 Both layers stack. An HR Manager gets their Manager baseline PLUS whatever the HR department has been granted. An Engagement Coordinator gets their Coordinator baseline but nothing extra, because Engagement hasn't been given additional toggles.
 
-This means the same role behaves differently in different departments — intentionally.
+This means the same role behaves differently in different departments  intentionally.
 
 ---
 
@@ -24,13 +24,13 @@ This means the same role behaves differently in different departments — intent
 
 | Role | Scope | Approves |
 |---|---|---|
-| CGS Founder | All orgs — platform level | Org Admins |
+| CGS Founder | All orgs  platform level | Org Admins |
 | Org Admin | Full org | Managers |
 | Manager | Assigned dept(s) | Coordinators |
 | Coordinator | Assigned dept | Administrators, DMs, CSAs |
-| Administrator | Own data | — |
-| Duty Manager | Own data + QR scanning | — |
-| CSA | Own data | — |
+| Administrator | Own data |  |
+| Duty Manager | Own data + QR scanning |  |
+| CSA | Own data |  |
 
 > *White-label note:* "Duty Manager" and "CSA" are USSU-specific display names. In the white-label system these are configurable per org via org_role_labels. The underlying permission codes duty_manager and csa remain fixed.
 
@@ -44,11 +44,11 @@ This means the same role behaves differently in different departments — intent
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | View broadcast feed | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Send to own department | ✓ | ✓ | ✓ | Draft only | Draft only | Draft only |
-| Send without approval (own posts) | ✓ | ✓ | ✓ | — | — | — |
-| Approve pending broadcasts | ✓ | ✓ (dept) | — | — | — | — |
-| Delete own broadcasts | ✓ | ✓ | ✓ | — | — | — |
+| Send without approval (own posts) | ✓ | ✓ | ✓ |  |  |  |
+| Approve pending broadcasts | ✓ | ✓ (dept) |  |  |  |  |
+| Delete own broadcasts | ✓ | ✓ | ✓ |  |  |  |
 | Edit own broadcasts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Schedule broadcasts | ✓ | ✓ | ✓ | — | — | — |
+| Schedule broadcasts | ✓ | ✓ | ✓ |  |  |  |
 
 ### Department toggles (Org Admin enables per department)
 
@@ -60,11 +60,11 @@ These are *off by default* for all departments. Org Admin turns them on per depa
 | send_no_approval | Coordinator's own broadcasts skip Manager approval and send directly | Coordinator only |
 | edit_others_broadcasts | Edit broadcasts written by other users (any author, any dept) | Manager, Coordinator |
 | delete_dept_broadcasts | Delete any broadcast within their own department, regardless of who wrote it | Manager, Coordinator |
-| delete_org_broadcasts | Delete any broadcast across the entire organisation — the strongest moderation power | Manager only |
+| delete_org_broadcasts | Delete any broadcast across the entire organisation  the strongest moderation power | Manager only |
 | pin_broadcasts | Pin a broadcast to the top of the feed for all subscribers | Manager only |
-| mandatory_broadcast | Mark a broadcast as mandatory — delivered to all users in the target group regardless of their subscription preferences | Manager only |
+| mandatory_broadcast | Mark a broadcast as mandatory  delivered to all users in the target group regardless of their subscription preferences | Manager only |
 
-### How they stack — concrete examples
+### How they stack  concrete examples
 
 *HR Manager* (HR dept has: send_org_wide, delete_org_broadcasts, edit_others_broadcasts, pin_broadcasts, mandatory_broadcast):
 - Can send to entire org ✓ (role = Manager, dept = send_org_wide)
@@ -72,7 +72,7 @@ These are *off by default* for all departments. Org Admin turns them on per depa
 - Can edit others' broadcasts ✓ (dept toggle)
 - Can pin broadcasts ✓ (dept toggle)
 - Can send mandatory broadcasts ✓ (dept toggle)
-- Can approve broadcast drafts ✓ (role baseline — Manager always approves)
+- Can approve broadcast drafts ✓ (role baseline  Manager always approves)
 
 *HR Coordinator* (same HR dept toggles):
 - Can send to entire org ✓ (dept = send_org_wide, Coordinator eligible)
@@ -80,7 +80,7 @@ These are *off by default* for all departments. Org Admin turns them on per depa
 - Can edit others' broadcasts ✓ (dept toggle, Coordinator eligible)
 - Can skip approval on own posts ✓ (dept = send_no_approval)
 - Can pin broadcasts ✗ (pin_broadcasts = Manager only)
-- Can approve others' drafts ✗ (role baseline — Coordinators never approve)
+- Can approve others' drafts ✗ (role baseline  Coordinators never approve)
 
 *Engagement Manager* (Engagement dept has no extra toggles):
 - Can send to entire org ✗ (dept toggle not granted)
@@ -90,74 +90,74 @@ These are *off by default* for all departments. Org Admin turns them on per depa
 
 *Engagement Coordinator* (no dept toggles):
 - Can send to own dept ✓ (role baseline)
-- Everything else: role baseline only — no extra powers
+- Everything else: role baseline only  no extra powers
 
 ### Org-wide broadcasts and subscription preferences
 
 When a send_org_wide broadcast is sent:
 - It is delivered to all users in the org by default
-- *It still respects each user's subscription preferences* — if a user is unsubscribed from a category, they won't receive it
-- Exception: if the sender has mandatory_broadcast enabled and marks the broadcast as mandatory — it bypasses subscriptions and is delivered to everyone
-- Mandatory broadcasts are highlighted differently in the feed (a distinct visual treatment — e.g. a banner or pinned position)
+- *It still respects each user's subscription preferences*  if a user is unsubscribed from a category, they won't receive it
+- Exception: if the sender has mandatory_broadcast enabled and marks the broadcast as mandatory  it bypasses subscriptions and is delivered to everyone
+- Mandatory broadcasts are highlighted differently in the feed (a distinct visual treatment  e.g. a banner or pinned position)
 
 ---
 
-## Full Permission Matrix — All Features
+## Full Permission Matrix  All Features
 
 ### Platform & organisation
 
 | Feature | CGS Founder | Org Admin | Manager | Coordinator | Administrator | DM | CSA |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| View all orgs (platform-wide) | ✓ | — | — | — | — | — | — |
-| Create / suspend orgs | ✓ | — | — | — | — | — | — |
-| Org settings & branding | ✓ | ✓ | — | — | — | — | — |
-| Grant dept broadcast toggles | ✓ | ✓ | — | — | — | — | — |
-| Grant custom permissions to managers | ✓ | ✓ | — | — | — | — | — |
+| View all orgs (platform-wide) | ✓ |  |  |  |  |  |  |
+| Create / suspend orgs | ✓ |  |  |  |  |  |  |
+| Org settings & branding | ✓ | ✓ |  |  |  |  |  |
+| Grant dept broadcast toggles | ✓ | ✓ |  |  |  |  |  |
+| Grant custom permissions to managers | ✓ | ✓ |  |  |  |  |  |
 
 ### Department & user management
 
 | Feature | CGS Founder | Org Admin | Manager | Coordinator | Administrator | DM | CSA |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Create / edit / archive departments | ✓ | ✓ | — | — | — | — | — |
-| Configure dept broadcast categories | ✓ | ✓ | — | — | — | — | — |
-| Assign managers to departments | ✓ | ✓ | — | — | — | — | — |
-| Approve / reject Managers | ✓ | ✓ | — | — | — | — | — |
-| Approve / reject Coordinators | ✓ | ✓ | ✓ (dept) | — | — | — | — |
-| Approve / reject Admins, DMs, CSAs | ✓ | ✓ | ✓ (dept) | ✓ (dept) | — | — | — |
-| Add / remove / edit users | ✓ | ✓ | ✓ (dept) | — | — | — | — |
-| View all users in org | ✓ | ✓ | ✓ (dept) | ✓ (dept) | — | — | — |
+| Create / edit / archive departments | ✓ | ✓ |  |  |  |  |  |
+| Configure dept broadcast categories | ✓ | ✓ |  |  |  |  |  |
+| Assign managers to departments | ✓ | ✓ |  |  |  |  |  |
+| Approve / reject Managers | ✓ | ✓ |  |  |  |  |  |
+| Approve / reject Coordinators | ✓ | ✓ | ✓ (dept) |  |  |  |  |
+| Approve / reject Admins, DMs, CSAs | ✓ | ✓ | ✓ (dept) | ✓ (dept) |  |  |  |
+| Add / remove / edit users | ✓ | ✓ | ✓ (dept) |  |  |  |  |
+| View all users in org | ✓ | ✓ | ✓ (dept) | ✓ (dept) |  |  |  |
 
 ### Rota & scheduling
 
 | Feature | CGS Founder | Org Admin | Manager | Coordinator | Administrator | DM | CSA |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| View full org rota | ✓ | ✓ | — | — | — | — | — |
-| Manage dept rota (add/edit/delete) | ✓ | ✓ | ✓ (dept) | ✓ (dept) | — | — | — |
-| Add own working hours | — | — | — | — | ✓ | ✓ | — |
-| View own schedule | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Import from Google Sheets | ✓ | ✓ | — | — | — | — | — |
+| View full org rota | ✓ | ✓ |  |  |  |  |  |
+| Manage dept rota (add/edit/delete) | ✓ | ✓ | ✓ (dept) | ✓ (dept) |  |  |  |
+| Add own working hours |  |  |  |  | ✓ | ✓ |  |
+| View own schedule |  | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Import from Google Sheets | ✓ | ✓ |  |  |  |  |  |
 
-> CSAs cannot self-log hours — their shifts are managed by their Coordinator or Manager.
+> CSAs cannot self-log hours  their shifts are managed by their Coordinator or Manager.
 
 ### Annual leave & holiday (full HR system)
 
 | Feature | CGS Founder | Org Admin | Manager | Coordinator | Administrator | DM | CSA |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Configure accrual rules & carry-over | ✓ | ✓ | — | — | — | — | — |
-| Approve / reject leave requests | ✓ | ✓ | ✓ (dept) | — | — | — | — |
-| View all leave across org | ✓ | ✓ | ✓ (dept) | — | — | — | — |
-| Submit own leave request | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View own leave balance & history | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Configure accrual rules & carry-over | ✓ | ✓ |  |  |  |  |  |
+| Approve / reject leave requests | ✓ | ✓ | ✓ (dept) |  |  |  |  |
+| View all leave across org | ✓ | ✓ | ✓ (dept) |  |  |  |  |
+| Submit own leave request |  | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| View own leave balance & history |  | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### Discounts & vouchers
 
 | Feature | CGS Founder | Org Admin | Manager | Coordinator | Administrator | DM | CSA |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Configure discount tiers (org-wide) | ✓ | ✓ | — | — | — | — | — |
-| Create & issue vouchers / event codes | ✓ | ✓ | Toggle | — | — | — | — |
-| Announce org-wide discount | ✓ | ✓ | Toggle | — | — | — | — |
-| View & use own discount / QR card | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Scan & verify staff QR codes | — | ✓ | ✓ | — | — | ✓ | — |
+| Configure discount tiers (org-wide) | ✓ | ✓ |  |  |  |  |  |
+| Create & issue vouchers / event codes | ✓ | ✓ | Toggle |  |  |  |  |
+| Announce org-wide discount | ✓ | ✓ | Toggle |  |  |  |  |
+| View & use own discount / QR card |  | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Scan & verify staff QR codes |  | ✓ | ✓ |  |  | ✓ |  |
 
 > "Toggle" = enabled per individual manager by Org Admin only.
 
@@ -277,7 +277,7 @@ CREATE TABLE org_role_labels (
 
 ---
 
-## Org Admin UI — Broadcast Permission Management
+## Org Admin UI  Broadcast Permission Management
 
 In the Org Admin dashboard under *Settings > Departments > [Department] > Broadcast Permissions*:
 
@@ -338,4 +338,4 @@ Send mandatory broadcasts     [OFF]
 
 ---
 
-Common Ground Studios Ltd — Campsite Permissions Spec v2.0
+Common Ground Studios Ltd  Campsite Permissions Spec v2.0

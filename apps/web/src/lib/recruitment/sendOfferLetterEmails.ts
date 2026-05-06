@@ -35,7 +35,7 @@ export async function sendOfferLetterSigningEmail(opts: {
   const path = `/jobs/offer-sign/${encodeURIComponent(opts.portalToken)}`;
   const signUrl = base ? `${base.replace(/\/+$/, '')}${path}` : path;
 
-  const subject = `${opts.orgName}: Your offer letter — please review and sign`;
+  const subject = `${opts.orgName}: Your offer letter  please review and sign`;
   const html = `
 <p>Hi ${escapeHtml(opts.candidateName)},</p>
 <p>Please review and sign your formal offer for <strong>${escapeHtml(opts.jobTitle)}</strong> at ${escapeHtml(opts.orgName)}.</p>

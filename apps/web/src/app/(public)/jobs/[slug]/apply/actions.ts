@@ -44,7 +44,7 @@ export async function submitPublicJobApplication(
   if (!jobSlug) return { ok: false, error: 'Missing job.' };
 
   const name = String(formData.get('candidate_name') ?? '').trim();
-  const email = String(formData.get('candidate_email') ?? '').trim();
+  const submittedEmail = String(formData.get('candidate_email') ?? '').trim();
   const phone = String(formData.get('candidate_phone') ?? '').trim();
   const loomRaw = String(formData.get('loom_url') ?? '').trim();
   const scoreRaw = String(formData.get('staffsavvy_score') ?? '').trim();
@@ -55,6 +55,21 @@ export async function submitPublicJobApplication(
   const motivationText = String(formData.get('motivation_text') ?? '').trim();
   const coverLetter = String(formData.get('cover_letter') ?? '').trim();
   const eqRaw = String(formData.get('eq_ethnicity') ?? '').trim();
+  const profilePersona = String(formData.get('profile_persona') ?? '').trim();
+  const profileSkillsRaw = String(formData.get('profile_skills_json') ?? '').trim();
+  let profileSkills: string[] = [];
+  if (profileSkillsRaw) {
+    try {
+      const parsed = JSON.parse(profileSkillsRaw);
+      if (Array.isArray(parsed)) {
+        profileSkills = parsed
+          .map((entry) => String(entry ?? '').trim())
+          .filter((entry) => entry.length > 0);
+      }
+    } catch {
+      profileSkills = [];
+    }
+  }
   const cvFile = formData.get('cv');
 
   let pEqEthnicityCode: string | null = null;
@@ -66,15 +81,24 @@ export async function submitPublicJobApplication(
   }
 
   if (!name) return { ok: false, error: 'Please enter your name.' };
-  if (!email) return { ok: false, error: 'Please enter your email.' };
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const candidateUserId = user?.id ?? null;
-  if (user?.email && email.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
-    return { ok: false, error: 'Use the same email address as your signed-in account, or sign out to apply as a guest.' };
+  if (!user || !user.email) {
+    return {
+      ok: false,
+      error: 'Please sign in or create a candidate account before applying.',
+    };
+  }
+  const candidateUserId = user.id;
+  const email = user.email.trim();
+  if (submittedEmail && submittedEmail.toLowerCase() !== email.toLowerCase()) {
+    return {
+      ok: false,
+      error: 'Email must match your signed-in account.',
+    };
   }
   const { data: listingRows, error: listingErr } = await supabase.rpc('public_job_listing_by_slug', {
     p_org_slug: orgSlug,
@@ -148,17 +172,22 @@ export async function submitPublicJobApplication(
   }
 
   if (candidateUserId) {
-    await supabase.from('candidate_profiles').upsert(
-      {
-        id: candidateUserId,
-        full_name: name || null,
-        phone: phone || null,
-        location: location || null,
-        linkedin_url: linkedInUrl || null,
-        portfolio_url: portfolioUrl || null,
-      },
-      { onConflict: 'id' }
-    );
+    const profileUpdate: Record<string, unknown> = {
+      id: candidateUserId,
+      full_name: name || null,
+      phone: phone || null,
+      location: location || null,
+      current_title: currentTitle || null,
+      linkedin_url: linkedInUrl || null,
+      portfolio_url: portfolioUrl || null,
+    };
+    if (profilePersona) {
+      profileUpdate.persona = profilePersona;
+    }
+    if (profileSkills.length > 0) {
+      profileUpdate.skills = profileSkills;
+    }
+    await supabase.from('candidate_profiles').upsert(profileUpdate, { onConflict: 'id' });
   }
 
   await supabase.rpc('track_public_job_metric', {

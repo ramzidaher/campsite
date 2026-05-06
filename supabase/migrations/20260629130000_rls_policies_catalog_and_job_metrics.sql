@@ -4,7 +4,7 @@
 -- permission_catalog: global reference rows; authenticated clients read for RBAC UI; writes via service_role / definer.
 
 -- ---------------------------------------------------------------------------
--- job_listing_public_metrics — block direct anon/authenticated table access
+-- job_listing_public_metrics  block direct anon/authenticated table access
 -- ---------------------------------------------------------------------------
 
 drop policy if exists job_listing_public_metrics_no_client_access on public.job_listing_public_metrics;
@@ -16,7 +16,7 @@ create policy job_listing_public_metrics_no_client_access
   with check (false);
 
 -- ---------------------------------------------------------------------------
--- permission_catalog — SELECT for signed-in users (writes stay service/definer-only)
+-- permission_catalog  SELECT for signed-in users (writes stay service/definer-only)
 -- ---------------------------------------------------------------------------
 
 alter table public.permission_catalog enable row level security;

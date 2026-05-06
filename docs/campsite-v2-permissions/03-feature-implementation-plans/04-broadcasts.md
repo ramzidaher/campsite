@@ -1,4 +1,4 @@
-# 04 — Broadcasts
+# 04  Broadcasts
 
 ## 1. Product intent
 
@@ -25,7 +25,7 @@
 
 **Related:** `packages/types/src/roles.ts` for org admin detection.
 
-## 3. Backend — Schema and migrations (orientation)
+## 3. Backend  Schema and migrations (orientation)
 
 **Foundational:** `supabase/migrations/20250326000001_phase2_broadcasts.sql`
 
@@ -39,7 +39,7 @@
 
 When debugging, **`create or replace function`** in **later** migrations wins over earlier files.
 
-## 4. Backend — Key SQL functions (contracts)
+## 4. Backend  Key SQL functions (contracts)
 
 ### 4.1 `user_may_compose_broadcasts()`
 
@@ -77,17 +77,17 @@ When debugging, **`create or replace function`** in **later** migrations wins ov
 
 ### 4.6 Read / unread
 
-- **`broadcast_unread_count()`** — RPC for badge counts.
-- **`broadcast_mark_all_read()`** — optional bulk read.
+- **`broadcast_unread_count()`**  RPC for badge counts.
+- **`broadcast_mark_all_read()`**  optional bulk read.
 - **`broadcast_reads`** policies: see phase2 broadcasts migration (select/insert/update own).
 
 ### 4.7 Notifications
 
 **Edge Function:** `supabase/functions/process-broadcast-notifications/index.ts`
 
-- Processes queued jobs / push delivery (exact trigger path in migrations — grep `broadcast_notification`).
+- Processes queued jobs / push delivery (exact trigger path in migrations  grep `broadcast_notification`).
 
-## 5. Backend — RLS policies (names to grep)
+## 5. Backend  RLS policies (names to grep)
 
 In `20260330200000_broadcast_dept_permissions.sql` (and overrides):
 
@@ -101,14 +101,14 @@ In `20260330200000_broadcast_dept_permissions.sql` (and overrides):
 
 **Delete policies:** grep `broadcasts_delete` in later migrations (dept/org delete toggles).
 
-## 6. Frontend — routes and server gates (`apps/web`)
+## 6. Frontend  routes and server gates (`apps/web`)
 
 | Path | File | Server behaviour |
 |------|------|------------------|
 | `/broadcasts` | `apps/web/src/app/(main)/broadcasts/page.tsx` | Auth + `org_id` + `status === 'active'`. Validates `?tab=` against role: unknown tab → redirect; compose/drafts/submitted require `canComposeBroadcast`; `scheduled` requires compose + not draft-only; `pending` requires `isBroadcastApproverRole`. |
 | `/broadcasts/[id]` | `apps/web/src/app/(main)/broadcasts/[id]/page.tsx` | Detail view; relies on RLS for row access; `notFound()` if missing. |
 
-## 7. Frontend — components (`apps/web`)
+## 7. Frontend  components (`apps/web`)
 
 | Component | Path | Responsibilities |
 |-----------|------|------------------|
@@ -116,9 +116,9 @@ In `20260330200000_broadcast_dept_permissions.sql` (and overrides):
 | `BroadcastComposer` | `apps/web/src/components/broadcasts/BroadcastComposer.tsx` | Dept/category selection, title/body, flags gated by `get_my_dept_broadcast_caps`; submit paths differ for draft-only roles; respects RPC failures (surface Supabase errors). |
 | `BroadcastFeed` | `apps/web/src/components/broadcasts/BroadcastFeed.tsx` | Feed listing, unread handling, filters. |
 | `BroadcastDetailView` | `apps/web/src/components/broadcasts/BroadcastDetailView.tsx` | Single broadcast rendering. |
-| `dept-scope` | `apps/web/src/components/broadcasts/dept-scope.ts` | `departmentsForBroadcast(role, ...)` — which departments appear in composer for each role. |
+| `dept-scope` | `apps/web/src/components/broadcasts/dept-scope.ts` | `departmentsForBroadcast(role, ...)`  which departments appear in composer for each role. |
 
-## 8. Frontend — admin routes (`apps/web`)
+## 8. Frontend  admin routes (`apps/web`)
 
 | Path | Gate | File |
 |------|------|------|
@@ -128,7 +128,7 @@ In `20260330200000_broadcast_dept_permissions.sql` (and overrides):
 ## 9. End-to-end implementation checklist (new capability)
 
 1. **Product:** Update [PLAN.md](../02-broadcast-baseline-toggles/PLAN.md) matrix if baseline changes.
-2. **SQL:** New migration `create or replace` for `broadcast_form_allowed`, `user_has_dept_broadcast_permission`, or RLS policies — never edit old migration files in place if already applied in prod. Then run `npm run supabase:db:push`.
+2. **SQL:** New migration `create or replace` for `broadcast_form_allowed`, `user_has_dept_broadcast_permission`, or RLS policies  never edit old migration files in place if already applied in prod. Then run `npm run supabase:db:push`.
 3. **Types:** `packages/types/src/broadcasts.ts` (+ `dashboard.ts` if KPI/scope affected).
 4. **Web:** `broadcasts/page.tsx` tab allowlist; `BroadcastsClient` / `BroadcastComposer` UI flags.
 5. **Tests:** Jest `apps/web/src/lib/__tests__/broadcastTypes.test.ts` for type gates; SQL sanity script `supabase/scripts/verify_dept_broadcast_plan02.sql` (Dashboard SQL editor).
@@ -145,11 +145,11 @@ In `20260330200000_broadcast_dept_permissions.sql` (and overrides):
 
 ## 11. Automated tests (`npm run test --workspace=@campsite/web`)
 
-- `src/lib/__tests__/broadcastTypes.test.ts` — `canComposeBroadcast`, `isBroadcastDraftOnlyRole`, `isBroadcastApproverRole`.
+- `src/lib/__tests__/broadcastTypes.test.ts`  `canComposeBroadcast`, `isBroadcastDraftOnlyRole`, `isBroadcastApproverRole`.
 
 ## 12. Debugging order
 
-1. Read Supabase **error** from client (RLS shows as generic errors sometimes — use logs).
+1. Read Supabase **error** from client (RLS shows as generic errors sometimes  use logs).
 2. Evaluate **`broadcast_form_allowed`** inputs: status, dept, three booleans.
 3. Evaluate **`user_may_broadcast_to_dept(dept_id)`**.
 4. Evaluate **toggle** rows in `dept_broadcast_permissions` for that dept.

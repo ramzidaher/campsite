@@ -116,7 +116,7 @@ type Props = {
   canPublishWithoutApproval: boolean;
   departments: DeptRow[];
   categoriesByDept: Map<string, CatRow[]>;
-  /** Departments the viewer belongs to or manages — used to auto-pick org-wide “permission” department. */
+  /** Departments the viewer belongs to or manages  used to auto-pick org-wide “permission” department. */
   viewerDeptIds: Set<string>;
   /** Called after a successful save/send; use to switch tabs or refresh lists. */
   onCreated?: (outcome: BroadcastComposeOutcome) => void;
@@ -1092,7 +1092,7 @@ export function BroadcastComposer({
               {draftOnly ? (
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e3e2df] bg-[#E8F1FA] text-[11px] font-semibold text-[#1e4d7a]">
-                    {initialsFromLabel(departments.find((d) => d.id === displayDeptId)?.name ?? '—')}
+                    {initialsFromLabel(departments.find((d) => d.id === displayDeptId)?.name ?? '')}
                   </div>
                   <div className="min-w-0">
                     <div className="truncate text-[14px] font-medium text-[#2d2d2d]">
@@ -1135,7 +1135,7 @@ export function BroadcastComposer({
                         <div className="truncate text-[14px] font-medium text-[#2d2d2d]">{name}</div>
                         <div className="truncate text-[13px] text-[#6b6b6b]">
                           {lead
-                            ? `Channel: ${cats.find((c) => c.id === displayCatId)?.name ?? '—'}`
+                            ? `Channel: ${cats.find((c) => c.id === displayCatId)?.name ?? ''}`
                             : 'Collaborating department'}
                         </div>
                       </div>
@@ -1207,7 +1207,7 @@ export function BroadcastComposer({
           <div>
             <h2 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-[#8f8f8f]">Message</h2>
             <p className="mt-1.5 text-[12px] leading-relaxed text-[#6b6b6b]">
-              Edit visually like Notion — content is stored as markdown for the feed. Add images as framed blocks; uploads need a
+              Edit visually like Notion  content is stored as markdown for the feed. Add images as framed blocks; uploads need a
               title and saved draft.
             </p>
           </div>

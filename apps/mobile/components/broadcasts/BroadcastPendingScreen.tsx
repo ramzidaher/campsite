@@ -183,7 +183,7 @@ export function BroadcastPendingScreen() {
     [],
   );
 
-  // Android doesn't have Alert.prompt — use a state-based modal instead
+  // Android doesn't have Alert.prompt  use a state-based modal instead
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState('');
 

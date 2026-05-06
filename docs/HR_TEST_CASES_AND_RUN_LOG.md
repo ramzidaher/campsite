@@ -1,4 +1,4 @@
-# HR manual QA — printable test checklist & run log
+# HR manual QA  printable test checklist & run log
 
 **Print tips:** Use your browser’s Print → Save as PDF. For fewer split sections, enable “Background graphics” if headings look faint. Each major area starts on a new page (if your print engine honors page breaks).
 
@@ -49,11 +49,11 @@
 
 ---
 
-## Automated checks (optional — not a substitute for UI)
+## Automated checks (optional  not a substitute for UI)
 
 These validate wiring/policy in-repo; run from machine with Node and deps installed.
 
-### TC-INFRA-001 — HR routes respond when unauthenticated (no 5xx)
+### TC-INFRA-001  HR routes respond when unauthenticated (no 5xx)
 
 **Goal:** Unauthenticated requests hit HR-related paths and get a login redirect, not a server error.
 
@@ -81,7 +81,7 @@ These validate wiring/policy in-repo; run from machine with Node and deps instal
 
 ---
 
-### TC-AUTO-DEPT-ISO — Department isolation policy unit tests (Jest)
+### TC-AUTO-DEPT-ISO  Department isolation policy unit tests (Jest)
 
 **Goal:** `departmentIsolationPolicy` helpers behave (overlap, org-admin bypass, manager mask primitives).
 
@@ -96,13 +96,13 @@ These validate wiring/policy in-repo; run from machine with Node and deps instal
 
 <div style="page-break-after: always;"></div>
 
-## Section 1 — HR directory and employee records
+## Section 1  HR directory and employee records
 
 **Section goal:** HR sees people overview; employee file opens correctly; edits only when policy allows.
 
-### TC-HR-1.1 — Org admin: full directory **[Smoke]**
+### TC-HR-1.1  Org admin: full directory **[Smoke]**
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`  
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`  
 **Primary URL:** `/hr/records` (or HR nav → Employee records)
 
 **Steps**
@@ -111,7 +111,7 @@ These validate wiring/policy in-repo; run from machine with Node and deps instal
 - [ ] Confirm you are in org **CampSite QA Lab** (or expected QA org)
 - [ ] Open `/hr/records` from the address bar **or** sidebar **HR** → employee records
 - [ ] **Expected:** Page loads with **no** error screen, **no** unhandled blank content
-- [ ] **Expected:** A **list** of members (or empty state only if truly no data — unlikely after seed)
+- [ ] **Expected:** A **list** of members (or empty state only if truly no data  unlikely after seed)
 - [ ] **Expected:** If the UI shows **summary / stats** (counts, etc.), they render without layout break
 - [ ] If search exists: enter a short query that should match someone (e.g. part of a seeded name)
 - [ ] **Expected:** Search does **not** break the page; results update or show “none” clearly
@@ -129,9 +129,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-1.2 — Org admin: open an employee file (Darcey) **[Smoke]**
+### TC-HR-1.2  Org admin: open an employee file (Darcey) **[Smoke]**
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`  
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`  
 **Primary URL:** `/hr/records` then open **Darcey James** (seeded staff)
 
 **Steps**
@@ -141,10 +141,10 @@ ________________________________________________________________________________
 - [ ] Locate **Darcey** in the list (search/filter if helpful)
 - [ ] Open Darcey’s row (name link or action) so URL is `/hr/records/{darceyUserId}`
 - [ ] **Expected:** File page **loads** without permission error for org admin
-- [ ] **Expected:** Employment / HR fields visible (contract-style info, dates, job title, etc. — whatever the product shows)
+- [ ] **Expected:** Employment / HR fields visible (contract-style info, dates, job title, etc.  whatever the product shows)
 - [ ] Scroll the full page; confirm **no** partial render or missing sections that look like a failed load
 - [ ] If an **audit** or **change history** block exists: open or expand it
-- [ ] **Expected:** Section loads **or** shows an explicit empty / “no history” state — **not** stack trace or generic error
+- [ ] **Expected:** Section loads **or** shows an explicit empty / “no history” state  **not** stack trace or generic error
 - [ ] **Optional:** If editable fields exist, change one **non-critical** field (e.g. internal note) and save
 - [ ] **Expected:** Save **succeeds** with confirmation **or** a **clear validation** message (not silent failure / stuck spinner)
 
@@ -156,9 +156,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-1.3 — Jane (manager): scoped directory **[Smoke]**
+### TC-HR-1.3  Jane (manager): scoped directory **[Smoke]**
 
-**Persona:** Jane — `campsite-qa-jane-trueman@example.com`  
+**Persona:** Jane  `campsite-qa-jane-trueman@example.com`  
 **Primary URL:** `/hr/records`
 
 **Steps**
@@ -167,7 +167,7 @@ ________________________________________________________________________________
 - [ ] Confirm org **CampSite QA Lab**
 - [ ] Open `/hr/records`
 - [ ] **Expected:** Page loads without error
-- [ ] **Expected:** List reflects **only** people Jane is allowed to see (dept / hierarchy — usually **not** entire org)
+- [ ] **Expected:** List reflects **only** people Jane is allowed to see (dept / hierarchy  usually **not** entire org)
 - [ ] **Expected:** **Darcey** appears (same dept / report line per seed)
 - [ ] Open **Darcey**’s file from the list
 - [ ] **Expected:** File loads
@@ -182,9 +182,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-1.4 — Org admin: member missing HR record (optional deep)
+### TC-HR-1.4  Org admin: member missing HR record (optional deep)
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`  
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`  
 **Primary URL:** `/hr/records`
 
 **Steps**
@@ -208,13 +208,13 @@ ________________________________________________________________________________
 
 <div style="page-break-after: always;"></div>
 
-## Section 2 — Org chart
+## Section 2  Org chart
 
 **Section goal:** Reporting lines match seed; manager masking does not leak names where forbidden.
 
-### TC-HR-2.1 — Org admin: full tree **[Smoke]**
+### TC-HR-2.1  Org admin: full tree **[Smoke]**
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`  
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`  
 **Primary URL:** `/hr/org-chart`
 
 **Steps**
@@ -226,7 +226,7 @@ ________________________________________________________________________________
 - [ ] Locate **Jane** (Activities / SLT as seeded)
 - [ ] **Expected:** **Darcey** appears under Jane’s branch if `reports_to` was seeded that way
 - [ ] If pan / zoom / collapse exists: use each once
-- [ ] **Expected:** No broken UI; open devtools console optionally — note any **errors** in notes if seen
+- [ ] **Expected:** No broken UI; open devtools console optionally  note any **errors** in notes if seen
 
 **Overall:** ☐ Pass ☐ Fail **Date:** _______________ **Tester:** _______________
 
@@ -235,9 +235,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-2.2 — Jane: scoped chart **[Smoke]**
+### TC-HR-2.2  Jane: scoped chart **[Smoke]**
 
-**Persona:** Jane — `campsite-qa-jane-trueman@example.com`  
+**Persona:** Jane  `campsite-qa-jane-trueman@example.com`  
 **Primary URL:** `/hr/org-chart`
 
 **Steps**
@@ -257,13 +257,13 @@ ________________________________________________________________________________
 
 <div style="page-break-after: always;"></div>
 
-## Section 3 — Leave (time off)
+## Section 3  Leave (time off)
 
 **Section goal:** Staff submit; manager approves direct reports; status visible to submitter; outsiders cannot approve wrong people.
 
-### TC-HR-3.1 — Darcey: submit leave **[Smoke]**
+### TC-HR-3.1  Darcey: submit leave **[Smoke]**
 
-**Persona:** Darcey — `campsite-qa-darcey-james@example.com`  
+**Persona:** Darcey  `campsite-qa-darcey-james@example.com`  
 **Primary URL:** `/leave`
 
 **Steps**
@@ -287,9 +287,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-3.2 — Jane: approve Darcey’s leave **[Smoke]**
+### TC-HR-3.2  Jane: approve Darcey’s leave **[Smoke]**
 
-**Persona:** Jane — `campsite-qa-jane-trueman@example.com`  
+**Persona:** Jane  `campsite-qa-jane-trueman@example.com`  
 **Primary URL:** `/leave` or manager approvals surface (follow product nav)
 
 **Steps**
@@ -308,9 +308,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-3.3 — Darcey: sees approved outcome
+### TC-HR-3.3  Darcey: sees approved outcome
 
-**Persona:** Darcey — `campsite-qa-darcey-james@example.com`  
+**Persona:** Darcey  `campsite-qa-darcey-james@example.com`  
 **Primary URL:** `/leave`
 
 **Steps**
@@ -327,9 +327,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-3.4 — Isla: cannot approve Jane’s leave (negative)
+### TC-HR-3.4  Isla: cannot approve Jane’s leave (negative)
 
-**Persona:** Isla — `campsite-qa-isla-thorpe@example.com`
+**Persona:** Isla  `campsite-qa-isla-thorpe@example.com`
 
 **Steps**
 
@@ -346,9 +346,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-3.5 — Org admin: org-wide leave view (if present)
+### TC-HR-3.5  Org admin: org-wide leave view (if present)
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`  
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`  
 **Primary URL:** `/hr/leave`
 
 **Steps**
@@ -367,13 +367,13 @@ ________________________________________________________________________________
 
 <div style="page-break-after: always;"></div>
 
-## Section 4 — Performance reviews
+## Section 4  Performance reviews
 
 **Section goal:** Cycles manageable at hub; staff see self; managers see team within scope.
 
-### TC-HR-4.1 — Org admin: cycles hub **[Smoke]**
+### TC-HR-4.1  Org admin: cycles hub **[Smoke]**
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`  
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`  
 **Primary URL:** `/hr/performance`
 
 **Steps**
@@ -393,9 +393,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-4.2 — Darcey: own performance **[Smoke]**
+### TC-HR-4.2  Darcey: own performance **[Smoke]**
 
-**Persona:** Darcey — `campsite-qa-darcey-james@example.com`  
+**Persona:** Darcey  `campsite-qa-darcey-james@example.com`  
 **Primary URL:** `/performance`
 
 **Steps**
@@ -413,9 +413,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-4.3 — Jane: team / direct reports
+### TC-HR-4.3  Jane: team / direct reports
 
-**Persona:** Jane — `campsite-qa-jane-trueman@example.com`  
+**Persona:** Jane  `campsite-qa-jane-trueman@example.com`  
 **Primary URL:** `/performance` (+ cycle detail if needed)
 
 **Steps**
@@ -425,7 +425,7 @@ ________________________________________________________________________________
 - [ ] Navigate to **Darcey**’s review if the product exposes a manager path
 - [ ] **Expected:** Darcey’s review opens if policy allows managers to act
 - [ ] Attempt to open a **non-report** peer’s review (someone outside Jane’s scope)
-- [ ] **Expected:** No access, redirect, or empty — **not** full content for arbitrary org members
+- [ ] **Expected:** No access, redirect, or empty  **not** full content for arbitrary org members
 
 **Overall:** ☐ Pass ☐ Fail **Date:** _______________ **Tester:** _______________
 
@@ -436,13 +436,13 @@ ________________________________________________________________________________
 
 <div style="page-break-after: always;"></div>
 
-## Section 5 — Onboarding
+## Section 5  Onboarding
 
 **Section goal:** Templates and runs work; assignee completes tasks; admin sees progress.
 
-### TC-HR-5.1 — Org admin: templates and runs **[Smoke]**
+### TC-HR-5.1  Org admin: templates and runs **[Smoke]**
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`  
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`  
 **Primary URL:** `/hr/onboarding`
 
 **Steps**
@@ -465,7 +465,7 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-5.2 — Darcey: complete a task; admin sees progress **[Smoke]**
+### TC-HR-5.2  Darcey: complete a task; admin sees progress **[Smoke]**
 
 **Personas:** Darcey then Org admin
 
@@ -489,13 +489,13 @@ ________________________________________________________________________________
 
 <div style="page-break-after: always;"></div>
 
-## Section 6 — Recruitment (pipeline)
+## Section 6  Recruitment (pipeline)
 
 **Section goal:** Request → approval → job → applications/interviews. **Recruitment is not fully pre-seeded:** run setup once per fresh DB.
 
-### TC-HR-6.0 — One-time recruitment setup **[Smoke for recruitment]**
+### TC-HR-6.0  One-time recruitment setup **[Smoke for recruitment]**
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`
 
 **Steps**
 
@@ -516,9 +516,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-6.1 — Job listings **[Smoke]**
+### TC-HR-6.1  Job listings **[Smoke]**
 
-**Persona:** Org admin — `campsite-qa-orgadmin@example.com`  
+**Persona:** Org admin  `campsite-qa-orgadmin@example.com`  
 **Primary URL:** `/hr/jobs`
 
 **Steps**
@@ -536,7 +536,7 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-6.2 — Applications pipeline
+### TC-HR-6.2  Applications pipeline
 
 **Primary URL:** `/hr/applications` or `/hr/jobs/{id}/applications`
 
@@ -555,7 +555,7 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-6.3 — Interviews
+### TC-HR-6.3  Interviews
 
 **Primary URL:** `/hr/interviews`
 
@@ -574,7 +574,7 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-6.4 — Offer templates
+### TC-HR-6.4  Offer templates
 
 **Primary URLs:** `/hr/offer-templates`, `/hr/offer-templates/new`, `/hr/offer-templates/{id}/edit`
 
@@ -597,11 +597,11 @@ ________________________________________________________________________________
 
 <div style="page-break-after: always;"></div>
 
-## Section 7 — Department isolation (HR data)
+## Section 7  Department isolation (HR data)
 
 **Section goal:** Events user (Isla) must not see Activities-only sensitive rows/paths that Jane sees, per isolation rules.
 
-### TC-HR-7.1 — Compare Jane vs Isla on directory **[Smoke]**
+### TC-HR-7.1  Compare Jane vs Isla on directory **[Smoke]**
 
 **Personas:** Jane, then Isla  
 **Primary URL:** `/hr/records`
@@ -618,7 +618,7 @@ ________________________________________________________________________________
 - [ ] If Isla sees **whole org**: record whether that matches **product intent** or file a bug
 - [ ] **Optional:** As Jane, copy `/hr/records/{activitiesMemberUserId}` for someone Isla should not see
 - [ ] Log in as **Isla**; paste URL in browser
-- [ ] **Expected:** **Blocked**, redirect, or sanitized view — **not** full salary/contract for out-of-scope member
+- [ ] **Expected:** **Blocked**, redirect, or sanitized view  **not** full salary/contract for out-of-scope member
 
 **Overall:** ☐ Pass ☐ Fail **Date:** _______________ **Tester:** _______________
 
@@ -629,13 +629,13 @@ ________________________________________________________________________________
 
 <div style="page-break-after: always;"></div>
 
-## Section 8 — Security-sensitive HR-adjacent checks
+## Section 8  Security-sensitive HR-adjacent checks
 
 Run after happy paths above.
 
-### TC-HR-8-A — Jane cannot override Isla incorrectly
+### TC-HR-8-A  Jane cannot override Isla incorrectly
 
-**Persona:** Jane — `campsite-qa-jane-trueman@example.com`
+**Persona:** Jane  `campsite-qa-jane-trueman@example.com`
 
 **Steps**
 
@@ -653,9 +653,9 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-8-B — Jane cannot assign over-privileged role
+### TC-HR-8-B  Jane cannot assign over-privileged role
 
-**Persona:** Jane — `campsite-qa-jane-trueman@example.com`
+**Persona:** Jane  `campsite-qa-jane-trueman@example.com`
 
 **Steps**
 
@@ -671,7 +671,7 @@ ________________________________________________________________________________
 
 ---
 
-### TC-HR-8-C — Invites / hiring RBAC (cross-check doc)
+### TC-HR-8-C  Invites / hiring RBAC (cross-check doc)
 
 **Steps**
 
@@ -686,7 +686,7 @@ ________________________________________________________________________________
 
 ---
 
-## Smoke run — master checklist (tick when entire case passed)
+## Smoke run  master checklist (tick when entire case passed)
 
 Use this page for a **~20 minute** smoke pass (**[Smoke]** only).
 

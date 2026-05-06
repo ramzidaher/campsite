@@ -1,8 +1,19 @@
 'use client';
 
 import { ExperienceLensBar } from '@/components/experience/ExperienceLensBar';
+import {
+  CalendarDays,
+  CalendarRange,
+  Hourglass,
+  MapPin,
+  Megaphone,
+  RadioTower,
+  Send,
+  Shapes,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
 const statTileClass =
   'block rounded-xl border border-[#d8d8d8] bg-white px-5 py-[18px] transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]';
@@ -373,6 +384,15 @@ export function ManagerDashboardClient({
     (StaffTimelineItem & { personName: string; toneLabel: string }) | null
   >(null);
 
+  useEffect(() => {
+    if (!selectedTimelineItem) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedTimelineItem(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedTimelineItem]);
+
   const upcomingBoard = useMemo(() => {
     const events = upcomingItems.filter((i) => i.kind !== 'shift');
     const shifts = upcomingItems.filter((i) => i.kind === 'shift');
@@ -504,9 +524,9 @@ export function ManagerDashboardClient({
   }, [timelineModel.now, timelineModel.rows, timelineView]);
 
   return (
-    <div className="space-y-8">
+    <div className="w-full space-y-8 px-5 py-6 sm:px-[28px] sm:py-7">
       <header>
-        <h1 className="font-authSerif text-[22px] tracking-tight text-[#121212]">Manager dashboard</h1>
+        <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Manager dashboard</h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
           Department overview and activity for your assigned teams.
         </p>
@@ -547,19 +567,19 @@ export function ManagerDashboardClient({
 
         {timelineModel.showDemoOverlayBanner ? (
           <div className="border-b border-[#ede9fe] bg-[#f5f3ff] px-5 py-2.5 text-[12px] text-[#4c1d95]">
-            Demo overlay enabled — extra preview tasks are merged into your timeline (live items remain unless cleared).
+            Demo overlay enabled  extra preview tasks are merged into your timeline (live items remain unless cleared).
           </div>
         ) : null}
 
         {timelineModel.showSyntheticPreviewBanner ? (
           <div className="border-b border-[#bfdbfe] bg-[#eff6ff] px-5 py-2.5 text-[12px] text-[#1e3a8a]">
-            No live timeline rows returned yet — showing built-in preview datasets. Switch “Timeline dataset” to Demo A/B or ensure HRIS dates exist for your profile.
+            No live timeline rows returned yet  showing built-in preview datasets. Switch “Timeline dataset” to Demo A/B or ensure HRIS dates exist for your profile.
           </div>
         ) : null}
 
         {timelineModel.isRangeFallback ? (
           <div className="border-b border-[#fef3c7] bg-[#fffbeb] px-5 py-2.5 text-[12px] text-[#92400e]">
-            No items matched this exact range — showing the nearest upcoming/recent items instead.
+            No items matched this exact range  showing the nearest upcoming/recent items instead.
           </div>
         ) : null}
 
@@ -608,7 +628,7 @@ export function ManagerDashboardClient({
                   ))}
                 </div>
 
-                {/* Data rows — flex layout (Bug 3 fix) */}
+                {/* Data rows  flex layout (Bug 3 fix) */}
                 {timelineGrid.rows.map((row) => {
                   const dueSoonDays = Math.max(2, Math.ceil(viewConfig[timelineView].days / 5));
                   return (
@@ -634,7 +654,7 @@ export function ManagerDashboardClient({
                           ))}
                         </div>
 
-                        {/* Baseline rule — all dots sit exactly on this line (Bug 2 fix) */}
+                        {/* Baseline rule  all dots sit exactly on this line (Bug 2 fix) */}
                         <div
                           className="pointer-events-none absolute left-0 right-0 h-px bg-[#d0d0d0]"
                           style={{ top: `${row.baseline}px` }}
@@ -660,7 +680,7 @@ export function ManagerDashboardClient({
                                 />
                               ) : null}
 
-                              {/* Dot — positioned directly on the baseline */}
+                              {/* Dot  positioned directly on the baseline */}
                               <span
                                 className={`absolute z-20 rounded-full border-2 border-white shadow-sm ${tone.dot}`}
                                 style={{
@@ -706,8 +726,18 @@ export function ManagerDashboardClient({
         </div>
 
         {selectedTimelineItem ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-md rounded-xl border border-[#d8d8d8] bg-white p-4 shadow-xl">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            onClick={() => setSelectedTimelineItem(null)}
+            role="presentation"
+          >
+            <div
+              className="w-full max-w-md rounded-xl border border-[#d8d8d8] bg-white p-4 shadow-xl"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Timeline item details"
+            >
               <div className="mb-2 flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-authSerif text-[18px] text-[#121212]">{selectedTimelineItem.title}</h3>
@@ -715,7 +745,7 @@ export function ManagerDashboardClient({
                 </div>
                 <button
                   type="button"
-                  className="rounded-md border border-[#d8d8d8] px-2 py-1 text-xs text-[#44403c] hover:bg-[#faf9f6]"
+                  className="rounded-md border border-[#d8d8d8] px-2 py-1 text-xs text-[#6b6b6b] hover:bg-[#f5f4f1] hover:text-[#121212]"
                   onClick={() => setSelectedTimelineItem(null)}
                 >
                   Close
@@ -737,25 +767,32 @@ export function ManagerDashboardClient({
                 <p>{selectedTimelineItem.details}</p>
                 {selectedTimelineItem.editable ? (
                   <p className="rounded-md border border-[#bbf7d0] bg-[#f0fdf4] px-2.5 py-1.5 text-[11px] text-[#166534]">
-                    ✎ Editable — changes sync to database
+                    Editable: updates are saved to the source record.
                   </p>
                 ) : (
                   <p className="rounded-md border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-1.5 text-[11px] text-[#475569]">
-                    Read-only event
+                    Read-only event from your activity history.
                   </p>
                 )}
               </div>
 
-              {selectedTimelineItem.editHref ? (
-                <div className="mt-4">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {selectedTimelineItem.editHref ? (
                   <Link
                     href={selectedTimelineItem.editHref}
-                    className="inline-flex h-9 items-center rounded-lg border border-[#121212] px-3 text-[12px] font-medium text-[#121212] hover:bg-[#f5f4f1]"
+                    className="inline-flex h-9 items-center rounded-lg bg-[#121212] px-3 text-[12px] font-medium text-[#faf9f6] hover:opacity-90"
                   >
                     Open source record
                   </Link>
-                </div>
-              ) : null}
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setSelectedTimelineItem(null)}
+                  className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1] hover:text-[#121212]"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -779,7 +816,7 @@ export function ManagerDashboardClient({
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/manager/departments" className={statTileClass}>
           <div className={labelRow}>
-            <span aria-hidden>👥</span> Department headcount
+            <Users className="h-3.5 w-3.5" aria-hidden /> Department headcount
           </div>
           <p className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {stats.activeUsers}
@@ -790,7 +827,7 @@ export function ManagerDashboardClient({
         </Link>
         <Link href="/pending-approvals" className={statTileClass}>
           <div className={labelRow}>
-            <span aria-hidden>⏳</span> Pending verifications
+            <Hourglass className="h-3.5 w-3.5" aria-hidden /> Pending verifications
           </div>
           <p
             className={[
@@ -804,14 +841,14 @@ export function ManagerDashboardClient({
         </Link>
         <Link href="/manager/teams" className={statTileClass}>
           <div className={labelRow}>
-            <span aria-hidden>🧩</span> Department teams
+            <Shapes className="h-3.5 w-3.5" aria-hidden /> Department teams
           </div>
           <p className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">{stats.teamsCount}</p>
           <p className="mt-2 text-xs text-[#9b9b9b]">Teams currently active in your scope</p>
         </Link>
         <Link href="/broadcasts" className={statTileClass}>
           <div className={labelRow}>
-            <span aria-hidden>📡</span> Broadcasts awaiting approval
+            <RadioTower className="h-3.5 w-3.5" aria-hidden /> Broadcasts awaiting approval
           </div>
           <p
             className={[
@@ -825,7 +862,7 @@ export function ManagerDashboardClient({
         </Link>
         <Link href="/broadcasts" className={statTileClass}>
           <div className={labelRow}>
-            <span aria-hidden>📣</span> Broadcasts sent this week
+            <Send className="h-3.5 w-3.5" aria-hidden /> Broadcasts sent this week
           </div>
           <p className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {stats.broadcastsThisWeek}
@@ -834,7 +871,7 @@ export function ManagerDashboardClient({
         </Link>
         <Link href="/rota" className={statTileClass}>
           <div className={labelRow}>
-            <span aria-hidden>🗓</span> Shifts this week
+            <CalendarRange className="h-3.5 w-3.5" aria-hidden /> Shifts this week
           </div>
           <p className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">
             {stats.shiftsWeek}
@@ -843,24 +880,26 @@ export function ManagerDashboardClient({
         </Link>
         <Link href="/rota" className={statTileClass}>
           <div className={labelRow}>
-            <span aria-hidden>📍</span> Shifts today
+            <MapPin className="h-3.5 w-3.5" aria-hidden /> Shifts today
           </div>
           <p className="font-authSerif text-[32px] leading-none tracking-tight text-[#121212]">{stats.shiftsToday}</p>
           <p className="mt-2 text-xs text-[#9b9b9b]">Scheduled for today across your departments</p>
         </Link>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/broadcasts?tab=feed&compose=1"
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#008B60] px-4 text-[13px] font-medium text-white transition hover:bg-[#007a54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008B60]"
+          className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]"
         >
+          <Megaphone className="h-4 w-4" aria-hidden />
           Compose broadcast
         </Link>
         <Link
           href="/rota"
-          className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#121212] transition hover:bg-[#f5f4f1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]"
+          className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition hover:bg-[#f5f4f1] hover:text-[#121212] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]"
         >
+          <CalendarDays className="h-4 w-4" aria-hidden />
           Open department rota
         </Link>
       </div>

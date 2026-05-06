@@ -1,4 +1,4 @@
-import { formatLeaveYearPeriodRange } from '@/lib/datetime';
+import { formatLeaveYearPeriodRange, leaveYearUiKeyFromDbKey } from '@/lib/datetime';
 import { EmployeeSelfDocumentsClient } from '@/components/profile/EmployeeSelfDocumentsClient';
 import { DependantsEditorClient } from '@/components/hr/DependantsEditorClient';
 import { BankDetailsClient } from '@/components/hr/BankDetailsClient';
@@ -33,14 +33,14 @@ function labelContract(value: string | null) {
   if (value === 'part_time') return 'Part-time';
   if (value === 'contractor') return 'Contractor';
   if (value === 'zero_hours') return 'Zero hours';
-  return '—';
+  return '';
 }
 
 function labelLocation(value: string | null) {
   if (value === 'office') return 'Office';
   if (value === 'remote') return 'Remote';
   if (value === 'hybrid') return 'Hybrid';
-  return '—';
+  return '';
 }
 
 function profileTabClass(active: boolean) {
@@ -53,7 +53,7 @@ function profileTabClass(active: boolean) {
 
 function formatRoleLabel(roleKey: string | null | undefined): string {
   const role = String(roleKey ?? '').trim();
-  if (!role) return '—';
+  if (!role) return '';
   const map: Record<string, string> = {
     org_admin: 'Org admin',
     super_admin: 'Org admin',
@@ -174,12 +174,13 @@ export default async function MyProfilePage({
   const profileLeaveYearKey = profileOverviewData.profileLeaveYearKey;
   const sm = profileOverviewData.leaveYearStartMonth;
   const sd = profileOverviewData.leaveYearStartDay;
+  const profileLeaveYearUiLabel = leaveYearUiKeyFromDbKey(profileLeaveYearKey, sm, sd);
   const annualEntitlementDays = profileOverviewData.allowanceAnnualEntitlementDays;
   const toilBalanceDays = profileOverviewData.allowanceToilBalanceDays;
   const annualApprovedRequests = profileOverviewData.annualApprovedRequests;
   const directReportRows = profileOverviewData.directReportRows;
 
-  const emailDisplay = (profile.email as string | null)?.trim() || user.email || '—';
+  const emailDisplay = (profile.email as string | null)?.trim() || user.email || '';
   const profileDisplayName = getDisplayName(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
   const roleLabel = formatRoleLabel(profile.role as string | null);
   const pronounsValue = String((profile as { pronouns?: string | null }).pronouns ?? '').trim();
@@ -211,7 +212,7 @@ export default async function MyProfilePage({
     new Map(
       [roleLabel, ...ownRoleLabels]
         .map((label) => String(label).trim())
-        .filter((label) => label.length > 0 && label !== '—')
+        .filter((label) => label.length > 0 && label !== '')
         .map((label) => [label.toLowerCase(), label] as const)
     ).values()
   );
@@ -227,6 +228,15 @@ export default async function MyProfilePage({
     certificate_document_url: string | null;
     created_at: string;
   }[];
+  const profileInitials = getProfileInitials(
+    profile.full_name as string,
+    (profile.preferred_name as string | null) ?? null
+  );
+  const interactiveAvatarRawUrl = (profile as { avatar_url?: string | null }).avatar_url;
+  const interactiveAvatarUrl =
+    typeof interactiveAvatarRawUrl === 'string' && interactiveAvatarRawUrl.trim().length > 0
+      ? interactiveAvatarRawUrl
+      : null;
   for (const label of otherTabData.partialSections ?? []) {
     timeoutFallbackLabels.add(label);
   }
@@ -247,9 +257,9 @@ export default async function MyProfilePage({
         { label: 'Work email', value: emailDisplay },
         { label: 'Role', value: roleLabel },
         { label: 'Pronouns', value: visiblePronouns ?? 'Hidden' },
-        { label: 'Department', value: deptNames.length ? deptNames.join(', ') : '—' },
+        { label: 'Department', value: deptNames.length ? deptNames.join(', ') : '' },
         { label: 'Account ID', value: user.id },
-        { label: 'Phone', value: '—' },
+        { label: 'Phone', value: '' },
         {
           label: 'Emergency contact',
           value: 'Not stored in CampSite yet. Ask HR if stored externally.',
@@ -262,29 +272,29 @@ export default async function MyProfilePage({
       label: 'Job',
       description: 'Position, contract, probation, and job metadata.',
       facts: [
-        { label: 'Job title', value: String(fileRow?.job_title ?? '—') },
-        { label: 'Grade', value: String(fileRow?.grade_level ?? '—') },
-        { label: 'Pay grade', value: String((fileRow as { pay_grade?: string } | undefined)?.pay_grade ?? '—') },
-        { label: 'Position type', value: String((fileRow as { position_type?: string } | undefined)?.position_type ?? '—') },
-        { label: 'Employment basis', value: String((fileRow as { employment_basis?: string } | undefined)?.employment_basis ?? '—') },
+        { label: 'Job title', value: String(fileRow?.job_title ?? '') },
+        { label: 'Grade', value: String(fileRow?.grade_level ?? '') },
+        { label: 'Pay grade', value: String((fileRow as { pay_grade?: string } | undefined)?.pay_grade ?? '') },
+        { label: 'Position type', value: String((fileRow as { position_type?: string } | undefined)?.position_type ?? '') },
+        { label: 'Employment basis', value: String((fileRow as { employment_basis?: string } | undefined)?.employment_basis ?? '') },
         { label: 'Contract', value: labelContract((fileRow?.contract_type as string | null) ?? null) },
-        { label: 'FTE', value: fileRow?.fte ? `${Math.round(Number(fileRow.fte) * 100)}%` : '—' },
-        { label: 'Weekly hours', value: String((fileRow as { weekly_hours?: number } | undefined)?.weekly_hours ?? '—') },
+        { label: 'FTE', value: fileRow?.fte ? `${Math.round(Number(fileRow.fte) * 100)}%` : '' },
+        { label: 'Weekly hours', value: String((fileRow as { weekly_hours?: number } | undefined)?.weekly_hours ?? '') },
         { label: 'Work location', value: labelLocation((fileRow?.work_location as string | null) ?? null) },
-        { label: 'Employment start', value: String(fileRow?.employment_start_date ?? '—') },
+        { label: 'Employment start', value: String(fileRow?.employment_start_date ?? '') },
         {
           label: 'Length of service',
           value:
             typeof (fileRow as { length_of_service_years?: number } | undefined)?.length_of_service_years === 'number' &&
             typeof (fileRow as { length_of_service_months?: number } | undefined)?.length_of_service_months === 'number'
               ? `${(fileRow as { length_of_service_years: number }).length_of_service_years}y ${(fileRow as { length_of_service_months: number }).length_of_service_months}m`
-              : '—',
+              : '',
         },
-        { label: 'Dept. start', value: String((fileRow as { department_start_date?: string } | undefined)?.department_start_date ?? '—') },
-        { label: 'Continuous employment', value: String((fileRow as { continuous_employment_start_date?: string } | undefined)?.continuous_employment_start_date ?? '—') },
-        { label: 'Probation end', value: String(fileRow?.probation_end_date ?? '—') },
-        { label: 'Notice period (weeks)', value: String(fileRow?.notice_period_weeks ?? '—') },
-        { label: 'Salary band', value: String(fileRow?.salary_band ?? '—') },
+        { label: 'Dept. start', value: String((fileRow as { department_start_date?: string } | undefined)?.department_start_date ?? '') },
+        { label: 'Continuous employment', value: String((fileRow as { continuous_employment_start_date?: string } | undefined)?.continuous_employment_start_date ?? '') },
+        { label: 'Probation end', value: String(fileRow?.probation_end_date ?? '') },
+        { label: 'Notice period (weeks)', value: String(fileRow?.notice_period_weeks ?? '') },
+        { label: 'Salary band', value: String(fileRow?.salary_band ?? '') },
       ],
       bulletPoints:
         probationItems.length > 0
@@ -298,7 +308,7 @@ export default async function MyProfilePage({
       facts: [
         {
           label: 'Leave year',
-          value: `${profileLeaveYearKey} · ${formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}`,
+          value: `${profileLeaveYearUiLabel} · ${formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}`,
         },
         { label: 'Annual entitlement', value: `${Number(annualEntitlementDays ?? 0)} days` },
         { label: 'Annual leave used', value: `${annualUsed} days` },
@@ -316,7 +326,7 @@ export default async function MyProfilePage({
           value:
             fileRow && (fileRow as { reports_to_name?: string }).reports_to_name
               ? String((fileRow as { reports_to_name: string }).reports_to_name)
-              : '—',
+              : '',
         },
       ],
       bulletPoints: directReports.length > 0 ? directReports : ['No direct reports.'],
@@ -384,7 +394,7 @@ export default async function MyProfilePage({
       facts: [{ label: 'Entries', value: `${ownEmploymentHistory.length}` }],
       bulletPoints:
         ownEmploymentHistory.length > 0
-          ? ownEmploymentHistory.slice(0, 5).map((r) => `${String(r.role_title ?? 'Role')} (${String(r.start_date ?? '—')} to ${String(r.end_date ?? 'present')})`)
+          ? ownEmploymentHistory.slice(0, 5).map((r) => `${String(r.role_title ?? 'Role')} (${String(r.start_date ?? '')} to ${String(r.end_date ?? 'present')})`)
           : ['No employment history entries yet.'],
     },
     {
@@ -412,7 +422,7 @@ export default async function MyProfilePage({
           value:
             fileRow && fileRow.notes != null && String(fileRow.notes).trim() !== ''
               ? String(fileRow.notes)
-              : '—',
+              : '',
         },
       ],
       bulletPoints: [ownCustomDefs.length > 0 ? 'Custom HR fields are configured.' : 'No custom fields configured yet.'],
@@ -480,7 +490,12 @@ export default async function MyProfilePage({
               Interactive profile orbit. Select any node to inspect that profile area.
             </p>
           </header>
-          <RadialOrbitalTimeline timelineData={radialTimelineData} />
+          <RadialOrbitalTimeline
+            timelineData={radialTimelineData}
+            centerAvatarUrl={interactiveAvatarUrl}
+            centerAvatarAlt={`${profileDisplayName} profile photo`}
+            centerFallbackText={profileInitials || ''}
+          />
         </div>
       </div>
     );
@@ -488,7 +503,7 @@ export default async function MyProfilePage({
     return view;
   }
 
-  const initials = getProfileInitials(profile.full_name as string, (profile.preferred_name as string | null) ?? null);
+  const initials = profileInitials;
   const rawAvatarUrl = (profile as { avatar_url?: string | null }).avatar_url;
   const profileAvatarUrl =
     typeof rawAvatarUrl === 'string' && rawAvatarUrl.trim().length > 0 ? rawAvatarUrl : null;
@@ -497,11 +512,11 @@ export default async function MyProfilePage({
     typeof (fileRow as { length_of_service_years?: number } | undefined)?.length_of_service_years === 'number' &&
     typeof (fileRow as { length_of_service_months?: number } | undefined)?.length_of_service_months === 'number'
       ? `${(fileRow as { length_of_service_years: number }).length_of_service_years}y ${(fileRow as { length_of_service_months: number }).length_of_service_months}m`
-      : '—';
+      : '';
   const managerName =
     fileRow && (fileRow as { reports_to_name?: string }).reports_to_name
       ? String((fileRow as { reports_to_name: string }).reports_to_name)
-      : '—';
+      : '';
   const holidayKindLabel: Record<'bank_holiday' | 'public_holiday' | 'org_break' | 'custom', string> = {
     bank_holiday: 'Bank holiday',
     public_holiday: 'Public holiday',
@@ -553,13 +568,13 @@ export default async function MyProfilePage({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  initials || '—'
+                  initials || ''
                 )}
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="font-authSerif text-[28px] leading-tight tracking-[-0.03em] text-[#121212]">{profileDisplayName}</h1>
                 <p className="mt-1 text-[13.5px] text-[#6b6b6b]">
-                  {deptNames.length ? deptNames.join(', ') : '—'} <span className="text-[#d4d4d4]">·</span> {emailDisplay}
+                  {deptNames.length ? deptNames.join(', ') : ''} <span className="text-[#d4d4d4]">·</span> {emailDisplay}
                 </p>
                 {visiblePronouns ? (
                   <p className="mt-1 text-[12px] text-[#9b9b9b]">{visiblePronouns}</p>
@@ -632,7 +647,7 @@ export default async function MyProfilePage({
                   fullName={String(profile.full_name ?? '')}
                   preferredName={(profile.preferred_name as string | null) ?? null}
                   email={emailDisplay}
-                  department={deptNames.length ? deptNames.join(', ') : '—'}
+                  department={deptNames.length ? deptNames.join(', ') : ''}
                   pronouns={(profile.pronouns as string | null) ?? null}
                   showPronouns={Boolean(profile.show_pronouns)}
                 />
@@ -807,7 +822,7 @@ export default async function MyProfilePage({
                           return (
                             <li key={r.id as string} className="flex items-center gap-2">
                               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,#f0f0f0)] text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
-                                {personInitials || '—'}
+                                {personInitials || ''}
                               </span>
                               <div>
                                 <p className="text-[13px] font-medium text-[#121212]">{display}</p>
@@ -866,8 +881,8 @@ export default async function MyProfilePage({
                         {p.alert_level === 'critical'
                           ? 'Your probation review is more than one week overdue.'
                           : p.alert_level === 'overdue'
-                            ? 'Your probation end date has passed — your manager should complete the probation review.'
-                            : 'Your probation period is ending soon — speak with your manager about your probation review.'}
+                            ? 'Your probation end date has passed  your manager should complete the probation review.'
+                            : 'Your probation period is ending soon  speak with your manager about your probation review.'}
                       </p>
                       <p className="mt-0.5 text-[12px] opacity-90">Probation ends {p.probation_end_date}.</p>
                     </div>
@@ -882,23 +897,23 @@ export default async function MyProfilePage({
                 <dl className="grid gap-3 sm:grid-cols-2 text-[13px]">
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Job title</dt>
-                    <dd className="text-[#121212]">{String(fileRow.job_title ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String(fileRow.job_title ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Grade</dt>
-                    <dd className="text-[#121212]">{String(fileRow.grade_level ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String(fileRow.grade_level ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Pay grade</dt>
-                    <dd className="text-[#121212]">{String((fileRow as { pay_grade?: string }).pay_grade ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String((fileRow as { pay_grade?: string }).pay_grade ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Position type</dt>
-                    <dd className="text-[#121212]">{String((fileRow as { position_type?: string }).position_type ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String((fileRow as { position_type?: string }).position_type ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Employment basis</dt>
-                    <dd className="text-[#121212]">{String((fileRow as { employment_basis?: string }).employment_basis ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String((fileRow as { employment_basis?: string }).employment_basis ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Contract</dt>
@@ -906,11 +921,11 @@ export default async function MyProfilePage({
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">FTE</dt>
-                    <dd className="text-[#121212]">{fileRow.fte ? `${Math.round(Number(fileRow.fte) * 100)}%` : '—'}</dd>
+                    <dd className="text-[#121212]">{fileRow.fte ? `${Math.round(Number(fileRow.fte) * 100)}%` : ''}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Weekly hours</dt>
-                    <dd className="text-[#121212]">{String((fileRow as { weekly_hours?: number }).weekly_hours ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String((fileRow as { weekly_hours?: number }).weekly_hours ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Work location</dt>
@@ -918,7 +933,7 @@ export default async function MyProfilePage({
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Employment start</dt>
-                    <dd className="text-[#121212]">{String(fileRow.employment_start_date ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String(fileRow.employment_start_date ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Length of service</dt>
@@ -926,35 +941,35 @@ export default async function MyProfilePage({
                       {typeof (fileRow as { length_of_service_years?: number }).length_of_service_years === 'number' &&
                       typeof (fileRow as { length_of_service_months?: number }).length_of_service_months === 'number'
                         ? `${(fileRow as { length_of_service_years: number }).length_of_service_years}y ${(fileRow as { length_of_service_months: number }).length_of_service_months}m`
-                        : '—'}
+                        : ''}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Dept. start</dt>
-                    <dd className="text-[#121212]">{String((fileRow as { department_start_date?: string }).department_start_date ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String((fileRow as { department_start_date?: string }).department_start_date ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Continuous employment</dt>
-                    <dd className="text-[#121212]">{String((fileRow as { continuous_employment_start_date?: string }).continuous_employment_start_date ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String((fileRow as { continuous_employment_start_date?: string }).continuous_employment_start_date ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Probation end</dt>
-                    <dd className="text-[#121212]">{String(fileRow.probation_end_date ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String(fileRow.probation_end_date ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Notice period (weeks)</dt>
-                    <dd className="text-[#121212]">{String(fileRow.notice_period_weeks ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String(fileRow.notice_period_weeks ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Salary band</dt>
-                    <dd className="text-[#121212]">{String(fileRow.salary_band ?? '—')}</dd>
+                    <dd className="text-[#121212]">{String(fileRow.salary_band ?? '')}</dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Budget</dt>
                     <dd className="text-[#121212]">
                       {(fileRow as { budget_amount?: number }).budget_amount != null
                         ? `${(fileRow as { budget_amount: number }).budget_amount} ${String((fileRow as { budget_currency?: string }).budget_currency ?? '').trim()}`.trim()
-                        : '—'}
+                        : ''}
                     </dd>
                   </div>
                 </dl>
@@ -976,7 +991,7 @@ export default async function MyProfilePage({
                 </div>
                 <div className="space-y-3 p-4">
                   <p className="text-[12px] text-[#6b6b6b]">
-                    Leave year {profileLeaveYearKey} · {formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}
+                    Leave year {profileLeaveYearUiLabel} · {formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}
                   </p>
                   <div>
                     <div className="mb-1 flex items-center justify-between text-[12px]">
@@ -1084,7 +1099,7 @@ export default async function MyProfilePage({
                         return (
                           <li key={r.id as string} className="flex items-center gap-2">
                             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--org-brand-primary,#0f6e56)_10%,#f0f0f0)] text-[11px] font-medium text-[var(--org-brand-primary,#0f6e56)]">
-                              {personInitials || '—'}
+                              {personInitials || ''}
                             </span>
                             <div>
                               <p className="text-[13px] font-medium text-[#121212]">{display}</p>
@@ -1470,7 +1485,7 @@ export default async function MyProfilePage({
                 <p className="mt-1 text-[#121212]">
                   {fileRow && fileRow.notes != null && String(fileRow.notes).trim() !== ''
                     ? String(fileRow.notes)
-                    : '—'}
+                    : ''}
                 </p>
               </div>
             </div>

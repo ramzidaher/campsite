@@ -1,6 +1,6 @@
-# Page Layer Stage C Report — Admin Users Normalization Slice 1
+# Page Layer Stage C Report  Admin Users Normalization Slice 1
 **Date:** 2026-04-30
-**Status:** COMPLETE — `admin/users` moved off page-local cache island
+**Status:** COMPLETE  `admin/users` moved off page-local cache island
 **Follow-up to:** `reports/page-layer-stage-b-jobs-detail-normalization-20260430.md`
 
 ---

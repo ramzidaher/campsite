@@ -3,6 +3,8 @@
 import { campusSurface, FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
+import { emitGlobalActionFeedback } from '@/lib/ui/globalActionFeedback';
+import { ArrowRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -59,6 +61,83 @@ type HiringReadinessRow = {
   start_confirmed_at: string | null;
 };
 
+type ActionErrorKind = 'validation' | 'network' | 'permission' | 'server';
+type UiActionError = {
+  kind: ActionErrorKind;
+  title: string;
+  description: string;
+  retryLabel?: string;
+  raw?: string;
+};
+
+function classifyActionError(input: unknown): UiActionError {
+  const maybe = input as { message?: string; code?: string; status?: number } | null;
+  const rawMessage = String(maybe?.message ?? 'Action failed');
+  const lower = rawMessage.toLowerCase();
+  const code = String(maybe?.code ?? '');
+  const status = Number(maybe?.status ?? 0);
+
+  if (!rawMessage.trim()) {
+    return {
+      kind: 'server',
+      title: 'We could not complete that action',
+      description: 'Refresh and try again. If this keeps happening, contact support.',
+      retryLabel: 'Refresh',
+    };
+  }
+
+  if (status === 403 || code === '42501' || lower.includes('permission') || lower.includes('not allowed') || lower.includes('forbidden')) {
+    return {
+      kind: 'permission',
+      title: 'You do not have permission',
+      description: 'Ask an admin for access or contact support if this looks wrong.',
+      raw: rawMessage,
+    };
+  }
+
+  if (
+    !globalThis.navigator?.onLine ||
+    lower.includes('network') ||
+    lower.includes('fetch') ||
+    lower.includes('timeout') ||
+    lower.includes('connection') ||
+    status === 408
+  ) {
+    return {
+      kind: 'network',
+      title: 'Lost connection',
+      description: 'Check your internet connection. We will reconnect automatically.',
+      retryLabel: 'Retry',
+      raw: rawMessage,
+    };
+  }
+
+  if (
+    code === '23505' ||
+    code === '23514' ||
+    code === '23503' ||
+    lower.includes('invalid') ||
+    lower.includes('required') ||
+    lower.includes('must') ||
+    lower.includes('cannot')
+  ) {
+    return {
+      kind: 'validation',
+      title: 'Please check the highlighted fields',
+      description: rawMessage,
+      raw: rawMessage,
+    };
+  }
+
+  return {
+    kind: 'server',
+    title: 'The server hit a problem',
+    description: 'Refresh and try again. If this keeps happening, contact support.',
+    retryLabel: 'Refresh',
+    raw: rawMessage,
+  };
+}
+
 function statusBadge(s: string) {
   const base = 'rounded-full px-2 py-0.5 text-[11px] font-medium';
   switch (s) {
@@ -70,7 +149,7 @@ function statusBadge(s: string) {
 }
 
 export function OnboardingHubClient({
-  orgId: _orgId,
+  orgId,
   canTemplates,
   canRuns,
   canManageRuns,
@@ -97,7 +176,8 @@ export function OnboardingHubClient({
 
   const [tab, setTab] = useState<'runs' | 'templates'>(canRuns ? 'runs' : 'templates');
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ type: 'success'; text: string } | null>(null);
+  const [actionError, setActionError] = useState<UiActionError | null>(null);
 
   // Start run form
   const [showStartForm, setShowStartForm] = useState(false);
@@ -111,18 +191,30 @@ export function OnboardingHubClient({
   const [tplDesc, setTplDesc] = useState('');
   const [tplDefault, setTplDefault] = useState(false);
   const [taskBusy, setTaskBusy] = useState(false);
-  const [taskMsg, setTaskMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [taskMsg, setTaskMsg] = useState<{ type: 'success'; text: string } | null>(null);
+  const [taskError, setTaskError] = useState<UiActionError | null>(null);
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskCategory, setTaskCategory] = useState('other');
   const [taskAssignee, setTaskAssignee] = useState('hr');
   const [taskDueOffset, setTaskDueOffset] = useState('1');
 
+  const isStartFormValid = Boolean(startUserId && startTemplateId && startDate);
+  const isTemplateFormValid = Boolean(tplName.trim());
+
   async function startRun(e: React.FormEvent) {
     e.preventDefault();
-    if (!startUserId || !startTemplateId || !startDate) return;
+    if (!isStartFormValid) {
+      setActionError({
+        kind: 'validation',
+        title: 'Complete required fields',
+        description: 'Select employee, template, and employment start date to continue.',
+      });
+      return;
+    }
     setBusy(true);
     setMsg(null);
+    setActionError(null);
     const { data: runId, error } = await withMinimumDelay(
       supabase.rpc('onboarding_run_start', {
         p_user_id: startUserId,
@@ -133,7 +225,11 @@ export function OnboardingHubClient({
     );
     setBusy(false);
     if (error) {
-      setMsg({ type: 'error', text: error.message });
+      const parsed = classifyActionError(error);
+      if (parsed.kind === 'network') {
+        emitGlobalActionFeedback({ tone: 'err', message: `${parsed.title}. Reconnecting in five seconds.` });
+      }
+      setActionError(parsed);
       return;
     }
     setShowStartForm(false);
@@ -143,11 +239,20 @@ export function OnboardingHubClient({
 
   async function createTemplate(e: React.FormEvent) {
     e.preventDefault();
-    if (!tplName.trim()) return;
+    if (!isTemplateFormValid) {
+      setActionError({
+        kind: 'validation',
+        title: 'Template name is required',
+        description: 'Enter a template name before creating.',
+      });
+      return;
+    }
     setBusy(true);
     setMsg(null);
+    setActionError(null);
     const { error } = await withMinimumDelay(
       supabase.from('onboarding_templates').insert({
+        org_id: orgId,
         name: tplName.trim(),
         description: tplDesc.trim() || null,
         is_default: tplDefault,
@@ -155,7 +260,11 @@ export function OnboardingHubClient({
     );
     setBusy(false);
     if (error) {
-      setMsg({ type: 'error', text: error.message });
+      const parsed = classifyActionError(error);
+      if (parsed.kind === 'network') {
+        emitGlobalActionFeedback({ tone: 'err', message: `${parsed.title}. Reconnecting in five seconds.` });
+      }
+      setActionError(parsed);
       return;
     }
     setShowTemplateForm(false);
@@ -171,12 +280,21 @@ export function OnboardingHubClient({
   const currentTemplateId = selectedTemplateId && activeTemplates.some((t) => t.id === selectedTemplateId)
     ? selectedTemplateId
     : null;
+  const isTaskFormValid = Boolean(currentTemplateId && taskTitle.trim());
 
   async function upsertTask(e: React.FormEvent) {
     e.preventDefault();
-    if (!currentTemplateId || !taskTitle.trim()) return;
+    if (!isTaskFormValid) {
+      setTaskError({
+        kind: 'validation',
+        title: 'Task title is required',
+        description: 'Add a title before saving this task.',
+      });
+      return;
+    }
     setTaskBusy(true);
     setTaskMsg(null);
+    setTaskError(null);
     const { error } = await withMinimumDelay(
       supabase.rpc('onboarding_template_task_upsert', {
         p_template_id: currentTemplateId,
@@ -189,7 +307,11 @@ export function OnboardingHubClient({
     );
     setTaskBusy(false);
     if (error) {
-      setTaskMsg({ type: 'error', text: error.message });
+      const parsed = classifyActionError(error);
+      if (parsed.kind === 'network') {
+        emitGlobalActionFeedback({ tone: 'err', message: `${parsed.title}. Reconnecting in five seconds.` });
+      }
+      setTaskError(parsed);
       return;
     }
     setEditTaskId(null);
@@ -214,12 +336,17 @@ export function OnboardingHubClient({
   async function deleteTask(taskId: string) {
     setTaskBusy(true);
     setTaskMsg(null);
+    setTaskError(null);
     const { error } = await withMinimumDelay(
       supabase.rpc('onboarding_template_task_delete', { p_task_id: taskId })
     );
     setTaskBusy(false);
     if (error) {
-      setTaskMsg({ type: 'error', text: error.message });
+      const parsed = classifyActionError(error);
+      if (parsed.kind === 'network') {
+        emitGlobalActionFeedback({ tone: 'err', message: `${parsed.title}. Reconnecting in five seconds.` });
+      }
+      setTaskError(parsed);
       return;
     }
     if (editTaskId === taskId) {
@@ -243,6 +370,7 @@ export function OnboardingHubClient({
 
     setTaskBusy(true);
     setTaskMsg(null);
+    setTaskError(null);
     const first = await withMinimumDelay(
       supabase.rpc('onboarding_template_task_upsert', {
         p_template_id: currentTemplateId,
@@ -265,7 +393,11 @@ export function OnboardingHubClient({
     });
     setTaskBusy(false);
     if (first.error || second.error) {
-      setTaskMsg({ type: 'error', text: first.error?.message ?? second.error?.message ?? 'Could not reorder tasks' });
+      const parsed = classifyActionError(first.error ?? second.error ?? { message: 'Could not reorder tasks' });
+      if (parsed.kind === 'network') {
+        emitGlobalActionFeedback({ tone: 'err', message: `${parsed.title}. Reconnecting in five seconds.` });
+      }
+      setTaskError(parsed);
       return;
     }
     setTaskMsg({ type: 'success', text: 'Task order updated.' });
@@ -276,12 +408,17 @@ export function OnboardingHubClient({
   async function confirmStart(applicationId: string) {
     setBusy(true);
     setMsg(null);
+    setActionError(null);
     const { error } = await withMinimumDelay(
       supabase.rpc('hiring_confirm_start', { p_job_application_id: applicationId })
     );
     setBusy(false);
     if (error) {
-      setMsg({ type: 'error', text: error.message });
+      const parsed = classifyActionError(error);
+      if (parsed.kind === 'network') {
+        emitGlobalActionFeedback({ tone: 'err', message: `${parsed.title}. Reconnecting in five seconds.` });
+      }
+      setActionError(parsed);
       return;
     }
     setMsg({ type: 'success', text: 'Start confirmed.' });
@@ -292,6 +429,7 @@ export function OnboardingHubClient({
   async function markPrestartChecksComplete(applicationId: string) {
     setBusy(true);
     setMsg(null);
+    setActionError(null);
     const { error } = await withMinimumDelay(
       supabase
         .from('hiring_start_readiness')
@@ -306,7 +444,11 @@ export function OnboardingHubClient({
     );
     setBusy(false);
     if (error) {
-      setMsg({ type: 'error', text: error.message });
+      const parsed = classifyActionError(error);
+      if (parsed.kind === 'network') {
+        emitGlobalActionFeedback({ tone: 'err', message: `${parsed.title}. Reconnecting in five seconds.` });
+      }
+      setActionError(parsed);
       return;
     }
     setMsg({ type: 'success', text: 'Pre-start checks marked complete.' });
@@ -315,7 +457,7 @@ export function OnboardingHubClient({
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
+    <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">Onboarding</h1>
@@ -328,8 +470,9 @@ export function OnboardingHubClient({
             <button
               type="button"
               onClick={() => setShowTemplateForm(true)}
-              className="inline-flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[12.5px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
             >
+              <Plus className="h-4 w-4" aria-hidden />
               New template
             </button>
           )}
@@ -337,7 +480,7 @@ export function OnboardingHubClient({
             <button
               type="button"
               onClick={() => setShowStartForm(true)}
-              className="inline-flex h-9 items-center rounded-lg bg-[#121212] px-3 text-[12.5px] font-medium text-[#faf9f6] hover:bg-[#2a2a2a]"
+              className="inline-flex h-10 items-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] hover:bg-[#2a2a2a]"
             >
               Start onboarding
             </button>
@@ -347,15 +490,33 @@ export function OnboardingHubClient({
 
       {msg ? (
         <p
-          className={[
-            'mb-4 rounded-lg px-3 py-2 text-[13px]',
-            msg.type === 'error'
-              ? 'border border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]'
-              : 'border border-[#86efac] bg-[#f0fdf4] text-[#166534]',
-          ].join(' ')}
+          className="mb-4 rounded-lg border border-[#86efac] bg-[#f0fdf4] px-3 py-2 text-[13px] text-[#166534]"
         >
           {msg.text}
         </p>
+      ) : null}
+      {actionError ? (
+        <div className="mb-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#7f1d1d]">
+          <p className="font-medium">{actionError.title}</p>
+          <p className="mt-0.5 text-[#991b1b]">{actionError.description}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {actionError.retryLabel ? (
+              <button
+                type="button"
+                onClick={() => router.refresh()}
+                className="rounded-md border border-[#fca5a5] bg-white px-2.5 py-1 text-[12px] font-medium text-[#7f1d1d] hover:bg-[#fff1f2]"
+              >
+                {actionError.retryLabel}
+              </button>
+            ) : null}
+            <a
+              href="mailto:support@campsiteapp.com"
+              className="rounded-md border border-[#fca5a5] bg-white px-2.5 py-1 text-[12px] font-medium text-[#7f1d1d] hover:bg-[#fff1f2]"
+            >
+              Contact us
+            </a>
+          </div>
+        </div>
       ) : null}
 
       {/* Start run form */}
@@ -402,7 +563,7 @@ export function OnboardingHubClient({
               />
             </label>
             <div className="flex gap-2 sm:col-span-3">
-              <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">
+              <button type="submit" disabled={busy || !isStartFormValid} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">
                 {busy ? 'Starting…' : 'Start'}
               </button>
               <button type="button" disabled={busy} onClick={() => setShowStartForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6] disabled:opacity-50">
@@ -410,6 +571,9 @@ export function OnboardingHubClient({
               </button>
             </div>
           </form>
+          {!isStartFormValid ? (
+            <p className="mt-2 text-[12px] text-[#b45309]">Complete all fields before starting onboarding.</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -431,22 +595,25 @@ export function OnboardingHubClient({
               Set as default template
             </label>
             <div className="flex gap-2">
-              <button type="submit" disabled={busy} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">{busy ? 'Creating…' : 'Create'}</button>
+              <button type="submit" disabled={busy || !isTemplateFormValid} className="rounded-lg bg-[#121212] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50">{busy ? 'Creating…' : 'Create'}</button>
               <button type="button" disabled={busy} onClick={() => setShowTemplateForm(false)} className="rounded-lg border border-[#e8e8e8] bg-white px-4 py-2 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#faf9f6] disabled:opacity-50">Cancel</button>
             </div>
+            {!isTemplateFormValid ? (
+              <p className="text-[12px] text-[#b45309]">Template name is required.</p>
+            ) : null}
           </form>
         </div>
       ) : null}
 
       {/* Tabs */}
-      <div className="mb-4 flex border-b border-[#ececec]">
+      <div className="mb-4 inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] p-1">
         {canRuns && (
-          <button type="button" onClick={() => setTab('runs')} className={['px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors', tab === 'runs' ? 'border-[#121212] text-[#121212]' : 'border-transparent text-[#9b9b9b] hover:text-[#4a4a4a]'].join(' ')}>
+          <button type="button" onClick={() => setTab('runs')} className={['rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors', tab === 'runs' ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]'].join(' ')}>
             Runs {activeRuns.length > 0 ? <span className="ml-1 rounded-full bg-[#dcfce7] px-1.5 py-0.5 text-[10px] font-bold text-[#166534]">{activeRuns.length}</span> : null}
           </button>
         )}
         {canTemplates && (
-          <button type="button" onClick={() => setTab('templates')} className={['px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors', tab === 'templates' ? 'border-[#121212] text-[#121212]' : 'border-transparent text-[#9b9b9b] hover:text-[#4a4a4a]'].join(' ')}>
+          <button type="button" onClick={() => setTab('templates')} className={['rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors', tab === 'templates' ? 'bg-white text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]'].join(' ')}>
             Templates ({activeTemplates.length})
           </button>
         )}
@@ -529,7 +696,9 @@ export function OnboardingHubClient({
                       </div>
                       <div className="flex items-center gap-3">
                         {statusBadge(r.status)}
-                        <span className="text-[12px] text-[#9b9b9b]">Open →</span>
+                        <span className="inline-flex items-center gap-1 text-[12px] text-[#9b9b9b]">
+                          Open <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                        </span>
                       </div>
                     </Link>
                   </li>
@@ -585,7 +754,9 @@ export function OnboardingHubClient({
                       </p>
                       {t.description ? <p className="text-[12px] text-[#9b9b9b]">{t.description}</p> : null}
                     </div>
-                    <span className="text-[12px] text-[#9b9b9b]">Manage tasks →</span>
+                    <span className="inline-flex items-center gap-1 text-[12px] text-[#9b9b9b]">
+                      Manage tasks <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -600,15 +771,33 @@ export function OnboardingHubClient({
               </div>
               {taskMsg ? (
                 <p
-                  className={[
-                    'mt-3 rounded-lg px-3 py-2 text-[13px]',
-                    taskMsg.type === 'error'
-                      ? 'border border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]'
-                      : 'border border-[#86efac] bg-[#f0fdf4] text-[#166534]',
-                  ].join(' ')}
+                  className="mt-3 rounded-lg border border-[#86efac] bg-[#f0fdf4] px-3 py-2 text-[13px] text-[#166534]"
                 >
                   {taskMsg.text}
                 </p>
+              ) : null}
+              {taskError ? (
+                <div className="mt-3 rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] text-[#7f1d1d]">
+                  <p className="font-medium">{taskError.title}</p>
+                  <p className="mt-0.5 text-[#991b1b]">{taskError.description}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {taskError.retryLabel ? (
+                      <button
+                        type="button"
+                        onClick={() => router.refresh()}
+                        className="rounded-md border border-[#fca5a5] bg-white px-2.5 py-1 text-[12px] font-medium text-[#7f1d1d] hover:bg-[#fff1f2]"
+                      >
+                        {taskError.retryLabel}
+                      </button>
+                    ) : null}
+                    <a
+                      href="mailto:support@campsiteapp.com"
+                      className="rounded-md border border-[#fca5a5] bg-white px-2.5 py-1 text-[12px] font-medium text-[#7f1d1d] hover:bg-[#fff1f2]"
+                    >
+                      Contact us
+                    </a>
+                  </div>
+                </div>
               ) : null}
               <form className="mt-4 grid gap-3 sm:grid-cols-4" onSubmit={(e) => void upsertTask(e)}>
                 <label className="block text-[12px] font-medium text-[#6b6b6b] sm:col-span-2">
@@ -638,7 +827,7 @@ export function OnboardingHubClient({
                   <input type="number" min={0} value={taskDueOffset} onChange={(e) => setTaskDueOffset(e.target.value)} className="mt-1 w-full rounded-lg border border-[#e8e8e8] bg-[#faf9f6] px-3 py-2 text-[13px] focus:border-[#121212] focus:outline-none" />
                 </label>
                 <div className="flex items-end gap-2 sm:col-span-3">
-                  <button type="submit" disabled={taskBusy} className="rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-white disabled:opacity-50">
+                  <button type="submit" disabled={taskBusy || !isTaskFormValid} className="rounded-lg bg-[#121212] px-3 py-2 text-[13px] font-medium text-white disabled:opacity-50">
                     {editTaskId ? 'Update task' : 'Add task'}
                   </button>
                   {editTaskId ? (
@@ -654,6 +843,9 @@ export function OnboardingHubClient({
                   ) : null}
                 </div>
               </form>
+              {!isTaskFormValid ? (
+                <p className="mt-2 text-[12px] text-[#b45309]">Task title is required before saving.</p>
+              ) : null}
 
               <ul className="mt-4 space-y-2">
                 {[...selectedTemplateTasks].sort((a, b) => a.sort_order - b.sort_order).map((task, idx, arr) => (

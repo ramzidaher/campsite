@@ -1,5 +1,5 @@
 -- Managers (dept_managers) and coordinators (user_departments) may create teams in their departments.
--- Coordinators get the same team update and roster rules as department managers (no delete — org admin only).
+-- Coordinators get the same team update and roster rules as department managers (no delete  org admin only).
 
 -- ---------------------------------------------------------------------------
 -- department_teams: INSERT for manager + coordinator

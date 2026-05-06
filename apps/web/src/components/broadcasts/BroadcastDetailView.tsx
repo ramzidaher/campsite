@@ -20,7 +20,7 @@ import * as chrono from 'chrono-node';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Pin } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Pin } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -473,7 +473,15 @@ export function BroadcastDetailView({
         />
 
         <div className="relative z-[100] flex w-full max-w-full flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-3">
-          <div className="flex justify-start" />
+          <div className="flex justify-start">
+            <Link
+              href="/broadcasts"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#121212]/15 bg-white/95 px-3 py-2 text-[13px] font-medium text-[#121212] shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition-colors hover:bg-[#f4f4f4]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+              Back to broadcasts
+            </Link>
+          </div>
 
           <div className="flex min-h-[44px] items-center justify-center">
             {initial.status === 'sent' && detailNavFallback.isLoading && !effectiveNavigation ? (

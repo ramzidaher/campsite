@@ -8,7 +8,7 @@ const TABS = 7;
 const CARD_BLOCKS = 2;
 
 /**
- * Route-level skeleton for `/profile` (My Profile HR record) — hero, section tabs, main column cards.
+ * Route-level skeleton for `/profile` (My Profile HR record)  hero, section tabs, main column cards.
  */
 export default function ProfileLoading() {
   return (

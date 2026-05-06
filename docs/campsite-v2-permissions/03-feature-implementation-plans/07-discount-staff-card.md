@@ -1,4 +1,4 @@
-# 07 — Staff discount card, verification, and tiers
+# 07  Staff discount card, verification, and tiers
 
 ## 1. Product intent
 
@@ -17,7 +17,7 @@ export function canVerifyStaffDiscountQr(role: string | null | undefined): boole
 }
 ```
 
-**Edge allowlist (must stay aligned):** `supabase/functions/_shared/staff_discount_verifier_roles.ts` — `isStaffDiscountVerifierRole()` used by **`staff-discount-verify`**.
+**Edge allowlist (must stay aligned):** `supabase/functions/_shared/staff_discount_verifier_roles.ts`  `isStaffDiscountVerifierRole()` used by **`staff-discount-verify`**.
 
 **Any change** to who may scan must update:
 
@@ -27,7 +27,7 @@ export function canVerifyStaffDiscountQr(role: string | null | undefined): boole
 
 **Note:** `scan_logs` **insert** is **service role** from the Edge Function only; authenticated clients cannot mutate (`scan_logs_deny_mutations`).
 
-## 3. Backend — Tables and RLS
+## 3. Backend  Tables and RLS
 
 **Base migration:** `supabase/migrations/20250328000001_phase4_discounts.sql`
 
@@ -47,11 +47,11 @@ export function canVerifyStaffDiscountQr(role: string | null | undefined): boole
 - **`scan_logs`:** no client **insert/update**; **select** org admin + legacy super_admin, same org.
 - **Card / tier display** uses org-scoped reads.
 
-## 4. Backend — Edge Functions
+## 4. Backend  Edge Functions
 
 | Function | Path | Role |
 |----------|------|------|
-| Token issuance | `supabase/functions/staff-discount-token/index.ts` | Active member in org — mints QR payload |
+| Token issuance | `supabase/functions/staff-discount-token/index.ts` | Active member in org  mints QR payload |
 | Verify | `supabase/functions/staff-discount-verify/index.ts` | **`isStaffDiscountVerifierRole`** then validates token; inserts **`scan_logs`** via service client |
 
 **Shared crypto:** `supabase/functions/_shared/staff_qr_crypto.ts`
@@ -72,7 +72,7 @@ export function canVerifyStaffDiscountQr(role: string | null | undefined): boole
 **File:** `apps/web/src/app/(main)/discount/scan/page.tsx`
 
 - Server gate: **`canVerifyStaffDiscountQr`** else `redirect('/discount')`.
-- Client: `DiscountScannerClient.tsx` — calls Edge verify with user JWT.
+- Client: `DiscountScannerClient.tsx`  calls Edge verify with user JWT.
 
 ### 5.3 Admin discount rules
 
@@ -84,9 +84,9 @@ export function canVerifyStaffDiscountQr(role: string | null | undefined): boole
 
 **File:** `apps/web/src/app/(main)/admin/scan-logs/page.tsx`
 
-- Gate: **`isOrgAdminRole`** (stricter than generic admin section — intentional for PII-heavy log).
+- Gate: **`isOrgAdminRole`** (stricter than generic admin section  intentional for PII-heavy log).
 
-### 5.5 Settings — discount tiers
+### 5.5 Settings  discount tiers
 
 **File:** `apps/web/src/app/(main)/settings/discount-tiers/page.tsx`
 
@@ -101,14 +101,14 @@ export function canVerifyStaffDiscountQr(role: string | null | undefined): boole
 
 ## 6. Verification checklist
 
-- [x] Coordinator **cannot** hit `/discount/scan` — server **`canVerifyStaffDiscountQr`** redirect.
-- [x] Edge verify rejects non-verifier roles — **`isStaffDiscountVerifierRole`** before processing.
+- [x] Coordinator **cannot** hit `/discount/scan`  server **`canVerifyStaffDiscountQr`** redirect.
+- [x] Edge verify rejects non-verifier roles  **`isStaffDiscountVerifierRole`** before processing.
 - [x] **`scan_logs`:** service role insert from Edge; **`org_id`** on rows; select policy same org + org admin / super_admin.
 - [x] Tier changes: **`discount_tiers`** client CRUD from admin/settings UIs; card reloads from Supabase on navigation/refresh (no special cache layer in app).
 
 ## 7. Automated tests (`npm run test --workspace=@campsite/web`)
 
-- `src/lib/__tests__/staffDiscountQr.test.ts` — `canVerifyStaffDiscountQr`.
+- `src/lib/__tests__/staffDiscountQr.test.ts`  `canVerifyStaffDiscountQr`.
 
 ## 8. Implementation order (new discount rule)
 

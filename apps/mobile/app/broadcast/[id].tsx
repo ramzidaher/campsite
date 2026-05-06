@@ -502,7 +502,7 @@ export default function BroadcastDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  /** Slight zoom only when a native BlurView sits on top—avoids hard edges without huge upscaling artifacts. */
+  /** Slight zoom only when a native BlurView sits on topavoids hard edges without huge upscaling artifacts. */
   backdropZoomForBlur: { transform: [{ scale: 1.04 }] },
   loadingBody: { flex: 1, justifyContent: 'center', paddingBottom: 72 },
   scroll: { flex: 1 },

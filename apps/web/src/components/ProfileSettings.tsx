@@ -1393,7 +1393,7 @@ export function ProfileSettings({
                     {shellMode !== 'off'
                       ? 'Uses the celebration mode you selected above; it overrides the holiday calendar.'
                       : effectiveCelebrationMode === 'off'
-                        ? 'No organisation holiday window matches today’s date — the shell stays without a holiday tint.'
+                        ? 'No organisation holiday window matches today’s date  the shell stays without a holiday tint.'
                         : 'Matched from today’s date and your organisation’s holiday calendar. Pick a mode above to override.'}
                   </p>
                 </div>

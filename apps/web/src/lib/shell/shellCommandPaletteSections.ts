@@ -29,7 +29,7 @@ function adminItemsToPalette(
 
 /**
  * Navigation + quick actions for the shell command menu (⌘K).
- * Mirrors primary sidebar visibility — keep in sync with `AppShell` nav.
+ * Mirrors primary sidebar visibility  keep in sync with `AppShell` nav.
  */
 export function buildShellCommandPaletteSections(opts: {
   orgName: string;

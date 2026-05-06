@@ -59,7 +59,7 @@ export default async function CandidatePortalPage({ params }: { params: Promise<
         dateStyle: 'medium',
         timeStyle: 'short',
       })
-    : '—';
+    : '';
 
   return (
     <div
@@ -128,7 +128,7 @@ export default async function CandidatePortalPage({ params }: { params: Promise<
           className="mt-8 text-center text-[11px]"
           style={{ color: 'var(--org-brand-muted)' }}
         >
-          This page is private to you — keep the link safe.
+          This page is private to you  keep the link safe.
         </p>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { EmployeeQuickViewModal } from '@/components/admin/hr/EmployeeQuickViewM
 import { EmployeeDirectoryGraph } from '@/components/genz/EmployeeDirectoryGraph';
 import { useUiModePreference } from '@/hooks/useUiModePreference';
 import type { UiMode } from '@/lib/uiMode';
+import { ArrowRight, ChevronLeft, ChevronRight, RotateCcw, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -64,7 +65,7 @@ function contractLabel(ct: string | null) {
     case 'part_time': return 'Part-time';
     case 'contractor': return 'Contractor';
     case 'zero_hours': return 'Zero hours';
-    default: return '—';
+    default: return '';
   }
 }
 
@@ -73,7 +74,7 @@ function locationLabel(wl: string | null) {
     case 'office': return 'Office';
     case 'remote': return 'Remote';
     case 'hybrid': return 'Hybrid';
-    default: return '—';
+    default: return '';
   }
 }
 
@@ -82,7 +83,7 @@ function initials(name: string) {
 }
 
 function hrRoleLabel(role: string) {
-  return role ? role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
+  return role ? role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
 }
 
 function hrStatusBadge(status: string) {
@@ -108,6 +109,11 @@ function hrStatusBadge(status: string) {
       Inactive
     </span>
   );
+}
+
+function normalizePageSize(value?: number): 25 | 50 | 100 | 200 {
+  if (value === 50 || value === 100 || value === 200) return value;
+  return 25;
 }
 
 function HRQuickViewSummary({
@@ -146,37 +152,37 @@ function HRQuickViewSummary({
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Job title</dt>
           <dd className="mt-0.5 text-[#121212]">
-            {r.job_title || '—'}
+            {r.job_title || ''}
             {r.grade_level ? <span className="ml-1 text-[11px] text-[#9b9b9b]">({r.grade_level})</span> : null}
           </dd>
         </div>
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contract</dt>
           <dd className="mt-0.5 text-[#121212]">
-            {r.contract_type ? contractLabel(r.contract_type) : '—'}
+            {r.contract_type ? contractLabel(r.contract_type) : ''}
             {r.fte != null && r.fte < 1 ? ` · ${Math.round(r.fte * 100)}% FTE` : ''}
           </dd>
         </div>
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Location</dt>
-          <dd className="mt-0.5 text-[#121212]">{r.work_location ? locationLabel(r.work_location) : '—'}</dd>
+          <dd className="mt-0.5 text-[#121212]">{r.work_location ? locationLabel(r.work_location) : ''}</dd>
         </div>
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Start date</dt>
-          <dd className="mt-0.5 text-[#121212]">{r.employment_start_date ?? '—'}</dd>
+          <dd className="mt-0.5 text-[#121212]">{r.employment_start_date ?? ''}</dd>
         </div>
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Tenure</dt>
           <dd className="mt-0.5 text-[#121212]">
             {r.length_of_service_years != null && r.length_of_service_months != null
               ? `${r.length_of_service_years}y ${r.length_of_service_months}m`
-              : '—'}
+              : ''}
           </dd>
         </div>
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Hours / positions</dt>
           <dd className="mt-0.5 text-[#121212]">
-            {r.weekly_hours != null ? `${r.weekly_hours}h` : '—'}
+            {r.weekly_hours != null ? `${r.weekly_hours}h` : ''}
             {r.positions_count != null && r.positions_count > 1 ? (
               <span className="text-[#9b9b9b]"> · {r.positions_count} positions</span>
             ) : null}
@@ -191,21 +197,21 @@ function HRQuickViewSummary({
                 {onProbation ? ' (on probation)' : ''}
               </span>
             ) : (
-              '—'
+              ''
             )}
           </dd>
         </div>
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Salary band</dt>
-          <dd className="mt-0.5 text-[#121212]">{r.salary_band || '—'}</dd>
+          <dd className="mt-0.5 text-[#121212]">{r.salary_band || ''}</dd>
         </div>
         <div className="sm:col-span-2">
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Departments</dt>
-          <dd className="mt-0.5 text-[#121212]">{r.department_names.length ? r.department_names.join(', ') : '—'}</dd>
+          <dd className="mt-0.5 text-[#121212]">{r.department_names.length ? r.department_names.join(', ') : ''}</dd>
         </div>
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Reports to</dt>
-          <dd className="mt-0.5 text-[#121212]">{r.reports_to_name || '—'}</dd>
+          <dd className="mt-0.5 text-[#121212]">{r.reports_to_name || ''}</dd>
         </div>
         <div>
           <dt className="text-[11.5px] font-medium uppercase tracking-wide text-[#9b9b9b]">Role</dt>
@@ -279,6 +285,7 @@ export function HRDirectoryClient({
   initialRows,
   dashStats,
   initialQuery = '',
+  initialPageLimit = 25,
   initialUiMode = 'classic',
 }: {
   orgId: string;
@@ -291,6 +298,8 @@ export function HRDirectoryClient({
   dashStats: Record<string, unknown> | null;
   /** Optional query seeded from URL (`?q=`), used by top-bar search. */
   initialQuery?: string;
+  /** Optional page size seeded from URL (`?limit=`), defaults to 25. */
+  initialPageLimit?: number;
   initialUiMode?: UiMode;
 }) {
   const columnOptions = [
@@ -329,6 +338,8 @@ export function HRDirectoryClient({
   }, [stats]);
 
   const [q, setQ] = useState(initialQuery);
+  const [rowsPerPage, setRowsPerPage] = useState<25 | 50 | 100 | 200>(() => normalizePageSize(initialPageLimit));
+  const [page, setPage] = useState(1);
   const [filterContract, setFilterContract] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterHasRecord, setFilterHasRecord] = useState('');
@@ -440,8 +451,24 @@ export function HRDirectoryClient({
       })
       .map(({ row }) => row);
   }, [indexedRows, deferredQ, filterContract, filterLocation, filterHasRecord]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filtered.slice(start, start + rowsPerPage);
+  }, [currentPage, filtered, rowsPerPage]);
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+  const rangeEnd = filtered.length === 0 ? 0 : Math.min(filtered.length, currentPage * rowsPerPage);
 
   const today = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    setPage(1);
+  }, [deferredQ, filterContract, filterLocation, filterHasRecord, rowsPerPage, tab]);
+
+  useEffect(() => {
+    setRowsPerPage(normalizePageSize(initialPageLimit));
+  }, [initialPageLimit]);
 
   return (
     <div
@@ -711,8 +738,9 @@ export function HRDirectoryClient({
                   setDashboardStatsError(null);
                   setDashboardStatsState('idle');
                 }}
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] text-[#121212] transition-colors hover:bg-[#f5f4f1]"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] text-[#121212] transition-colors hover:bg-[#f5f4f1]"
               >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                 Retry overview
               </button>
             </div>
@@ -726,38 +754,65 @@ export function HRDirectoryClient({
       {tab === 'directory' ? (
         <>
           {/* Filters */}
-          <div className={isInteractiveDirectoryView ? 'mt-3 mb-2 flex flex-wrap gap-3 px-5 sm:px-7' : 'mb-5 flex flex-wrap gap-3'}>
-            <input
-              type="search"
-              placeholder="Search name, email, role…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="h-9 w-64 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] outline-none focus:border-[#121212]"
-            />
-            <FormSelect value={filterContract} onChange={(e) => setFilterContract(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
-              <option value="">All contracts</option>
-              <option value="full_time">Full-time</option>
-              <option value="part_time">Part-time</option>
-              <option value="contractor">Contractor</option>
-              <option value="zero_hours">Zero hours</option>
-            </FormSelect>
-            <FormSelect value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
-              <option value="">All locations</option>
-              <option value="office">Office</option>
-              <option value="remote">Remote</option>
-              <option value="hybrid">Hybrid</option>
-            </FormSelect>
-            <FormSelect value={filterHasRecord} onChange={(e) => setFilterHasRecord(e.target.value)} className="h-9 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
-              <option value="">All members</option>
-              <option value="yes">Has HR record</option>
-              <option value="no">Missing HR record</option>
-            </FormSelect>
+          <div className={isInteractiveDirectoryView ? 'mt-3 mb-2 rounded-xl border border-[#e7e2d8] bg-[#fcfbf8] p-3 px-5 sm:px-7' : 'mb-5 rounded-xl border border-[#e7e2d8] bg-[#fcfbf8] p-3'}>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="min-w-[14rem] flex-1">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Search</span>
+                <input
+                  type="search"
+                  placeholder="Search name, email, role..."
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] outline-none focus:border-[#121212]"
+                />
+              </label>
+              <div className="w-[12rem]">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Contract</span>
+                <FormSelect value={filterContract} onChange={(e) => setFilterContract(e.target.value)} className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
+                  <option value="">All contracts</option>
+                  <option value="full_time">Full-time</option>
+                  <option value="part_time">Part-time</option>
+                  <option value="contractor">Contractor</option>
+                  <option value="zero_hours">Zero hours</option>
+                </FormSelect>
+              </div>
+              <div className="w-[12rem]">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Location</span>
+                <FormSelect value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
+                  <option value="">All locations</option>
+                  <option value="office">Office</option>
+                  <option value="remote">Remote</option>
+                  <option value="hybrid">Hybrid</option>
+                </FormSelect>
+              </div>
+              <div className="w-[12rem]">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">HR record</span>
+                <FormSelect value={filterHasRecord} onChange={(e) => setFilterHasRecord(e.target.value)} className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]">
+                  <option value="">All members</option>
+                  <option value="yes">Has HR record</option>
+                  <option value="no">Missing HR record</option>
+                </FormSelect>
+              </div>
+              <div className="w-[8rem]">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Rows</span>
+                <FormSelect
+                  value={String(rowsPerPage)}
+                  onChange={(e) => setRowsPerPage(normalizePageSize(Number.parseInt(e.target.value, 10)))}
+                  className="h-9 w-full rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#6b6b6b] outline-none focus:border-[#121212]"
+                >
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                </FormSelect>
+              </div>
             <div ref={columnsMenuRef} className="relative z-40">
               <button
                 type="button"
                 onClick={() => setIsColumnsMenuOpen((prev) => !prev)}
-                className="flex h-9 items-center rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#4a4a4a]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#4a4a4a]"
               >
+                <Settings2 className="h-3.5 w-3.5" aria-hidden />
                 Columns
               </button>
               {isColumnsMenuOpen ? (
@@ -803,40 +858,44 @@ export function HRDirectoryClient({
                 </div>
               ) : null}
             </div>
-            <span className="ml-auto flex items-center text-[12px] text-[#9b9b9b]">{filtered.length} of {initialRows.length}</span>
+              <span className="ml-auto flex items-center text-[12px] text-[#9b9b9b]">
+                Showing {rangeStart}-{rangeEnd} of {filtered.length} ({initialRows.length} total)
+              </span>
+            </div>
           </div>
 
           {uiMode === 'interactive' ? (
             <EmployeeDirectoryGraph rows={filtered} />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-white">
-              <table className="w-full min-w-[840px] text-[13px]">
-                <thead>
-                  <tr className="border-b border-[#ececec] text-left text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-                    <th className="px-4 py-3">Name</th>
-                    {visibleColumns.jobTitle ? <th className="px-4 py-3">Job title</th> : null}
-                    {visibleColumns.contract ? <th className="px-4 py-3">Contract</th> : null}
-                    {visibleColumns.location ? <th className="px-4 py-3">Location</th> : null}
-                    {visibleColumns.startDate ? <th className="px-4 py-3">Start date</th> : null}
-                    {visibleColumns.tenure ? <th className="px-4 py-3">Tenure</th> : null}
-                    {visibleColumns.hoursPositions ? <th className="px-4 py-3">Hrs / pos.</th> : null}
-                    {visibleColumns.probation ? <th className="px-4 py-3">Probation ends</th> : null}
-                    {visibleColumns.departments ? <th className="px-4 py-3">Departments</th> : null}
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#ececec]">
-                  {filtered.length === 0 ? (
-                    <tr><td colSpan={2 + columnOptions.filter((c) => visibleColumns[c.key]).length} className="px-4 py-8 text-center text-[#9b9b9b]">No members match.</td></tr>
-                  ) : null}
-                  {filtered.map((r) => {
-                    const onProbation = r.probation_end_date && r.probation_end_date >= today;
-                    return (
-                      <tr
-                        key={r.user_id}
-                        className="group cursor-pointer hover:bg-[#faf9f6]"
-                        onClick={() => setPreviewRow(r)}
-                      >
+            <>
+              <div className="overflow-x-auto rounded-xl border border-[#d8d8d8] bg-white">
+                <table className="w-full min-w-[840px] text-[13px]">
+                  <thead>
+                    <tr className="border-b border-[#ececec] text-left text-[11.5px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+                      <th className="px-4 py-3">Name</th>
+                      {visibleColumns.jobTitle ? <th className="px-4 py-3">Job title</th> : null}
+                      {visibleColumns.contract ? <th className="px-4 py-3">Contract</th> : null}
+                      {visibleColumns.location ? <th className="px-4 py-3">Location</th> : null}
+                      {visibleColumns.startDate ? <th className="px-4 py-3">Start date</th> : null}
+                      {visibleColumns.tenure ? <th className="px-4 py-3">Tenure</th> : null}
+                      {visibleColumns.hoursPositions ? <th className="px-4 py-3">Hrs / pos.</th> : null}
+                      {visibleColumns.probation ? <th className="px-4 py-3">Probation ends</th> : null}
+                      {visibleColumns.departments ? <th className="px-4 py-3">Departments</th> : null}
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#ececec]">
+                    {filtered.length === 0 ? (
+                      <tr><td colSpan={2 + columnOptions.filter((c) => visibleColumns[c.key]).length} className="px-4 py-8 text-center text-[#9b9b9b]">No members match.</td></tr>
+                    ) : null}
+                    {pagedRows.map((r) => {
+                      const onProbation = r.probation_end_date && r.probation_end_date >= today;
+                      return (
+                        <tr
+                          key={r.user_id}
+                          className="group cursor-pointer hover:bg-[#faf9f6]"
+                          onClick={() => setPreviewRow(r)}
+                        >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
                             {r.avatar_url ? (
@@ -852,7 +911,7 @@ export function HRDirectoryClient({
                         </td>
                         {visibleColumns.jobTitle ? (
                           <td className="px-4 py-3 text-[#4a4a4a]">
-                            {r.job_title || <span className="text-[#c8c8c8]">—</span>}
+                            {r.job_title || <span className="text-[#c8c8c8]"></span>}
                             {r.grade_level ? <span className="ml-1 whitespace-nowrap text-[11px] text-[#9b9b9b]">({r.grade_level})</span> : null}
                           </td>
                         ) : null}
@@ -862,14 +921,14 @@ export function HRDirectoryClient({
                               <span className="rounded-full bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#4a4a4a]">
                                 {contractLabel(r.contract_type)}{r.fte && r.fte < 1 ? ` ${Math.round(r.fte * 100)}%` : ''}
                               </span>
-                            ) : <span className="text-[#c8c8c8]">—</span>}
+                            ) : <span className="text-[#c8c8c8]"></span>}
                           </td>
                         ) : null}
                         {visibleColumns.location ? (
-                          <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.work_location ? locationLabel(r.work_location) : <span className="text-[#c8c8c8]">—</span>}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.work_location ? locationLabel(r.work_location) : <span className="text-[#c8c8c8]"></span>}</td>
                         ) : null}
                         {visibleColumns.startDate ? (
-                          <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.employment_start_date ?? <span className="text-[#c8c8c8]">—</span>}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-[#4a4a4a]">{r.employment_start_date ?? <span className="text-[#c8c8c8]"></span>}</td>
                         ) : null}
                         {visibleColumns.tenure ? (
                           <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#4a4a4a]">
@@ -878,13 +937,13 @@ export function HRDirectoryClient({
                                 {r.length_of_service_years}y {r.length_of_service_months}m
                               </span>
                             ) : (
-                              <span className="text-[#c8c8c8]">—</span>
+                              <span className="text-[#c8c8c8]"></span>
                             )}
                           </td>
                         ) : null}
                         {visibleColumns.hoursPositions ? (
                           <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#4a4a4a]">
-                            {r.weekly_hours != null ? <span>{r.weekly_hours}h</span> : <span className="text-[#c8c8c8]">—</span>}
+                            {r.weekly_hours != null ? <span>{r.weekly_hours}h</span> : <span className="text-[#c8c8c8]"></span>}
                             {r.positions_count != null && r.positions_count > 1 ? (
                               <span className="text-[#9b9b9b]"> · {r.positions_count} pos.</span>
                             ) : null}
@@ -896,7 +955,7 @@ export function HRDirectoryClient({
                               <span className={['text-[12px]', onProbation ? 'font-medium text-[#c2410c]' : 'text-[#6b6b6b]'].join(' ')}>
                                 {r.probation_end_date}{onProbation ? ' ●' : ''}
                               </span>
-                            ) : <span className="text-[#c8c8c8]">—</span>}
+                            ) : <span className="text-[#c8c8c8]"></span>}
                           </td>
                         ) : null}
                         {visibleColumns.departments ? (
@@ -925,24 +984,51 @@ export function HRDirectoryClient({
                         >
                           <button
                             type="button"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[16px] font-medium text-[#121212] opacity-70 transition-opacity hover:bg-[#ececec] group-hover:opacity-100"
+                            className="inline-flex h-8 items-center justify-center gap-1 rounded-lg px-2 text-[12px] font-medium text-[#121212] opacity-70 transition-opacity hover:bg-[#ececec] group-hover:opacity-100"
                             aria-label="Preview employee"
                             title="Preview"
                             onClick={() => setPreviewRow(r)}
                           >
-                            →
+                            Open
+                            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                           </button>
                         </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {filtered.length > 0 ? (
+                <div className="mt-3 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage <= 1}
+                    className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[12px] text-[#4a4a4a] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
+                    Previous
+                  </button>
+                  <span className="text-[12px] text-[#6b6b6b]">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#d8d8d8] bg-white px-2.5 text-[12px] text-[#4a4a4a] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                    <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
           {initialRows.some((r) => !r.hr_record_id) ? (
             <p className="mt-4 text-[12px] text-[#9b9b9b]">
-              {initialRows.filter((r) => !r.hr_record_id).length} member{initialRows.filter((r) => !r.hr_record_id).length === 1 ? '' : 's'} without an HR record — open their file to create one.
+              {initialRows.filter((r) => !r.hr_record_id).length} member{initialRows.filter((r) => !r.hr_record_id).length === 1 ? '' : 's'} without an HR record  open their file to create one.
             </p>
           ) : null}
         </>

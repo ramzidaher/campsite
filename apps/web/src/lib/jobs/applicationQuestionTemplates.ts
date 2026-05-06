@@ -50,13 +50,13 @@ function opts(rows: { label: string }[]): ScreeningQuestionOption[] {
   return rows.map((r) => ({ id: rid(), label: r.label }));
 }
 
-/** Curated starters — edit prompts after inserting to match your role. */
+/** Curated starters  edit prompts after inserting to match your role. */
 export const APPLICATION_QUESTION_TEMPLATES: ApplicationQuestionTemplate[] = [
   {
     id: 'why-role',
     category: 'Motivation',
     title: 'Interest in this role',
-    description: 'Open paragraph — common across postings.',
+    description: 'Open paragraph  common across postings.',
     build: () => ({
       questionType: 'paragraph',
       prompt: 'What draws you to this role and our organisation?',

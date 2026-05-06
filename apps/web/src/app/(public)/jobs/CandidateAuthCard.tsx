@@ -1,10 +1,16 @@
 'use client';
 
+import {
+  CANDIDATE_PERSONA_OPTIONS,
+  CANDIDATE_SKILLS_MAX,
+  CANDIDATE_SKILL_OPTIONS,
+} from '@/app/(public)/jobs/candidatePersonaOptions';
 import { tenantJobsSubrouteRelativePath, tenantPublicJobsIndexRelativePath } from '@/lib/tenant/adminUrl';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { ArrowLeft, ArrowRight, Check, PartyPopper } from 'lucide-react';
 
 type Tab = 'login' | 'register';
 type RegStep = 0 | 1;
@@ -18,19 +24,8 @@ export type CandidateAuthCardProps = {
   defaultNext?: string;
 };
 
-const SKILL_OPTIONS = [
-  'React', 'Python', 'Design', 'Leadership', 'Data',
-  'DevOps', 'Marketing', 'Sales', 'Strategy', 'Finance', 'AI/ML', 'Writing',
-];
-
-const PERSONA_OPTIONS = [
-  { emoji: '🚀', label: 'Rockstar' },
-  { emoji: '🧙', label: 'Wizard' },
-  { emoji: '🥷', label: 'Ninja' },
-  { emoji: '🤖', label: 'Robot' },
-  { emoji: '🐉', label: 'Dragon' },
-  { emoji: '🦅', label: 'Phoenix' },
-];
+const SKILL_OPTIONS = CANDIDATE_SKILL_OPTIONS;
+const PERSONA_OPTIONS = CANDIDATE_PERSONA_OPTIONS;
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -48,7 +43,7 @@ function passwordStrength(pw: string): { score: number; label: string; color: st
   if (pw.length >= 10) s++;
   if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) s++;
   if (/[^A-Za-z0-9]/.test(pw)) s++;
-  const labels = ['', 'Weak', 'Fair', 'Strong', 'Unbreakable 🔒'];
+  const labels = ['', 'Weak', 'Fair', 'Strong', 'Unbreakable'];
   const colors = ['', '#ef4444', '#f59e0b', '#22c55e', '#22c55e'];
   return { score: s, label: labels[s] ?? '', color: colors[s] ?? '' };
 }
@@ -80,14 +75,14 @@ export function CandidateAuthCard({
   const liEmailValid = liEmail.includes('@') && liEmail.includes('.');
   const liEmailValidRef = useRef(false);
 
-  // ── register state — step 0
+  // ── register state  step 0
   const [rName, setRName] = useState('');
   const [rEmail, setREmail] = useState('');
   const [rPw, setRPw] = useState('');
   const rEmailValid = rEmail.includes('@') && rEmail.includes('.');
   const rEmailValidRef = useRef(false);
 
-  // ── register state — step 1 (persona / skills)
+  // ── register state  step 1 (persona / skills)
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 
@@ -134,7 +129,7 @@ export function CandidateAuthCard({
   useEffect(() => {
     if (liEmailValid && !liEmailValidRef.current) {
       liEmailValidRef.current = true;
-      showToast('+50 XP — email confirmed!');
+      showToast('+50 XP  email confirmed!');
     } else if (!liEmailValid) {
       liEmailValidRef.current = false;
     }
@@ -145,7 +140,7 @@ export function CandidateAuthCard({
   useEffect(() => {
     if (rEmailValid && !rEmailValidRef.current) {
       rEmailValidRef.current = true;
-      showToast('+20 XP — email saved!');
+      showToast('+20 XP  email saved!');
     } else if (!rEmailValid) {
       rEmailValidRef.current = false;
     }
@@ -157,12 +152,16 @@ export function CandidateAuthCard({
     e.preventDefault();
     setLiLoading(true);
     setLiError(null);
-    const { error } = await createClient().auth.signInWithPassword({ email: liEmail, password: liPw });
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email: liEmail, password: liPw });
     if (error) {
       setLiError(error.message);
       setLiLoading(false);
       return;
     }
+    const { error: claimErr } = await supabase.rpc('claim_my_applications');
+    void claimErr;
+    setLiLoading(false);
     showToast('Welcome back, job hunter!');
     router.replace(nextUrl);
     router.refresh();
@@ -213,7 +212,7 @@ export function CandidateAuthCard({
       if (!rName.trim()) { showToast('What do we call you?'); return; }
       if (!rEmailValid) { showToast('Hmm, check your email first'); return; }
       if (rPw.length < 8) { showToast('Password needs 8+ characters'); return; }
-      showToast('+25 XP — step 1 complete!');
+      showToast('+25 XP  step 1 complete!');
     }
     setRegStep(s);
   }
@@ -221,17 +220,17 @@ export function CandidateAuthCard({
   function toggleSkill(skill: string) {
     if (selectedSkills.includes(skill)) {
       setSelectedSkills((s) => s.filter((x) => x !== skill));
-    } else if (selectedSkills.length < 5) {
+    } else if (selectedSkills.length < CANDIDATE_SKILLS_MAX) {
       setSelectedSkills((s) => [...s, skill]);
-      showToast(`+8 XP — ${skill} added!`);
+      showToast(`+8 XP  ${skill} added!`);
     } else {
-      showToast('Max 5 superpowers!');
+      showToast(`Max ${CANDIDATE_SKILLS_MAX} superpowers!`);
     }
   }
 
   function pickPersona(emoji: string, label: string) {
     setSelectedPersona(emoji);
-    showToast(`+15 XP — ${label} selected!`);
+    showToast(`+15 XP  ${label} selected!`);
   }
 
   // ── shared styles
@@ -461,7 +460,7 @@ export function CandidateAuthCard({
                 color: 'var(--jobs-on-primary, #fff)',
               }}
             >
-              {liLoading ? 'Signing in…' : 'Launch my career →'}
+              {liLoading ? 'Signing in…' : 'Launch my career'}
             </button>
           </form>
         ) : /* ── Register form ── */
@@ -474,7 +473,7 @@ export function CandidateAuthCard({
               }}
               aria-hidden
             >
-              ✓
+              <Check className="h-5 w-5 text-[var(--org-brand-primary)]" aria-hidden />
             </div>
             <h3
               className="font-authSerif text-[1.375rem]"
@@ -498,12 +497,12 @@ export function CandidateAuthCard({
                 color: 'var(--jobs-on-primary, #fff)',
               }}
             >
-              Go to sign in →
+              <span className="inline-flex items-center gap-1">Go to sign in <ArrowRight className="h-4 w-4" aria-hidden /></span>
             </button>
           </div>
         ) : (
           <form onSubmit={(e) => void handleRegister(e)}>
-            {/* Step dots — 2 steps */}
+            {/* Step dots  2 steps */}
             <div className="mb-4 flex items-center justify-center gap-1.5">
               {([0, 1] as const).map((i) => (
                 <div
@@ -587,7 +586,7 @@ export function CandidateAuthCard({
                     value={rPw}
                     onChange={(e) => setRPw(e.target.value)}
                   />
-                  {/* Strength bar — always visible once focused/typed */}
+                  {/* Strength bar  always visible once focused/typed */}
                   <div className="mt-2">
                     <div className="flex gap-1">
                       {[1, 2, 3, 4].map((i) => (
@@ -620,7 +619,7 @@ export function CandidateAuthCard({
                     color: 'var(--jobs-on-primary, #fff)',
                   }}
                 >
-                  Next: pick your vibe →
+                  <span className="inline-flex items-center gap-1">Next: pick your vibe <ArrowRight className="h-4 w-4" aria-hidden /></span>
                 </button>
               </div>
             ) : (
@@ -662,7 +661,7 @@ export function CandidateAuthCard({
                   >
                     Your superpowers{' '}
                     <span style={{ color: 'var(--org-brand-primary)', textTransform: 'none', letterSpacing: 0 }}>
-                      (pick up to 5)
+                      (pick up to {CANDIDATE_SKILLS_MAX})
                     </span>
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -710,7 +709,7 @@ export function CandidateAuthCard({
                       background: 'var(--org-brand-bg)',
                     }}
                   >
-                    ← Back
+                    <span className="inline-flex items-center gap-1"><ArrowLeft className="h-4 w-4" aria-hidden /> Back</span>
                   </button>
                   <button
                     type="submit"
@@ -721,7 +720,7 @@ export function CandidateAuthCard({
                       color: 'var(--jobs-on-primary, #fff)',
                     }}
                   >
-                    {rLoading ? 'Creating…' : 'Create my profile 🎉'}
+                    {rLoading ? 'Creating…' : <span className="inline-flex items-center gap-1">Create my profile <PartyPopper className="h-4 w-4" aria-hidden /></span>}
                   </button>
                 </div>
               </div>
@@ -741,7 +740,7 @@ export function CandidateAuthCard({
               className="font-semibold underline underline-offset-2 hover:opacity-70"
               style={{ color: 'var(--org-brand-text)' }}
             >
-              Join the party →
+              <span className="inline-flex items-center gap-1">Join the party <ArrowRight className="h-3.5 w-3.5" aria-hidden /></span>
             </button>
           </>
         ) : (
@@ -753,7 +752,7 @@ export function CandidateAuthCard({
               className="font-semibold underline underline-offset-2 hover:opacity-70"
               style={{ color: 'var(--org-brand-text)' }}
             >
-              Sign in →
+              <span className="inline-flex items-center gap-1">Sign in <ArrowRight className="h-3.5 w-3.5" aria-hidden /></span>
             </button>
           </>
         )}
@@ -766,7 +765,7 @@ export function CandidateAuthCard({
           className="text-[12px] transition-opacity hover:opacity-70"
           style={{ color: 'var(--org-brand-muted, #9b9b9b)' }}
         >
-          ← Browse open roles
+          <span className="inline-flex items-center gap-1"><ArrowLeft className="h-3.5 w-3.5" aria-hidden /> Browse open roles</span>
         </Link>
       </p>
 

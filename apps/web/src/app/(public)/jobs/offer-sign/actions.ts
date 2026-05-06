@@ -272,9 +272,9 @@ export async function submitOfferSignature(
     .filter((e): e is string => Boolean(e));
 
   const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
-  const subject = `${orgName}: Signed offer — ${jobTitle}`;
+  const subject = `${orgName}: Signed offer  ${jobTitle}`;
   const htmlBody = `
-<p>The offer letter for <strong>${escapeHtml(candName)}</strong> (${escapeHtml(candEmail)}) — <strong>${escapeHtml(jobTitle)}</strong> — has been signed electronically.</p>
+<p>The offer letter for <strong>${escapeHtml(candName)}</strong> (${escapeHtml(candEmail)})  <strong>${escapeHtml(jobTitle)}</strong>  has been signed electronically.</p>
 <p>Signed by: ${escapeHtml(typed)}</p>
 `.trim();
 

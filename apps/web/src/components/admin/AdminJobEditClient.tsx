@@ -86,7 +86,7 @@ export function AdminJobEditClient({
   requestHref: string;
   /** Careers-site funnel counts (live listings only). */
   publicMetrics?: JobPublicMetrics | null;
-  /** From org HR metric settings — used for diversity target codes. */
+  /** From org HR metric settings  used for diversity target codes. */
   eqCategoryOptions?: { code: string; label: string }[];
   applicationFormOptions?: { id: string; name: string | null }[];
 }) {
@@ -296,12 +296,12 @@ export function AdminJobEditClient({
               <>
                 Status: {jobListingStatusLabel(job.status)}
                 {job.status === 'draft' ? ' · Drafts use a temporary URL until you publish.' : null}
-                {isArchived ? ' · Archived — restore to draft to edit or publish again.' : null}
+                {isArchived ? ' · Archived  restore to draft to edit or publish again.' : null}
               </>
             )}
           </p>
           <p className="mt-1.5 max-w-2xl text-[12px] leading-relaxed text-[#6b6b6b]">
-            Prefilled from approved recruitment brief — title, grade / level, salary band, and contract type.
+            Prefilled from approved recruitment brief  title, grade / level, salary band, and contract type.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-3">

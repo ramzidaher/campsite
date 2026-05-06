@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: 'Terms of service · Campsite',
-  description: 'Terms of service for the Campsite app — Common Ground Studios Ltd',
+  description: 'Terms of service for the Campsite app  Common Ground Studios Ltd',
 };
 
 export default async function TermsPage() {

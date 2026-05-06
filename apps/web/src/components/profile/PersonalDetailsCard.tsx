@@ -34,7 +34,7 @@ export function PersonalDetailsCard({
   const [pronounsValue, setPronounsValue] = useState(pronouns ?? '');
   const [showPronounsValue, setShowPronounsValue] = useState(showPronouns);
 
-  const visiblePronouns = pronounsValue.trim() || '—';
+  const visiblePronouns = pronounsValue.trim() || '';
 
   async function save() {
     setLoading(true);
@@ -88,7 +88,7 @@ export function PersonalDetailsCard({
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Full name</dt>
             <dd className="text-[#121212]">
-              {editing ? <input className={inputClass} value={nameValue} onChange={(e) => setNameValue(e.target.value)} /> : nameValue || '—'}
+              {editing ? <input className={inputClass} value={nameValue} onChange={(e) => setNameValue(e.target.value)} /> : nameValue || ''}
             </dd>
           </div>
           <div>
@@ -121,7 +121,7 @@ export function PersonalDetailsCard({
               {editing ? (
                 <input className={inputClass} value={preferredNameValue} onChange={(e) => setPreferredNameValue(e.target.value)} />
               ) : (
-                preferredNameValue.trim() || '—'
+                preferredNameValue.trim() || ''
               )}
             </dd>
           </div>

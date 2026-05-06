@@ -29,7 +29,7 @@ function screeningAnswerDisplay(row: {
   if (row.type_snapshot === 'yes_no') {
     if (row.answer_yes_no === true) return 'Yes';
     if (row.answer_yes_no === false) return 'No';
-    return '—';
+    return '';
   }
   if (row.type_snapshot === 'single_choice' && row.answer_choice_id) {
     const raw = row.options_snapshot;
@@ -43,7 +43,7 @@ function screeningAnswerDisplay(row: {
     }
     return row.answer_choice_id;
   }
-  return (row.answer_text ?? '').trim() || '—';
+  return (row.answer_text ?? '').trim() || '';
 }
 
 async function requireOrgPermission(permissionKey: string) {

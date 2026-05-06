@@ -2,9 +2,9 @@
 
 ## Glossary
 
-- **Broadcast channel** — A row in `public.broadcast_channels` tied to one `departments` row. It is the **routing key** for targeted (“specific”) broadcasts: who receives a sent post depends on `user_subscriptions` for that `channel_id`, with exceptions below.
-- **`broadcasts.channel_id`** — Set for non–org-wide sends; must reference a `broadcast_channels` row for the same `dept_id` as the broadcast. Org-wide sends use `is_org_wide = true` and keep `channel_id` null.
-- **`user_subscriptions`** — `(user_id, channel_id)` with `subscribed` boolean. Members opt in or out per channel (registration and **Settings → Broadcast channels**).
+- **Broadcast channel**  A row in `public.broadcast_channels` tied to one `departments` row. It is the **routing key** for targeted (“specific”) broadcasts: who receives a sent post depends on `user_subscriptions` for that `channel_id`, with exceptions below.
+- **`broadcasts.channel_id`**  Set for non–org-wide sends; must reference a `broadcast_channels` row for the same `dept_id` as the broadcast. Org-wide sends use `is_org_wide = true` and keep `channel_id` null.
+- **`user_subscriptions`**  `(user_id, channel_id)` with `subscribed` boolean. Members opt in or out per channel (registration and **Settings → Broadcast channels**).
 
 Historical note: before migration `20260430270000_rename_broadcast_channels.sql`, the table was `dept_categories` and columns were `cat_id`.
 
@@ -24,10 +24,10 @@ Feed visibility uses `broadcast_visible_to_reader`, which for sent rows delegate
 
 ## Product surfaces
 
-- **Compose** — Picks department + channel (unless org-wide). Copy should say “channel”, not “tag”.
-- **Admin → Departments** — Org admins maintain the list of channels per department.
-- **Registration** — Join flow stores chosen channels in `register_subscriptions` metadata as `{ channel_id, subscribed }` (legacy `cat_id` is still accepted server-side).
-- **Settings** — Members can toggle `user_subscriptions` after join.
+- **Compose**  Picks department + channel (unless org-wide). Copy should say “channel”, not “tag”.
+- **Admin → Departments**  Org admins maintain the list of channels per department.
+- **Registration**  Join flow stores chosen channels in `register_subscriptions` metadata as `{ channel_id, subscribed }` (legacy `cat_id` is still accepted server-side).
+- **Settings**  Members can toggle `user_subscriptions` after join.
 
 ## Related migrations
 

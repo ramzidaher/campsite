@@ -1,4 +1,4 @@
-# Page Layer Stage G — Remaining Hotspots Pass
+# Page Layer Stage G  Remaining Hotspots Pass
 **Date:** 2026-05-01  
 **Owner:** Engineering  
 **Scope:**  

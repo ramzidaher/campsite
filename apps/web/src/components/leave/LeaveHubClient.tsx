@@ -162,15 +162,15 @@ function leaveKindBookingHint(kind: string): string | null {
     case 'toil':
       return 'Deducts from your TOIL balance once approved.';
     case 'parental':
-      return 'Parental leave — manager approval required.';
+      return 'Parental leave  manager approval required.';
     case 'bereavement':
-      return 'Bereavement leave — manager approval required.';
+      return 'Bereavement leave  manager approval required.';
     case 'compassionate':
-      return 'Compassionate leave — manager approval required.';
+      return 'Compassionate leave  manager approval required.';
     case 'study':
-      return 'Study leave — manager approval may be required.';
+      return 'Study leave  manager approval may be required.';
     case 'unpaid':
-      return 'Unpaid leave — manager approval required.';
+      return 'Unpaid leave  manager approval required.';
     default:
       return null;
   }
@@ -1245,7 +1245,7 @@ export function LeaveHubClient({
   const formTripDays =
     formStart && formEnd && formEnd >= formStart ? daysBetween(formStart, formEnd) : 0;
   /**
-   * Leave units in the selected leave year (working days and/or calendar — matches server & hero).
+   * Leave units in the selected leave year (working days and/or calendar  matches server & hero).
    */
   const requestedDaysInLeaveYear = useMemo(() => {
     if (!formStart || !formEnd || formEnd < formStart) return 0;
@@ -1527,11 +1527,11 @@ export function LeaveHubClient({
         </div>
       </section>
 
-      {/* Employee leave balance dashboard — ring + palette aligned to payroll-style cards */}
+      {/* Employee leave balance dashboard  ring + palette aligned to payroll-style cards */}
       <section>
         <h2 className="mb-4 text-[12px] font-semibold uppercase tracking-widest text-[#6b6b6b]">Leave balance dashboard</h2>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {/* Annual leave — green (ring = % of annual allowance still unused; matches headline days) */}
+          {/* Annual leave  green (ring = % of annual allowance still unused; matches headline days) */}
           <div className="flex flex-col items-center rounded-2xl border border-[#e8e8e8] bg-white px-4 pb-5 pt-6 text-center shadow-sm">
             <div
               className="relative mb-4 flex h-[88px] w-[88px] items-center justify-center"
@@ -1567,7 +1567,7 @@ export function LeaveHubClient({
             <p className="mt-2 text-[13px] font-medium text-[#121212]">Annual leave</p>
           </div>
 
-          {/* TOIL — purple (ring = share of TOIL pool still unused; matches balance headline) */}
+          {/* TOIL  purple (ring = share of TOIL pool still unused; matches balance headline) */}
           <div className="flex flex-col items-center rounded-2xl border border-[#e8e8e8] bg-white px-4 pb-5 pt-6 text-center shadow-sm">
             <div
               className="relative mb-4 flex h-[88px] w-[88px] items-center justify-center"
@@ -1606,7 +1606,7 @@ export function LeaveHubClient({
             </p>
           </div>
 
-          {/* Pending — amber / cream (count in ring, no % ) */}
+          {/* Pending  amber / cream (count in ring, no % ) */}
           <div className="flex flex-col items-center rounded-2xl border border-[#e8e8e8] bg-white px-4 pb-5 pt-6 text-center shadow-sm">
             <div className="relative mb-4 flex h-[88px] w-[88px] items-center justify-center">
               <div
@@ -1626,7 +1626,7 @@ export function LeaveHubClient({
             </p>
           </div>
 
-          {/* Upcoming approved — red / rose (count in ring, no % ) */}
+          {/* Upcoming approved  red / rose (count in ring, no % ) */}
           <div className="flex flex-col items-center rounded-2xl border border-[#e8e8e8] bg-white px-4 pb-5 pt-6 text-center shadow-sm">
             <div className="relative mb-4 flex h-[88px] w-[88px] items-center justify-center">
               <div
@@ -1650,7 +1650,7 @@ export function LeaveHubClient({
         </>
       )}
 
-      {/* Request TOIL credit (overtime) — manager approval */}
+      {/* Request TOIL credit (overtime)  manager approval */}
       {showToilEarnForm && canSubmit ? (
         <div className="mb-6 rounded-2xl border border-[#bbf7d0] bg-[#f0fdf9] p-6">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
@@ -1858,7 +1858,7 @@ export function LeaveHubClient({
         </div>
       ) : null}
 
-      {/* Leave request form — compact grid layout aligned to payroll-style booking */}
+      {/* Leave request form  compact grid layout aligned to payroll-style booking */}
       {showLeaveForm && canSubmit ? (
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6 shadow-sm sm:p-8">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-3 border-b border-[#f0f0f0] pb-5">
@@ -1882,7 +1882,7 @@ export function LeaveHubClient({
           <form className="space-y-6" onSubmit={(e) => void submitLeave(e)}>
             {leaveExempt ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-950">
-                Your HR record is marked without paid annual leave entitlement — book unpaid or other leave types, or log sick days (with a rota shift on those dates).
+                Your HR record is marked without paid annual leave entitlement  book unpaid or other leave types, or log sick days (with a rota shift on those dates).
               </p>
             ) : null}
             <div>
@@ -2094,7 +2094,7 @@ export function LeaveHubClient({
       {showSickForm && canSubmit ? (
         <div className="mb-6 rounded-2xl border border-[#e8e8e8] bg-white p-6">
           <h2 className="mb-1 text-[15px] font-semibold text-[#121212]">Log sick days</h2>
-          <p className="mb-4 text-[12px] text-[#9b9b9b]">Sick days don&apos;t use your annual leave — no approval needed.</p>
+          <p className="mb-4 text-[12px] text-[#9b9b9b]">Sick days don&apos;t use your annual leave  no approval needed.</p>
           {leaveExempt ? (
             <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-950">
               For your contract, you can only log sick or absence on dates where you have a scheduled rota shift covering that day.
@@ -2784,7 +2784,7 @@ export function LeaveHubClient({
         </section>
       ) : null}
 
-      {/* SSP estimate (UK) — shown when “Details” is on */}
+      {/* SSP estimate (UK)  shown when “Details” is on */}
       {leaveExplainerOpen && canSubmit && sspSummary ? (
         <section>
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">
@@ -2797,7 +2797,7 @@ export function LeaveHubClient({
             <dl className="mt-3 grid gap-2 sm:grid-cols-2">
               <div>
                 <dt className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Scheme</dt>
-                <dd className="text-[#121212]">{String(sspSummary.scheme ?? '—')}</dd>
+                <dd className="text-[#121212]">{String(sspSummary.scheme ?? '')}</dd>
               </div>
               <div>
                 <dt className="text-[11px] font-medium uppercase tracking-wide text-[#9b9b9b]">Total SSP (£)</dt>
@@ -2816,7 +2816,7 @@ export function LeaveHubClient({
             </dl>
             {sspSummary.ineligible_below_lel ? (
               <p className="mt-3 text-[12px] text-[#b45309]">
-                Below Lower Earnings Limit — SSP not payable under legacy LEL rules. Clear LEL in leave settings for 2026 reform.
+                Below Lower Earnings Limit  SSP not payable under legacy LEL rules. Clear LEL in leave settings for 2026 reform.
               </p>
             ) : null}
             {Array.isArray(sspSummary.notes) && (sspSummary.notes as unknown[]).length > 0 ? (
@@ -2850,7 +2850,7 @@ export function LeaveHubClient({
         </section>
       ) : null}
 
-      {/* Absence score — full card hidden unless “Details” is on */}
+      {/* Absence score  full card hidden unless “Details” is on */}
       {leaveExplainerOpen && absenceScore ? (
         <section>
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Absence score</h2>
@@ -2922,7 +2922,7 @@ export function LeaveHubClient({
                 onChange={(e) => setApprovalNote(e.target.value)}
                 rows={3}
                 className="w-full resize-y rounded-xl border border-[#d8d8d8] bg-[#faf9f6] px-3 py-2.5 text-[13px] focus:border-[#121212] focus:outline-none"
-                placeholder="e.g. approved — enjoy your break"
+                placeholder="e.g. approved  enjoy your break"
               />
             </label>
             <div className="mt-4 flex flex-wrap items-center gap-3">

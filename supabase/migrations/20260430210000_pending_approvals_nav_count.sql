@@ -1,4 +1,4 @@
--- Nav badge count for pending member approvals — one round-trip, same rules as `can_approve_profile`.
+-- Nav badge count for pending member approvals  one round-trip, same rules as `can_approve_profile`.
 
 create or replace function public.pending_approvals_nav_count()
 returns integer

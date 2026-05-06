@@ -1,4 +1,4 @@
--- Phase 5 — Platform admin (CGS), org admin RLS extensions, rota sync log, org settings fields.
+-- Phase 5  Platform admin (CGS), org admin RLS extensions, rota sync log, org settings fields.
 
 -- ---------------------------------------------------------------------------
 -- CGS platform admins (no org; auth user ids provisioned manually)
@@ -136,7 +136,7 @@ create policy organisations_platform_update
   with check (true);
 
 -- ---------------------------------------------------------------------------
--- Profiles: org super admin may update any profile in org (not self role/status — trigger)
+-- Profiles: org super admin may update any profile in org (not self role/status  trigger)
 -- ---------------------------------------------------------------------------
 
 create policy profiles_update_org_super_admin
@@ -241,7 +241,7 @@ create policy broadcasts_delete_super_admin_draft
   );
 
 -- ---------------------------------------------------------------------------
--- Platform: list super admins per org (privacy — only super_admin role rows)
+-- Platform: list super admins per org (privacy  only super_admin role rows)
 -- ---------------------------------------------------------------------------
 
 create policy profiles_platform_select_super_admins
@@ -256,7 +256,7 @@ create policy profiles_platform_select_super_admins
 -- platform_admins policies above
 
 -- ---------------------------------------------------------------------------
--- Aggregated stats (CGS dashboard — bypasses org-scoped RLS)
+-- Aggregated stats (CGS dashboard  bypasses org-scoped RLS)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.platform_dashboard_stats()

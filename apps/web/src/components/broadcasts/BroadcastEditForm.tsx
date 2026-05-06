@@ -322,7 +322,7 @@ export function BroadcastEditForm({
             <div>
               <h2 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-[#8f8f8f]">Message</h2>
               <p className="mt-1.5 text-[12px] leading-relaxed text-[#6b6b6b]">
-                Edit visually like Notion — content is stored as markdown for the feed. Add images as framed blocks.
+                Edit visually like Notion  content is stored as markdown for the feed. Add images as framed blocks.
               </p>
             </div>
           </div>

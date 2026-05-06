@@ -78,7 +78,7 @@ export default async function OnboardingHubPage({
     status: r.status as string,
     employment_start_date: r.employment_start_date as string,
     created_at: r.created_at as string,
-    template_name: templateMap[r.template_id as string] ?? '—',
+    template_name: templateMap[r.template_id as string] ?? '',
   }));
 
   const view = (

@@ -122,7 +122,7 @@ export async function syncCelebrationHolidaysForOrg(args: {
   orgId: string;
   country: string;
   apiKey: string;
-  /** Current calendar year in the org's perspective — pass `new Date().getFullYear()`. */
+  /** Current calendar year in the org's perspective  pass `new Date().getFullYear()`. */
   anchorYear: number;
   forceRefreshCache?: boolean;
   signal?: AbortSignal;

@@ -1,6 +1,6 @@
-# Page Layer Stage F Report — Profile Decomposition Slice 2
+# Page Layer Stage F Report  Profile Decomposition Slice 2
 **Date:** 2026-04-30  
-**Status:** COMPLETE (slice) — extracted profile personal/time-off support reads into shared loader  
+**Status:** COMPLETE (slice)  extracted profile personal/time-off support reads into shared loader  
 **Workstream:** WS1.4 profile decomposition (in progress overall)
 
 ---

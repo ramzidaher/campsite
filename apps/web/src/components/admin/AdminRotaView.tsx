@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowRight, CalendarPlus, Download, Link2 } from 'lucide-react';
 
 import type { AdminRotaDashboardModel } from '@/lib/admin/loadAdminRota';
 
@@ -61,22 +62,24 @@ export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/rota-import"
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] transition-colors hover:bg-[#f5f4f1]"
           >
-            📥 Import Google Sheets
+            <Download className="h-3.5 w-3.5" aria-hidden />
+            Import Google Sheets
           </Link>
           <Link
             href="/rota"
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
           >
-            + Add shift
+            <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+            Add shift
           </Link>
         </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
         <StatCard
-          label="📊 Shifts this week"
+          label="Shifts this week"
           value={String(data.shiftsThisWeek)}
           sub={
             data.deptCountThisWeek > 0
@@ -85,17 +88,17 @@ export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
           }
         />
         <StatCard
-          label="✅ Coverage rate"
+          label="Coverage rate"
           value={coverage}
           sub={coverageSub}
           valueClass={data.coveragePct != null && data.coveragePct >= 90 ? 'text-[#15803d]' : ''}
         />
-        <StatCard label="🔄 Last sync" value={syncTitle} sub={syncSub} valueClass="text-[20px]" />
+        <StatCard label="Last sync" value={syncTitle} sub={syncSub} valueClass="text-[20px]" />
       </div>
 
       <div className="mb-6 flex gap-3 rounded-lg border border-[#d6d3d1] bg-[#f5f5f4] px-4 py-3 text-[13px] text-[#44403c]">
         <span className="shrink-0" aria-hidden>
-          🔗
+          <Link2 className="mt-0.5 h-4 w-4" />
         </span>
         <div>
           {data.hasSheetsMapping ? (
@@ -107,7 +110,10 @@ export function AdminRotaView({ data }: { data: AdminRotaDashboardModel }) {
             <span>No Sheets column mapping yet - connect a spreadsheet and map columns in the import wizard.</span>
           )}{' '}
           <Link href="/admin/rota-import" className="font-medium underline underline-offset-2 hover:text-[#1e3a8a]">
-            Manage import →
+            <span className="inline-flex items-center gap-1">
+              Manage import
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </span>
           </Link>
         </div>
       </div>

@@ -8,7 +8,7 @@ import {
 const MEETING_ROWS = 5;
 
 /**
- * Route-level skeleton for `/one-on-ones` — mirrors {@link OneOnOnesHubClient} hub + optional schedule aside.
+ * Route-level skeleton for `/one-on-ones`  mirrors {@link OneOnOnesHubClient} hub + optional schedule aside.
  */
 export default function OneOnOnesLoading() {
   return (

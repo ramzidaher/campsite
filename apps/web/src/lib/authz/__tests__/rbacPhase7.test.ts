@@ -8,7 +8,7 @@ import {
   profileVisibleUnderDepartmentIsolation,
 } from '../departmentIsolationPolicy';
 
-describe('Phase 7 — org admin vs department isolation (pure mirror)', () => {
+describe('Phase 7  org admin vs department isolation (pure mirror)', () => {
   const dx = 'dept-x';
   const dy = 'dept-y';
   const ua = 'user-a';
@@ -39,7 +39,7 @@ describe('Phase 7 — org admin vs department isolation (pure mirror)', () => {
   });
 });
 
-describe('Phase 7 — permission overrides gate (manager vs peer / superior)', () => {
+describe('Phase 7  permission overrides gate (manager vs peer / superior)', () => {
   const org = new Set(['mgr', 'ic', 'peer', 'ceo']);
   const chain = new Map<string, string | null>([
     ['ic', 'mgr'],
@@ -116,7 +116,7 @@ describe('Phase 7 — permission overrides gate (manager vs peer / superior)', (
   });
 });
 
-describe('Phase 7 — role rank: cannot assign above own level', () => {
+describe('Phase 7  role rank: cannot assign above own level', () => {
   const senior: RankedOrgRole = { id: '1', key: 'senior', rank_level: 40, rank_order: 10 };
   const junior: RankedOrgRole = { id: '2', key: 'junior', rank_level: 30, rank_order: 5 };
   const sameBandLower: RankedOrgRole = { id: '3', key: 'alt', rank_level: 40, rank_order: 20 };
@@ -180,7 +180,7 @@ describe('Phase 7 — role rank: cannot assign above own level', () => {
   });
 });
 
-describe('Phase 7 — permission overrides composition (no bleed)', () => {
+describe('Phase 7  permission overrides composition (no bleed)', () => {
   const role = new Set(['broadcasts.view', 'members.view']);
 
   it('subtractive removes an otherwise granted role grant', () => {
@@ -256,7 +256,7 @@ describe('Phase 7 — permission overrides composition (no bleed)', () => {
   });
 });
 
-describe('Phase 7 — custom role picker ceiling', () => {
+describe('Phase 7  custom role picker ceiling', () => {
   const items: PermissionPickerItem[] = [
     {
       key: 'a.x',

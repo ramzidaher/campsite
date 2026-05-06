@@ -18,7 +18,7 @@ comment on column public.employee_hr_records.pay_frequency is
 comment on column public.employee_hr_records.contracted_days_per_week is
   'Working days per week (e.g. 5 full-time, 3 part-time) for statutory annual leave: weeks × days.';
 comment on column public.employee_hr_records.average_weekly_earnings_gbp is
-  'Average weekly earnings (AWE) for SSP — typically 8-week reference per HMRC.';
+  'Average weekly earnings (AWE) for SSP  typically 8-week reference per HMRC.';
 
 alter table public.org_leave_settings
   add column if not exists use_uk_weekly_paid_leave_formula boolean not null default false,
@@ -127,7 +127,7 @@ $$;
 revoke all on function public.leave_prorate_annual_days(uuid, uuid, text, numeric) from public;
 
 -- ---------------------------------------------------------------------------
--- 3. Org leave settings upsert — extend with SSP + weekly leave flags
+-- 3. Org leave settings upsert  extend with SSP + weekly leave flags
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.org_leave_settings_upsert(integer, smallint, smallint, integer, numeric, boolean, boolean, smallint[]);
@@ -401,7 +401,7 @@ begin
 
   if v_lel is not null and v_awe is not null and v_awe < v_lel then
     v_ineligible_lel := true;
-    notes := array_append(notes, 'Average weekly earnings below Lower Earnings Limit — SSP not payable (legacy rule).');
+    notes := array_append(notes, 'Average weekly earnings below Lower Earnings Limit  SSP not payable (legacy rule).');
   end if;
 
   if not v_ineligible_lel then

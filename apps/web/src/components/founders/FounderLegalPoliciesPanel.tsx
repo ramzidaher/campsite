@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Search } from 'lucide-react';
 import { BroadcastBodyEditor } from '@/components/broadcasts/BroadcastBodyEditor';
 import { LegalMarkdownArticle } from '@/components/legal/LegalMarkdownArticle';
 import {
@@ -189,9 +190,7 @@ export function FounderLegalPoliciesPanel({
             Table of contents
           </div>
           <div className="search-bar" style={{ marginBottom: 14 }}>
-            <span style={{ color: 'var(--text3)', fontSize: 12 }} aria-hidden>
-              🔍
-            </span>
+            <Search style={{ color: 'var(--text3)' }} size={14} aria-hidden />
             <input
               type="search"
               placeholder="Search"

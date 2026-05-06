@@ -51,7 +51,7 @@
 
 ## Detailed Entry Log
 
-## 2026-04-30 — Baseline Balance Program Opened
+## 2026-04-30  Baseline Balance Program Opened
 **Summary**
 - Created full-product balance readiness audit (beyond performance only).
 - Created remediation plan with workstreams and exit criteria.
@@ -68,7 +68,7 @@
 
 ---
 
-## 2026-04-30 — WS1.1 Completed (Admin System Overview Parity)
+## 2026-04-30  WS1.1 Completed (Admin System Overview Parity)
 **Summary**
 - Normalized `admin/system-overview` to shell-bundle access model.
 - Extracted route fan-out into shared cached loader (`campsite:admin:system-overview`).
@@ -87,7 +87,7 @@
 
 ---
 
-## 2026-04-30 — WS1.2 Completed (Dashboard Cache Convergence)
+## 2026-04-30  WS1.2 Completed (Dashboard Cache Convergence)
 **Summary**
 - Replaced dashboard local cache island with shared cache utility (`campsite:dashboard:home`).
 - Preserved manual-refresh semantics by invalidating the specific key before reload.
@@ -105,7 +105,7 @@
 
 ---
 
-## 2026-04-30 — WS1.3 Completed (HR Recruitment Branch Unification)
+## 2026-04-30  WS1.3 Completed (HR Recruitment Branch Unification)
 **Summary**
 - Replaced split cached/uncached branch behavior in `/hr/recruitment` with one shared cached page-data loader.
 - Route now uses a single cached fetch path and only branches at render time.
@@ -124,7 +124,7 @@
 
 ---
 
-## 2026-04-30 — WS2.1 Completed (Fallback Taxonomy Policy)
+## 2026-04-30  WS2.1 Completed (Fallback Taxonomy Policy)
 **Summary**
 - Defined global fallback taxonomy with three allowed classes:
   - `complete_stale_snapshot`
@@ -143,7 +143,7 @@
 
 ---
 
-## 2026-04-30 — WS2.2 Completed (Route-Family Fallback Audit)
+## 2026-04-30  WS2.2 Completed (Route-Family Fallback Audit)
 **Summary**
 - Audited high-touch route families against fallback taxonomy policy.
 - Confirmed manager and hiring/recruitment families are policy-aligned.
@@ -159,7 +159,7 @@
 
 ---
 
-## 2026-04-30 — WS2.2-A Completed (Dashboard Fallback Signaling)
+## 2026-04-30  WS2.2-A Completed (Dashboard Fallback Signaling)
 **Summary**
 - Added explicit partial-data signaling for dashboard timeout fallback activations.
 - Dashboard now distinguishes stale-cache state and timeout-partial state with visible UI messaging.
@@ -176,7 +176,7 @@
 
 ---
 
-## 2026-04-30 — WS2.2-B Completed (Profile Fallback Hardening)
+## 2026-04-30  WS2.2-B Completed (Profile Fallback Hardening)
 **Summary**
 - Added profile route fallback activation tracking for timeout fallback paths.
 - Added explicit partial-data banner in both profile UI modes when fallbacks activate.
@@ -193,7 +193,7 @@
 
 ---
 
-## 2026-04-30 — WS2.2-C Completed (Admin HR Fallback Contract)
+## 2026-04-30  WS2.2-C Completed (Admin HR Fallback Contract)
 **Summary**
 - Added fallback activation tracking in admin-HR shared loader.
 - Added explicit degraded-data banner in admin-HR route when timeout fallbacks activate.
@@ -212,7 +212,7 @@
 
 ---
 
-## 2026-04-30 — WS3.1 Completed (Balance Acceptance Checklist)
+## 2026-04-30  WS3.1 Completed (Balance Acceptance Checklist)
 **Summary**
 - Added formal pre-release balance gate checklist with pass/fail signoff block.
 - Checklist now enforces route consistency, cache/invalidation integrity, shell access consistency, fallback compliance, verification baseline, and inventory drift control.
@@ -228,7 +228,7 @@
 
 ---
 
-## 2026-04-30 — WS3.2 Completed (Inventory Refresh and Drift Review)
+## 2026-04-30  WS3.2 Completed (Inventory Refresh and Drift Review)
 **Summary**
 - Regenerated route inventory via `npm run routes:inventory`.
 - Produced updated inventory artifact and compared against latest baseline.
@@ -245,7 +245,7 @@
 
 ---
 
-## 2026-04-30 — WS4.1 Completed (Founder Surface Decision)
+## 2026-04-30  WS4.1 Completed (Founder Surface Decision)
 **Summary**
 - Made explicit founder-surface strategy decision: intentional back-office exception.
 - Documented rationale, guardrails, and revisit triggers.
@@ -261,7 +261,7 @@
 
 ---
 
-## 2026-04-30 — WS1.4 Progress Slice (Profile Other-Tab Loader Extraction)
+## 2026-04-30  WS1.4 Progress Slice (Profile Other-Tab Loader Extraction)
 **Summary**
 - Extracted profile “other tab” heavy fan-out reads into shared cached loader.
 - Added new shared cache namespace and invalidation coverage for profile other-tab data.
@@ -280,7 +280,7 @@
 
 ---
 
-## 2026-04-30 — WS1.4 Progress Slice 2 (Profile Personal/Time-Off Support Loader)
+## 2026-04-30  WS1.4 Progress Slice 2 (Profile Personal/Time-Off Support Loader)
 **Summary**
 - Extracted profile personal/time-off support query path (holiday periods + role assignment/role labels) into a shared loader.
 - Removed additional route-local query orchestration from `profile/page.tsx` and replaced it with a cached `lib` call.
@@ -299,7 +299,7 @@
 
 ---
 
-## 2026-04-30 — WS1.4 Progress Slice 3 (Profile Overview/Core Loader)
+## 2026-04-30  WS1.4 Progress Slice 3 (Profile Overview/Core Loader)
 **Summary**
 - Extracted profile overview/core query cluster into shared loader (`leave settings/timezone`, allowance/usage, departments, direct reports, onboarding count, probation alerts).
 - Removed additional route-level fan-out from `profile/page.tsx` and switched to one cached loader call.
@@ -318,7 +318,7 @@
 
 ---
 
-## 2026-04-30 — WS1.4 Progress Slice 4 (Profile Route Shape Cleanup)
+## 2026-04-30  WS1.4 Progress Slice 4 (Profile Route Shape Cleanup)
 **Summary**
 - Removed legacy response-wrapper shims from `profile/page.tsx` after overview-loader extraction.
 - Switched route render paths to consume typed overview fields directly.
@@ -335,7 +335,7 @@
 
 ---
 
-## 2026-05-01 — WS1.4 Closed (Profile Decomposition Completion)
+## 2026-05-01  WS1.4 Closed (Profile Decomposition Completion)
 **Summary**
 - Completed Stage F closure pass and finalized profile route decomposition objective.
 - Profile route now consumes shared loaders for overview, personal/time-off support, and other-tab data paths.
@@ -353,7 +353,7 @@
 
 ---
 
-## 2026-05-01 — Readiness Delta + Checklist Signoff Pass
+## 2026-05-01  Readiness Delta + Checklist Signoff Pass
 **Summary**
 - Reissued readiness delta based on completed WS1-WS4 workstreams and latest profile closure.
 - Executed release-style verification sequence (`lint`, `typecheck`, `test`, `build`, `routes:inventory`) and recorded pass results.
@@ -373,7 +373,7 @@
 
 ---
 
-## 2026-05-01 — Full-Page Balance Scan (Global Sanity Check)
+## 2026-05-01  Full-Page Balance Scan (Global Sanity Check)
 **Summary**
 - Ran a full inventory-based global scan to validate whether *all* pages are balance-aligned.
 - Confirmed targeted WS1-WS4 workstreams remain complete and healthy.
@@ -390,7 +390,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 1 Completed (Absence Reporting)
+## 2026-05-01  Stage G Slice 1 Completed (Absence Reporting)
 **Summary**
 - Normalized `/admin/hr/absence-reporting` from mixed in-page fan-out to shared page-data loader model.
 - Added new shared cache namespace and invalidation coverage for absence reporting.
@@ -407,7 +407,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 2 Completed (Onboarding Run Detail)
+## 2026-05-01  Stage G Slice 2 Completed (Onboarding Run Detail)
 **Summary**
 - Normalized `/admin/hr/onboarding/[runId]` from mixed read model to shared page-data cache path.
 - Moved run/task/employee/completer data fan-out into shared loader while preserving route-local access checks.
@@ -424,7 +424,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 3 Completed (Performance Cycle Detail)
+## 2026-05-01  Stage G Slice 3 Completed (Performance Cycle Detail)
 **Summary**
 - Normalized `/admin/hr/performance/[cycleId]` from mixed read model to shared page-data cache path.
 - Moved cycle/reviews/members fan-out into shared loader and preserved route-local access checks.
@@ -441,7 +441,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 4 Completed (One-on-One Compliance)
+## 2026-05-01  Stage G Slice 4 Completed (One-on-One Compliance)
 **Summary**
 - Normalized `/admin/hr/one-on-ones` from mixed route-level RPC reads to shared page-data cache path.
 - Added a dedicated one-on-one compliance cache namespace plus a client/API invalidation scope so manager/user write flows clear the new HR compliance dataset correctly.
@@ -458,7 +458,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 5 Completed (Admin Teams)
+## 2026-05-01  Stage G Slice 5 Completed (Admin Teams)
 **Summary**
 - Normalized `/admin/teams` from direct-query route shape to shared shell + shared page-data cache pattern.
 - Added `campsite:admin:teams` shared-cache namespace and wired invalidation into department/global cache invalidation flows.
@@ -475,7 +475,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 6 Completed (Broadcast Detail + Edit)
+## 2026-05-01  Stage G Slice 6 Completed (Broadcast Detail + Edit)
 **Summary**
 - Normalized `/broadcasts/[id]` and `/broadcasts/[id]/edit` from direct-query route fan-out to shell + shared page-data cache pattern.
 - Added broadcast page cache namespaces (`campsite:broadcasts:detail`, `campsite:broadcasts:edit`) with org/viewer/broadcast scoped keys.
@@ -492,7 +492,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 7 Completed (Hiring Forms + New Request)
+## 2026-05-01  Stage G Slice 7 Completed (Hiring Forms + New Request)
 **Summary**
 - Normalized `/hr/hiring/application-forms`, `/hr/hiring/application-forms/[id]/preview`, and `/hr/hiring/new-request` to shared page-data cache patterns.
 - Added dedicated shared loaders for forms index and preview, and reused `getCachedHrRecruitmentPageData(...)` for new-request manager data path.
@@ -509,7 +509,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 8 Completed (HR Metric Alerts + Leave + Notifications)
+## 2026-05-01  Stage G Slice 8 Completed (HR Metric Alerts + Leave + Notifications)
 **Summary**
 - Normalized `/hr/hr-metric-alerts`, `/leave`, and `/notifications/applications` to shell + shared page-data cache pattern.
 - Added dedicated namespaces and invalidation wiring for HR metric settings, leave page data, and application notifications page data.
@@ -526,7 +526,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 9 Completed (Remaining Hotspots Pass)
+## 2026-05-01  Stage G Slice 9 Completed (Remaining Hotspots Pass)
 **Summary**
 - Normalized `/performance/[reviewId]` to shell + shared page-data cache.
 - Refactored `/admin/hr/[userId]` limited-view branch to shared loader and shell identity path.
@@ -545,7 +545,7 @@
 
 ---
 
-## 2026-05-01 — Stage G Slice 10 Completed (Profile Final Closure)
+## 2026-05-01  Stage G Slice 10 Completed (Profile Final Closure)
 **Summary**
 - Normalized `/profile` to remove residual route-local direct reads and page-level orchestration signals from the page route.
 - Moved profile page identity/section orchestration into dedicated helper (`profilePageRouteData`) while preserving route behavior.
@@ -562,7 +562,7 @@
 
 ---
 
-## 2026-05-01 — Governance Pass Completed (Exception Register + Final Scan Alignment)
+## 2026-05-01  Governance Pass Completed (Exception Register + Final Scan Alignment)
 **Summary**
 - Created explicit exception register for all remaining non-high flagged routes.
 - Updated full scan report to reflect Stage G closure and governance classification state.

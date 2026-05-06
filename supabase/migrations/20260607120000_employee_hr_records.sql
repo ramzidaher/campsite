@@ -36,7 +36,7 @@ create index if not exists employee_hr_records_user_idx
   on public.employee_hr_records (user_id);
 
 comment on table public.employee_hr_records is
-  'One HR record per active employee per org — job details, contract, employment dates.';
+  'One HR record per active employee per org  job details, contract, employment dates.';
 
 -- ---------------------------------------------------------------------------
 -- Audit log

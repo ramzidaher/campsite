@@ -1,4 +1,4 @@
-# Page Layer Stage G — HR Metric Alerts, Leave, Notifications Normalization
+# Page Layer Stage G  HR Metric Alerts, Leave, Notifications Normalization
 **Date:** 2026-05-01  
 **Owner:** Engineering  
 **Scope:**  

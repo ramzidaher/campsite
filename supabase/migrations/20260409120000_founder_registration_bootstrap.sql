@@ -1,4 +1,4 @@
--- First org admin self-serve (new tenant). Not platform founders — see platform_admins / 11-platform-founders.
+-- First org admin self-serve (new tenant). Not platform founders  see platform_admins / 11-platform-founders.
 -- Extends apply_registration_from_user_meta; keep trigger + ensure_my_registration_profile in sync.
 
 create or replace function public.apply_registration_from_user_meta(

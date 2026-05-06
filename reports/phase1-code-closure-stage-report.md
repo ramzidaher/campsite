@@ -1,7 +1,7 @@
-# Phase 1 Stage Report — Code-Side Closure
+# Phase 1 Stage Report  Code-Side Closure
 **Date:** 2026-04-30
 **Follow-up to:** `reports/phase1-production-hardening-stage-report.md`
-**Status:** CODE-SIDE COMPLETE — production validation still required before Phase 1 can be called fully done
+**Status:** CODE-SIDE COMPLETE  production validation still required before Phase 1 can be called fully done
 
 **Validation follow-up:** `reports/phase1-production-validation-stage-report.md`
 

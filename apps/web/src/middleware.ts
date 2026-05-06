@@ -18,6 +18,27 @@ const AUTH_COOKIE_NAME_PATTERNS = [
   /^sb-[^-]+-auth-token(?:\.\d+)?$/,
   /^sb-[^-]+-auth-token-code-verifier$/,
 ];
+const SUPABASE_FETCH_TIMEOUT_ERROR_PREFIX = 'supabase_fetch_timeout_after_';
+
+function logMiddlewareAuthTransientFailure(input: {
+  path: string;
+  reason:
+    | 'middleware_auth_timeout'
+    | 'refresh_token_already_used'
+    | 'refresh_token_not_found'
+    | 'transient_network_auth_error';
+  code: string;
+  message: string;
+}): void {
+  const payload = {
+    event: 'middleware_auth_transient_failure',
+    path: input.path,
+    reason: input.reason,
+    code: input.code || null,
+    message: input.message,
+  };
+  console.warn(`[auth][middleware][transient_failure] ${JSON.stringify(payload)}`);
+}
 
 function clearStaleSupabaseAuthCookies(request: NextRequest, response: NextResponse): void {
   const staleCookieNames = request.cookies
@@ -39,6 +60,7 @@ function clearStaleSupabaseAuthCookies(request: NextRequest, response: NextRespo
 export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
   const url = request.nextUrl.clone();
+  const pathname = request.nextUrl.pathname;
   const { orgSlug, isPlatformAdmin } = resolveHostRequestContext(host, url.searchParams.get('org'));
 
   const nextHeaders = new Headers(request.headers);
@@ -101,7 +123,9 @@ export async function middleware(request: NextRequest) {
         code === 'refresh_token_already_used' || message.includes('Invalid Refresh Token: Already Used');
       const isRefreshTokenNotFound = code === 'refresh_token_not_found';
       const isTransientNetworkAuthError =
-        lowerMessage.includes('fetch failed') || message.includes('AuthRetryableFetchError');
+        lowerMessage.includes('fetch failed') ||
+        message.includes('AuthRetryableFetchError') ||
+        lowerMessage.includes(SUPABASE_FETCH_TIMEOUT_ERROR_PREFIX);
       if (
         authTimedOut ||
         isRefreshTokenAlreadyUsed ||
@@ -109,8 +133,20 @@ export async function middleware(request: NextRequest) {
         isTransientNetworkAuthError
       ) {
         // Concurrent tab/navigation refreshes can lose the rotation race (`already_used` / `not_found`).
-        // Slow auth must not clear cookies or force login — layouts and pages call `getUser()` again.
+        // Slow auth must not clear cookies or force login  layouts and pages call `getUser()` again.
         authTransientFailure = true;
+        logMiddlewareAuthTransientFailure({
+          path: pathname,
+          reason: authTimedOut
+            ? 'middleware_auth_timeout'
+            : isRefreshTokenAlreadyUsed
+              ? 'refresh_token_already_used'
+              : isRefreshTokenNotFound
+                ? 'refresh_token_not_found'
+                : 'transient_network_auth_error',
+          code,
+          message,
+        });
       } else if (message.includes('Invalid Refresh Token')) {
         clearStaleSupabaseAuthCookies(request, response);
       }
@@ -118,7 +154,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const pathname = request.nextUrl.pathname;
   const accountType = (user?.user_metadata?.account_type as string | undefined) ?? '';
   const isAuthEmailReturn =
     pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/confirm');

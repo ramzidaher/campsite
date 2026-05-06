@@ -44,7 +44,7 @@ create policy "service role manages leave notifications"
   with check (true);
 
 -- ---------------------------------------------------------------------------
--- Internal: insert a row for the requester (best-effort — never raises)
+-- Internal: insert a row for the requester (best-effort  never raises)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.leave_notify_requester_decision(

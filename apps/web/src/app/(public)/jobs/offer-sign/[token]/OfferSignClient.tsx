@@ -80,7 +80,7 @@ export function OfferSignClient({ token, initial }: { token: string; initial: Ro
       setRow((x) => ({ ...x, status: 'signed', body_html: '' }));
       setMsg({
         type: 'ok',
-        text: 'Thank you — your offer is signed. A PDF copy is being sent to your email and to HR.',
+        text: 'Thank you  your offer is signed. A PDF copy is being sent to your email and to HR.',
       });
     });
   };

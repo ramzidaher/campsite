@@ -1,6 +1,7 @@
 import {
   isDepartmentWorkspaceRole,
   isManagerRole,
+  isOrgAdminRole,
   PERMISSION_KEYS,
   type PermissionKey,
   type ProfileRole,
@@ -393,9 +394,11 @@ export function getMainShellFinanceNavItemsByPermissions(
 
 export function getMainShellManagerNavItemsByPermissions(
   permissions: readonly PermissionKey[] | null | undefined,
-  opts: { pendingApprovalCount: number }
+  opts: { pendingApprovalCount: number },
+  viewerRole?: ProfileRole | string | null
 ): MainShellAdminNavItem[] | null {
   const p = permissions ?? [];
+  const r = normalizedProfileRole(viewerRole);
   const { pendingApprovalCount } = opts;
   const items: MainShellAdminNavItem[] = [];
   const canManageWorkspace = p.includes('recruitment.create_request');
@@ -403,6 +406,7 @@ export function getMainShellManagerNavItemsByPermissions(
   const canViewTeams = p.includes('teams.view');
   const canReviewMembers = p.includes('approvals.members.review');
   const canViewOrgChart = p.includes('org_chart.view');
+  const showDepartmentWorkspaceLinks = !isOrgAdminRole(r);
   if (!canManageWorkspace && !canViewDepts && !canViewTeams && !canReviewMembers && !canViewOrgChart)
     return null;
 
@@ -442,9 +446,9 @@ export function getMainShellManagerNavItemsByPermissions(
     items.push({ href: '/hr/hiring', label: 'Hiring', icon: 'recruitment', section: 'People' });
   if (p.includes('hr.view_direct_reports'))
     items.push({ href: '/hr/records', label: 'Team HR records', icon: 'hrRecords', section: 'People' });
-  if (canViewDepts)
+  if (canViewDepts && showDepartmentWorkspaceLinks)
     items.push({ href: '/manager/departments', label: 'Departments', icon: 'departments', section: 'Your departments' });
-  if (canViewTeams)
+  if (canViewTeams && showDepartmentWorkspaceLinks)
     items.push({ href: '/manager/teams', label: 'Teams', icon: 'teams', section: 'Your departments' });
   if (canManageWorkspace || canViewDepts || canViewTeams || canViewOrgChart)
     items.push({ href: '/manager/org-chart', label: 'Live org chart', icon: 'orgChart', section: 'People' });

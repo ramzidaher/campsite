@@ -1,9 +1,9 @@
-# 08 — Organisation admin (`/admin`)
+# 08  Organisation admin (`/admin`)
 
 ## 1. Product intent
 
 - **Org admin** (`profiles.role` = `org_admin`, legacy `super_admin`) has **full control inside one tenant**: members, structure, broadcast admin tools, rota import, discount rules, org settings, integrations.
-- **Not** the same as **platform admin** (`platform_admins` — see [11-platform-founders.md](./11-platform-founders.md)).
+- **Not** the same as **platform admin** (`platform_admins`  see [11-platform-founders.md](./11-platform-founders.md)).
 
 ## 2. Shared gates (web)
 
@@ -18,7 +18,7 @@
 | `canManageOrgSettings(role)` | Settings, notifications, discount admin, integrations |
 | `getMainShellAdminNavItems(role)` | Sidebar structure under **Admin** |
 
-**Current implementation:** every **`canManage*`** returns **`isOrgAdminRole`** — kept as **separate functions** so sub-gates can diverge without rewriting every `page.tsx`.
+**Current implementation:** every **`canManage*`** returns **`isOrgAdminRole`**  kept as **separate functions** so sub-gates can diverge without rewriting every `page.tsx`.
 
 **Rule:** New `/admin/*` pages should use **one** of the `canManage*` functions in `page.tsx` for sub-gates, or rely solely on **`admin/layout.tsx`** if the feature is org-admin-only without finer split.
 
@@ -44,7 +44,7 @@
 
 **For each new admin screen:** document the **policies** and **RPCs** in that feature’s plan file (broadcasts, rota, discount) and link from here.
 
-## 4. Frontend — Layout
+## 4. Frontend  Layout
 
 **File:** `apps/web/src/app/(main)/admin/layout.tsx`
 
@@ -52,9 +52,9 @@
 2. Load `profiles.role`, `status`, `org_id`.
 3. Redirect **`/broadcasts`** if missing org, not **`active`**, or **`!canAccessOrgAdminArea(role)`**.
 
-**Children:** rendered in `<div className="min-w-0">` — full-width content; main chrome is parent **`(main)/layout.tsx`** + **`AppShell`**.
+**Children:** rendered in `<div className="min-w-0">`  full-width content; main chrome is parent **`(main)/layout.tsx`** + **`AppShell`**.
 
-## 5. Frontend — Routes (inventory)
+## 5. Frontend  Routes (inventory)
 
 Each path below lives under `apps/web/src/app/(main)/admin/…`.
 
@@ -75,9 +75,9 @@ Each path below lives under `apps/web/src/app/(main)/admin/…`.
 | `/admin/notifications` | `notifications/page.tsx` | **`canManageOrgSettings`** → `/admin` |
 | `/admin/integrations` | `integrations/page.tsx` | **`canManageOrgSettings`** → `/admin` |
 
-## 6. Frontend — Shell navigation
+## 6. Frontend  Shell navigation
 
-**File:** `apps/web/src/lib/adminGates.ts` — **`getMainShellAdminNavItems`**
+**File:** `apps/web/src/lib/adminGates.ts`  **`getMainShellAdminNavItems`**
 
 - Returns **`null`** if not org admin → **Admin** block hidden in **`AppShell`**.
 - Pending badge merged in **`(main)/layout.tsx`** for **`/admin/pending`**.
@@ -103,14 +103,14 @@ Each path below lives under `apps/web/src/app/(main)/admin/…`.
 
 ## 8. Verification checklist
 
-- [x] Non–org-admin hitting **`/admin/users`** (or any **`/admin/*`**) is redirected — **`admin/layout.tsx`** **`canAccessOrgAdminArea`**.
-- [x] Coordinator cannot use org-admin-only data paths — **RLS** on tenant tables (see feature plans); no access to **`/admin`** shell.
-- [x] Scan logs use **`isOrgAdminRole`** on **`scan-logs/page.tsx`**, not only **`canManageOrgSettings`** — stays stricter if **`canManageOrgSettings`** is ever broadened.
+- [x] Non–org-admin hitting **`/admin/users`** (or any **`/admin/*`**) is redirected  **`admin/layout.tsx`** **`canAccessOrgAdminArea`**.
+- [x] Coordinator cannot use org-admin-only data paths  **RLS** on tenant tables (see feature plans); no access to **`/admin`** shell.
+- [x] Scan logs use **`isOrgAdminRole`** on **`scan-logs/page.tsx`**, not only **`canManageOrgSettings`**  stays stricter if **`canManageOrgSettings`** is ever broadened.
 - [x] Nav items match routes that exist; all listed **`/admin/*`** pages apply layout + documented sub-gate.
 
 ## 9. Automated tests (`npm run test --workspace=@campsite/web`)
 
-- `src/lib/__tests__/adminGates.test.ts` — **`canAccessOrgAdminArea`**, **`canManage*`**, **`getMainShellAdminNavItems`**.
+- `src/lib/__tests__/adminGates.test.ts`  **`canAccessOrgAdminArea`**, **`canManage*`**, **`getMainShellAdminNavItems`**.
 
 ## 10. Implementation order (new admin section)
 

@@ -1,10 +1,10 @@
-# Demo org — test flow (checklist)
+# Demo org  test flow (checklist)
 
 **Setup:** Run `npm run seed-demo-org`, save the printed **emails** + password (`DemoAccess2026!` by default). Org slug `demo-access-lab`, org name `Demo Access Lab`. Use **incognito / separate profiles** per user when comparing.
 
 ---
 
-## Flow 1 — Org admin baseline
+## Flow 1  Org admin baseline
 
 | Step | Login as | Do | Check |
 |------|----------|-----|--------|
@@ -17,46 +17,46 @@
 
 ---
 
-## Flow 2 — Manager (repeat per manager account)
+## Flow 2  Manager (repeat per manager account)
 
-Accounts: **Manager — Ops**, **Manager — Programs**, **Manager — Guest**, **Manager — Ops + Programs**.
+Accounts: **Manager  Ops**, **Manager  Programs**, **Manager  Guest**, **Manager  Ops + Programs**.
 
 | Step | Login as | Do | Check |
 |------|----------|-----|--------|
-| 1 | e.g. **Manager — Ops** | Sidebar | **Manager** + **Approvals**; no **Admin** |
+| 1 | e.g. **Manager  Ops** | Sidebar | **Manager** + **Approvals**; no **Admin** |
 | 2 | same | **Manager → Overview** (`/manager`) | Page loads |
 | 3 | same | **Manager → Department rota** / `/rota` | Works for managed depts |
 | 4 | same | **Approvals** / `/pending-approvals` | Empty until Flow 5 |
 | 5 | same | **Discount Card** | Verify / scan UI present |
-| 6 | **Manager — Guest** only | **Approvals** after Flow 5 | Must **not** see pending user who only picked **Operations** |
+| 6 | **Manager  Guest** only | **Approvals** after Flow 5 | Must **not** see pending user who only picked **Operations** |
 
 ---
 
-## Flow 3 — Coordinator
+## Flow 3  Coordinator
 
-Accounts: **Coordinator — Ops**, **Coordinator — Programs**, **Coordinator — Ops (overlap)**.
+Accounts: **Coordinator  Ops**, **Coordinator  Programs**, **Coordinator  Ops (overlap)**.
 
 | Step | Login as | Do | Check |
 |------|----------|-----|--------|
 | 1 | any coordinator | Sidebar | **Approvals** only; no **Admin**, no **Manager** |
-| 2 | **Coordinator — Ops** | `/pending-approvals` after Flow 5 | Sees pending user on **Operations** |
-| 3 | **Coordinator — Programs** | same | Does **not** see Ops-only pending user |
+| 2 | **Coordinator  Ops** | `/pending-approvals` after Flow 5 | Sees pending user on **Operations** |
+| 3 | **Coordinator  Programs** | same | Does **not** see Ops-only pending user |
 | 4 | both Ops coordinators | same pending Ops user | Both can see same row (overlap test) |
 
 ---
 
-## Flow 4 — Staff roles (broadcast + discount)
+## Flow 4  Staff roles (broadcast + discount)
 
 | Step | Login as | Do | Check |
 |------|----------|-----|--------|
-| 1 | **CSA — Ops A** or **Duty manager — Guest** | **Broadcasts** | Can draft; submit for **pending approval** (not full send path) |
-| 2 | **Administrator — Ops** | **Broadcasts** | Broader send / status options than CSA (per product) |
+| 1 | **CSA  Ops A** or **Duty manager  Guest** | **Broadcasts** | Can draft; submit for **pending approval** (not full send path) |
+| 2 | **Administrator  Ops** | **Broadcasts** | Broader send / status options than CSA (per product) |
 | 3 | **CSA** / **Administrator** | **Discount Card** | No verify scanner (card only) |
-| 4 | **Duty manager — Programs** | **Discount Card** | Verify / scan UI present |
+| 4 | **Duty manager  Programs** | **Discount Card** | Verify / scan UI present |
 
 ---
 
-## Flow 5 — Member approval (needs extra user)
+## Flow 5  Member approval (needs extra user)
 
 Seed has **no** pending members; queue stays empty until this.
 
@@ -70,7 +70,7 @@ Seed has **no** pending members; queue stays empty until this.
 
 ---
 
-## Flow 6 — Broadcast approval (two windows)
+## Flow 6  Broadcast approval (two windows)
 
 | Step | Window | Do | Check |
 |------|--------|-----|--------|
@@ -80,7 +80,7 @@ Seed has **no** pending members; queue stays empty until this.
 
 ---
 
-## Flow 7 — Society leader + calendar
+## Flow 7  Society leader + calendar
 
 | Step | Login as | Do | Check |
 |------|----------|-----|--------|

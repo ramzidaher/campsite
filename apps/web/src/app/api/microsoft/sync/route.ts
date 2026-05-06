@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true }); // silently skip if service role not configured
   }
 
-  // All sync operations are best-effort — never error the client
+  // All sync operations are best-effort  never error the client
   try {
     if (type === 'shift') {
       if (action === 'delete') {

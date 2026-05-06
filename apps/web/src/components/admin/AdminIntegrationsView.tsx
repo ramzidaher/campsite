@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BarChart3, CalendarDays } from 'lucide-react';
 
 export function AdminIntegrationsView({
   sheetsMappingCount,
@@ -17,9 +18,7 @@ export function AdminIntegrationsView({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 shadow-sm">
           <div className="flex items-start gap-3">
-            <span className="text-2xl" aria-hidden>
-              📊
-            </span>
+            <BarChart3 className="h-6 w-6 text-[#6b6b6b]" aria-hidden />
             <div className="min-w-0 flex-1">
               <h2 className="font-authSerif text-lg text-[#121212]">Google Sheets</h2>
               <p className="mt-1 text-[13px] leading-snug text-[#6b6b6b]">
@@ -38,9 +37,7 @@ export function AdminIntegrationsView({
 
         <div className="rounded-xl border border-[#d8d8d8] bg-white p-5 shadow-sm">
           <div className="flex items-start gap-3">
-            <span className="text-2xl" aria-hidden>
-              📅
-            </span>
+            <CalendarDays className="h-6 w-6 text-[#6b6b6b]" aria-hidden />
             <div className="min-w-0 flex-1">
               <h2 className="font-authSerif text-lg text-[#121212]">Google Calendar &amp; interviews</h2>
               <p className="mt-1 text-[13px] leading-snug text-[#6b6b6b]">

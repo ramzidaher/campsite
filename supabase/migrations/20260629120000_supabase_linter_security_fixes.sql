@@ -61,7 +61,7 @@ create policy "service role manages recruitment notifications"
   with check (true);
 
 -- ---------------------------------------------------------------------------
--- 3) RLS: organisations platform update — avoid WITH CHECK (true)
+-- 3) RLS: organisations platform update  avoid WITH CHECK (true)
 -- ---------------------------------------------------------------------------
 
 drop policy if exists organisations_platform_update on public.organisations;

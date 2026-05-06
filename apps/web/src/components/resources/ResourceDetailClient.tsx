@@ -243,7 +243,7 @@ export function ResourceDetailClient({
 
       {isArchived ? (
         <div className="mb-4 rounded-xl border border-[var(--org-brand-border)] bg-[var(--org-brand-surface)] px-4 py-3 text-[13px] text-[var(--org-brand-text)]">
-          <strong className="font-semibold">Archived</strong> — hidden from the resource library and search. Restore to
+          <strong className="font-semibold">Archived</strong>  hidden from the resource library and search. Restore to
           make it visible again, or delete permanently.
         </div>
       ) : null}

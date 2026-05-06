@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { History } from 'lucide-react';
 
 export async function RotaSyncHistory({ orgId }: { orgId: string }) {
   const supabase = await createClient();
@@ -10,8 +11,11 @@ export async function RotaSyncHistory({ orgId }: { orgId: string }) {
     .limit(25);
 
   return (
-    <section className="mt-10 space-y-3">
-      <h2 className="text-[13px] font-semibold text-[#121212]">Import history</h2>
+    <section className="mx-auto mt-10 max-w-4xl space-y-3 px-5 pb-8 sm:px-[28px]">
+      <h2 className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#121212]">
+        <History className="h-3.5 w-3.5" aria-hidden />
+        Import history
+      </h2>
       {error ? <p className="text-[13px] text-[#b91c1c]">{error.message}</p> : null}
       <div className="overflow-x-auto rounded-xl border border-[#d8d8d8]">
         <table className="w-full min-w-[520px] text-left text-[13px]">

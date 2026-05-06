@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { Building2, Trophy, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
@@ -8,9 +9,9 @@ import { useCallback, useMemo, useState } from 'react';
 type Dept = { id: string; name: string; type: string };
 
 function typeIcon(t: string) {
-  if (t === 'society') return '👥';
-  if (t === 'club') return '⚽';
-  return '🏢';
+  if (t === 'society') return <Users className="h-4 w-4" aria-hidden />;
+  if (t === 'club') return <Trophy className="h-4 w-4" aria-hidden />;
+  return <Building2 className="h-4 w-4" aria-hidden />;
 }
 
 export function AdminCategoriesClient({
@@ -60,19 +61,19 @@ export function AdminCategoriesClient({
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-7">
+    <div className="w-full px-5 py-6 sm:px-[28px] sm:py-7">
       <div className="mb-6">
         <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">
           Broadcast channels
         </h1>
         <p className="mt-1 text-[13px] text-[#6b6b6b]">
-          URL <span className="font-mono text-[12px] text-[#6b6b6b]">/admin/categories</span> is legacy; these rows
-          are <span className="font-medium text-[#121212]">broadcast_channels</span> in the database. Channels are
-          scoped per department, appear when composing broadcasts, and in{' '}
+          Manage broadcast channels by department. These rows map to{' '}
+          <span className="font-medium text-[#121212]">broadcast_channels</span> in the database. Channels appear
+          when composing broadcasts and in{' '}
           <Link href="/admin/departments" className="font-medium text-[#121212] underline underline-offset-2">
             Departments
           </Link>{' '}
-          detail as well.
+          detail.
         </p>
       </div>
 
@@ -95,9 +96,9 @@ export function AdminCategoriesClient({
           sortedDepts.map((d) => {
             const cats = initialCats[d.id] ?? [];
             return (
-              <div key={d.id} className="rounded-xl border border-[#d8d8d8] bg-white p-4 shadow-sm">
+              <div key={d.id} className="rounded-xl border border-[#d8d8d8] bg-white p-4 transition-colors hover:bg-[#faf9f6]">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-lg" aria-hidden>
+                  <span className="text-[#6b6b6b]" aria-hidden>
                     {typeIcon(d.type)}
                   </span>
                   <h2 className="font-authSerif text-lg text-[#121212]">{d.name}</h2>
@@ -123,14 +124,14 @@ export function AdminCategoriesClient({
                           className="ml-0.5 rounded-full p-0.5 text-[#9b9b9b] hover:bg-[#f5f4f1] hover:text-[#b91c1c] disabled:opacity-40"
                           aria-label={`Remove ${c.name}`}
                         >
-                          ×
+                          <X className="h-3 w-3" aria-hidden />
                         </button>
                       </span>
                     ))
                   )}
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(220px,1fr)_auto] sm:items-center">
                   <input
                     type="text"
                     value={draftByDept[d.id] ?? ''}
@@ -139,16 +140,16 @@ export function AdminCategoriesClient({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') void addCategory(d.id);
                     }}
-                    placeholder="New category name"
-                    className="h-9 min-w-[200px] flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b]"
+                    placeholder="New channel name"
+                    className="h-10 min-w-[200px] flex-1 rounded-lg border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#121212] outline-none placeholder:text-[#9b9b9b] focus:border-[#121212] focus:shadow-[0_0_0_3px_rgba(18,18,18,0.07)]"
                   />
                   <button
                     type="button"
                     disabled={busy || !(draftByDept[d.id] ?? '').trim()}
                     onClick={() => void addCategory(d.id)}
-                    className="h-9 rounded-lg border border-[#121212] bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="h-10 rounded-lg border border-[#121212] bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Add
+                    Add channel
                   </button>
                 </div>
               </div>

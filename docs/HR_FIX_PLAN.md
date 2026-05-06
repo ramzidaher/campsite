@@ -1,4 +1,4 @@
-# HR Module — Full Fix Plan
+# HR Module  Full Fix Plan
 
 ## Status: Planning
 **Date:** 2026-04-09  
@@ -8,24 +8,24 @@
 
 ## Overview of Problems Found
 
-1. **Broken DB writes** — `review_cycles` INSERT crashes at DB level (`created_by` is NOT NULL with no default; client never sends it).
-2. **Permission misuse** — `performance.view_reports` (a read permission) is used as the write gate in `review_manager_submit` and `review_goal_upsert` RPCs. Anyone with read-only HR view access can write assessments.
-3. **No data sync trigger** — `job_applications.offer_letter_status` is never updated when an `application_offers` row is created/status-changed. Column is always stale.
-4. **Employees are locked out of their own data** — No `hr.view_own` permission exists; employees cannot see their own job title, contract, or HR record. Only org_admin can.
-5. **Managers can't see direct reports' HR data** — No `hr.view_direct_reports` permission or RLS policy. Currently only org_admin has any HR record visibility.
-6. **Onboarding template tasks have no edit UI** — The hub links to `?template=id` which re-opens the same hub. No CRUD interface exists for template tasks after creation.
-7. **Performance cycle create has no backend RPC** — Client does a raw `supabase.from('review_cycles').insert(...)` without `created_by`, hitting the NOT NULL constraint.
-8. **Onboarding template task mutations go through direct table inserts** — No RPC, no audit trail, breaks the consistent security-definer pattern.
-9. **`interview_joining_instructions`** — Column exists on `job_applications` but no UI reads or writes it.
-10. **Dual route divergence** — `/hr/recruitment` and `/hr/jobs` are standalone pages separate from `/admin/recruitment` and `/admin/jobs`. They will diverge over time.
-11. **Explicit DELETE RLS missing** — No tables have `for delete using (false)` policies. Safe but unintentional.
-12. **`org_permission_policies` table** — Created in RBAC migration but never implemented anywhere; dead schema.
+1. **Broken DB writes**  `review_cycles` INSERT crashes at DB level (`created_by` is NOT NULL with no default; client never sends it).
+2. **Permission misuse**  `performance.view_reports` (a read permission) is used as the write gate in `review_manager_submit` and `review_goal_upsert` RPCs. Anyone with read-only HR view access can write assessments.
+3. **No data sync trigger**  `job_applications.offer_letter_status` is never updated when an `application_offers` row is created/status-changed. Column is always stale.
+4. **Employees are locked out of their own data**  No `hr.view_own` permission exists; employees cannot see their own job title, contract, or HR record. Only org_admin can.
+5. **Managers can't see direct reports' HR data**  No `hr.view_direct_reports` permission or RLS policy. Currently only org_admin has any HR record visibility.
+6. **Onboarding template tasks have no edit UI**  The hub links to `?template=id` which re-opens the same hub. No CRUD interface exists for template tasks after creation.
+7. **Performance cycle create has no backend RPC**  Client does a raw `supabase.from('review_cycles').insert(...)` without `created_by`, hitting the NOT NULL constraint.
+8. **Onboarding template task mutations go through direct table inserts**  No RPC, no audit trail, breaks the consistent security-definer pattern.
+9. **`interview_joining_instructions`**  Column exists on `job_applications` but no UI reads or writes it.
+10. **Dual route divergence**  `/hr/recruitment` and `/hr/jobs` are standalone pages separate from `/admin/recruitment` and `/admin/jobs`. They will diverge over time.
+11. **Explicit DELETE RLS missing**  No tables have `for delete using (false)` policies. Safe but unintentional.
+12. **`org_permission_policies` table**  Created in RBAC migration but never implemented anywhere; dead schema.
 
 ---
 
-## Phase 1 — Critical Bug Fixes (Nothing Works Without These)
+## Phase 1  Critical Bug Fixes (Nothing Works Without These)
 
-### 1.1 Fix `review_cycles` INSERT — `created_by` NOT NULL crash
+### 1.1 Fix `review_cycles` INSERT  `created_by` NOT NULL crash
 **Files:**
 - `supabase/migrations/` → new migration to add `DEFAULT auth.uid()` to `review_cycles.created_by`
 - `apps/web/src/components/admin/hr/performance/PerformanceCyclesClient.tsx` line 65 → pass `created_by` from session OR rely on the new default
@@ -40,7 +40,7 @@
 
 **What to do:**
 - In `review_manager_submit`: replace the HR override permission check from `performance.view_reports` → `performance.manage_cycles`
-- In `review_goal_upsert`: same — replace `performance.view_reports` → `performance.manage_cycles` for HR admin override; keep `performance.review_direct_reports` for reviewers
+- In `review_goal_upsert`: same  replace `performance.view_reports` → `performance.manage_cycles` for HR admin override; keep `performance.review_direct_reports` for reviewers
 - Write a new migration to replace these functions (cannot edit old migration files)
 
 ### 1.3 Fix `job_applications.offer_letter_status` sync
@@ -50,7 +50,7 @@
 
 ---
 
-## Phase 2 — RBAC / Permissions Completion
+## Phase 2  RBAC / Permissions Completion
 
 ### 2.1 Add `hr.view_own` permission
 **What to do:**
@@ -70,7 +70,7 @@
 ### 2.3 Verify permission catalog completeness
 **What to do:**
 - Audit `defaultPermissions.ts` and `permission_catalog` table entries against every `has_permission()` key used in all RPCs
-- Ensure every key checked in an RPC exists in the catalog — missing catalog entries silently return false, denying access with no error
+- Ensure every key checked in an RPC exists in the catalog  missing catalog entries silently return false, denying access with no error
 - Keys to verify are present: `hr.view_own`, `hr.view_direct_reports`, all `performance.*`, `onboarding.*`, `leave.*`, `recruitment.*`, `jobs.*`, `applications.*`, `offers.*`, `interviews.*`
 
 ### 2.4 Update `adminGates.ts` nav for new permissions
@@ -82,7 +82,7 @@
 
 ---
 
-## Phase 3 — Database Hardening
+## Phase 3  Database Hardening
 
 ### 3.1 Add explicit DELETE policies on all HR tables
 **What to do:**
@@ -92,7 +92,7 @@
 
 ### 3.2 Add `auth.uid()` defaults for `created_by` / `updated_by` columns
 **What to do:**
-- Migration: set `DEFAULT auth.uid()` on `review_cycles.created_by`, `onboarding_templates.created_by`, `recruitment_requests.created_by` — any table where the client is doing a direct insert without passing created_by
+- Migration: set `DEFAULT auth.uid()` on `review_cycles.created_by`, `onboarding_templates.created_by`, `recruitment_requests.created_by`  any table where the client is doing a direct insert without passing created_by
 - Consistent with the `employee_hr_records` pattern which uses an explicit RPC for this
 
 ### 3.3 Add trigger to keep `profiles.role` in sync
@@ -102,7 +102,7 @@
 
 ---
 
-## Phase 4 — Missing Backend RPCs
+## Phase 4  Missing Backend RPCs
 
 ### 4.1 RPC: `onboarding_template_task_upsert`
 **What to do:**
@@ -140,14 +140,14 @@
 
 ---
 
-## Phase 5 — Frontend Connections
+## Phase 5  Frontend Connections
 
 ### 5.1 Employee HR self-view page
 **Route:** `/profile/hr` (or `/my-record`)
 
 **What to do:**
 - New RSC page that calls `hr_employee_file(auth.uid())` (the updated RPC that allows self-view)
-- Read-only view of: job title, grade, contract type, FTE, work location, employment start date, probation end date, notice period, salary band (if `hr.view_own` grants it — consider filtering salary for self-view)
+- Read-only view of: job title, grade, contract type, FTE, work location, employment start date, probation end date, notice period, salary band (if `hr.view_own` grants it  consider filtering salary for self-view)
 - Show own leave allowance summary: entitlement, used, TOIL balance, Bradford score
 - Add nav item in AppShell for all logged-in users
 
@@ -173,7 +173,7 @@
 **What to do:**
 - In the application pipeline card (when stage = `interview_scheduled`), show a field to set/view joining instructions
 - On save, call `supabase.rpc('interview_joining_instructions_set', {...})`
-- Display joining instructions to the candidate via their portal token (`get_candidate_application_portal` already returns the application row — ensure `interview_joining_instructions` is included in the SELECT)
+- Display joining instructions to the candidate via their portal token (`get_candidate_application_portal` already returns the application row  ensure `interview_joining_instructions` is included in the SELECT)
 
 ### 5.5 Offer letter status in application pipeline
 **File:** Job pipeline component
@@ -181,7 +181,7 @@
 **What to do:**
 - `job_applications.offer_letter_status` is now kept in sync (Phase 1.3)
 - Add offer status badge to the application card when `offer_letter_status` is not null
-- Values: `sent`, `signed`, `declined`, `superseded` — each with a distinct colour/icon
+- Values: `sent`, `signed`, `declined`, `superseded`  each with a distinct colour/icon
 
 ### 5.6 Manager HR directory
 **What to do:**
@@ -191,7 +191,7 @@
 
 ---
 
-## Phase 6 — Routing & Navigation
+## Phase 6  Routing & Navigation
 
 ### 6.1 Consolidate /hr/recruitment and /hr/jobs routes
 **What to do:**
@@ -217,7 +217,7 @@
 
 ---
 
-## Phase 7 — Data Integrity & Cleanup
+## Phase 7  Data Integrity & Cleanup
 
 ### 7.1 Remove or implement `org_permission_policies` table
 **What to do:**
@@ -234,7 +234,7 @@
 ### 7.3 Rate limit `submit_job_application` RPC
 **What to do:**
 - Add Postgres-level rate limiting or move to an edge function with IP-based rate limiting
-- Currently anon-callable with no throttle — vulnerable to spam/flood
+- Currently anon-callable with no throttle  vulnerable to spam/flood
 
 ### 7.4 Verify all `created_by` / `updated_by` columns populate correctly end-to-end
 **What to do:**

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight, ChevronLeft, X } from 'lucide-react';
 import { useEffect, useId, type ReactNode } from 'react';
 
 export function EmployeeQuickViewModal({
@@ -58,9 +59,7 @@ export function EmployeeQuickViewModal({
             className="shrink-0 rounded-md px-1 py-0.5 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1] hover:text-[#121212]"
             onClick={onClose}
           >
-            <span aria-hidden className="mr-0.5">
-              ‹
-            </span>
+            <ChevronLeft className="mr-0.5 inline h-3.5 w-3.5" aria-hidden />
             Back to {backLabel}
           </button>
           <div className="min-w-0 flex-1 text-center">
@@ -78,7 +77,7 @@ export function EmployeeQuickViewModal({
                 aria-label="Open full employee record"
                 title="Open full employee record"
               >
-                →
+                <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             ) : null}
             <button
@@ -87,7 +86,7 @@ export function EmployeeQuickViewModal({
               onClick={onClose}
               aria-label="Close"
             >
-              ✕
+              <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
         </div>

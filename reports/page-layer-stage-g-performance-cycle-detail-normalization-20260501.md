@@ -1,4 +1,4 @@
-# Page Layer Stage G Report — Performance Cycle Detail Normalization
+# Page Layer Stage G Report  Performance Cycle Detail Normalization
 **Date:** 2026-05-01  
 **Status:** COMPLETE (slice)  
 **Workstream:** Stage G global page-balance closure

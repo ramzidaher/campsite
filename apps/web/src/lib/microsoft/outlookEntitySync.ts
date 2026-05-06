@@ -1,7 +1,7 @@
 /**
  * Server-side helpers that push CampSite entities into / out of Outlook Calendar.
  * All functions require a service-role SupabaseClient.
- * All functions are best-effort — failures are logged but not thrown.
+ * All functions are best-effort  failures are logged but not thrown.
  */
 
 import { graphDeleteEvent, graphInsertEvent, graphPatchEvent } from '@/lib/microsoft/graphApi';
@@ -28,7 +28,7 @@ export async function syncShiftToOutlook(admin: SupabaseClient, shiftId: string)
   const orgName = org?.name?.trim() || 'CampSite';
   const tz = org?.timezone?.trim() || 'UTC';
   const role = (shift.role_label as string | null)?.trim();
-  const subject = role ? `[Shift] ${role} — ${orgName}` : `[Shift] ${orgName}`;
+  const subject = role ? `[Shift] ${role}  ${orgName}` : `[Shift] ${orgName}`;
   const content = (shift.notes as string | null)?.trim() || `Scheduled shift at ${orgName}.`;
   const start = { dateTime: (shift.start_time as string).replace('Z', ''), timeZone: tz };
   const end = { dateTime: (shift.end_time as string).replace('Z', ''), timeZone: tz };
@@ -255,7 +255,7 @@ export async function syncLeaveToOutlook(admin: SupabaseClient, leaveId: string)
   const kind = ((leave.kind as string) || 'leave').replace('_', ' ');
   const startDate = leave.start_date as string;
   const endDate = leave.end_date as string;
-  const subject = `Leave — ${kind.charAt(0).toUpperCase() + kind.slice(1)} (${startDate} to ${endDate})`;
+  const subject = `Leave  ${kind.charAt(0).toUpperCase() + kind.slice(1)} (${startDate} to ${endDate})`;
   const content = `Approved leave period via CampSite.`;
 
   // All-day event: Graph uses exclusive end date for all-day events

@@ -26,6 +26,21 @@ export type DepartmentsDirectoryBundle = {
   staffOptions: { id: string; full_name: string; role: string }[];
 };
 
+function looksLikeUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
+function displayNameFromProfile(
+  profile: { id?: unknown; full_name?: unknown; email?: unknown } | undefined,
+  fallbackId: string
+): string {
+  const fullName = typeof profile?.full_name === 'string' ? profile.full_name.trim() : '';
+  if (fullName && !looksLikeUuid(fullName)) return fullName;
+  const email = typeof profile?.email === 'string' ? profile.email.trim() : '';
+  if (email) return email;
+  return fallbackId;
+}
+
 /**
  * Loads department grid + detail payloads for Admin → Departments or Manager → Departments.
  * When `deptIds` is set, only those departments are returned (managers: managed depts only).
@@ -81,7 +96,7 @@ export async function loadDepartmentsDirectory(
       'staff_empty_depts',
       supabase
         .from('profiles')
-        .select('id, full_name, role')
+        .select('id, full_name, email, role')
         .eq('org_id', orgId)
         .eq('status', 'active')
         .order('full_name'),
@@ -96,7 +111,14 @@ export async function loadDepartmentsDirectory(
       memberCountByDept,
       membersByDept,
       broadcastPermsByDept,
-      staffOptions: (staffEmpty ?? []) as { id: string; full_name: string; role: string }[],
+      staffOptions: (staffEmpty ?? []).map((row) => {
+        const id = String((row as { id?: unknown }).id ?? '');
+        return {
+          id,
+          full_name: displayNameFromProfile(row as { full_name?: unknown; email?: unknown }, id),
+          role: String((row as { role?: unknown }).role ?? ''),
+        };
+      }),
     };
   }
 
@@ -136,7 +158,7 @@ export async function loadDepartmentsDirectory(
       'active_staff_lookup',
       supabase
         .from('profiles')
-        .select('id, full_name, role')
+        .select('id, full_name, email, role')
         .eq('org_id', orgId)
         .eq('status', 'active')
         .order('full_name'),
@@ -145,6 +167,26 @@ export async function loadDepartmentsDirectory(
   ]);
 
   const profById = new Map((staffRes.data ?? []).map((p) => [p.id as string, p]));
+
+  const managerUserIds = Array.from(
+    new Set((dmsRes.data ?? []).map((row) => String((row as { user_id?: unknown }).user_id ?? '')).filter(Boolean))
+  );
+  const missingManagerIds = managerUserIds.filter((id) => !profById.has(id));
+  if (missingManagerIds.length > 0) {
+    const { data: managerProfiles } = await withServerPerf(
+      '/departments/directory',
+      'manager_profiles_lookup',
+      supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .eq('org_id', orgId)
+        .in('id', missingManagerIds),
+      350
+    );
+    for (const profile of managerProfiles ?? []) {
+      profById.set(String((profile as { id?: unknown }).id ?? ''), profile);
+    }
+  }
 
   for (const row of dbpRes.error ? [] : dbpRes.data ?? []) {
     const did = row.dept_id as string;
@@ -193,7 +235,7 @@ export async function loadDepartmentsDirectory(
       if (!teamMembersByTeamId[tid]) teamMembersByTeamId[tid] = [];
       teamMembersByTeamId[tid].push({
         user_id: uid,
-        full_name: (pr.full_name as string) ?? uid,
+        full_name: displayNameFromProfile(pr as { full_name?: unknown; email?: unknown }, uid),
         role: (pr.role as string) ?? '',
       });
     }
@@ -212,7 +254,7 @@ export async function loadDepartmentsDirectory(
     const pr = profById.get(uid);
     managersByDept[did].push({
       user_id: uid,
-      full_name: (pr?.full_name as string) ?? uid,
+      full_name: displayNameFromProfile(pr as { full_name?: unknown; email?: unknown } | undefined, uid),
     });
   }
 
@@ -229,7 +271,7 @@ export async function loadDepartmentsDirectory(
     if (!membersByDept[did]) membersByDept[did] = [];
     membersByDept[did].push({
       user_id: uid,
-      full_name: (pr.full_name as string) ?? uid,
+      full_name: displayNameFromProfile(pr as { full_name?: unknown; email?: unknown }, uid),
       role: (pr.role as string) ?? '',
     });
   }
@@ -250,6 +292,13 @@ export async function loadDepartmentsDirectory(
     memberCountByDept,
     membersByDept,
     broadcastPermsByDept,
-    staffOptions: (staffRes.data ?? []) as { id: string; full_name: string; role: string }[],
+    staffOptions: (staffRes.data ?? []).map((row) => {
+      const id = String((row as { id?: unknown }).id ?? '');
+      return {
+        id,
+        full_name: displayNameFromProfile(row as { full_name?: unknown; email?: unknown }, id),
+        role: String((row as { role?: unknown }).role ?? ''),
+      };
+    }),
   };
 }

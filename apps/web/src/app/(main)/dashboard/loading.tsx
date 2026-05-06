@@ -7,7 +7,7 @@ import {
 
 /**
  * Route-level skeleton for `/dashboard`.
- * Primitives live in `@/components/loading` — reuse on other heavy `loading.tsx` files.
+ * Primitives live in `@/components/loading`  reuse on other heavy `loading.tsx` files.
  */
 export default function DashboardLoading() {
   const statCards = Array.from({ length: 4 });

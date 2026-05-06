@@ -1,4 +1,4 @@
--- Campsite — initial database extensions and storage buckets.
+-- Campsite  initial database extensions and storage buckets.
 -- All tenant tables in later migrations MUST enable RLS from creation.
 
 create extension if not exists "uuid-ossp" with schema extensions;
@@ -6,7 +6,7 @@ create extension if not exists "uuid-ossp" with schema extensions;
 -- pg_cron runs in the `cron` schema on hosted Supabase; extension must be allowed by project.
 create extension if not exists pg_cron with schema extensions;
 
--- Storage buckets (public read optional — tighten in Phase 1+)
+-- Storage buckets (public read optional  tighten in Phase 1+)
 insert into storage.buckets (id, name, public)
 values ('org-logos', 'org-logos', true)
 on conflict (id) do nothing;

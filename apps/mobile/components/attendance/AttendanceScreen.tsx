@@ -108,7 +108,7 @@ export function AttendanceScreen({ profile }: { profile: ProfileRow }) {
       <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
         <Text style={[styles.title, { color: text }]}>This week</Text>
         <Text style={[styles.stat, { color: text }]}>
-          {minutes != null ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : '—'}
+          {minutes != null ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : ''}
         </Text>
         {err ? <Text style={styles.err}>{err}</Text> : null}
         <View style={styles.row}>

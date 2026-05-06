@@ -2,6 +2,7 @@
 
 import { FormSelect } from '@campsite/ui/web';
 import { jobApplicationModeLabel } from '@/lib/jobs/labels';
+import { ArrowLeft, ArrowRight, Check, CircleCheck, Flag, Goal, Hand, Paperclip } from 'lucide-react';
 import {
   CV_MAX_BYTES,
   cvUploadValidationMessage,
@@ -43,6 +44,14 @@ export function ApplyJobFormClient({
   hostHeader,
   defaultEmail,
   isAuthenticated,
+  defaultName = null,
+  defaultPhone = null,
+  defaultLocation = null,
+  defaultCurrentTitle = null,
+  defaultLinkedin = null,
+  defaultPortfolio = null,
+  defaultPersona = null,
+  defaultSkills = [],
   eqCategories = [],
   screeningQuestions = [],
 }: {
@@ -52,6 +61,14 @@ export function ApplyJobFormClient({
   hostHeader: string;
   defaultEmail?: string | null;
   isAuthenticated: boolean;
+  defaultName?: string | null;
+  defaultPhone?: string | null;
+  defaultLocation?: string | null;
+  defaultCurrentTitle?: string | null;
+  defaultLinkedin?: string | null;
+  defaultPortfolio?: string | null;
+  defaultPersona?: string | null;
+  defaultSkills?: string[];
   /** Optional equality monitoring options from org HR settings. */
   eqCategories?: { code: string; label: string }[];
   screeningQuestions?: PublicScreeningQuestionRow[];
@@ -60,14 +77,19 @@ export function ApplyJobFormClient({
     SubmitJobApplicationState | undefined,
     FormData
   >(submitPublicJobApplication, undefined);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [location, setLocation] = useState('');
-  const [currentTitle, setCurrentTitle] = useState('');
-  const [linkedinUrl, setLinkedinUrl] = useState('');
-  const [portfolioUrl, setPortfolioUrl] = useState('');
+  const initialFullName = (defaultName ?? '').trim();
+  const initialFirstName = initialFullName ? initialFullName.split(/\s+/)[0] ?? '' : '';
+  const initialLastName = initialFullName
+    ? initialFullName.split(/\s+/).slice(1).join(' ')
+    : '';
+  const [firstName, setFirstName] = useState(initialFirstName);
+  const [lastName, setLastName] = useState(initialLastName);
+  const [email, setEmail] = useState((defaultEmail ?? '').trim());
+  const [phone, setPhone] = useState((defaultPhone ?? '').trim());
+  const [location, setLocation] = useState((defaultLocation ?? '').trim());
+  const [currentTitle, setCurrentTitle] = useState((defaultCurrentTitle ?? '').trim());
+  const [linkedinUrl, setLinkedinUrl] = useState((defaultLinkedin ?? '').trim());
+  const [portfolioUrl, setPortfolioUrl] = useState((defaultPortfolio ?? '').trim());
   const [motivationText, setMotivationText] = useState('');
   const [loomUrl, setLoomUrl] = useState('');
   const [fitScore, setFitScore] = useState('');
@@ -106,6 +128,26 @@ export function ApplyJobFormClient({
       setEmail(defaultEmail.trim());
     }
   }, [defaultEmail]);
+
+  const hasProfileDefaults = Boolean(
+    (defaultName ?? '').trim() ||
+      (defaultPhone ?? '').trim() ||
+      (defaultLocation ?? '').trim() ||
+      (defaultCurrentTitle ?? '').trim() ||
+      (defaultLinkedin ?? '').trim() ||
+      (defaultPortfolio ?? '').trim() ||
+      (defaultSkills ?? []).length > 0 ||
+      (defaultPersona ?? '').trim()
+  );
+
+  const personaJson = useMemo(
+    () => (defaultPersona ?? '').trim(),
+    [defaultPersona]
+  );
+  const skillsJson = useMemo(
+    () => JSON.stringify(Array.isArray(defaultSkills) ? defaultSkills : []),
+    [defaultSkills]
+  );
 
   const done = state?.ok === true;
   const fullName = `${firstName} ${lastName}`.trim();
@@ -186,22 +228,22 @@ export function ApplyJobFormClient({
   const progressPct = [5, 35, 65, 90, 100][done ? 4 : currentStep] ?? 5;
   const banters = [
     {
-      icon: '👋',
+      icon: 'hand',
       msg: "Hey! Applying should take just a few minutes.",
       em: 'We promise to keep this lightweight and straightforward.',
     },
     {
-      icon: '🎯',
+      icon: 'goal',
       msg: 'Great start. A couple of quick questions next.',
       em: 'Clear answers help us review faster.',
     },
     {
-      icon: '📎',
+      icon: 'paperclip',
       msg: 'Nice. Add your application materials and you are almost done.',
       em: 'One strong submission channel is enough for combination roles.',
     },
     {
-      icon: '🏁',
+      icon: 'flag',
       msg: 'Final check before submit.',
       em: 'Take a breath, review, and send it.',
     },
@@ -260,8 +302,10 @@ export function ApplyJobFormClient({
           </div>
         ) : (
           <div className="mb-4 rounded-[11px] border border-[#d8d8d8] bg-white px-4 py-3 text-[13px] text-[#6b6b6b]">
-            You are signed in — this application will be linked to your candidate account. The email field must match
-            your account email.
+            You are signed in  this application will be linked to your candidate account.{' '}
+            {hasProfileDefaults
+              ? 'Pulled details from your profile  edit to override for this application.'
+              : 'The email field is locked to your account email.'}
           </div>
         )}
         <section className="mb-6 rounded-[11px] border border-[#d8d8d8] bg-[#f5f4f1] p-6">
@@ -302,7 +346,7 @@ export function ApplyJobFormClient({
                       idx > currentStep ? 'border-[#d8d8d8] bg-[#faf9f6] text-[#9b9b9b]' : '',
                     ].join(' ')}
                   >
-                    {idx < currentStep ? '✓' : idx + 1}
+                    {idx < currentStep ? <Check className="h-3.5 w-3.5" aria-hidden /> : idx + 1}
                   </div>
                   {idx < 3 ? (
                     <div
@@ -332,10 +376,26 @@ export function ApplyJobFormClient({
         {done ? (
           <section className="rounded-[11px] border border-[#d8d8d8] bg-white p-6 text-center">
             <div className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 border-[#bbf7d0] bg-[#dcfce7] text-[28px]">
-              ✓
+              <CircleCheck className="h-8 w-8 text-[#15803d]" aria-hidden />
             </div>
             <h2 className="font-authSerif text-[30px]">Application submitted</h2>
             <p className="mx-auto mt-2 max-w-[420px] text-[14px] leading-relaxed text-[#6b6b6b]">{state.message}</p>
+            {isAuthenticated ? (
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <Link
+                  href="/jobs/me"
+                  className="inline-flex h-9 items-center justify-center rounded-[9px] bg-[#121212] px-4 text-[13px] font-medium text-white hover:opacity-90"
+                >
+                  Track in my candidate portal
+                </Link>
+                <Link
+                  href={tenantJobListingRelativePathClient(jobSlug, orgSlug)}
+                  className="inline-flex h-9 items-center justify-center rounded-[9px] border border-[#d8d8d8] bg-white px-4 text-[13px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
+                >
+                  Back to role
+                </Link>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
@@ -359,10 +419,17 @@ export function ApplyJobFormClient({
           <input type="hidden" name="loom_url" value={loomUrl} />
           <input type="hidden" name="staffsavvy_score" value={listing.allow_staffsavvy ? staffsavvyScore : ''} />
           <input type="hidden" name="screening_answers_json" value={screeningPayloadJson} />
+          <input type="hidden" name="profile_persona" value={personaJson} />
+          <input type="hidden" name="profile_skills_json" value={skillsJson} />
 
           {!done ? (
             <div className="mb-4 flex items-start gap-3 rounded-[11px] bg-[#121212] px-4 py-3 text-[13px] text-[#faf9f6]">
-              <span className="text-[16px]">{banters[currentStep]?.icon}</span>
+              <span className="text-[16px]" aria-hidden>
+                {banters[currentStep]?.icon === 'hand' ? <Hand className="h-4 w-4" /> : null}
+                {banters[currentStep]?.icon === 'goal' ? <Goal className="h-4 w-4" /> : null}
+                {banters[currentStep]?.icon === 'paperclip' ? <Paperclip className="h-4 w-4" /> : null}
+                {banters[currentStep]?.icon === 'flag' ? <Flag className="h-4 w-4" /> : null}
+              </span>
               <div>
                 <p>{banters[currentStep]?.msg}</p>
                 <p className="mt-1 text-[12px] italic opacity-75">{banters[currentStep]?.em}</p>
@@ -373,20 +440,24 @@ export function ApplyJobFormClient({
           <section className={`${currentStep === 0 && !done ? 'block' : 'hidden'}`}>
             <div className="rounded-[11px] border border-[#d8d8d8] bg-white p-6">
               <h2 className="mb-4 border-b border-[#d8d8d8] pb-2 font-authSerif text-[22px]">Your details</h2>
-              <button
-                type="button"
-                onClick={prefillLinkedIn}
-                className="mb-3 flex w-full items-center gap-3 rounded-[9px] border border-[#d8d8d8] bg-[#eeecea] px-4 py-3 text-left hover:border-[#9b9b9b]"
-              >
-                <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded bg-[#0077B5] text-[12px] font-bold text-white">
-                  in
-                </span>
-                <span className="text-[13px] text-[#6b6b6b]">
-                  <strong className="text-[#121212]">Import from LinkedIn</strong> - skip the typing
-                </span>
-                <span className="ml-auto text-[18px]">→</span>
-              </button>
-              <p className="mb-4 text-center text-[12px] text-[#9b9b9b]">or fill in manually</p>
+              {!isAuthenticated ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={prefillLinkedIn}
+                    className="mb-3 flex w-full items-center gap-3 rounded-[9px] border border-[#d8d8d8] bg-[#eeecea] px-4 py-3 text-left hover:border-[#9b9b9b]"
+                  >
+                    <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded bg-[#0077B5] text-[12px] font-bold text-white">
+                      in
+                    </span>
+                    <span className="text-[13px] text-[#6b6b6b]">
+                      <strong className="text-[#121212]">Import from LinkedIn</strong> - skip the typing
+                    </span>
+                    <ArrowRight className="ml-auto h-4 w-4" aria-hidden />
+                  </button>
+                  <p className="mb-4 text-center text-[12px] text-[#9b9b9b]">or fill in manually</p>
+                </>
+              ) : null}
               <div className="mb-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass} htmlFor="first_name">
@@ -510,7 +581,7 @@ export function ApplyJobFormClient({
                 disabled={!stepReady[0] || pending}
                 className="flex-1 rounded-[11px] bg-[#121212] px-4 py-3 text-[14px] font-medium text-white disabled:bg-[#d8d8d8] disabled:text-[#9b9b9b]"
               >
-                Continue →
+                <span className="inline-flex items-center gap-1">Continue <ArrowRight className="h-4 w-4" aria-hidden /></span>
               </button>
             </div>
           </section>
@@ -690,7 +761,7 @@ export function ApplyJobFormClient({
                 onClick={goBack}
                 className="flex-1 rounded-[11px] border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[14px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
               >
-                ← Back
+                <span className="inline-flex items-center gap-1"><ArrowLeft className="h-4 w-4" aria-hidden /> Back</span>
               </button>
               <button
                 type="button"
@@ -698,7 +769,7 @@ export function ApplyJobFormClient({
                 disabled={!stepReady[1] || pending}
                 className="flex-[2] rounded-[11px] bg-[#121212] px-4 py-3 text-[14px] font-medium text-white disabled:bg-[#d8d8d8] disabled:text-[#9b9b9b]"
               >
-                Continue →
+                <span className="inline-flex items-center gap-1">Continue <ArrowRight className="h-4 w-4" aria-hidden /></span>
               </button>
             </div>
           </section>
@@ -718,7 +789,7 @@ export function ApplyJobFormClient({
                     CV upload
                   </label>
                   <p className="mb-1 text-[11px] text-[#9b9b9b]">
-                    PDF or Word — max {Math.floor(CV_MAX_BYTES / (1024 * 1024))} MB
+                    PDF or Word  max {Math.floor(CV_MAX_BYTES / (1024 * 1024))} MB
                   </p>
                   <input
                     id="cv"
@@ -808,7 +879,7 @@ export function ApplyJobFormClient({
                 onClick={goBack}
                 className="flex-1 rounded-[11px] border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[14px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
               >
-                ← Back
+                <span className="inline-flex items-center gap-1"><ArrowLeft className="h-4 w-4" aria-hidden /> Back</span>
               </button>
               <button
                 type="button"
@@ -880,14 +951,14 @@ export function ApplyJobFormClient({
                 onClick={goBack}
                 className="flex-1 rounded-[11px] border border-[#d8d8d8] bg-[#faf9f6] px-4 py-3 text-[14px] text-[#6b6b6b] hover:bg-[#f5f4f1]"
               >
-                ← Back
+                <span className="inline-flex items-center gap-1"><ArrowLeft className="h-4 w-4" aria-hidden /> Back</span>
               </button>
               <button
                 type="submit"
                 disabled={!stepReady[3] || pending}
                 className="flex-[2] rounded-[11px] bg-[#121212] px-4 py-3 text-[14px] font-medium text-white disabled:bg-[#d8d8d8] disabled:text-[#9b9b9b]"
               >
-                {pending ? 'Submitting...' : 'Submit application ✓'}
+                {pending ? 'Submitting...' : 'Submit application'}
               </button>
             </div>
           </section>

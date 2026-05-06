@@ -21,6 +21,21 @@ export function HrOneOnOneComplianceClient({ initialRows }: { initialRows: Compl
   const [filter, setFilter] = useState<'all' | 'overdue' | 'due_soon' | 'ok'>('all');
   const [rows, setRows] = useState(initialRows);
   const [loading, setLoading] = useState(false);
+  const overview = useMemo(() => {
+    const total = rows.length;
+    const overdue = rows.filter((row) => row.status === 'overdue').length;
+    const dueSoon = rows.filter((row) => row.status === 'due_soon').length;
+    const onTrack = rows.filter((row) => row.status === 'ok').length;
+    const averageCadenceDays = total > 0 ? Math.round(rows.reduce((sum, row) => sum + row.cadence_days, 0) / total) : 0;
+
+    return {
+      total,
+      overdue,
+      dueSoon,
+      onTrack,
+      averageCadenceDays,
+    };
+  }, [rows]);
 
   const load = async (f: typeof filter) => {
     setLoading(true);
@@ -33,6 +48,14 @@ export function HrOneOnOneComplianceClient({ initialRows }: { initialRows: Compl
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-7">
       <h1 className="font-authSerif text-[26px] leading-tight tracking-[-0.03em] text-[#121212]">1:1 check-in oversight</h1>
       <p className="mt-1 text-[13px] text-[#6b6b6b]">Manager–report pairs, cadence, and compliance status.</p>
+
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <OverviewCard label="Total pairs" value={overview.total} />
+        <OverviewCard label="Overdue" value={overview.overdue} tone="danger" />
+        <OverviewCard label="Due soon" value={overview.dueSoon} tone="warning" />
+        <OverviewCard label="On track" value={overview.onTrack} tone="success" />
+        <OverviewCard label="Avg cadence" value={`${overview.averageCadenceDays}d`} />
+      </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {(['all', 'overdue', 'due_soon', 'ok'] as const).map((f) => (
@@ -89,7 +112,7 @@ export function HrOneOnOneComplianceClient({ initialRows }: { initialRows: Compl
                   <td className="px-4 py-3 text-[#6b6b6b]">
                     {r.last_completed_at
                       ? new Date(r.last_completed_at).toLocaleDateString()
-                      : '—'}
+                      : ''}
                   </td>
                   <td className="px-4 py-3 text-[#6b6b6b]">{new Date(r.next_due_on).toLocaleDateString()}</td>
                   <td className="px-4 py-3">{r.cadence_days}</td>
@@ -107,12 +130,38 @@ export function HrOneOnOneComplianceClient({ initialRows }: { initialRows: Compl
                       {r.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{r.days_overdue > 0 ? r.days_overdue : '—'}</td>
+                  <td className="px-4 py-3">{r.days_overdue > 0 ? r.days_overdue : ''}</td>
                 </tr>
               ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function OverviewCard({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: number | string;
+  tone?: 'neutral' | 'danger' | 'warning' | 'success';
+}) {
+  const toneClasses =
+    tone === 'danger'
+      ? 'border-[#fecaca]'
+      : tone === 'warning'
+        ? 'border-[#fde68a]'
+        : tone === 'success'
+          ? 'border-[#bbf7d0]'
+          : 'border-[#e8e8e8]';
+
+  return (
+    <div className={`rounded-xl border bg-white p-4 ${toneClasses}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">{label}</p>
+      <p className="mt-2 text-[28px] font-semibold leading-none text-[#121212] tabular-nums">{value}</p>
     </div>
   );
 }

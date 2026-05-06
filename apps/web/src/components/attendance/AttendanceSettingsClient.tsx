@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { Plus, Save, Settings2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Site = {
@@ -117,7 +118,12 @@ export function AttendanceSettingsClient({ orgId }: { orgId: string }) {
             <input type="checkbox" checked={mgrCorrect} onChange={(e) => setMgrCorrect(e.target.checked)} />
             After reject, manager may correct without re-submit
           </label>
-          <button type="button" onClick={() => void saveOrg()} className="rounded-lg bg-[#121212] px-4 py-2 text-[12.5px] text-white">
+          <button
+            type="button"
+            onClick={() => void saveOrg()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-4 py-2 text-[12.5px] text-white"
+          >
+            <Settings2 className="h-3.5 w-3.5" aria-hidden />
             Save org settings
           </button>
         </div>
@@ -125,29 +131,44 @@ export function AttendanceSettingsClient({ orgId }: { orgId: string }) {
 
       <section>
         <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-widest text-[#9b9b9b]">Work sites</h2>
-        <form onSubmit={addSite} className="mb-6 flex max-w-xl flex-wrap items-end gap-3">
-          <label className="flex-1 min-w-[8rem] text-[12px] text-[#6b6b6b]">
+        <form onSubmit={addSite} className="mb-6 max-w-3xl rounded-xl border border-[#e8e4dc] bg-white p-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="text-[12px] text-[#6b6b6b] sm:col-span-2">
             Name
-            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded border px-2 py-1 text-[13px]" />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full rounded border border-[#d8d8d8] px-2 py-1 text-[13px]"
+            />
           </label>
           <label className="w-24 text-[12px] text-[#6b6b6b]">
             Lat
-            <input value={lat} onChange={(e) => setLat(e.target.value)} className="mt-1 w-full rounded border px-2 py-1 text-[13px]" />
+            <input
+              value={lat}
+              onChange={(e) => setLat(e.target.value)}
+              className="mt-1 w-full rounded border border-[#d8d8d8] px-2 py-1 text-[13px]"
+            />
           </label>
           <label className="w-24 text-[12px] text-[#6b6b6b]">
             Lng
-            <input value={lng} onChange={(e) => setLng(e.target.value)} className="mt-1 w-full rounded border px-2 py-1 text-[13px]" />
+            <input
+              value={lng}
+              onChange={(e) => setLng(e.target.value)}
+              className="mt-1 w-full rounded border border-[#d8d8d8] px-2 py-1 text-[13px]"
+            />
           </label>
-          <label className="w-24 text-[12px] text-[#6b6b6b]">
+          <label className="text-[12px] text-[#6b6b6b]">
             Radius m
             <input
               value={siteRadius}
               onChange={(e) => setSiteRadius(e.target.value)}
               placeholder="default"
-              className="mt-1 w-full rounded border px-2 py-1 text-[13px]"
+              className="mt-1 w-full rounded border border-[#d8d8d8] px-2 py-1 text-[13px]"
             />
           </label>
-          <button type="submit" className="rounded-lg bg-[#121212] px-4 py-2 text-[12.5px] text-white">
+          </div>
+          <button type="submit" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#121212] px-4 py-2 text-[12.5px] text-white">
+            <Plus className="h-3.5 w-3.5" aria-hidden />
             Add site
           </button>
         </form>

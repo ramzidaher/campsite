@@ -1,4 +1,4 @@
-# 05 — Calendar
+# 05  Calendar
 
 ## 1. Product intent
 
@@ -10,7 +10,7 @@
 
 ### 2.1 Tables
 
-**Primary migration:** `supabase/migrations/20250327000001_phase3_rota_calendar.sql` (later migrations may alter policies — grep for overrides).
+**Primary migration:** `supabase/migrations/20250327000001_phase3_rota_calendar.sql` (later migrations may alter policies  grep for overrides).
 
 | Table | Purpose |
 |-------|---------|
@@ -21,7 +21,7 @@
 
 **Web clients:** `CalendarClient.tsx` and `RotaClient.tsx` query **`rota_shifts`** (not `shifts`).
 
-**Alignment:** `20260406180000_calendar_rota_super_admin_alignment.sql` — legacy **`super_admin`** treated like **`org_admin`** for `calendar_events` managed policies and org-wide **`rota_shifts`** visibility / `can_manage_rota_for_dept`.
+**Alignment:** `20260406180000_calendar_rota_super_admin_alignment.sql`  legacy **`super_admin`** treated like **`org_admin`** for `calendar_events` managed policies and org-wide **`rota_shifts`** visibility / `can_manage_rota_for_dept`.
 
 ### 2.2 RLS policies (baseline from phase3, updated in v2 + super_admin migration)
 
@@ -43,7 +43,7 @@ Re-read the **full** `USING` / `WITH CHECK` clauses in migrations before changin
 
 ### 2.3 RPCs
 
-- `CalendarClient.tsx` uses `.from('calendar_events')` and `.from('rota_shifts')` — grep the file for `.rpc(` when adding server-side helpers.
+- `CalendarClient.tsx` uses `.from('calendar_events')` and `.from('rota_shifts')`  grep the file for `.rpc(` when adding server-side helpers.
 
 ### 2.4 Edge / external
 
@@ -80,7 +80,7 @@ Re-read the **full** `USING` / `WITH CHECK` clauses in migrations before changin
 
 ### 3.3 Styling
 
-- Uses source-based chip colours (rota green, broadcast blue, manual purple) — keep consistent if adding sources.
+- Uses source-based chip colours (rota green, broadcast blue, manual purple)  keep consistent if adding sources.
 
 ## 4. Shared types
 
@@ -92,14 +92,14 @@ Re-read the **full** `USING` / `WITH CHECK` clauses in migrations before changin
 
 ## 5. Verification checklist
 
-- [x] Non-admin cannot mutate another user’s manual event except **creator** path (`created_by = auth.uid()`) or **manager/org admin** override — **RLS** `calendar_events_update` / `delete`.
+- [x] Non-admin cannot mutate another user’s manual event except **creator** path (`created_by = auth.uid()`) or **manager/org admin** override  **RLS** `calendar_events_update` / `delete`.
 - [x] Shift visibility on calendar matches **rota** `rota_shifts_select` (self, dept managers, org admins + legacy super_admin).
-- [x] Org boundary: **`calendar_events_select`** and shift policies use **`current_org_id()`** / **`org_id`** — RLS is last line of defence.
-- [ ] Timezone: events display in **browser local** time (`Date` parsing); DST edge cases not specially handled — document if product requires UTC storage + explicit TZ.
+- [x] Org boundary: **`calendar_events_select`** and shift policies use **`current_org_id()`** / **`org_id`**  RLS is last line of defence.
+- [ ] Timezone: events display in **browser local** time (`Date` parsing); DST edge cases not specially handled  document if product requires UTC storage + explicit TZ.
 
 ## 6. Automated tests (`npm run test --workspace=@campsite/web`)
 
-- `src/lib/__tests__/calendarTypes.test.ts` — `canManageCalendarManualEvents`.
+- `src/lib/__tests__/calendarTypes.test.ts`  `canManageCalendarManualEvents`.
 
 ## 7. Implementation order (new calendar capability)
 

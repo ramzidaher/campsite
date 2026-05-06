@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { RegisterDoneRepair } from '@/components/auth/RegisterDoneRepair';
+import { Hourglass, Mail } from 'lucide-react';
 
 function isOrgCreatorQuery(sp: {
   creator?: string;
@@ -31,7 +32,7 @@ export default async function RegisterDonePage({
           className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#ecfdf5] text-2xl"
           aria-hidden
         >
-          ✉️
+          <Mail className="h-7 w-7 text-[#15803d]" aria-hidden />
         </div>
         <h2 className="auth-title">Confirm your email</h2>
         <p className="auth-sub mx-auto mb-5 max-w-md">
@@ -64,7 +65,7 @@ export default async function RegisterDonePage({
     <div className="py-4 text-center">
       <RegisterDoneRepair />
       <div className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-amber-100 text-[32px]">
-        ⏳
+        <Hourglass className="h-8 w-8 text-amber-700" aria-hidden />
       </div>
       <h2 className="auth-title">Awaiting approval</h2>
       <p className="auth-sub mx-auto mb-6 max-w-md">

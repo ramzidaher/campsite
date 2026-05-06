@@ -385,7 +385,7 @@ begin
            'notes_preview', left(
              trim(
                coalesce(nullif(trim(m.session_title), ''), '') ||
-               case when nullif(trim(m.session_title), '') is not null then ' — ' else '' end ||
+               case when nullif(trim(m.session_title), '') is not null then '  ' else '' end ||
                coalesce(public._one_on_one_doc_preview_text(m.session_title, m.doc), m.shared_notes, '')
              ),
              200

@@ -1,4 +1,4 @@
-# Campsite — architecture
+# Campsite  architecture
 
 ## Overview
 

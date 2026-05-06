@@ -1,8 +1,8 @@
 -- In-app notifications for recruitment requests.
 --
 -- Two events create notifications:
---   1. new_request  — manager submits → notifies all users with recruitment.approve_request
---   2. status_changed — HR updates status → notifies the original requester (created_by)
+--   1. new_request   manager submits → notifies all users with recruitment.approve_request
+--   2. status_changed  HR updates status → notifies the original requester (created_by)
 --
 -- The UI reads these to show:
 --   • unread badge on the top bar bell (for both HR and the requesting manager)

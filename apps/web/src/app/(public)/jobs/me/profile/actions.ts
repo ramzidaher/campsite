@@ -1,5 +1,10 @@
 'use server';
 
+import {
+  CANDIDATE_PERSONA_OPTIONS,
+  CANDIDATE_SKILLS_MAX,
+  CANDIDATE_SKILL_OPTIONS,
+} from '@/app/(public)/jobs/candidatePersonaOptions';
 import { buildCandidateJobsLoginRedirectUrl } from '@/lib/jobs/candidateAuthRedirect';
 import { createClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
@@ -10,8 +15,12 @@ const MAX = {
   name: 200,
   phone: 40,
   location: 200,
+  current_title: 200,
   url: 500,
 } as const;
+
+const VALID_PERSONA_EMOJIS = new Set(CANDIDATE_PERSONA_OPTIONS.map((o) => o.emoji));
+const VALID_SKILLS = new Set<string>(CANDIDATE_SKILL_OPTIONS as readonly string[]);
 
 export type CandidateProfileFormState = { ok: boolean; error: string | null };
 
@@ -61,11 +70,18 @@ export async function updateCandidateProfile(
   const full_name = trimOrNull(formData.get('full_name'), MAX.name);
   const phone = trimOrNull(formData.get('phone'), MAX.phone);
   const location = trimOrNull(formData.get('location'), MAX.location);
+  const current_title = trimOrNull(formData.get('current_title'), MAX.current_title);
   const linkedinRaw = String(formData.get('linkedin_url') ?? '').trim();
   const portfolioRaw = String(formData.get('portfolio_url') ?? '').trim();
+  const personaRaw = String(formData.get('persona') ?? '').trim();
+  const skillsRaw = formData.getAll('skills').map((v) => String(v ?? '').trim());
 
   const linkedin_url = normalizeOptionalUrl(linkedinRaw);
   const portfolio_url = normalizeOptionalUrl(portfolioRaw);
+  const persona = personaRaw && VALID_PERSONA_EMOJIS.has(personaRaw) ? personaRaw : null;
+  const skills = Array.from(
+    new Set(skillsRaw.filter((entry) => entry.length > 0 && VALID_SKILLS.has(entry)))
+  ).slice(0, CANDIDATE_SKILLS_MAX);
 
   if (linkedinRaw && linkedin_url === null) {
     return { ok: false, error: 'LinkedIn URL does not look valid. Use https://… or leave blank.' };
@@ -80,8 +96,11 @@ export async function updateCandidateProfile(
       full_name,
       phone,
       location,
+      current_title,
       linkedin_url,
       portfolio_url,
+      persona,
+      skills,
     },
     { onConflict: 'id' }
   );

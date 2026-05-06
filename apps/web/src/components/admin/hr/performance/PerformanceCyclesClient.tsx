@@ -3,6 +3,7 @@
 import { campusSurface, FormSelect } from '@campsite/ui/web';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import { createClient } from '@/lib/supabase/client';
+import { ArrowRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -114,8 +115,9 @@ export function PerformanceCyclesClient({
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="inline-flex h-9 items-center rounded-lg bg-[#121212] px-4 text-[12.5px] font-medium text-[#faf9f6] hover:bg-[#2a2a2a]"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#121212] px-4 text-[12.5px] font-medium text-[#faf9f6] hover:bg-[#2a2a2a]"
           >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
             New cycle
           </button>
         )}
@@ -177,6 +179,16 @@ export function PerformanceCyclesClient({
         <div className="rounded-2xl border border-[#e8e8e8] bg-white px-4 py-10 text-center">
           <p className="text-[14px] font-medium text-[#121212]">No review cycles yet</p>
           <p className="mt-1 text-[13px] text-[#9b9b9b]">Create a cycle to start collecting performance reviews.</p>
+          {canManage ? (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="mx-auto mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-[#121212] px-4 text-[12.5px] font-medium text-[#faf9f6] hover:bg-[#2a2a2a]"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              New cycle
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -214,13 +226,12 @@ function CycleRow({ cycle, canViewCycleDetail }: { cycle: Cycle; canViewCycleDet
           </span>
         </div>
         <p className="mt-0.5 text-[12px] text-[#9b9b9b]">
-          {cycle.period_start} → {cycle.period_end}
+          {cycle.period_start} to {cycle.period_end}
           {cycle.review_total > 0
             ? ` · ${cycle.review_completed}/${cycle.review_total} completed (${progress}%)`
             : ' · No reviews yet'}
         </p>
       </div>
-      <span className="ml-4 shrink-0 text-[12px] text-[#9b9b9b]">{canViewCycleDetail ? 'Open →' : 'Read-only'}</span>
     </>
   );
 
@@ -231,11 +242,25 @@ function CycleRow({ cycle, canViewCycleDetail }: { cycle: Cycle; canViewCycleDet
           href={`/hr/performance/${cycle.id}`}
           className={`flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4 ${campusSurface.interactiveSheetRow}`}
         >
-          {content}
+          <div className="min-w-0 flex-1">
+            {content}
+            {cycle.review_total > 0 ? (
+              <div className="mt-3 h-1.5 w-full rounded-full bg-[#efede8]">
+                <div className="h-full rounded-full bg-[#121212]" style={{ width: `${progress}%` }} />
+              </div>
+            ) : null}
+          </div>
+          {canViewCycleDetail ? (
+            <span className="ml-4 inline-flex shrink-0 items-center gap-1 text-[12px] text-[#9b9b9b]">
+              Open
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </span>
+          ) : null}
         </Link>
       ) : (
         <div className="flex items-center justify-between rounded-xl border border-[#e8e8e8] bg-white p-4">
           {content}
+          <span className="ml-4 shrink-0 text-[12px] text-[#9b9b9b]">Read-only</span>
         </div>
       )}
     </li>

@@ -91,7 +91,7 @@ export default async function SessionChoicePage() {
         {orgSlug ? (
           <p className="mt-6 text-center text-[12px] text-[#9b9b9b]">
             Sign in at <span className="font-medium text-[#6b6b6b]">camp-site.co.uk</span> with your work email
-            — we&apos;ll connect you to the right workspace.
+             we&apos;ll connect you to the right workspace.
           </p>
         ) : null}
       </div>

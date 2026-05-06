@@ -151,7 +151,7 @@ export function RotaManagePanelMobile({
           <Text style={styles.blockTitle}>Create rota</Text>
           <Text style={styles.blockHint}>
             {profile.role === 'manager'
-              ? 'Pick a department you manage — required for your role.'
+              ? 'Pick a department you manage  required for your role.'
               : 'Department is optional for org admins and coordinators.'}
           </Text>
           <Text style={styles.label}>Title</Text>

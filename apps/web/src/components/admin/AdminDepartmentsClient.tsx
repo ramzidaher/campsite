@@ -4,8 +4,9 @@ import { FormSelect } from '@campsite/ui/web';
 import { adminDepartmentsChannelsHeading, adminDepartmentsChannelsHint } from '@/lib/broadcasts/channelCopy';
 import { invalidateClientCaches } from '@/lib/cache/clientInvalidate';
 import type { DeptMemberRow } from '@/lib/departments/loadDepartmentsDirectory';
-import { departmentColorTagStyle, normalizeDepartmentColorHex } from '@/lib/departments/departmentColor';
+import { normalizeDepartmentColorHex } from '@/lib/departments/departmentColor';
 import { createClient } from '@/lib/supabase/client';
+import { Building2, ChevronDown, Search, Trophy, UserPlus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -27,6 +28,11 @@ type DeptTeamRow = { id: string; name: string; lead_user_id: string | null };
 type BroadcastPermRow = { permission: string; min_role: string };
 
 type MinRoleOpt = 'manager' | 'coordinator' | 'coordinator_only';
+type DeptDetailTab = 'overview' | 'teams' | 'members' | 'broadcast' | 'managers';
+
+function looksLikeUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+}
 
 /** Matches `dept_broadcast_permissions.permission` + Plan 02 spec. */
 const DEPT_BROADCAST_PERM_DEFS: {
@@ -83,12 +89,6 @@ function minRoleLabel(r: MinRoleOpt): string {
   if (r === 'coordinator_only') return 'Coordinators only';
   if (r === 'coordinator') return 'Managers & coordinators';
   return 'Managers (dept managers)';
-}
-
-function typeIcon(t: string) {
-  if (t === 'society') return '👥';
-  if (t === 'club') return '⚽';
-  return '🏢';
 }
 
 function typeLabel(t: string) {
@@ -188,6 +188,13 @@ export function AdminDepartmentsClient({
     }
     return list;
   }, [initialDepartments, filter, q]);
+  const staffNameById = useMemo(
+    () =>
+      Object.fromEntries(
+        staffOptions.map((s) => [s.id, (s.full_name ?? '').trim() || 'Unknown'])
+      ) as Record<string, string>,
+    [staffOptions]
+  );
 
   const refresh = useCallback(() => {
     router.refresh();
@@ -471,9 +478,10 @@ export function AdminDepartmentsClient({
               setMsg(null);
               setCreateOpen(true);
             }}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#121212] px-4 text-[13px] font-medium text-[#faf9f6] transition-opacity hover:opacity-90"
           >
-            + New Department
+            <UserPlus className="h-4 w-4" aria-hidden />
+            New department
           </button>
         ) : null}
       </div>
@@ -482,9 +490,7 @@ export function AdminDepartmentsClient({
 
       <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex h-9 w-full max-w-[240px] items-center gap-2 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] px-3">
-          <span className="text-[13px] text-[#9b9b9b]" aria-hidden>
-            🔍
-          </span>
+          <Search className="h-3.5 w-3.5 text-[#9b9b9b]" aria-hidden />
           <input
             type="search"
             value={q}
@@ -523,7 +529,11 @@ export function AdminDepartmentsClient({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+        <>
+          <p className="mb-3 text-[12px] text-[#6b6b6b]">
+            Select a department card to open settings.
+          </p>
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredGrid.map((d) => (
             <DeptGridCard
               key={d.id}
@@ -531,13 +541,15 @@ export function AdminDepartmentsClient({
               memberCount={memberCountByDept[d.id] ?? 0}
               categories={categoriesByDept[d.id] ?? []}
               managers={managersByDept[d.id] ?? []}
+              staffNameById={staffNameById}
               onOpen={() => {
                 setMsg(null);
                 setDetailDept(d);
               }}
             />
           ))}
-        </div>
+          </div>
+        </>
       )}
 
       {isOrgAdmin && createOpen ? (
@@ -663,18 +675,27 @@ function DeptGridCard({
   memberCount,
   categories,
   managers,
+  staffNameById,
   onOpen,
 }: {
   dept: Dept;
   memberCount: number;
   categories: { id: string; name: string }[];
   managers: { user_id: string; full_name: string }[];
+  staffNameById: Record<string, string>;
   onOpen: () => void;
 }) {
   const catNames = categories.map((c) => c.name);
   const show = catNames.slice(0, 3);
   const more = catNames.length - show.length;
-  const deptColorStyle = departmentColorTagStyle(dept.color_hex);
+  const normalizedColor = normalizeDepartmentColorHex(dept.color_hex);
+  const managerLabel = managers
+    .map((m) => {
+      const raw = (m.full_name ?? '').trim();
+      if (raw && !looksLikeUuid(raw)) return raw;
+      return (staffNameById[m.user_id] ?? raw) || 'Unknown';
+    })
+    .join(', ');
 
   return (
     <button
@@ -685,10 +706,23 @@ function DeptGridCard({
         'w-full cursor-pointer rounded-xl border border-[#d8d8d8] bg-white p-[18px] text-left transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-[0_1px_3px_rgba(0,0,0,0.07),0_4px_12px_rgba(0,0,0,0.04)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#121212]',
         dept.is_archived ? 'opacity-75' : '',
       ].join(' ')}
+      style={
+        normalizedColor
+          ? {
+              backgroundImage: `linear-gradient(to top, color-mix(in srgb, ${normalizedColor} 18%, transparent) 0%, transparent 38%)`,
+            }
+          : undefined
+      }
     >
       <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[9px] border border-[#d8d8d8] bg-[#f5f4f1] text-[18px]">
-          {typeIcon(dept.type)}
+        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[9px] border border-[#d8d8d8] bg-[#f5f4f1] text-[#6b6b6b]">
+          {dept.type === 'society' ? (
+            <Users className="h-4 w-4" aria-hidden />
+          ) : dept.type === 'club' ? (
+            <Trophy className="h-4 w-4" aria-hidden />
+          ) : (
+            <Building2 className="h-4 w-4" aria-hidden />
+          )}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           <span className="inline-flex items-center rounded-full border border-[#d8d8d8] bg-[#f5f4f1] px-2 py-0.5 text-[11px] font-medium text-[#6b6b6b]">
@@ -699,10 +733,7 @@ function DeptGridCard({
               Archived
             </span>
           ) : null}
-          <span
-            className="rounded-md px-2 py-1 text-[11px] font-medium text-[#6b6b6b] hover:bg-[#f5f4f1]"
-            aria-hidden
-          >
+          <span className="rounded-md border border-[#d8d8d8] bg-white px-2 py-1 text-[11px] font-medium text-[#6b6b6b]">
             Edit
           </span>
         </div>
@@ -711,19 +742,8 @@ function DeptGridCard({
       <div className="mb-1 text-[12px] text-[#9b9b9b]">members</div>
       <div className="text-[14px] font-medium text-[#121212]">{dept.name}</div>
       <div className="mt-1 text-[12px] text-[#6b6b6b]">
-        {managers.length ? <>Managed by {managers.map((m) => m.full_name).join(', ')}</> : 'No assigned manager'}
+        {managers.length ? <>Managed by {managerLabel}</> : 'No assigned manager'}
       </div>
-      {dept.color_hex ? (
-        <div className="mt-2">
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium"
-            style={deptColorStyle}
-          >
-            <span className="h-2 w-2 rounded-full bg-current" aria-hidden />
-            {dept.color_hex}
-          </span>
-        </div>
-      ) : null}
       {catNames.length > 0 ? (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {show.map((c) => (
@@ -781,7 +801,7 @@ function ModalOverlay({
         tabIndex={-1}
         className={[
           'max-h-[min(90vh,800px)] w-full overflow-y-auto rounded-xl border border-[#d8d8d8] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.07)]',
-          wide ? 'max-w-2xl' : 'max-w-lg',
+          wide ? 'max-w-4xl' : 'max-w-lg',
         ].join(' ')}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose();
@@ -890,6 +910,21 @@ function DeptDetailForm({
   const [teamMemberPick, setTeamMemberPick] = useState<Record<string, string>>({});
   const [teamNameDrafts, setTeamNameDrafts] = useState<Record<string, string>>({});
   const [mergeTargetId, setMergeTargetId] = useState('');
+  const [activeTab, setActiveTab] = useState<DeptDetailTab>(isOrgAdmin ? 'overview' : 'teams');
+  const staffNameById = useMemo(
+    () =>
+      Object.fromEntries(
+        staffOptions.map((s) => [s.id, (s.full_name ?? '').trim() || 'Unknown'])
+      ) as Record<string, string>,
+    [staffOptions]
+  );
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    teams: true,
+    members: true,
+    perms: false,
+    channels: false,
+    managers: false,
+  });
 
   const canSetTeamOwner = isOrgAdmin || isDeptManager;
   const canManageTeamRoster = useCallback(
@@ -899,6 +934,7 @@ function DeptDetailForm({
 
   useEffect(() => {
     setEdit(dept);
+    setActiveTab(isOrgAdmin ? 'overview' : 'teams');
   }, [dept]);
 
   useEffect(() => {
@@ -909,18 +945,51 @@ function DeptDetailForm({
     setTeamNameDrafts(next);
   }, [teams]);
 
+  function toggleSection(section: string) {
+    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }
+
   return (
     <>
+      <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-[#d8d8d8] bg-[#f5f4f1] p-1">
+        {(isOrgAdmin
+          ? ([
+              ['overview', 'Overview'],
+              ['teams', 'Teams'],
+              ['members', 'Members'],
+              ['broadcast', 'Broadcast'],
+              ['managers', 'Managers'],
+            ] as const)
+          : ([
+              ['teams', 'Teams'],
+              ['members', 'Members'],
+              ['broadcast', 'Broadcast'],
+            ] as const)
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            className={[
+              'rounded-md px-3 py-1.5 text-[12px] transition-colors',
+              activeTab === key ? 'bg-white font-medium text-[#121212] shadow-sm' : 'text-[#6b6b6b] hover:text-[#121212]',
+            ].join(' ')}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {!isOrgAdmin ? (
         <p className="mb-4 text-[12px] leading-snug text-[#6b6b6b]">
           Department name, merge, broadcast permission presets, and assigned managers are managed by an organisation
           admin. You can add or remove department members and edit teams below.{' '}
           <span className="font-medium text-[#121212]">Broadcast channels</span> for this department are listed after
-          members — only an org admin can add or remove them (Admin → Broadcast channels or Admin → Departments).
+          members  only an org admin can add or remove them (Admin → Broadcast channels or Admin → Departments).
         </p>
       ) : null}
 
-      {isOrgAdmin ? (
+      {isOrgAdmin && activeTab === 'overview' ? (
         <>
           <div className="grid gap-3">
             <label className="text-[13px] text-[#121212]">
@@ -1035,8 +1104,21 @@ function DeptDetailForm({
         </>
       ) : null}
 
+      {activeTab === 'teams' ? (
       <div className={`${isOrgAdmin ? 'mt-6' : ''} border-t border-[#d8d8d8] pt-4`}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Teams</p>
+        <button
+          type="button"
+          onClick={() => toggleSection('teams')}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Teams</p>
+          <ChevronDown
+            className={['h-4 w-4 text-[#9b9b9b] transition-transform', openSections.teams ? 'rotate-0' : '-rotate-90'].join(' ')}
+            aria-hidden
+          />
+        </button>
+        {openSections.teams ? (
+          <>
         <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
           Named groups for targeted broadcasts (e.g. morning shift, night shift). Assign a <span className="font-medium text-[#6b6b6b]">team owner</span> to let them manage the roster and rename the team. Org admins, department managers, and coordinators can create and manage teams in their scope; higher roles can broadcast to any team in the department without joining it.
         </p>
@@ -1237,10 +1319,26 @@ function DeptDetailForm({
             </button>
           </div>
         ) : null}
+          </>
+        ) : null}
       </div>
+      ) : null}
 
+      {activeTab === 'members' ? (
       <div className="mt-6 border-t border-[#d8d8d8] pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Members</p>
+        <button
+          type="button"
+          onClick={() => toggleSection('members')}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Members</p>
+          <ChevronDown
+            className={['h-4 w-4 text-[#9b9b9b] transition-transform', openSections.members ? 'rotate-0' : '-rotate-90'].join(' ')}
+            aria-hidden
+          />
+        </button>
+        {openSections.members ? (
+          <>
         <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
           People linked to this department for broadcasts, rota and approvals. Removing them here does not deactivate
           their account.
@@ -1297,11 +1395,26 @@ function DeptDetailForm({
             Add
           </button>
         </div>
+          </>
+        ) : null}
       </div>
+      ) : null}
 
-      {isOrgAdmin ? (
+      {isOrgAdmin && activeTab === 'broadcast' ? (
         <div className="mt-6 border-t border-[#d8d8d8] pt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast permissions</p>
+          <button
+            type="button"
+            onClick={() => toggleSection('perms')}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Broadcast permissions</p>
+            <ChevronDown
+              className={['h-4 w-4 text-[#9b9b9b] transition-transform', openSections.perms ? 'rotate-0' : '-rotate-90'].join(' ')}
+              aria-hidden
+            />
+          </button>
+          {openSections.perms ? (
+            <>
           <p className="mt-1 text-[12px] leading-snug text-[#9b9b9b]">
             Off by default. Grants extra broadcast powers for this department; baseline role rules still apply.
           </p>
@@ -1316,8 +1429,8 @@ function DeptDetailForm({
                   key={def.permission}
                   className="rounded-lg border border-[#eceae6] bg-[#faf9f6] px-3 py-2.5"
                 >
-                  <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap sm:items-center sm:justify-between">
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
+                  <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap sm:justify-between">
+                    <label className="flex w-full min-w-0 cursor-pointer items-start gap-2.5 sm:flex-1">
                       <input
                         type="checkbox"
                         className="mt-0.5 rounded border-[#d8d8d8]"
@@ -1335,7 +1448,7 @@ function DeptDetailForm({
                     </label>
                     {enabled && def.minRoleOptions.length > 1 ? (
                       <FormSelect
-                        className="w-full shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[12px] text-[#121212] sm:w-[200px]"
+                        className="w-full shrink-0 rounded-lg border border-[#d8d8d8] bg-white px-2.5 py-1.5 text-[12px] text-[#121212] sm:w-[280px]"
                         value={safeMin}
                         disabled={busy}
                         onChange={(e) =>
@@ -1359,13 +1472,28 @@ function DeptDetailForm({
               );
             })}
           </ul>
+            </>
+          ) : null}
         </div>
       ) : null}
 
+      {activeTab === 'broadcast' ? (
       <div className="mt-6 border-t border-[#d8d8d8] pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
-          {adminDepartmentsChannelsHeading}
-        </p>
+        <button
+          type="button"
+          onClick={() => toggleSection('channels')}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">
+            {adminDepartmentsChannelsHeading}
+          </p>
+          <ChevronDown
+            className={['h-4 w-4 text-[#9b9b9b] transition-transform', openSections.channels ? 'rotate-0' : '-rotate-90'].join(' ')}
+            aria-hidden
+          />
+        </button>
+        {openSections.channels ? (
+          <>
         <p className="mt-1 text-[12px] leading-snug text-[#6b6b6b]">{adminDepartmentsChannelsHint}</p>
         <ul className="mt-2 space-y-1.5 text-[13px]">
           {categories.length === 0 ? (
@@ -1407,15 +1535,30 @@ function DeptDetailForm({
             </button>
           </div>
         ) : (
-          <p className="mt-2 text-[12px] leading-snug text-[#9b9b9b]">
-            Ask an organisation admin to add channels here or under Admin → Broadcast channels (
-            <span className="font-mono text-[11px]">/admin/categories</span>).
-          </p>
+        <p className="mt-2 text-[12px] leading-snug text-[#9b9b9b]">
+          Ask an organisation admin to add channels here or under Admin → Broadcast channels.
+        </p>
         )}
+          </>
+        ) : null}
       </div>
+      ) : null}
 
+      {isOrgAdmin && activeTab === 'managers' ? (
       <div className="mt-6 border-t border-[#d8d8d8] pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Managers</p>
+        <button
+          type="button"
+          onClick={() => toggleSection('managers')}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9b9b9b]">Managers</p>
+          <ChevronDown
+            className={['h-4 w-4 text-[#9b9b9b] transition-transform', openSections.managers ? 'rotate-0' : '-rotate-90'].join(' ')}
+            aria-hidden
+          />
+        </button>
+        {openSections.managers ? (
+          <>
         <p className="mt-1 text-[12px] text-[#9b9b9b]">
           {isOrgAdmin
             ? 'Assign who can approve and manage this department.'
@@ -1427,7 +1570,13 @@ function DeptDetailForm({
           ) : (
             managers.map((m) => (
               <li key={m.user_id} className="flex items-center justify-between gap-2">
-                <span className="text-[#6b6b6b]">{m.full_name}</span>
+                <span className="text-[#6b6b6b]">
+                  {(() => {
+                    const raw = (m.full_name ?? '').trim();
+                    if (raw && !looksLikeUuid(raw)) return raw;
+                    return (staffNameById[m.user_id] ?? raw) || 'Unknown';
+                  })()}
+                </span>
                 {isOrgAdmin ? (
                   <button
                     type="button"
@@ -1471,7 +1620,10 @@ function DeptDetailForm({
             </button>
           </div>
         ) : null}
+          </>
+        ) : null}
       </div>
+      ) : null}
     </>
   );
 }

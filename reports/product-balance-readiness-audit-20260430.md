@@ -110,7 +110,7 @@ For this project, a balanced product is one where:
 
 ## Domain Scorecard
 
-### 1) Architecture Consistency — **Amber**
+### 1) Architecture Consistency  **Amber**
 **Improved**
 - Shared cache normalization is now applied to major Stage B/C hotspots (jobs/recruitment/manager/admin users/admin HR/profile employee file).
 - Shell-bundle pattern is now used more consistently in normalized routes.
@@ -127,7 +127,7 @@ For this project, a balanced product is one where:
 
 ---
 
-### 2) AuthN / AuthZ Coherence — **Amber-Green**
+### 2) AuthN / AuthZ Coherence  **Amber-Green**
 **Strengths**
 - Shell-bundle based permission reuse exists and is now common in normalized paths.
 - Many high-risk surfaces gate correctly before heavy reads.
@@ -142,7 +142,7 @@ For this project, a balanced product is one where:
 
 ---
 
-### 3) Data Fetching & Cache Semantics — **Amber**
+### 3) Data Fetching & Cache Semantics  **Amber**
 **Strengths**
 - Shared cache utility adoption is broad and significantly better than historical state.
 - Invalidation coverage has been expanded with each Stage B/C namespace.
@@ -158,7 +158,7 @@ For this project, a balanced product is one where:
 
 ---
 
-### 4) Fallback / Degraded UX Semantics — **Amber-Red**
+### 4) Fallback / Degraded UX Semantics  **Amber-Red**
 **Observation**
 - This remains one of the most important non-performance imbalance dimensions.
 
@@ -171,7 +171,7 @@ For this project, a balanced product is one where:
 
 ---
 
-### 5) UX Consistency Across Surfaces — **Amber**
+### 5) UX Consistency Across Surfaces  **Amber**
 **Improved**
 - HR/people typography and shell consistency rules exist and are followed in many touched routes.
 
@@ -183,7 +183,7 @@ For this project, a balanced product is one where:
 
 ---
 
-### 6) Testing, QA, and Release Discipline — **Amber-Green**
+### 6) Testing, QA, and Release Discipline  **Amber-Green**
 **Strengths**
 - CI gate includes: secrets scan, format, lint, typecheck, tests, web build.
 - Test suite exists with coverage across authz, RBAC, dashboard scope, accessibility, and regression contracts.
@@ -195,7 +195,7 @@ For this project, a balanced product is one where:
 
 ---
 
-### 7) Operational Readiness (Incident & Observability) — **Amber**
+### 7) Operational Readiness (Incident & Observability)  **Amber**
 **Strengths**
 - Incident reporting and slowwatch tooling are present.
 - Perf instrumentation (`withServerPerf`) is used in many critical routes.

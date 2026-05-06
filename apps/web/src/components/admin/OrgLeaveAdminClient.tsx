@@ -291,8 +291,7 @@ export function OrgLeaveAdminClient({
     }
   }
 
-  async function addHolidayPeriod(e: React.FormEvent) {
-    e.preventDefault();
+  async function addHolidayPeriod() {
     if (!holidayName.trim() || !holidayStart || !holidayEnd) return;
     if (holidayEnd < holidayStart) {
       flash('Holiday end date must be on or after start date.', 'err');
@@ -359,6 +358,7 @@ export function OrgLeaveAdminClient({
   }
 
   const selectedMember = members.find((m) => m.id === targetId);
+  const activeHolidayPeriodsCount = holidayPeriods.filter((h) => h.is_active).length;
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-7">
@@ -377,6 +377,13 @@ export function OrgLeaveAdminClient({
         </p>
       ) : null}
 
+      <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <OverviewCard label="Team members" value={members.length} />
+        <OverviewCard label="Active holidays" value={activeHolidayPeriodsCount} />
+        <OverviewCard label="Leave year" value={year} />
+        <OverviewCard label="Bradford window" value={`${bradfordDays || '365'}d`} />
+      </section>
+
       {/* Allowances */}
       <section className="mb-8 rounded-xl border border-[#d8d8d8] bg-white p-5">
         <h2 className="text-[15px] font-semibold text-[#121212]">Leave allowances</h2>
@@ -394,7 +401,7 @@ export function OrgLeaveAdminClient({
               >
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.full_name}{m.email ? ` — ${m.email}` : ''}
+                    {m.full_name}{m.email ? `  ${m.email}` : ''}
                   </option>
                 ))}
               </FormSelect>
@@ -465,6 +472,12 @@ export function OrgLeaveAdminClient({
           These settings apply to everyone in your organisation.
         </p>
         <form className="mt-4 space-y-5" onSubmit={(e) => void saveSettings(e)}>
+          <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <p className="text-[12.5px] font-medium text-[#121212]">Basic settings</p>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              Configure the core rules first. Advanced policy controls are collapsed below.
+            </p>
+          </div>
           <div>
             <label className="block text-[12.5px] font-medium text-[#6b6b6b]">
               Sickness look-back period (days)
@@ -547,7 +560,7 @@ export function OrgLeaveAdminClient({
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
               Add organisation-specific holiday timelines (for example longer university Christmas breaks). These dates are auto-excluded from leave day deduction.
             </p>
-            <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={(e) => void addHolidayPeriod(e)}>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className="block text-[12.5px] font-medium text-[#6b6b6b] sm:col-span-2">
                 Name
                 <input
@@ -596,14 +609,15 @@ export function OrgLeaveAdminClient({
               </label>
               <div className="sm:col-span-2">
                 <button
-                  type="submit"
+                  type="button"
                   disabled={busy || !holidayName.trim() || !holidayStart || !holidayEnd}
+                  onClick={() => void addHolidayPeriod()}
                   className="rounded-lg border border-[#121212] bg-white px-4 py-2 text-[13px] font-medium text-[#121212] hover:bg-[#f5f4f1] disabled:opacity-50"
                 >
                   {busy ? 'Adding…' : 'Add holiday period'}
                 </button>
               </div>
-            </form>
+            </div>
             <div className="mt-4 space-y-2">
               {holidayPeriods.length === 0 ? (
                 <p className="text-[11px] text-[#9b9b9b]">No holiday periods configured yet.</p>
@@ -717,7 +731,7 @@ export function OrgLeaveAdminClient({
           </div>
 
           <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
-            <p className="text-[12.5px] font-medium text-[#121212]">UK weekly paid — statutory annual leave</p>
+            <p className="text-[12.5px] font-medium text-[#121212]">UK weekly paid  statutory annual leave</p>
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
               When enabled, people with pay frequency &quot;weekly&quot; on their HR record use statutory weeks × contracted working days per week as the full-year entitlement (before employment-start pro-rating).
             </p>
@@ -745,7 +759,7 @@ export function OrgLeaveAdminClient({
           </div>
 
           <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
-            <p className="text-[12.5px] font-medium text-[#121212]">Statutory Sick Pay (SSP) — estimates</p>
+            <p className="text-[12.5px] font-medium text-[#121212]">Statutory Sick Pay (SSP)  estimates</p>
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
               Rates feed the SSP summary on the time-off hub. April 2026 reform: min(flat, % of AWE), no LEL by default. Set LEL only for legacy payroll comparisons.
             </p>
@@ -843,10 +857,19 @@ export function OrgLeaveAdminClient({
               Remove saved organisation default
             </label>
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
-              Each SU (organisation) can set its own policy — e.g. 20 days or 30 days. Save here, then use “Apply to everyone” below to populate allowances; employment start dates still pro-rate the year someone joins.
+              Each SU (organisation) can set its own policy  e.g. 20 days or 30 days. Save here, then use “Apply to everyone” below to populate allowances; employment start dates still pro-rate the year someone joins.
             </p>
           </div>
 
+          <details className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
+            <summary className="cursor-pointer list-none text-[12.5px] font-medium text-[#121212]">
+              Advanced policy controls
+            </summary>
+            <p className="mt-1 text-[11px] text-[#9b9b9b]">
+              Holiday calendars, carry-over, encashment, SSP, international profiles, accrual and bulk actions.
+            </p>
+
+            <div className="mt-4 space-y-4">
           <div className="rounded-lg border border-[#e8e8e8] bg-[#fafaf8] p-4">
             <p className="text-[12.5px] font-medium text-[#121212]">International leave law profile</p>
             <p className="mt-1 text-[11px] text-[#9b9b9b]">
@@ -977,6 +1000,8 @@ export function OrgLeaveAdminClient({
               </label>
             </div>
           </div>
+          </div>
+          </details>
 
           <button
             type="submit"
@@ -987,6 +1012,15 @@ export function OrgLeaveAdminClient({
           </button>
         </form>
       </section>
+    </div>
+  );
+}
+
+function OverviewCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-[#e8e8e8] bg-white p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#9b9b9b]">{label}</p>
+      <p className="mt-2 text-[28px] font-semibold leading-none text-[#121212] tabular-nums">{value}</p>
     </div>
   );
 }

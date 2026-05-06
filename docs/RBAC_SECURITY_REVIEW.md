@@ -29,7 +29,7 @@ This note summarizes a **manual review** of tenant admin/API routes and how they
 
 ## Findings / gaps
 
-### 1. Member invite provision (`admin_provision_invited_member`) — elevation risk
+### 1. Member invite provision (`admin_provision_invited_member`)  elevation risk
 
 `POST /api/admin/invite-member` checks `members.invite`, then calls **`admin_provision_invited_member` with the service role**. That RPC validates legacy **profile role strings** and org membership setup but **does not** currently invoke `actor_can_assign_role` or the Phase 5 system/custom assignment rules used by `assign_user_org_role`.
 

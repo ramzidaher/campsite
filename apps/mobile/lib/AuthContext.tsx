@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [configured]);
 
-  // Only react to user identity changes — not every new session object from token refresh —
+  // Only react to user identity changes  not every new session object from token refresh 
   // so we don't briefly clear profile / toggle profileLoading and flash register.
   const sessionUserId = session?.user?.id ?? null;
 

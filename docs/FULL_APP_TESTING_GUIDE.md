@@ -38,7 +38,7 @@ npm run seed-qa-full
 
 - Default org slug: `campsite-qa-lab` (override: `CAMPSITE_QA_ORG_SLUG`).
 - Default password: `CampSiteQA2026!` (override: `CAMPSITE_QA_PASSWORD`).
-- Emails: `campsite-qa-{persona}@example.com` — see [QA_SEED_AND_SCENARIOS.md](./QA_SEED_AND_SCENARIOS.md) for personas (org admin, Jane manager, pending user, isolation cases, etc.).
+- Emails: `campsite-qa-{persona}@example.com`  see [QA_SEED_AND_SCENARIOS.md](./QA_SEED_AND_SCENARIOS.md) for personas (org admin, Jane manager, pending user, isolation cases, etc.).
 - Output: `scripts/qa-seed-output.json` (gitignored) with org id and user ids.
 
 **Password-manager import (optional):**
@@ -64,9 +64,9 @@ Updates [demo-org-logins.md](./demo-org-logins.md) from script output (or use `-
 ### A. Smoke (15–30 min)
 
 1. Log in as **org admin** from QA doc (`campsite-qa-orgadmin@example.com`).
-2. Open **Dashboard**, **Broadcasts**, **Admin → Overview**, one **HR** link — no errors.
-3. Log in as **manager** (Jane) — confirm **Manager** section + scoped content.
-4. Run **`npm test`** at root — all packages that define tests should pass.
+2. Open **Dashboard**, **Broadcasts**, **Admin → Overview**, one **HR** link  no errors.
+3. Log in as **manager** (Jane)  confirm **Manager** section + scoped content.
+4. Run **`npm test`** at root  all packages that define tests should pass.
 
 ### B. Scenario-driven (half day)
 
@@ -82,11 +82,11 @@ Follow **every table** in [QA_SEED_AND_SCENARIOS.md](./QA_SEED_AND_SCENARIOS.md)
 ### D. Founder / platform
 
 1. `npm run add-platform-founder` with a dedicated email (see script).
-2. Sign in and walk **Founder HQ** (`/founders`): orgs, RBAC catalog, legal policies, audit — see granular rows **G-052** and CrossCutting rows in the main CSV.
+2. Sign in and walk **Founder HQ** (`/founders`): orgs, RBAC catalog, legal policies, audit  see granular rows **G-052** and CrossCutting rows in the main CSV.
 
 ### E. Public / candidate
 
-Without staff login: `/jobs`, apply flow, status/offer token pages — use real tokens from seeded applications when available.
+Without staff login: `/jobs`, apply flow, status/offer token pages  use real tokens from seeded applications when available.
 
 ---
 
@@ -114,7 +114,7 @@ Use QA lab credentials; confirm tabs (home, broadcasts, calendar, rota, discount
 
 ## 7. HR-specific depth
 
-[HR_TEST_CASES_AND_RUN_LOG.md](./HR_TEST_CASES_AND_RUN_LOG.md) and [HR_FIX_PLAN.md](./HR_FIX_PLAN.md) track HR bugs and cases — align with QA seed personas where possible.
+[HR_TEST_CASES_AND_RUN_LOG.md](./HR_TEST_CASES_AND_RUN_LOG.md) and [HR_FIX_PLAN.md](./HR_FIX_PLAN.md) track HR bugs and cases  align with QA seed personas where possible.
 
 ---
 

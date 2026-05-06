@@ -132,7 +132,7 @@ begin
         '[]'::jsonb
       ),
 
-    -- high bradford scores (threshold 200 — common UK HR trigger)
+    -- high bradford scores (threshold 200  common UK HR trigger)
     'bradford_alerts',
       coalesce(
         (select jsonb_agg(row)

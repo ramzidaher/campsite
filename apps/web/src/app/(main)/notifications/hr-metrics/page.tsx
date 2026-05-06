@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase/getAuthUser';
 
-/** In-app list for hr_metric_notifications (managers + HR). No extra permission gate — RLS returns only your rows. */
+/** In-app list for hr_metric_notifications (managers + HR). No extra permission gate  RLS returns only your rows. */
 export default async function HrMetricNotificationsPage() {
   const supabase = await createClient();
   const user = await getAuthUser();

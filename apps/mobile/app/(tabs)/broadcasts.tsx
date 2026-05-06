@@ -30,7 +30,7 @@ import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const FILTER_KEY_PILL = 'campsite_broadcast_feed_pill_mobile';
 const PAGE_SIZE = 20;
-/** Must match `screenTop.marginBottom` — space between filters and list. */
+/** Must match `screenTop.marginBottom`  space between filters and list. */
 const SCREEN_TOP_BELOW_GAP = 8;
 
 function formatSentAt(iso: string | null): string {

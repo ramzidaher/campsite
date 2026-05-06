@@ -47,7 +47,7 @@ export async function GET(req: Request) {
   const includeSensitive = url.searchParams.get('includeSensitive') === '1';
   const reason = (url.searchParams.get('reason') || '').trim();
 
-  // Single RPC for all permissions + profile fetch in parallel — replaces 6 individual has_permission calls.
+  // Single RPC for all permissions + profile fetch in parallel  replaces 6 individual has_permission calls.
   const [permissionKeys, { data: targetProfile }] = await Promise.all([
     getMyPermissions(orgId),
     supabase
