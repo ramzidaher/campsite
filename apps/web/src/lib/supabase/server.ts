@@ -16,7 +16,8 @@ export async function createClient() {
 
   return createServerClient(url, key, {
     global: {
-      fetch: (input, init) => fetchWithTimeout(input, init, getSupabaseFetchTimeoutMs()),
+      fetch: (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+        fetchWithTimeout(input, init, getSupabaseFetchTimeoutMs()),
     },
     cookies: {
       getAll() {
