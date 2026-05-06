@@ -1,4 +1,4 @@
-import { formatLeaveYearPeriodRange } from '@/lib/datetime';
+import { formatLeaveYearPeriodRange, leaveYearUiKeyFromDbKey } from '@/lib/datetime';
 import { EmployeeSelfDocumentsClient } from '@/components/profile/EmployeeSelfDocumentsClient';
 import { DependantsEditorClient } from '@/components/hr/DependantsEditorClient';
 import { BankDetailsClient } from '@/components/hr/BankDetailsClient';
@@ -174,6 +174,7 @@ export default async function MyProfilePage({
   const profileLeaveYearKey = profileOverviewData.profileLeaveYearKey;
   const sm = profileOverviewData.leaveYearStartMonth;
   const sd = profileOverviewData.leaveYearStartDay;
+  const profileLeaveYearUiLabel = leaveYearUiKeyFromDbKey(profileLeaveYearKey, sm, sd);
   const annualEntitlementDays = profileOverviewData.allowanceAnnualEntitlementDays;
   const toilBalanceDays = profileOverviewData.allowanceToilBalanceDays;
   const annualApprovedRequests = profileOverviewData.annualApprovedRequests;
@@ -307,7 +308,7 @@ export default async function MyProfilePage({
       facts: [
         {
           label: 'Leave year',
-          value: `${profileLeaveYearKey} · ${formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}`,
+          value: `${profileLeaveYearUiLabel} · ${formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}`,
         },
         { label: 'Annual entitlement', value: `${Number(annualEntitlementDays ?? 0)} days` },
         { label: 'Annual leave used', value: `${annualUsed} days` },
@@ -990,7 +991,7 @@ export default async function MyProfilePage({
                 </div>
                 <div className="space-y-3 p-4">
                   <p className="text-[12px] text-[#6b6b6b]">
-                    Leave year {profileLeaveYearKey} · {formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}
+                    Leave year {profileLeaveYearUiLabel} · {formatLeaveYearPeriodRange(profileLeaveYearKey, sm, sd)}
                   </p>
                   <div>
                     <div className="mb-1 flex items-center justify-between text-[12px]">

@@ -16,7 +16,12 @@ import {
 } from 'react-native';
 
 import type { ProfileRow } from '@/lib/AuthContext';
-import { currentLeaveYearKey, formatLeaveYearPeriodRange } from '@/lib/datetime';
+import {
+  currentLeaveYearKey,
+  dbLeaveYearKeyFromUiKey,
+  formatLeaveYearPeriodRange,
+  leaveYearUiKeyFromDbKey,
+} from '@/lib/datetime';
 import { leaveRangeOverlapsExisting } from '@/lib/leaveDateOverlap';
 import { getSupabase } from '@/lib/supabase';
 import { formatToilMinutes, toilInputToMinutes } from '@/lib/toilDuration';
@@ -193,16 +198,13 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
   const defaultLeaveYearKey = currentLeaveYearKey(new Date(), leaveYearStartMonth, leaveYearStartDay);
   const year = yearOverride ?? defaultLeaveYearKey;
 
-  const yearOptions = useMemo(() => {
+  const leaveYearUiYearOptions = useMemo(() => {
     const cy = new Date().getFullYear();
-    const base = [cy - 1, cy, cy + 1];
-    const yNum = Number(year);
-    if (Number.isFinite(yNum) && !base.includes(yNum)) {
-      base.push(yNum);
-      base.sort((a, b) => a - b);
-    }
-    return base.map(String);
-  }, [year]);
+    const uiSet = new Set([cy - 1, cy, cy + 1]);
+    const uiSelected = Number(leaveYearUiKeyFromDbKey(year, leaveYearStartMonth, leaveYearStartDay));
+    if (Number.isFinite(uiSelected)) uiSet.add(uiSelected);
+    return [...uiSet].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+  }, [year, leaveYearStartMonth, leaveYearStartDay]);
 
   const leavePeriodLabel = useMemo(
     () => formatLeaveYearPeriodRange(year, leaveYearStartMonth, leaveYearStartDay),
@@ -692,7 +694,7 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
         <View style={styles.header}>
           <Text style={[styles.title, { color: textPrimary }]}>Time off</Text>
           <Text style={[styles.subtitle, { color: textSecondary }]}>
-            Balances and usage for leave year {year}
+            Balances and usage for leave year {leaveYearUiKeyFromDbKey(year, leaveYearStartMonth, leaveYearStartDay)}
             {yearOverride == null ? ' (org default for today)' : ''}.
           </Text>
         </View>
@@ -718,26 +720,32 @@ export function LeaveScreen({ profile }: { profile: ProfileRow }) {
                 Default
               </Text>
             </Pressable>
-            {yearOptions.map((yk) => (
-              <Pressable
-                key={yk}
-                onPress={() => setYearOverride(yk)}
-                style={[
-                  styles.yearChip,
-                  { borderColor: border, backgroundColor: year === yk && yearOverride !== null ? '#121212' : cardBg },
-                ]}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: year === yk && yearOverride !== null ? '#fff' : textPrimary,
-                  }}
+            {leaveYearUiYearOptions.map((uiY) => {
+              const dbY = dbLeaveYearKeyFromUiKey(uiY, leaveYearStartMonth, leaveYearStartDay);
+              return (
+                <Pressable
+                  key={dbY}
+                  onPress={() => setYearOverride(dbY)}
+                  style={[
+                    styles.yearChip,
+                    {
+                      borderColor: border,
+                      backgroundColor: year === dbY && yearOverride !== null ? '#121212' : cardBg,
+                    },
+                  ]}
                 >
-                  {yk}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: year === dbY && yearOverride !== null ? '#fff' : textPrimary,
+                    }}
+                  >
+                    {uiY}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
