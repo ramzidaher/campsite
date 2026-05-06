@@ -942,7 +942,7 @@ export function OrgChartClient({
         </button>
         <button type="button" onClick={zoomOut} aria-label="Zoom out">-</button>
         <button type="button" onClick={zoomIn} aria-label="Zoom in">+</button>
-        <button type="button" onClick={fitToView}>Fit</button>
+        <button type="button" onClick={() => fitToView()}>Fit</button>
         <button type="button" onClick={resetView}>Reset view</button>
         <span className={styles.exportGroup} aria-label="Export options">
           <span className={styles.exportLabel}>Export</span>
